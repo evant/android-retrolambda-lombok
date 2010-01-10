@@ -1,4 +1,4 @@
-package lombok.parboiled.grammar;
+package lombok.ast.grammar;
 
 import lombok.ast.Node;
 
