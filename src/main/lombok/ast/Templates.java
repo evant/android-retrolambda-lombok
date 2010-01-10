@@ -110,3 +110,10 @@ class VariableDeclarationEntryTemplate {
 	@NonNull Identifier name;
 	Expression initializer;
 }
+
+@GenerateAstNode(extending=Expression.class)
+class InlineIfExpressionTemplate {
+	@NonNull Expression condition;
+	@NonNull Expression ifTrue;
+	@NonNull Expression ifFalse;
+}

@@ -48,11 +48,19 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 	 */
 	public Rule nullLiteral() {
 		return enforcedSequence(
-			enforcedSequence(
+			sequence(
 					string("null"),
 					basics.testLexBreak()),
 			SET(actions.createNullLiteral(LAST_TEXT())),
 			basics.optWS());
+	}
+	
+	public Rule thisLiteral() {
+		return enforcedSequence(
+				sequence(
+						string("this"), basics.testLexBreak(), basics.optWS(), testNot(ch('('))),
+				SET(actions.createThisLiteral(LAST_TEXT())),
+				basics.optWS());
 	}
 	
 	/**
@@ -114,7 +122,7 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 	 */
 	public Rule booleanLiteral() {
 		return enforcedSequence(
-				enforcedSequence(
+				sequence(
 						firstOf(string("true"), string("false")),
 						basics.testLexBreak()),
 				SET(actions.createBooleanLiteral(LAST_TEXT())),

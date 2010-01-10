@@ -57,6 +57,7 @@ public class TypesParser extends BaseParser<Object, Actions<Object>> {
 						sequence(string("short"), basics.testLexBreak()),
 						sequence(string("char"), basics.testLexBreak()),
 						sequence(string("byte"), basics.testLexBreak())),
+						sequence(string("void"), basics.testLexBreak()),
 				basics.optWS());
 	}
 	

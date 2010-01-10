@@ -166,7 +166,11 @@ public abstract class Node {
 //		this.accept(printer);
 //		return printer.toString();
 		if (this instanceof Literal) {
-			return "NODE: " + this.getClass().getSimpleName() + ": " + ((Literal)this).getRawValue();
+			return "[" + ((Literal)this).getRawValue() + "]";
+		} else if (this instanceof BinaryExpression) {
+			return "(" + ((BinaryExpression)this).getRawLeft() + " " + ((BinaryExpression)this).getOperator() + " " + ((BinaryExpression)this).getRawRight() + ")";
+		} else if (this instanceof InlineIfExpression) {
+			return String.format("(%s?%s:%s)", ((InlineIfExpression)this).getRawCondition(), ((InlineIfExpression)this).getRawIfTrue(), ((InlineIfExpression)this).getRawIfFalse());
 		} else {
 			return "NODE: " + this.getClass().getSimpleName();
 		}

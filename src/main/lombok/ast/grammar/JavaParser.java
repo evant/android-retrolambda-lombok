@@ -29,8 +29,8 @@ import org.parboiled.Rule;
 
 public class JavaParser extends BaseParser<Node, JavaActions> {
 	private BasicsParser basics = Parboiled.createParser(BasicsParser.class);
-	private LiteralsParser literals = Parboiled.createParser(LiteralsParser.class);
 	private TypesParser types = Parboiled.createParser(TypesParser.class);
+	private OperatorsParser operators = Parboiled.createParser(OperatorsParser.class);
 	
 	public Rule compilationUnit() {
 		return enforcedSequence(
@@ -44,8 +44,8 @@ public class JavaParser extends BaseParser<Node, JavaActions> {
 	public Rule testRules() {
 		return sequence(
 				zeroOrMore(firstOf(
-						literals.anyLiteral(),
-						types.type())),
+						operators.anyExpression(),
+						sequence(types.type(), basics.optWS(), ch('.'), basics.optWS(), string("class")))),
 				eoi());
 	}
 	
