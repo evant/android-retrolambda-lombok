@@ -1,0 +1,11 @@
+<ivy-module version="2.0">
+	<info organisation="projectlombok.org" module="lombok.ast" />
+	<configurations>
+		<conf name="build" extends="runtime" />
+		<conf name="runtime" />
+	</configurations>
+	<dependencies>
+		<dependency org="projectlombok.org" name="lombok" rev="0.9.2" conf="build->default" />
+		<dependency org="projectlombok.org" name="parboiled" rev="0.8.3.0" conf="runtime" />
+	</dependencies>
+</ivy-module>

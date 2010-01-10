@@ -19,12 +19,12 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 -->
-<project name="lombok.ast" default="compile">
+<project name="lombok.ast" default="compile"  xmlns:ivy="antlib:org.apache.ivy.ant">
 	<property name="build.compiler" value="javac1.6" />
 	
 	<path id="libs.path">
-		<fileset dir="lib">
-			<include name="**/*.jar" />
+		<fileset dir="lib/build">
+			<include name="*.jar" />
 		</fileset>
 	</path>
 	
@@ -32,7 +32,20 @@
 		<delete dir="build" quiet="true" />
 	</target>
 	
-	<target name="templateProcessor">
+	<target name="-checkIfDepsMissing">
+		<condition property="deps.missing">
+			<or>
+				<not><available file="lib/build/lombok.jar" /></not>
+				<not><available file="lib/build/parboiled.jar" /></not>
+			</or>
+		</condition>
+	</target>
+	
+	<target name="-checkDeps" depends="-checkIfDepsMissing" if="deps.missing">
+		<fail>You are missing some dependencies; try running "ant updateDependencies" to fix this</fail>
+	</target>
+	
+	<target name="templateProcessor" depends="-checkDeps" description="Compiles the Template Processor, which produces the AST API classes">
 		<mkdir dir="build/templateProcessor" />
 		<javac destdir="build/templateProcessor" debug="true" target="1.6" source="1.6">
 			<classpath refid="libs.path" />
@@ -44,7 +57,7 @@
 		<jar destfile="build/templateProcessor.jar" basedir="build/templateProcessor" />
 	</target>
 	
-	<target name="generateSource" depends="templateProcessor">
+	<target name="generateSource" depends="-checkDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6">
 			<classpath refid="libs.path" />
@@ -56,7 +69,7 @@
 		</javac>
 	</target>
 	
-	<target name="compile" depends="templateProcessor">
+	<target name="compile" depends="-checkDeps, templateProcessor" description="Compiles all code for lombok.ast">
 		<mkdir dir="build/lombok.ast" />
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6">
@@ -66,5 +79,30 @@
 			<compilerarg value="-s" />
 			<compilerarg path="build/lombok.ast_generatedSource" />
 		</javac>
+		<echo>NOTE: If you see a wash of errors above this line, ignore them. Compilation succeeded; this is a javac bug.</echo>
+	</target>
+	
+	<target name="testParser" depends="compile" description="Runs the testRules parse target, and will parse standard input, line by line.">
+		<java classname="lombok.ast.grammar.ParseSomething">
+			<classpath location="build/lombok.ast" />
+			<classpath refid="libs.path" />
+		</java>
+	</target>
+	
+	<target name="ensure-ivy">
+		<ant antfile="buildScripts/ivy.ant.xml" target="init-ivy" dir="." />
+	</target>
+	
+	<target name="dependencyReport" depends="config-ivy" description="Generates a pretty html page showing this project's dependencies">
+		<ivy:report todir="." />
+	</target>
+	
+	<target name="config-ivy" depends="ensure-ivy">
+		<ivy:configure file="buildScripts/ivysettings.xml" />
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
+	</target>
+	
+	<target name="updateDependencies" depends="config-ivy" description="Download / Update lombok's dependencies via ivy, which will be downloaded automatically if you don't have it.">
+		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
 	</target>
 </project>

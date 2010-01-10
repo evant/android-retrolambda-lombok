@@ -1,0 +1,7 @@
+<ivysettings>
+	<resolvers>
+		<filesystem name="projectLocalRepo">
+			<ivy pattern="${ivy.settings.dir}/[module]-ivy-[revision].xml" />
+		</filesystem>
+	</resolvers>
+</ivysettings>

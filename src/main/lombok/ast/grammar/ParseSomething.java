@@ -47,6 +47,7 @@ public class ParseSomething {
 		
 		if (src == null) {
 			Scanner s = new Scanner(System.in);
+			System.out.println("Write something to parse, then hit enter to print the node graph of what the parser made of it.");
 			while (true) {
 				String line = s.nextLine();
 				if (line.isEmpty()) return;
