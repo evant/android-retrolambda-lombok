@@ -24,6 +24,8 @@ package lombok.ast.template;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -57,6 +59,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		private final boolean mandatory;
 		private final String type;
 		private final boolean isList;
+		private final boolean notAstNode;
 		
 		public String titleCasedName() {
 			String n = name.replace("_", "");
@@ -105,12 +108,12 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (type instanceof DeclaredType) {
 					DeclaredType t = (DeclaredType) type;
 					if (t.toString().startsWith("java.util.List<")) {
-						fields.add(new FieldData(fieldName, true, t.getTypeArguments().get(0).toString(), true));
+						fields.add(new FieldData(fieldName, true, t.getTypeArguments().get(0).toString(), true, !isAstNodeChild(t.getTypeArguments().get(0))));
 						continue;
 					}
 				}
 				
-				fields.add(new FieldData(fieldName, isMandatory, type.toString(), false));
+				fields.add(new FieldData(fieldName, isMandatory, type.toString(), false, !isAstNodeChild(type)));
 			}
 			
 			try {
@@ -123,6 +126,15 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		return true;
+	}
+	
+	private static final List<String> TREAT_AS_PRIMITIVE = Collections.unmodifiableList(Arrays.asList(
+			"boolean", "byte", "char", "short", "int", "long", "float", "double", "void",
+			"String", "java.util.String", "Object", "java.lang.Object", "Number", "java.lang.Number"
+	));
+	
+	private boolean isAstNodeChild(TypeMirror m) {
+		return !TREAT_AS_PRIMITIVE.contains(m.toString());
 	}
 	
 	private void generateSourceFile(Element originatingElement, String className, String extending, List<FieldData> fields) throws IOException {
@@ -156,9 +168,16 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(" {\n");
 		for (FieldData field : fields) {
 			if (field.isList()) {
+				if (field.isNotAstNode()) throw new UnsupportedOperationException("We don't support lists with non-ast.nodes yet!");
 				out.write("\tprivate final java.util.List<lombok.ast.Node> ");
 				out.write(field.getName());
 				out.write(" = new java.util.ArrayList<lombok.ast.Node>();\n");
+			} else if (field.isNotAstNode()) {
+				out.write("\tprivate ");
+				out.write(field.getType());
+				out.write(" ");
+				out.write(field.getName());
+				out.write(";\n");
 			} else {
 				out.write("\tprivate lombok.ast.Node ");
 				out.write(field.getName());
@@ -196,6 +215,44 @@ public class TemplateProcessor extends AbstractProcessor {
 					generateListAccessor(out, field.getName(), className, field);
 //				}
 				
+				continue;
+			}
+			
+			if (field.isNotAstNode()) {
+				/* getter */ {
+					out.write("\tpublic ");
+					out.write(field.getType());
+					out.write(field.getType().equals("boolean") ? " is" : " get");
+					out.write(field.titleCasedName());
+					out.write("() {\n");
+					out.write("\t\treturn this.");
+					out.write(field.getName());
+					out.write(";\n\t}\n\t\n");
+				}
+				
+				/* setter */ {
+					out.write("\tpublic ");
+					out.write(className);
+					out.write(" set");
+					out.write(field.titleCasedName());
+					out.write("(");
+					out.write(field.getType());
+					out.write(" ");
+					out.write(field.getName());
+					out.write(") {\n");
+					if (field.isMandatory()) {
+						out.write("\t\tif (");
+						out.write(field.getName());
+						out.write(" == null) throw new java.lang.NullPointerException(\"");
+						out.write(field.getName());
+						out.write(" is mandatory\");\n");
+					}
+					out.write("\t\tthis.");
+					out.write(field.getName());
+					out.write(" = ");
+					out.write(field.getName());
+					out.write(";\n\t\treturn this;\n\t}\n\t\n");
+				}
 				continue;
 			}
 			
@@ -285,6 +342,16 @@ public class TemplateProcessor extends AbstractProcessor {
 					out.write("\t\t}\n");
 					continue;
 				}
+				if (field.isNotAstNode()) {
+					if (field.isMandatory()) {
+						out.write("\t\tif (this.");
+						out.write(field.getName());
+						out.write(" == null) problems.add(new lombok.ast.SyntaxProblem(this, \"");
+						out.write(field.getName());
+						out.write(" is mandatory\"));\n");
+					}
+					continue;
+				}
 				out.write("\t\tcheckChildValidity(problems, this.");
 				out.write(field.getName());
 				out.write(", \"");
@@ -304,6 +371,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write(typeName);
 			out.write("(this)) return;\n");
 			for (FieldData field : fields) {
+				if (field.isNotAstNode()) continue;
 				if (field.isList()) {
 					out.write("\t\tfor (lombok.ast.Node child : this.");
 					out.write(field.getName());

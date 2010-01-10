@@ -117,3 +117,10 @@ class InlineIfExpressionTemplate {
 	@NonNull Expression ifTrue;
 	@NonNull Expression ifFalse;
 }
+
+@GenerateAstNode(extending=Expression.class)
+class IncrementExpressionTemplate {
+	@NonNull Expression operand;
+	boolean decrement = false;
+	boolean prefix = false;
+}

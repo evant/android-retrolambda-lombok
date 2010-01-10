@@ -44,5 +44,7 @@ public interface ASTVisitor {
 	public boolean visitNullLiteral(NullLiteral node);
 	public boolean visitThisLiteral(ThisLiteral node);
 	public boolean visitBinaryExpression(BinaryExpression node);
+	public boolean visitUnaryExpression(UnaryExpression node);
 	public boolean visitInlineIfExpression(InlineIfExpression node);
+	public boolean visitIncrementExpression(IncrementExpression node);
 }

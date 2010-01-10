@@ -4,8 +4,10 @@ import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.BinaryExpression;
+import lombok.ast.IncrementExpression;
 import lombok.ast.InlineIfExpression;
 import lombok.ast.Node;
+import lombok.ast.UnaryExpression;
 
 import org.parboiled.BaseActions;
 
@@ -49,5 +51,30 @@ public class OperatorsActions extends BaseActions<Node> {
 		}
 		
 		return currentNode;
+	}
+	
+	public Node createPostfixOperation(Node operand, List<String> postfixOperators) {
+		Node current = operand;
+		
+		for (String postfix : postfixOperators) {
+			if (postfix != null && postfix.trim().equals("++")) current = new IncrementExpression().setRawOperand(current);
+			if (postfix != null && postfix.trim().equals("--")) current = new IncrementExpression().setRawOperand(current).setDecrement(true);
+		}
+		
+		return current;
+	}
+	
+	public Node createUnaryOperation(String operator, Node operand, List<String> postfixOperators) {
+		Node current = operand;
+		
+		for (String postfix : postfixOperators) {
+			if (postfix != null && postfix.trim().equals("++")) current = new IncrementExpression().setRawOperand(current);
+			if (postfix != null && postfix.trim().equals("--")) current = new IncrementExpression().setRawOperand(current).setDecrement(true);
+		}
+		
+		if (operator != null && operator.trim().equals("++")) return new IncrementExpression().setRawOperand(current).setPrefix(true);
+		if (operator != null && operator.trim().equals("--")) return new IncrementExpression().setRawOperand(current).setPrefix(true).setDecrement(true);
+		
+		return new UnaryExpression().setRawOperand(current).setRawOperator(operator);
 	}
 }

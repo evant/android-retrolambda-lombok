@@ -25,16 +25,10 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 		super(Parboiled.createActions(OperatorsActions.class));
 	}
 	
-	/* operators:
-	 *      =       >    <    !       ~       ?       :
-        ==      <=   >=   !=      &&      ||      ++      --
-        +       -       *       /       &   |       ^       %       <<        >>        >>>
-        +=      -=      *=      /=      &=  |=      ^=      %=      <<=       >>=       >>>=
-        
-        as well as:
-        cast
-        paren-grouping
-        instanceof
+	/*
+	 * level 0: paren grouping, primitive
+	 * level 1: array index, method call, member access
+	 * level 2: increment pre/post, unary +-, bit/logical not, any cast, new.
 	 */
 	
 	@Retention(RetentionPolicy.RUNTIME)
@@ -63,49 +57,104 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 				shiftOperation(),
 				additiveOperation(),
 				multiplicativeOperation(),
+				level2Operation(),
 				primaryExpression());
 	}
 	
+	@PrecedencePlayer(200)
+	public Rule level2Operation() {
+		return firstOf(unaryOperation(), postfixIncrementOperation());
+	}
+	
+	private Rule unaryOperation() {
+		return sequence(
+				firstOf(string("++"), string("--"), ch('!'), ch('~'), solitarySymbol('+'), solitarySymbol('-')).label("operator"),
+				basics.optWS(),
+				firstOf(level2Operation(), higher("level2Operation")).label("operand"),
+				basics.optWS(),
+				zeroOrMore(sequence(
+						firstOf(string("++"), string("--")).label("postfixOperators"),
+						basics.optWS())),
+				SET(actions.createUnaryOperation(TEXT("operator"), VALUE("operand"), TEXTS("zeroOrMore/sequence/postfixOperators"))));
+	}
+	
+	private Rule postfixIncrementOperation() {
+		return sequence(
+				higher("level2Operation").label("operand"),
+				basics.optWS(),
+				oneOrMore(sequence(
+						firstOf(string("++"), string("--")).label("postfixOperators"),
+						basics.optWS())),
+				SET(actions.createPostfixOperation(VALUE("operand"), TEXTS("oneOrMore/sequence/postfixOperators"))));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17
+	 */
 	@PrecedencePlayer(300)
 	public Rule multiplicativeOperation() {
 		return forBinaryOperation(firstOf(ch('*'), solitarySymbol('/'), ch('%')), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18
+	 */
 	@PrecedencePlayer(400)
 	public Rule additiveOperation() {
 		return forBinaryOperation(firstOf(solitarySymbol('+'), solitarySymbol('-')), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19
+	 */
 	@PrecedencePlayer(500)
 	public Rule shiftOperation() {
 		return forBinaryOperation(firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.20
+	 */
 	@PrecedencePlayer(600)
 	public Rule relationalOperation() {
 		return forBinaryOperation(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>'), sequence(string("instanceof"), basics.testLexBreak())), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21
+	 */
 	@PrecedencePlayer(700)
 	public Rule equalityOperation() {
 		return forBinaryOperation(firstOf(string("==="), string("!=="), string("=="), string("!=")), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
+	 */
 	@PrecedencePlayer(800)
 	public Rule bitwiseAndOperation() {
 		return forBinaryOperation(solitarySymbol('&'), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
+	 */
 	@PrecedencePlayer(900)
 	public Rule bitwiseXorOperation() {
 		return forBinaryOperation(solitarySymbol('^'), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
+	 */
 	@PrecedencePlayer(1000)
 	public Rule bitwiseOrOperation() {
 		return forBinaryOperation(solitarySymbol('|'), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23
+	 */
 	@PrecedencePlayer(1100)
 	public Rule conditionalAndOperation() {
 		return forBinaryOperation(string("&&"), true);
@@ -116,11 +165,17 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 		return forBinaryOperation(string("^^"), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24
+	 */
 	@PrecedencePlayer(1200)
 	public Rule conditionalOrOperation() {
 		return forBinaryOperation(string("||"), true);
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.25
+	 */
 	@PrecedencePlayer(1300)
 	public Rule inlineIfOperation() {
 		return sequence(
@@ -142,6 +197,9 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 				basics.optWS());
 	}
 	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26
+	 */
 	@PrecedencePlayer(1400)
 	public Rule assignmentOperation() {
 		return forBinaryOperation(firstOf(
