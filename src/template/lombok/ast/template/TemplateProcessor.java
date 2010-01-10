@@ -332,6 +332,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(methodName);
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
-		out.write("Accessor;\n\t}\n\t");
+		out.write("Accessor;\n\t}\n");
 	}
 }
