@@ -1,0 +1,13 @@
+<project name="lombok.ast" default="templateProcessor">
+	<target name="templateProcessor">
+		<mkdir dir="build/templateProcessor" />
+		<javac destdir="build/templateProcessor" debug="true" target="1.6" source="1.6">
+			<src path="src/template" />
+			<classpath location="lib/lombok.jar" />
+		</javac>
+		<mkdir dir="build/templateProcessor/META-INF" />
+		<mkdir dir="build/templateProcessor/META-INF/services" />
+		<echo file="build/templateProcessor/META-INF/services/javax.annotation.processing.Processor">lombok.ast.template.TemplateProcessor</echo>
+		<jar destfile="build/templateProcessor.jar" basedir="build/templateProcessor" />
+	</target>
+</project>
