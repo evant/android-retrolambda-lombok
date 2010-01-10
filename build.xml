@@ -19,16 +19,52 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 -->
-<project name="lombok.ast" default="templateProcessor">
+<project name="lombok.ast" default="compile">
+	<property name="build.compiler" value="javac1.6" />
+	
+	<path id="libs.path">
+		<fileset dir="lib">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	
+	<target name="clean">
+		<delete dir="build" quiet="true" />
+	</target>
+	
 	<target name="templateProcessor">
 		<mkdir dir="build/templateProcessor" />
 		<javac destdir="build/templateProcessor" debug="true" target="1.6" source="1.6">
+			<classpath refid="libs.path" />
 			<src path="src/template" />
-			<classpath location="lib/lombok.jar" />
 		</javac>
 		<mkdir dir="build/templateProcessor/META-INF" />
 		<mkdir dir="build/templateProcessor/META-INF/services" />
 		<echo file="build/templateProcessor/META-INF/services/javax.annotation.processing.Processor">lombok.ast.template.TemplateProcessor</echo>
 		<jar destfile="build/templateProcessor.jar" basedir="build/templateProcessor" />
+	</target>
+	
+	<target name="generateSource" depends="templateProcessor">
+		<mkdir dir="build/lombok.ast_generatedSource" />
+		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6">
+			<classpath refid="libs.path" />
+			<classpath location="build/templateProcessor.jar" />
+			<src path="src/main" />
+			<compilerarg value="-proc:only" />
+			<compilerarg value="-s" />
+			<compilerarg path="build/lombok.ast_generatedSource" />
+		</javac>
+	</target>
+	
+	<target name="compile" depends="templateProcessor">
+		<mkdir dir="build/lombok.ast" />
+		<mkdir dir="build/lombok.ast_generatedSource" />
+		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6">
+			<classpath refid="libs.path" />
+			<classpath location="build/templateProcessor.jar" />
+			<src path="src/main" />
+			<compilerarg value="-s" />
+			<compilerarg path="build/lombok.ast_generatedSource" />
+		</javac>
 	</target>
 </project>
