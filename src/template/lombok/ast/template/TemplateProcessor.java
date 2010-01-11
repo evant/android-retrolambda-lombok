@@ -62,6 +62,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		private final boolean mandatory;
 		private final String rawFormParser;
 		private final String rawFormGenerator;
+		private final String initialValue;
 		private final String type;
 		private final boolean isList;
 		private final boolean astNode;
@@ -74,6 +75,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			this.astNode = ncon == null;
 			this.rawFormParser = astNode ? "" : ncon.rawFormParser();
 			this.rawFormGenerator = astNode ? "" : ncon.rawFormGenerator();
+			this.initialValue = astNode ? "" : ncon.initialValue();
 			
 			if (type instanceof DeclaredType) {
 				DeclaredType t = (DeclaredType) type;
@@ -539,6 +541,10 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.getType());
 		out.write(" ");
 		out.write(field.getName());
+		if (field.getInitialValue() != null) {
+			out.write(" = ");
+			out.write(field.getInitialValue());
+		}
 		out.write(";\n");
 		if (field.getRawFormParser().isEmpty()) return;
 		
