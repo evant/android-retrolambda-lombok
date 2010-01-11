@@ -59,7 +59,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		private final boolean mandatory;
 		private final String type;
 		private final boolean isList;
-		private final boolean notAstNode;
+		private final boolean astNode;
 		
 		public String titleCasedName() {
 			String n = name.replace("_", "");
@@ -108,12 +108,12 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (type instanceof DeclaredType) {
 					DeclaredType t = (DeclaredType) type;
 					if (t.toString().startsWith("java.util.List<")) {
-						fields.add(new FieldData(fieldName, true, t.getTypeArguments().get(0).toString(), true, !isAstNodeChild(t.getTypeArguments().get(0))));
+						fields.add(new FieldData(fieldName, true, t.getTypeArguments().get(0).toString(), true, isAstNodeChild(t.getTypeArguments().get(0))));
 						continue;
 					}
 				}
 				
-				fields.add(new FieldData(fieldName, isMandatory, type.toString(), false, !isAstNodeChild(type)));
+				fields.add(new FieldData(fieldName, isMandatory, type.toString(), false, isAstNodeChild(type)));
 			}
 			
 			try {
@@ -168,11 +168,11 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(" {\n");
 		for (FieldData field : fields) {
 			if (field.isList()) {
-				if (field.isNotAstNode()) throw new UnsupportedOperationException("We don't support lists with non-ast.nodes yet!");
+				if (!field.isAstNode()) throw new UnsupportedOperationException("We don't support lists with non-ast.nodes yet!");
 				out.write("\tprivate final java.util.List<lombok.ast.Node> ");
 				out.write(field.getName());
 				out.write(" = new java.util.ArrayList<lombok.ast.Node>();\n");
-			} else if (field.isNotAstNode()) {
+			} else if (!field.isAstNode()) {
 				out.write("\tprivate ");
 				out.write(field.getType());
 				out.write(" ");
@@ -218,7 +218,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				continue;
 			}
 			
-			if (field.isNotAstNode()) {
+			if (!field.isAstNode()) {
 				/* getter */ {
 					out.write("\tpublic ");
 					out.write(field.getType());
@@ -342,7 +342,7 @@ public class TemplateProcessor extends AbstractProcessor {
 					out.write("\t\t}\n");
 					continue;
 				}
-				if (field.isNotAstNode()) {
+				if (!field.isAstNode()) {
 					if (field.isMandatory()) {
 						out.write("\t\tif (this.");
 						out.write(field.getName());
@@ -371,7 +371,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write(typeName);
 			out.write("(this)) return;\n");
 			for (FieldData field : fields) {
-				if (field.isNotAstNode()) continue;
+				if (!field.isAstNode()) continue;
 				if (field.isList()) {
 					out.write("\t\tfor (lombok.ast.Node child : this.");
 					out.write(field.getName());
