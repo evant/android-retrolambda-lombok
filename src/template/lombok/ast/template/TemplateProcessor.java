@@ -24,9 +24,10 @@ package lombok.ast.template;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -40,9 +41,11 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
@@ -57,9 +60,29 @@ public class TemplateProcessor extends AbstractProcessor {
 	private static class FieldData {
 		private final String name;
 		private final boolean mandatory;
+		private final String rawFormParser;
+		private final String rawFormGenerator;
 		private final String type;
 		private final boolean isList;
 		private final boolean astNode;
+		
+		public FieldData(VariableElement field) {
+			this.name = String.valueOf(field.getSimpleName());
+			this.mandatory = field.getAnnotation(NonNull.class) != null;
+			TypeMirror type = field.asType();
+			NotChildOfNode ncon = field.getAnnotation(NotChildOfNode.class);
+			this.astNode = ncon == null;
+			this.rawFormParser = astNode ? "" : ncon.rawFormParser();
+			this.rawFormGenerator = astNode ? "" : ncon.rawFormGenerator();
+			
+			if (type instanceof DeclaredType) {
+				DeclaredType t = (DeclaredType) type;
+				this.isList = t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<");
+				if (this.isList) type = t.getTypeArguments().get(0);
+			} else this.isList = false;
+			
+			this.type = type.toString();
+		}
 		
 		public String titleCasedName() {
 			String n = name.replace("_", "");
@@ -75,49 +98,58 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 			
 			List<FieldData> fields = new ArrayList<FieldData>();
+			List<ExecutableElement> methodsToCopy = new ArrayList<ExecutableElement>();
+			List<ExecutableElement> additionalChecks = new ArrayList<ExecutableElement>();
+			
 			String className;
 			String extending = null;
 			
-			TypeElement annotated = (TypeElement)element;
-			className = annotated.getQualifiedName().toString();
-			if (className.endsWith("Template")) className = className.substring(0, className.length() - "Template".length());
-			else {
-				processingEnv.getMessager().printMessage(Kind.ERROR, "@GenerateAstNode annotated classes must end in 'Template'. Example: IfTemplate");
-				return true;
+			TypeElement annotated;
+			/* Calculate file and class name of the source file we need to generate */ {
+				annotated = (TypeElement)element;
+				className = annotated.getQualifiedName().toString();
+				if (className.endsWith("Template")) className = className.substring(0, className.length() - "Template".length());
+				else {
+					processingEnv.getMessager().printMessage(Kind.ERROR, "@GenerateAstNode annotated classes must end in 'Template'. Example: IfTemplate");
+					return true;
+				}
 			}
 			
-			for (AnnotationMirror annotation : annotated.getAnnotationMirrors()) {
-				if (!annotation.getAnnotationType().toString().equals(GenerateAstNode.class.getName())) continue;
-				
-				for (Entry<? extends ExecutableElement, ? extends AnnotationValue> value : annotation.getElementValues().entrySet()) {
-					extending = value.getValue().toString();
-					if (extending.endsWith(".class")) {
-						extending = extending.substring(0, extending.length() - ".class".length());
+			/* Pick up the 1 parameter of the annotation (this is the type that the class to be generated must extend) */ {
+				for (AnnotationMirror annotation : annotated.getAnnotationMirrors()) {
+					if (!annotation.getAnnotationType().toString().equals(GenerateAstNode.class.getName())) continue;
+					
+					for (Entry<? extends ExecutableElement, ? extends AnnotationValue> value : annotation.getElementValues().entrySet()) {
+						extending = value.getValue().toString();
+						if (extending.endsWith(".class")) {
+							extending = extending.substring(0, extending.length() - ".class".length());
+						}
 					}
+					
+					if (extending == null) extending = "lombok.ast.Node";
 				}
-				
-				if (extending == null) extending = "lombok.ast.Node";
 			}
 			
-			for (Element enclosed : annotated.getEnclosedElements()) {
-				if (enclosed.getKind() != ElementKind.FIELD) continue;
-				VariableElement field = (VariableElement) enclosed;
-				String fieldName = String.valueOf(field.getSimpleName());
-				boolean isMandatory = field.getAnnotation(NonNull.class) != null;
-				TypeMirror type = field.asType();
-				if (type instanceof DeclaredType) {
-					DeclaredType t = (DeclaredType) type;
-					if (t.toString().startsWith("java.util.List<")) {
-						fields.add(new FieldData(fieldName, true, t.getTypeArguments().get(0).toString(), true, isAstNodeChild(t.getTypeArguments().get(0))));
-						continue;
-					}
+			/* Analyze all fields of template class */ {
+				for (Element enclosed : annotated.getEnclosedElements()) {
+					if (enclosed.getKind() != ElementKind.FIELD) continue;
+					fields.add(new FieldData((VariableElement) enclosed));
 				}
-				
-				fields.add(new FieldData(fieldName, isMandatory, type.toString(), false, isAstNodeChild(type)));
+			}
+			
+			/* Analyze all methods of template class */ {
+				for (Element enclosed : annotated.getEnclosedElements()) {
+					if (enclosed.getKind() != ElementKind.METHOD) continue;
+					ExecutableElement method = (ExecutableElement) enclosed;
+					boolean copyMethod = method.getAnnotation(CopyMethod.class) != null;
+					boolean additionalCheck = method.getAnnotation(AdditionalCheck.class) != null;
+					if (copyMethod) methodsToCopy.add(method);
+					if ( additionalCheck) additionalChecks.add(method);
+				}
 			}
 			
 			try {
-				generateSourceFile(annotated, className, extending, fields);
+				generateSourceFile(annotated, className, extending, fields, methodsToCopy, additionalChecks);
 			} catch (IOException e) {
 				processingEnv.getMessager().printMessage(Kind.ERROR, String.format(
 						"Can't generate sourcefile %s: %s",
@@ -128,16 +160,9 @@ public class TemplateProcessor extends AbstractProcessor {
 		return true;
 	}
 	
-	private static final List<String> TREAT_AS_PRIMITIVE = Collections.unmodifiableList(Arrays.asList(
-			"boolean", "byte", "char", "short", "int", "long", "float", "double", "void",
-			"String", "java.util.String", "Object", "java.lang.Object", "Number", "java.lang.Number"
-	));
-	
-	private boolean isAstNodeChild(TypeMirror m) {
-		return !TREAT_AS_PRIMITIVE.contains(m.toString());
-	}
-	
-	private void generateSourceFile(Element originatingElement, String className, String extending, List<FieldData> fields) throws IOException {
+	private void generateSourceFile(Element originatingElement, String className, String extending, List<FieldData> fields,
+			List<ExecutableElement> methodsToCopy, List<ExecutableElement> additionalChecks) throws IOException {
+		
 		JavaFileObject file = processingEnv.getFiler().createSourceFile(className, originatingElement);
 		Writer out = file.openWriter();
 		out.write("//Generated by lombok.ast.template.TemplateProcessor. DO NOT EDIT, DO NOT CHECK IN!\n\n");
@@ -195,13 +220,21 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			if (!field.isAstNode()) {
 				generateFairWeatherGetter(out, field, false);
-				generateFairWeatherSetter(out, className, field);
+				if (field.getRawFormGenerator().isEmpty()) {
+					generateFairWeatherSetter(out, className, field);
+				} else {
+					generateFairWeatherSetterForRawBasics(out, className, field);
+				}
+				if (!field.getRawFormParser().isEmpty()) {
+					generateRawGetter(out, field, true);
+					generateRawSetterForBasic(out, className, field);
+				}
 				continue;
 			}
 			
 			generateFairWeatherGetter(out, field, true);
 			generateFairWeatherSetter(out, className, field);
-			generateRawGetter(out, field);
+			generateRawGetter(out, field, false);
 			generateRawSetter(out, className, field);
 		}
 		
@@ -220,6 +253,20 @@ public class TemplateProcessor extends AbstractProcessor {
 				
 				generateCheckForNodeField(out, field);
 			}
+			
+			for (ExecutableElement additionalCheck : additionalChecks) {
+				if (!additionalCheck.getModifiers().contains(Modifier.STATIC))
+					throw new IllegalArgumentException("additional checks must be static");
+				if (additionalCheck.getParameters().size() != 2)
+					throw new IllegalArgumentException("additional checks must have 2 parameters (List<SyntaxProblem> problems, Self(NotTemplate))");
+				
+				out.write("\t\t");
+				out.write(className);
+				out.write("Template.");
+				out.write(additionalCheck.getSimpleName().toString());
+				out.write("(problems, this);\n");
+			}
+			
 			out.write("\t}\n\t\n");
 		}
 		
@@ -243,6 +290,51 @@ public class TemplateProcessor extends AbstractProcessor {
 				out.write(".accept(visitor);\n");
 			}
 			out.write("\t}\n");
+		}
+		
+		/* extra methods */ {
+			for (ExecutableElement delegate : methodsToCopy) {
+				boolean isVoid = delegate.getReturnType().getKind() == TypeKind.VOID;
+				out.write("\t");
+				out.write(delegate.getAnnotation(CopyMethod.class).accessModifier());
+				out.write(" ");
+				
+				if (!delegate.getTypeParameters().isEmpty()) {
+					throw new IllegalArgumentException("We don't support generics parameters on extra methods in templates.");
+				}
+				out.write(isVoid ? "void" : delegate.getReturnType().toString());
+				out.write(" ");
+				out.write(delegate.getSimpleName().toString());
+				out.write("(");
+				/* Add parameters, but skip the first one which is used to transport 'this' reference */ {
+					int idx = 0;
+					for (VariableElement p : delegate.getParameters()) {
+						if (idx++ == 0) continue;
+						if (idx > 1) out.write(", ");
+						out.write(p.asType().toString());
+						out.write(" ");
+						out.write(p.getSimpleName().toString());
+					}
+				}
+				out.write(") {\n\t\t");
+				out.write(isVoid ? "" : "return ");
+				out.write(className);
+				out.write("Template.");
+				out.write(delegate.getSimpleName().toString());
+				out.write("(this");
+				/* Generate parameters, but skip first */ {
+					boolean first = true;
+					for (VariableElement p : delegate.getParameters()) {
+						if (first) {
+							first = false;
+							continue;
+						}
+						out.write(", ");
+						out.write(p.getSimpleName().toString());
+					}
+				}
+				out.write(");\n\t}\n");
+			}
 		}
 		
 		out.write("}\n");
@@ -280,6 +372,14 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.getType().equals("boolean") ? " is" : " get");
 		out.write(field.titleCasedName());
 		out.write("() {\n");
+		if (!field.getRawFormParser().isEmpty()) {
+			out.write("\t\tif (this.errorReasonFor");
+			out.write(field.titleCasedName());
+			out.write(" != null) throw new lombok.ast.AstException(this, this.errorReasonFor");
+			out.write(field.titleCasedName());
+			out.write(");\n");
+		}
+		
 		if (generateCheck) {
 			out.write("\t\tassertChildType(");
 			out.write(field.getName());
@@ -302,11 +402,18 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(";\n\t}\n\t\n");
 	}
 	
-	private void generateRawGetter(Writer out, FieldData field) throws IOException {
-		out.write("\tpublic lombok.ast.Node getRaw");
+	private void generateRawGetter(Writer out, FieldData field, boolean basic) throws IOException {
+		out.write("\tpublic ");
+		out.write(basic ? "java.lang.String" : "lombok.ast.Node");
+		out.write(" getRaw");
 		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
-		out.write(field.getName());
+		if (basic) {
+			out.write("raw");
+			out.write(field.titleCasedName());
+		} else {
+			out.write(field.getName());
+		}
 		out.write(";\n\t}\n\t\n");
 	}
 	
@@ -323,6 +430,48 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(" = ");
 		out.write(field.getName());
 		out.write(";\n\t\treturn this;\n\t}\n\t\n");
+	}
+	
+	
+	private void generateRawSetterForBasic(Writer out, String className, FieldData field) throws IOException {
+		Object[] params = {
+				className,
+				field.titleCasedName(),
+				field.getName(),
+				getDefaultValueForType(field.getType()),
+				field.getRawFormParser()
+		};
+		out.write(String.format(
+				"\tpublic %1$s setRaw%2$s(java.lang.String %3$s) {\n" +
+				"\t\tthis.raw%2$s = %3$s;\n" +
+				"\t\tthis.%3$s = %4$s;\n" +
+				"\t\tthis.errorReasonFor%2$s = null;\n" +
+				"\t\ttry {\n" +
+				"\t\t\tthis.%3$s = %1$sTemplate.%5$s(%3$s);\n" +
+				"\t\t} catch (java.lang.IllegalArgumentException e) {\n" +
+				"\t\t\tthis.errorReasonFor%2$s = e.getMessage() == null ? e.toString() : e.getMessage();\n" +
+				"\t\t} catch (Exception e) {\n" +
+				"\t\t\tthis.errorReasonFor%2$s = e.toString();\n" +
+				"\t\t}\n" +
+				"\t\treturn this;\n" +
+				"\t}\n", params));
+	}
+	
+	private static final Map<String, String> DEFAULT_VALUES; static {
+		Map<String, String> m = new HashMap<String, String>();
+		m.put("boolean", "false");
+		m.put("byte", "0");
+		m.put("short", "0");
+		m.put("char", "'\\0'");
+		m.put("int", "0");
+		m.put("long", "0L");
+		m.put("float", "0.0F");
+		m.put("double", "0.0");
+		DEFAULT_VALUES = Collections.unmodifiableMap(m);
+	}
+	
+	private static String getDefaultValueForType(String type) {
+		return String.valueOf(DEFAULT_VALUES.get(type));
 	}
 	
 	private void generateFairWeatherSetter(Writer out, String className, FieldData field) throws IOException {
@@ -349,11 +498,61 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(";\n\t\treturn this;\n\t}\n\t\n");
 	}
 	
+	private void generateFairWeatherSetterForRawBasics(Writer out, String className, FieldData field) throws IOException {
+		out.write("\tpublic ");
+		out.write(className);
+		out.write(" set");
+		out.write(field.titleCasedName());
+		out.write("(");
+		out.write(field.getType());
+		out.write(" ");
+		out.write(field.getName());
+		out.write(") {\n");
+		if (field.isMandatory()) {
+			out.write("\t\tif (");
+			out.write(field.getName());
+			out.write(" == null) throw new java.lang.NullPointerException(\"");
+			out.write(field.getName());
+			out.write(" is mandatory\");\n");
+		}
+		out.write("\t\tthis.errorReasonFor");
+		out.write(field.titleCasedName());
+		out.write(" = null;\n");
+		out.write("\t\tthis.");
+		out.write(field.getName());
+		out.write(" = ");
+		out.write(field.getName());
+		out.write(";\n");
+		out.write("\t\tthis.raw");
+		out.write(field.titleCasedName());
+		out.write(" = ");
+		out.write(className);
+		out.write("Template.");
+		out.write(field.getRawFormGenerator());
+		out.write("(");
+		out.write(field.getName());
+		out.write(");\n\t\treturn this;\n\t}\n\t\n");
+	}
+	
 	private void generateFieldsForBasic(Writer out, FieldData field) throws IOException {
 		out.write("\tprivate ");
 		out.write(field.getType());
 		out.write(" ");
 		out.write(field.getName());
+		out.write(";\n");
+		if (field.getRawFormParser().isEmpty()) return;
+		
+		out.write("\tprivate java.lang.String raw");
+		out.write(field.titleCasedName());
+		out.write(";\n");
+		
+		out.write("\tprivate java.lang.String errorReasonFor");
+		out.write(field.titleCasedName());
+		if (field.isMandatory()) {
+			out.write(" = \"missing ");
+			out.write(field.getName());
+			out.write("\"");
+		}
 		out.write(";\n");
 	}
 	
@@ -390,12 +589,20 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateCheckForBasicField(Writer out, FieldData field) throws IOException {
-		if (field.isMandatory()) {
-			out.write("\t\tif (this.");
-			out.write(field.getName());
-			out.write(" == null) problems.add(new lombok.ast.SyntaxProblem(this, \"");
-			out.write(field.getName());
-			out.write(" is mandatory\"));\n");
+		if (!field.getRawFormParser().isEmpty()) {
+			out.write("\t\tif (this.errorReasonFor");
+			out.write(field.titleCasedName());
+			out.write(" != null) problems.add(new lombok.ast.SyntaxProblem(this, this.errorReasonFor");
+			out.write(field.titleCasedName());
+			out.write("));\n");
+		} else {
+			if (field.isMandatory()) {
+				out.write("\t\tif (this.");
+				out.write(field.getName());
+				out.write(" == null) problems.add(new lombok.ast.SyntaxProblem(this, \"");
+				out.write(field.getName());
+				out.write(" is mandatory\"));\n");
+			}
 		}
 	}
 	
