@@ -59,7 +59,7 @@ class WhileTemplate {
 
 @GenerateAstNode(extending=Statement.class)
 class ForTemplate {
-	Statement initializion;
+	Statement initialization;
 	Expression condition;
 	List<Statement> increments;
 	@NonNull Statement statement;
