@@ -165,202 +165,60 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write(" extends ");
 			out.write(extending);
 		}
+		
 		out.write(" {\n");
 		for (FieldData field : fields) {
-			if (field.isList()) {
-				if (!field.isAstNode()) throw new UnsupportedOperationException("We don't support lists with non-ast.nodes yet!");
-				out.write("\tprivate final java.util.List<lombok.ast.Node> ");
-				out.write(field.getName());
-				out.write(" = new java.util.ArrayList<lombok.ast.Node>();\n");
-			} else if (!field.isAstNode()) {
-				out.write("\tprivate ");
-				out.write(field.getType());
-				out.write(" ");
-				out.write(field.getName());
-				out.write(";\n");
-			} else {
-				out.write("\tprivate lombok.ast.Node ");
-				out.write(field.getName());
-				out.write(";\n");
+			if (field.isList() && !field.isAstNode()) {
+				throw new UnsupportedOperationException("Generating an AST Node with a list containing non lombok.ast.Node-based objects is not supported: " + field.getName());
 			}
 			
 			if (field.isList()) {
-				// private lombok.ast.ListAccessor<CatchBlock, Try> catchesAccessor = ListAccessor.of(catches, this, CatchBlock.class, "Try.catches");
-				out.write("\tprivate lombok.ast.ListAccessor<");
-				out.write(field.getType());
-				out.write(", ");
-				out.write(className);
-				out.write("> ");
-				out.write(field.getName());
-				out.write("Accessor = ListAccessor.of(");
-				out.write(field.getName());
-				out.write(", this, ");
-				out.write(field.getType());
-				out.write(".class, \"");
-				out.write(typeName);
-				if (fields.size() > 1) {
-					out.write(".");
-					out.write(field.getName());
-				}
-				out.write("\");\n");
+				generateFieldsForList(out, className, typeName, fields.size(), field);
+				continue;
 			}
+			
+			if (!field.isAstNode()) {
+				generateFieldsForBasic(out, field);
+				continue;
+			}
+			
+			generateFieldsForNode(out, field);
 		}
+		
 		out.write("\t\n");
 		for (FieldData field : fields) {
 			if (field.isList()) {
-//				if (fields.size() == 1) {
-//					generateListAccessor(out, "asListAccessor", className, field);
-//					generateDelegation();
-//				} else {
-					generateListAccessor(out, field.getName(), className, field);
-//				}
+				generateListAccessor(out, field.getName(), className, field);
 				
 				continue;
 			}
 			
 			if (!field.isAstNode()) {
-				/* getter */ {
-					out.write("\tpublic ");
-					out.write(field.getType());
-					out.write(field.getType().equals("boolean") ? " is" : " get");
-					out.write(field.titleCasedName());
-					out.write("() {\n");
-					out.write("\t\treturn this.");
-					out.write(field.getName());
-					out.write(";\n\t}\n\t\n");
-				}
-				
-				/* setter */ {
-					out.write("\tpublic ");
-					out.write(className);
-					out.write(" set");
-					out.write(field.titleCasedName());
-					out.write("(");
-					out.write(field.getType());
-					out.write(" ");
-					out.write(field.getName());
-					out.write(") {\n");
-					if (field.isMandatory()) {
-						out.write("\t\tif (");
-						out.write(field.getName());
-						out.write(" == null) throw new java.lang.NullPointerException(\"");
-						out.write(field.getName());
-						out.write(" is mandatory\");\n");
-					}
-					out.write("\t\tthis.");
-					out.write(field.getName());
-					out.write(" = ");
-					out.write(field.getName());
-					out.write(";\n\t\treturn this;\n\t}\n\t\n");
-				}
+				generateFairWeatherGetter(out, field, false);
+				generateFairWeatherSetter(out, className, field);
 				continue;
 			}
 			
-			/* fair weather getter */ {
-				out.write("\tpublic ");
-				out.write(field.getType());
-				out.write(" get");
-				out.write(field.titleCasedName());
-				out.write("() {\n");
-				out.write("\t\tassertChildType(");
-				out.write(field.getName());
-				out.write(", \"");
-				out.write(field.getName());
-				out.write("\", ");
-				out.write("" + field.isMandatory());
-				out.write(", ");
-				out.write(field.getType());
-				out.write(".class);\n\t\treturn (");
-				out.write(field.getType());
-				out.write(") ");
-				out.write(field.getName());
-				out.write(";\n\t}\n\t\n");
-			}
-			
-			/* raw getter */ {
-				out.write("\tpublic lombok.ast.Node getRaw");
-				out.write(field.titleCasedName());
-				out.write("() {\n\t\treturn ");
-				out.write(field.getName());
-				out.write(";\n\t}\n\t\n");
-			}
-			
-			/* fair weather setter */ {
-				out.write("\tpublic ");
-				out.write(className);
-				out.write(" set");
-				out.write(field.titleCasedName());
-				out.write("(");
-				out.write(field.getType());
-				out.write(" ");
-				out.write(field.getName());
-				out.write(") {\n");
-				if (field.isMandatory()) {
-					out.write("\t\tif (");
-					out.write(field.getName());
-					out.write(" == null) throw new java.lang.NullPointerException(\"");
-					out.write(field.getName());
-					out.write(" is mandatory\");\n");
-				}
-				out.write("\t\tthis.");
-				out.write(field.getName());
-				out.write(" = ");
-				out.write(field.getName());
-				out.write(";\n\t\treturn this;\n\t}\n\t\n");
-			}
-			
-			/* raw setter */ {
-				out.write("\tpublic ");
-				out.write(className);
-				out.write(" setRaw");
-				out.write(field.titleCasedName());
-				out.write("(lombok.ast.Node ");
-				out.write(field.getName());
-				out.write(") {\n");
-				out.write("\t\tthis.");
-				out.write(field.getName());
-				out.write(" = ");
-				out.write(field.getName());
-				out.write(";\n\t\treturn this;\n\t}\n\t\n");
-			}
+			generateFairWeatherGetter(out, field, true);
+			generateFairWeatherSetter(out, className, field);
+			generateRawGetter(out, field);
+			generateRawSetter(out, className, field);
 		}
 		
 		/* checkSyntacticValidity */ {
 			out.write("\t@java.lang.Override public void checkSyntacticValidity(java.util.List<lombok.ast.SyntaxProblem> problems) {\n");
 			for (FieldData field : fields) {
 				if (field.isList()) {
-					out.write("\t\tfor (int i = 0; i < this.");
-					out.write(field.getName());
-					out.write(".size(); i++) {\n");
-					out.write("\t\t\tcheckChildValidity(problems, this.");
-					out.write(field.getName());
-					out.write(".get(i), \"");
-					out.write(field.getName());
-					out.write("[\" + i + \"]\", true, ");
-					out.write(field.getType());
-					out.write(".class);\n");
-					out.write("\t\t}\n");
+					generateCheckForList(out, field);
 					continue;
 				}
+				
 				if (!field.isAstNode()) {
-					if (field.isMandatory()) {
-						out.write("\t\tif (this.");
-						out.write(field.getName());
-						out.write(" == null) problems.add(new lombok.ast.SyntaxProblem(this, \"");
-						out.write(field.getName());
-						out.write(" is mandatory\"));\n");
-					}
+					generateCheckForBasicField(out, field);
 					continue;
 				}
-				out.write("\t\tcheckChildValidity(problems, this.");
-				out.write(field.getName());
-				out.write(", \"");
-				out.write(field.getName());
-				out.write("\", ");
-				out.write("" + field.isMandatory());
-				out.write(", ");
-				out.write(field.getType());
-				out.write(".class);\n");
+				
+				generateCheckForNodeField(out, field);
 			}
 			out.write("\t}\n\t\n");
 		}
@@ -391,6 +249,114 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.close();
 	}
 	
+	private void generateFieldsForList(Writer out, String className, String typeName, int fieldsSize, FieldData field) throws IOException {
+		out.write("\tprivate final java.util.List<lombok.ast.Node> ");
+		out.write(field.getName());
+		out.write(" = new java.util.ArrayList<lombok.ast.Node>();\n");
+		
+		// private lombok.ast.ListAccessor<CatchBlock, Try> catchesAccessor = ListAccessor.of(catches, this, CatchBlock.class, "Try.catches");
+		out.write("\tprivate lombok.ast.ListAccessor<");
+		out.write(field.getType());
+		out.write(", ");
+		out.write(className);
+		out.write("> ");
+		out.write(field.getName());
+		out.write("Accessor = ListAccessor.of(");
+		out.write(field.getName());
+		out.write(", this, ");
+		out.write(field.getType());
+		out.write(".class, \"");
+		out.write(typeName);
+		if (fieldsSize > 1) {
+			out.write(".");
+			out.write(field.getName());
+		}
+		out.write("\");\n");
+	}
+	
+	private void generateFairWeatherGetter(Writer out, FieldData field, boolean generateCheck) throws IOException {
+		out.write("\tpublic ");
+		out.write(field.getType());
+		out.write(field.getType().equals("boolean") ? " is" : " get");
+		out.write(field.titleCasedName());
+		out.write("() {\n");
+		if (generateCheck) {
+			out.write("\t\tassertChildType(");
+			out.write(field.getName());
+			out.write(", \"");
+			out.write(field.getName());
+			out.write("\", ");
+			out.write("" + field.isMandatory());
+			out.write(", ");
+			out.write(field.getType());
+			out.write(".class);\n");
+		}
+		out.write("\t\treturn ");
+		if (generateCheck) {
+			out.write("(");
+			out.write(field.getType());
+			out.write(") ");
+		}
+		out.write("this.");
+		out.write(field.getName());
+		out.write(";\n\t}\n\t\n");
+	}
+	
+	private void generateRawGetter(Writer out, FieldData field) throws IOException {
+		out.write("\tpublic lombok.ast.Node getRaw");
+		out.write(field.titleCasedName());
+		out.write("() {\n\t\treturn this.");
+		out.write(field.getName());
+		out.write(";\n\t}\n\t\n");
+	}
+	
+	private void generateRawSetter(Writer out, String className, FieldData field) throws IOException {
+		out.write("\tpublic ");
+		out.write(className);
+		out.write(" setRaw");
+		out.write(field.titleCasedName());
+		out.write("(lombok.ast.Node ");
+		out.write(field.getName());
+		out.write(") {\n");
+		out.write("\t\tthis.");
+		out.write(field.getName());
+		out.write(" = ");
+		out.write(field.getName());
+		out.write(";\n\t\treturn this;\n\t}\n\t\n");
+	}
+	
+	private void generateFairWeatherSetter(Writer out, String className, FieldData field) throws IOException {
+		out.write("\tpublic ");
+		out.write(className);
+		out.write(" set");
+		out.write(field.titleCasedName());
+		out.write("(");
+		out.write(field.getType());
+		out.write(" ");
+		out.write(field.getName());
+		out.write(") {\n");
+		if (field.isMandatory()) {
+			out.write("\t\tif (");
+			out.write(field.getName());
+			out.write(" == null) throw new java.lang.NullPointerException(\"");
+			out.write(field.getName());
+			out.write(" is mandatory\");\n");
+		}
+		out.write("\t\tthis.");
+		out.write(field.getName());
+		out.write(" = ");
+		out.write(field.getName());
+		out.write(";\n\t\treturn this;\n\t}\n\t\n");
+	}
+	
+	private void generateFieldsForBasic(Writer out, FieldData field) throws IOException {
+		out.write("\tprivate ");
+		out.write(field.getType());
+		out.write(" ");
+		out.write(field.getName());
+		out.write(";\n");
+	}
+	
 	private void generateListAccessor(Writer out, String methodName, String className, FieldData field) throws IOException {
 		out.write("\tpublic lombok.ast.ListAccessor<");
 		out.write(field.getType());
@@ -401,5 +367,47 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
 		out.write("Accessor;\n\t}\n");
+	}
+	
+	private void generateFieldsForNode(Writer out, FieldData field) throws IOException {
+		out.write("\tprivate lombok.ast.Node ");
+		out.write(field.getName());
+		out.write(";\n");
+	}
+	
+	private void generateCheckForList(Writer out, FieldData field) throws IOException {
+		out.write("\t\tfor (int i = 0; i < this.");
+		out.write(field.getName());
+		out.write(".size(); i++) {\n");
+		out.write("\t\t\tcheckChildValidity(problems, this.");
+		out.write(field.getName());
+		out.write(".get(i), \"");
+		out.write(field.getName());
+		out.write("[\" + i + \"]\", true, ");
+		out.write(field.getType());
+		out.write(".class);\n");
+		out.write("\t\t}\n");
+	}
+	
+	private void generateCheckForBasicField(Writer out, FieldData field) throws IOException {
+		if (field.isMandatory()) {
+			out.write("\t\tif (this.");
+			out.write(field.getName());
+			out.write(" == null) problems.add(new lombok.ast.SyntaxProblem(this, \"");
+			out.write(field.getName());
+			out.write(" is mandatory\"));\n");
+		}
+	}
+	
+	private void generateCheckForNodeField(Writer out, FieldData field) throws IOException {
+		out.write("\t\tcheckChildValidity(problems, this.");
+		out.write(field.getName());
+		out.write(", \"");
+		out.write(field.getName());
+		out.write("\", ");
+		out.write("" + field.isMandatory());
+		out.write(", ");
+		out.write(field.getType());
+		out.write(".class);\n");
 	}
 }
