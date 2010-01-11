@@ -24,7 +24,9 @@ package lombok.ast;
 import java.util.List;
 
 import lombok.NonNull;
+import lombok.ast.template.AdditionalCheck;
 import lombok.ast.template.GenerateAstNode;
+import lombok.ast.template.NotChildOfNode;
 
 @GenerateAstNode(extending=Statement.class)
 class AssertTemplate {
@@ -91,12 +93,12 @@ class TryTemplate {
 	List<Catch> catches;
 	Block finally_;
 	
-	//TODO actually call this thing!
-//	static void additionalSyntacticChecks(List<SyntaxProblem> problems, Try node) {
-//		if (node.catches().size() == 0 && node.getRawFinally() == null) {
-//			problems.add(new SyntaxProblem(node, "try statement with no catches and no finally"));
-//		}
-//	}
+	@AdditionalCheck
+	static void checkNotLoneTry(List<SyntaxProblem> problems, Try node) {
+		if (node.catches().size() == 0 && node.getRawFinally() == null) {
+			problems.add(new SyntaxProblem(node, "try statement with no catches and no finally"));
+		}
+	}
 }
 
 @GenerateAstNode(extending=Statement.class)
@@ -121,6 +123,49 @@ class InlineIfExpressionTemplate {
 @GenerateAstNode(extending=Expression.class)
 class IncrementExpressionTemplate {
 	@NonNull Expression operand;
-	boolean decrement = false;
-	boolean prefix = false;
+	@NotChildOfNode boolean decrement = false;
+	@NotChildOfNode boolean prefix = false;
+}
+
+@GenerateAstNode
+class IdentifierTemplate {
+	@NotChildOfNode
+	@NonNull String name;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class BinaryExpressionTemplate {
+	@NonNull Expression left;
+	@NonNull Expression right;
+	@NotChildOfNode(rawFormParser="parseOperator", rawFormGenerator="generateOperator")
+	@NonNull BinaryOperator operator;
+	
+	static String generateOperator(BinaryOperator op) {
+		return op.getSymbol();
+	}
+	
+	static BinaryOperator parseOperator(String op) {
+		if (op == null) throw new IllegalArgumentException("missing operator");
+		BinaryOperator result = BinaryOperator.fromSymbol(op.trim());
+		if (result != null) throw new IllegalArgumentException("unknown binary operator: " + op.trim());
+		return result;
+	}
+}
+
+@GenerateAstNode(extending=Expression.class)
+class UnaryExpressionTemplate {
+	@NonNull Expression operand;
+	@NotChildOfNode(rawFormParser="parseOperator", rawFormGenerator="generateOperator")
+	@NonNull UnaryOperator operator;
+	
+	static String generateOperator(UnaryOperator op) {
+		return op.getSymbol();
+	}
+	
+	static UnaryOperator parseOperator(String op) {
+		if (op == null) throw new IllegalArgumentException("missing operator");
+		UnaryOperator result = UnaryOperator.fromSymbol(op.trim());
+		if (result != null) throw new IllegalArgumentException("unknown unary operator: " + op.trim());
+		return result;
+	}
 }
