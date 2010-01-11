@@ -25,6 +25,7 @@ import java.util.List;
 
 import lombok.NonNull;
 import lombok.ast.template.AdditionalCheck;
+import lombok.ast.template.CopyMethod;
 import lombok.ast.template.GenerateAstNode;
 import lombok.ast.template.NotChildOfNode;
 
@@ -167,5 +168,71 @@ class UnaryExpressionTemplate {
 		UnaryOperator result = UnaryOperator.fromSymbol(op.trim());
 		if (result != null) throw new IllegalArgumentException("unknown unary operator: " + op.trim());
 		return result;
+	}
+}
+
+@GenerateAstNode
+class TypeTemplate {
+	@NotChildOfNode(initialValue = "lombok.astWildcardKind.NONE")
+	@NonNull WildcardKind wildcard;
+	
+	List<TypePart> parts;
+	
+	@CopyMethod
+	static String getTypeName(Type t) {
+		StringBuilder out = new StringBuilder();
+		for (TypePart p : t.parts().getContents()) {
+			if (out.length() > 0) out.append(".");
+			out.append(p.getTypeName());
+		}
+		
+		return out.toString();
+	}
+	
+	@CopyMethod
+	static boolean hasGenerics(Type t) {
+		return getGenerics(t).isEmpty();
+	}
+	
+	@CopyMethod
+	static ListAccessor<Type, Type> getGenerics(Type t) {
+		return t.parts().last().generics().wrap(t);
+	}
+}
+
+@GenerateAstNode
+class TypePartTemplate {
+	@NonNull Identifier identifier;
+	List<Type> generics;
+	
+	@CopyMethod
+	static String getTypeName(TypePart p) {
+		if (p.generics().isEmpty()) return p.getIdentifier().getName();
+		
+		StringBuilder out = new StringBuilder();
+		out.append(p.getIdentifier().getName()).append("<");
+		boolean first = true;
+		for (Type t : p.generics().getContents()) {
+			if (!first) out.append(", ");
+			first = false;
+			switch (t.getWildcard()) {
+			case EXTENDS:
+				out.append("? extends ");
+				out.append(t.getTypeName());
+				break;
+			case SUPER:
+				out.append("? super ");
+				out.append(t.getTypeName());
+				break;
+			default:
+			case NONE:
+				out.append(t.getTypeName());
+				break;
+			case UNBOUND:
+				out.append("?");
+				break;
+			}
+		}
+		return out.append(">").toString();
 	}
 }

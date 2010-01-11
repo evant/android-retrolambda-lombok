@@ -27,19 +27,25 @@ import java.util.NoSuchElementException;
 
 public class ListAccessor<T extends Node, P extends Node> {
 	private final List<Node> list;
-	private final P parent;
+	private final Node parent;
 	private final Class<T> tClass;
 	private final String listName;
+	private final P returnAsParent;
 	
-	private ListAccessor(List<Node> list, P parent, Class<T> tClass, String listName) {
+	private ListAccessor(List<Node> list, Node parent, Class<T> tClass, String listName, P returnAsParent) {
 		this.list = list;
 		this.parent = parent;
 		this.tClass = tClass;
 		this.listName = listName;
+		this.returnAsParent = returnAsParent;
 	}
 	
 	static <T extends Node, P extends Node> ListAccessor<T, P> of(List<Node> list, P parent, Class<T> tClass, String listName) {
-		return new ListAccessor<T, P>(list, parent, tClass, listName);
+		return new ListAccessor<T, P>(list, parent, tClass, listName, parent);
+	}
+	
+	<Q extends Node> ListAccessor<T, Q> wrap(Q returnThisAsParent) {
+		return new ListAccessor<T, Q>(list, parent, tClass, listName, returnThisAsParent);
 	}
 	
 	public void clear() {
@@ -54,7 +60,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 		if (node == null) throw new NullPointerException("node");
 		parent.adopt(node);
 		list.add(0, node);
-		return parent;
+		return returnAsParent;
 	}
 	
 	public P addToEnd(T node) {
@@ -65,7 +71,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 		if (node == null) throw new NullPointerException("node");
 		parent.adopt(node);
 		list.add(node);
-		return parent;
+		return returnAsParent;
 	}
 	
 	public P addBefore(T node, Node ref) {
@@ -80,7 +86,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 			if (list.get(i) == ref) {
 				parent.adopt(node);
 				list.add(i, node);
-				return parent;
+				return returnAsParent;
 			}
 		}
 		
@@ -99,7 +105,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 			if (list.get(i) == ref) {
 				parent.adopt(node);
 				list.add(i+1, node);
-				return parent;
+				return returnAsParent;
 			}
 		}
 		
@@ -124,7 +130,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 					throw e;
 				}
 				list.set(i, replacement);
-				return parent;
+				return returnAsParent;
 			}
 		}
 		
@@ -138,7 +144,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 			if (list.get(i) == source) {
 				parent.disown(source);
 				list.remove(i);
-				return parent;
+				return returnAsParent;
 			}
 		}
 		
@@ -156,6 +162,42 @@ public class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		return out;
+	}
+	
+	public Node rawFirst() {
+		try {
+			return list.get(0);
+		} catch (IndexOutOfBoundsException e) {
+			throw new NoSuchElementException();
+		}
+	}
+	
+	public T first() {
+		Node r = rawFirst();
+		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
+				"first element of %w isn't of the appropriate type(%s): %s",
+				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
+		return tClass.cast(r);
+	}
+	
+	public Node rawLast() {
+		try {
+			return list.get(list.size()-1);
+		} catch (IndexOutOfBoundsException e) {
+			throw new NoSuchElementException();
+		}
+	}
+	
+	public T last() {
+		Node r = rawLast();
+		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
+				"last element of %w isn't of the appropriate type(%s): %s",
+				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
+		return tClass.cast(r);
+	}
+	
+	public boolean isEmpty() {
+		return list.isEmpty();
 	}
 	
 	public Iterable<Node> getRawContents() {
