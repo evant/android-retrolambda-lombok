@@ -541,7 +541,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.getType());
 		out.write(" ");
 		out.write(field.getName());
-		if (field.getInitialValue() != null) {
+		if (!field.getInitialValue().isEmpty()) {
 			out.write(" = ");
 			out.write(field.getInitialValue());
 		}
