@@ -39,13 +39,13 @@ import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
 public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
-	private final BasicsParser basics = Parboiled.createParser(BasicsParser.class);
-	private final LiteralsParser literals = Parboiled.createParser(LiteralsParser.class);
-	private final TypesParser types = Parboiled.createParser(TypesParser.class);
+	private final ParserGroup group;
 	
-	public OperatorsParser() {
+	public OperatorsParser(ParserGroup group) {
 		super(Parboiled.createActions(OperatorsActions.class));
+		this.group = group;
 	}
+	
 	
 	/*
 	 * level 0: paren grouping, primitive
@@ -62,13 +62,13 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	@PrecedencePlayer(0)
 	public Rule primaryExpression() {
 		return firstOf(
-				literals.anyLiteral(),
+				group.literals.anyLiteral(),
 				identifierExpression());
 	}
 	
 	private Rule identifierExpression() {
 		return sequence(
-				basics.identifier(),
+				group.basics.identifier(),
 				SET(actions.createIdentifierExpression(LAST_VALUE())));
 	}
 	
@@ -89,7 +89,27 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 				multiplicativeOperation(),
 				level2Operation(),
 				postfixIncrementOperation(),
+				dotNewOperation(),
 				primaryExpression());
+	}
+	
+	@PrecedencePlayer(101)
+	public Rule dotNewOperation() {
+		return enforcedSequence(
+				sequence(
+						higher("dotNewOperation"),
+						ch('.'),
+						group.basics.optWS(),
+						string("new"),
+						group.basics.testLexBreak(),
+						group.basics.optWS()),
+				group.types.typeArguments(),
+				group.basics.identifier(),
+				group.types.typeArguments(),
+				group.basics.optWS(),
+				group.structures.methodArguments(),
+				group.basics.optWS(),
+				optional(group.structures.classBody()));
 	}
 	
 	//Technically, postfix increment operations are in group 2 along with all the unary operators like ~ and !, as well as typecasts, and targeted new expressions.
@@ -97,11 +117,12 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	@PrecedencePlayer(190)
 	public Rule postfixIncrementOperation() {
 		return sequence(
-				higher("postfixIncrementOperation").label("operand"),
-				basics.optWS(),
+				higher("postfixIncrementOperation"),
+				SET(),
+				group.basics.optWS(),
 				zeroOrMore(sequence(
-						firstOf(string("++"), string("--")).label("postfixOperator"), basics.optWS())),
-				SET(actions.createPostfixOperation(VALUE("operand"), TEXTS("zeroOrMore/sequence/postfixOperator"))));
+						firstOf(string("++"), string("--")).label("postfixOperator"), group.basics.optWS())),
+				SET(actions.createPostfixOperation(VALUE(), TEXTS("zeroOrMore/sequence/postfixOperator"))));
 	}
 	
 	@PrecedencePlayer(200)
@@ -114,8 +135,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	private Rule castExpression() {
 		return sequence(
 				ch('('),
-				basics.optWS(),
-				types.type(),
+				group.basics.optWS(),
+				group.types.type(),
 				ch(')'),
 				firstOf(level2Operation(), higher("level2Operation")).label("operand"),
 				SET(actions.createTypeCastExpression(VALUE("type"), VALUE("operand"))));
@@ -124,9 +145,9 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	private Rule numericUnaryOperation() {
 		return sequence(
 				firstOf(string("++"), string("--"), ch('!'), ch('~'), solitarySymbol('+'), solitarySymbol('-')).label("operator"),
-				basics.optWS(),
+				group.basics.optWS(),
 				firstOf(level2Operation(), higher("level2Operation")).label("operand"),
-				basics.optWS(),
+				group.basics.optWS(),
 				SET(actions.createUnaryOperation(TEXT("operator"), VALUE("operand"))));
 	}
 	
@@ -159,7 +180,7 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 */
 	@PrecedencePlayer(600)
 	public Rule relationalOperation() {
-		return forBinaryOperation(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>'), sequence(string("instanceof"), basics.testLexBreak())), true);
+		return forBinaryOperation(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>'), sequence(string("instanceof"), group.basics.testLexBreak())), true);
 	}
 	
 	/**
@@ -221,22 +242,23 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	@PrecedencePlayer(1300)
 	public Rule inlineIfOperation() {
 		return sequence(
-				higher("inlineIfOperation").label("head"),
-				basics.optWS(),
+				higher("inlineIfOperation"),
+				SET(),
+				group.basics.optWS(),
 				oneOrMore(
 						sequence(
 								sequence(ch('?'), testNot(firstOf(ch('.'), ch(':'), ch('?')))).label("operator1"),
-								basics.optWS(),
+								group.basics.optWS(),
 								higher("inlineIfOperation").label("tail1"),
-								basics.optWS(),
+								group.basics.optWS(),
 								ch(':').label("operator2"),
-								basics.optWS(),
+								group.basics.optWS(),
 								higher("inlineIfOperation").label("tail2")
 								)),
-				SET(actions.createInlineIfOperation(VALUE("head"),
+				SET(actions.createInlineIfOperation(VALUE(),
 						TEXTS("oneOrMore/sequence/operator1"), TEXTS("oneOrMore/sequence/operator2"),
 						VALUES("oneOrMore/sequence/tail1"), VALUES("oneOrMore/sequence/tail2"))),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	/**
@@ -281,18 +303,18 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 		
 		return sequence(
 				higher(methodName).label("head"),
-				basics.optWS(),
+				group.basics.optWS(),
 				oneOrMore(
 						sequence(
 								operator.label("operator"),
-								basics.optWS(),
+								group.basics.optWS(),
 								higher(methodName).label("tail"),
-								basics.optWS())),
+								group.basics.optWS())),
 				SET(leftAssociative ?
 						actions.createLeftAssociativeBinaryOperation(VALUE("head"), TEXTS("oneOrMore/sequence/operator"), VALUES("oneOrMore/sequence/tail")) :
 						actions.createRightAssociativeBinaryOperation(VALUE("head"), TEXTS("oneOrMore/sequence/operator"), VALUES("oneOrMore/sequence/tail"))
 						),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	private Rule higher(String methodName) {

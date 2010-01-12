@@ -23,14 +23,17 @@ package lombok.ast.grammar;
 
 import lombok.ast.Node;
 
+import org.parboiled.Actions;
 import org.parboiled.BaseParser;
-import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
-public class JavaParser extends BaseParser<Node, JavaActions> {
-	private BasicsParser basics = Parboiled.createParser(BasicsParser.class);
-	private TypesParser types = Parboiled.createParser(TypesParser.class);
-	private OperatorsParser operators = Parboiled.createParser(OperatorsParser.class);
+public class JavaParser extends BaseParser<Node, Actions<Node>> {
+	private final ParserGroup group;
+	
+	public JavaParser(ParserGroup group) {
+		this.group = group;
+		
+	}
 	
 	public Rule compilationUnit() {
 		return enforcedSequence(
@@ -44,61 +47,61 @@ public class JavaParser extends BaseParser<Node, JavaActions> {
 	public Rule testRules() {
 		return sequence(
 				zeroOrMore(firstOf(
-						operators.anyExpression(),
-						sequence(types.type(), basics.optWS(), ch('.'), basics.optWS(), string("class")))),
+						group.operators.anyExpression(),
+						sequence(group.types.type(), group.basics.optWS(), ch('.'), group.basics.optWS(), string("class")))),
 				eoi());
 	}
 	
 	@Override protected Rule fromCharLiteral(char c) {
-		return enforcedSequence(ch(c), basics.optWS());
+		return enforcedSequence(ch(c), group.basics.optWS());
 	}
 	
 	@Override protected Rule fromStringLiteral(String string) {
-		return enforcedSequence(string(string), basics.optWS());
+		return enforcedSequence(string(string), group.basics.optWS());
 	}
 	
 	public Rule typeDeclaration() {
-		return sequence(zeroOrMore(typeModifier()), string("class"), basics.mandatoryWS(), basics.identifier(), '{', '}');
+		return sequence(zeroOrMore(typeModifier()), string("class"), group.basics.mandatoryWS(), group.basics.identifier(), '{', '}');
 	}
 	
 	public Rule typeModifier() {
-		return enforcedSequence(firstOf(string("public"), string("protected"), string("private"), string("static"), string("abstract"), string("strictfp")), basics.mandatoryWS());
+		return enforcedSequence(firstOf(string("public"), string("protected"), string("private"), string("static"), string("abstract"), string("strictfp")), group.basics.mandatoryWS());
 	}
 	
 	public Rule importDeclaration() {
 		return enforcedSequence(
 				sequence(
 					string("import"),
-					basics.testLexBreak(),
-					basics.optWS()),
+					group.basics.testLexBreak(),
+					group.basics.optWS()),
 				optional(sequence(
 						string("static"),
-						basics.testLexBreak(),
-						basics.optWS())).label("static"),
+						group.basics.testLexBreak(),
+						group.basics.optWS())).label("static"),
 				sequenceOfIdentifiers(),
 				optional(sequence(
-						ch('.'), basics.optWS(), ch('*'), basics.optWS())).label("starImport"),
+						ch('.'), group.basics.optWS(), ch('*'), group.basics.optWS())).label("starImport"),
 				ch(';'),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	private Rule sequenceOfIdentifiers() {
 		return sequence(
-				basics.identifier(),
+				group.basics.identifier(),
 				zeroOrMore(sequence(
 						ch('.'),
-						basics.optWS(),
-						basics.identifier())));
+						group.basics.optWS(),
+						group.basics.identifier())));
 	}
 	
 	public Rule packageDeclaration() {
 		return enforcedSequence(
 				sequence(
 						string("package"),
-						basics.testLexBreak(),
-						basics.optWS()),
+						group.basics.testLexBreak(),
+						group.basics.optWS()),
 				sequenceOfIdentifiers(),
 				ch(';'),
-				basics.optWS());
+				group.basics.optWS());
 	}
 }

@@ -178,9 +178,17 @@ public abstract class Node {
 		} else if (this instanceof InlineIfExpression) {
 			return String.format("(%s?%s:%s)", ((InlineIfExpression)this).getRawCondition(), ((InlineIfExpression)this).getRawIfTrue(), ((InlineIfExpression)this).getRawIfFalse());
 		} else if (this instanceof Type) {
-			return ((Type)this).getTypeName();
+			try {
+				return ((Type)this).getTypeName();
+			} catch (AstException e) {
+				return "<Broken type>";
+			}
 		} else if (this instanceof TypePart) {
-			return ((TypePart)this).getTypeName();
+			try {
+				return ((TypePart)this).getTypeName();
+			} catch (AstException e) {
+				return "<Broken typePart>";
+			}
 		} else if (this instanceof Identifier) {
 			return ((Identifier)this).getName();
 		} else if (this instanceof Cast) {

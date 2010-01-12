@@ -172,8 +172,14 @@ class UnaryExpressionTemplate {
 }
 
 @GenerateAstNode
+class TypeVariableTemplate {
+	@NonNull Identifier name;
+	List<Type> extending;
+}
+
+@GenerateAstNode
 class TypeTemplate {
-	@NotChildOfNode(initialValue = "lombok.astWildcardKind.NONE")
+	@NotChildOfNode(initialValue = "lombok.ast.WildcardKind.NONE")
 	@NonNull WildcardKind wildcard;
 	@NotChildOfNode
 	int arrayDimensions;

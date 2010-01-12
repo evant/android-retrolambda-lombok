@@ -27,6 +27,7 @@ import lombok.ast.Identifier;
 import lombok.ast.Node;
 import lombok.ast.Type;
 import lombok.ast.TypePart;
+import lombok.ast.TypeVariable;
 import lombok.ast.WildcardKind;
 
 import org.parboiled.BaseActions;
@@ -86,5 +87,20 @@ public class TypesActions extends BaseActions<Node> {
 		}
 		
 		return value;
+	}
+	
+	public Node createTypeVariable(Node name, Node head, List<Node> tail) {
+		TypeVariable tv = new TypeVariable().setRawName(name);
+		
+		if (head != null) tv.extending().addToEndRaw(head);
+		if (tail != null) for (Node t : tail) if (t != null) tv.extending().addToEndRaw(t);
+		return tv;
+	}
+	
+	public Node createTypeVariables(Node head, List<Node> tail) {
+		OrphanedTypeVariables otv = new OrphanedTypeVariables();
+		if (head != null) otv.variables.add(head);
+		if (tail != null) for (Node t : tail) otv.variables.add(t);
+		return otv;
 	}
 }

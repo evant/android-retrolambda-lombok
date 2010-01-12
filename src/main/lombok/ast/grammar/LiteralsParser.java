@@ -28,10 +28,11 @@ import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
 public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
-	private BasicsParser basics = Parboiled.createParser(BasicsParser.class);
+	private final ParserGroup group;
 	
-	public LiteralsParser() {
+	public LiteralsParser(ParserGroup group) {
 		super(Parboiled.createActions(LiteralsActions.class));
+		this.group = group;
 	}
 	
 	public Rule anyLiteral() {
@@ -50,17 +51,17 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 		return enforcedSequence(
 			sequence(
 					string("null"),
-					basics.testLexBreak()),
+					group.basics.testLexBreak()),
 			SET(actions.createNullLiteral(LAST_TEXT())),
-			basics.optWS());
+			group.basics.optWS());
 	}
 	
 	public Rule thisLiteral() {
 		return enforcedSequence(
 				sequence(
-						string("this"), basics.testLexBreak(), basics.optWS(), testNot(ch('('))),
+						string("this"), group.basics.testLexBreak(), group.basics.optWS(), testNot(ch('('))),
 				SET(actions.createThisLiteral(LAST_TEXT())),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	/**
@@ -72,13 +73,13 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 						ch('"'),
 						zeroOrMore(
 								sequence(
-										testNot(firstOf(ch('"'), basics.lineTerminator())),
+										testNot(firstOf(ch('"'), group.basics.lineTerminator())),
 										firstOf(
 												escapedSequence(),
 												any()))),
 						ch('"')),
 				SET(actions.createStringLiteral(LAST_TEXT())),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	/**
@@ -92,11 +93,11 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 								enforcedSequence(escapedSequence(), ch('\'')),
 								sequence(
 										zeroOrMore(sequence(testNot(
-												firstOf(ch('\''), basics.lineTerminator())), any())),
+												firstOf(ch('\''), group.basics.lineTerminator())), any())),
 										ch('\'')),
 								any())),
 				SET(actions.createCharLiteral(LAST_TEXT())),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	/**
@@ -124,9 +125,9 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 		return enforcedSequence(
 				sequence(
 						firstOf(string("true"), string("false")),
-						basics.testLexBreak()),
+						group.basics.testLexBreak()),
 				SET(actions.createBooleanLiteral(LAST_TEXT())),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	/**
@@ -138,7 +139,7 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 				test(sequence(optional(ch('.')), charRange('0', '9'))),
 				firstOf(hexLiteral(), fpLiteral()),
 				SET(LAST_VALUE()),
-				basics.optWS());
+				group.basics.optWS());
 	}
 	
 	/**

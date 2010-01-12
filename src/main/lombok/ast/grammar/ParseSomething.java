@@ -29,7 +29,6 @@ import java.util.Scanner;
 
 import lombok.ast.Node;
 
-import org.parboiled.Parboiled;
 import org.parboiled.common.Function;
 import org.parboiled.common.StringUtils;
 import org.parboiled.support.ParseTreeUtils;
@@ -43,7 +42,7 @@ public class ParseSomething {
 			src = readFile(args);
 		}
 		
-		JavaParser p = Parboiled.createParser(JavaParser.class);
+		ParserGroup group = new ParserGroup();
 		
 		if (src == null) {
 			Scanner s = new Scanner(System.in);
@@ -51,10 +50,10 @@ public class ParseSomething {
 			while (true) {
 				String line = s.nextLine();
 				if (line.isEmpty()) return;
-				parse(p, line);
+				parse(group.java, line);
 			}
 		} else {
-			parse(p, src);
+			parse(group.java, src);
 		}
 	}
 	

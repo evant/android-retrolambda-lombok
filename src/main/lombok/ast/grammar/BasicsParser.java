@@ -40,8 +40,12 @@ import org.parboiled.support.Characters;
  * Contains the basics of java parsing: Whitespace and comment handling, as well as applying backslash-u escapes.
  */
 public class BasicsParser extends BaseParser<Node, BasicsActions> {
-	public BasicsParser() {
+	@SuppressWarnings("unused")
+	private final ParserGroup group;
+	
+	public BasicsParser(ParserGroup group) {
 		super(Parboiled.createActions(BasicsActions.class));
+		this.group = group;
 	}
 	/**
 	 * Eats up any whitespace and comments at the current position.
@@ -65,7 +69,7 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 	public Rule identifier() {
 		return sequence(testNot(expressionSensitiveKeyword()), identifierStart(), zeroOrMore(identifierPart()),
 				SET(actions.createIdentifier(TEXT("identifierStart"), TEXTS("zeroOrMore/identifierPart"))),
-				optWS());
+				optWS()).label("identifier");
 	}
 	
 	private Rule expressionSensitiveKeyword() {
