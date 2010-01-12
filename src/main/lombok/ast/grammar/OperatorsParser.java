@@ -1,3 +1,24 @@
+/*
+ * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package lombok.ast.grammar;
 
 import java.lang.annotation.ElementType;
@@ -20,6 +41,7 @@ import org.parboiled.Rule;
 public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	private final BasicsParser basics = Parboiled.createParser(BasicsParser.class);
 	private final LiteralsParser literals = Parboiled.createParser(LiteralsParser.class);
+	private final TypesParser types = Parboiled.createParser(TypesParser.class);
 	
 	public OperatorsParser() {
 		super(Parboiled.createActions(OperatorsActions.class));
@@ -39,7 +61,15 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	
 	@PrecedencePlayer(0)
 	public Rule primaryExpression() {
-		return literals.anyLiteral();
+		return firstOf(
+				literals.anyLiteral(),
+				identifierExpression());
+	}
+	
+	private Rule identifierExpression() {
+		return sequence(
+				basics.identifier(),
+				SET(actions.createIdentifierExpression(LAST_VALUE())));
 	}
 	
 	public Rule anyExpression() {
@@ -58,34 +88,46 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 				additiveOperation(),
 				multiplicativeOperation(),
 				level2Operation(),
+				postfixIncrementOperation(),
 				primaryExpression());
+	}
+	
+	//Technically, postfix increment operations are in group 2 along with all the unary operators like ~ and !, as well as typecasts, and targeted new expressions.
+	//However, because ALL of the group 2 operations are right-associative, the postfix operators can be considered as a higher level of precedence.
+	@PrecedencePlayer(190)
+	public Rule postfixIncrementOperation() {
+		return sequence(
+				higher("postfixIncrementOperation").label("operand"),
+				basics.optWS(),
+				zeroOrMore(sequence(
+						firstOf(string("++"), string("--")).label("postfixOperator"), basics.optWS())),
+				SET(actions.createPostfixOperation(VALUE("operand"), TEXTS("zeroOrMore/sequence/postfixOperator"))));
 	}
 	
 	@PrecedencePlayer(200)
 	public Rule level2Operation() {
-		return firstOf(unaryOperation(), postfixIncrementOperation());
+		return firstOf(
+				numericUnaryOperation(),
+				castExpression());
 	}
 	
-	private Rule unaryOperation() {
+	private Rule castExpression() {
+		return sequence(
+				ch('('),
+				basics.optWS(),
+				types.type(),
+				ch(')'),
+				firstOf(level2Operation(), higher("level2Operation")).label("operand"),
+				SET(actions.createTypeCastExpression(VALUE("type"), VALUE("operand"))));
+	}
+	
+	private Rule numericUnaryOperation() {
 		return sequence(
 				firstOf(string("++"), string("--"), ch('!'), ch('~'), solitarySymbol('+'), solitarySymbol('-')).label("operator"),
 				basics.optWS(),
 				firstOf(level2Operation(), higher("level2Operation")).label("operand"),
 				basics.optWS(),
-				zeroOrMore(sequence(
-						firstOf(string("++"), string("--")).label("postfixOperators"),
-						basics.optWS())),
-				SET(actions.createUnaryOperation(TEXT("operator"), VALUE("operand"), TEXTS("zeroOrMore/sequence/postfixOperators"))));
-	}
-	
-	private Rule postfixIncrementOperation() {
-		return sequence(
-				higher("level2Operation").label("operand"),
-				basics.optWS(),
-				oneOrMore(sequence(
-						firstOf(string("++"), string("--")).label("postfixOperators"),
-						basics.optWS())),
-				SET(actions.createPostfixOperation(VALUE("operand"), TEXTS("oneOrMore/sequence/postfixOperators"))));
+				SET(actions.createUnaryOperation(TEXT("operator"), VALUE("operand"))));
 	}
 	
 	/**

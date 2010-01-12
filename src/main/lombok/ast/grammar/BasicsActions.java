@@ -19,8 +19,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package lombok.ast;
+package lombok.ast.grammar;
 
-public enum WildcardKind {
-	NONE, EXTENDS, SUPER, UNBOUND;
+import java.util.List;
+
+import lombok.ast.Identifier;
+import lombok.ast.Node;
+
+import org.parboiled.BaseActions;
+
+public class BasicsActions extends BaseActions<Node> {
+	public Node createIdentifier(String text, List<String> texts) {
+		StringBuilder s = new StringBuilder(1 + (texts == null ? 0 : texts.size()));
+		if (text != null) s.append(text);
+		if (texts != null) for (String p : texts) {
+			if (p != null) s.append(p);
+		}
+		
+		return new Identifier().setName(s.toString());
+	}
 }

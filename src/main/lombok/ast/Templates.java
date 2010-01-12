@@ -148,7 +148,7 @@ class BinaryExpressionTemplate {
 	static BinaryOperator parseOperator(String op) {
 		if (op == null) throw new IllegalArgumentException("missing operator");
 		BinaryOperator result = BinaryOperator.fromSymbol(op.trim());
-		if (result != null) throw new IllegalArgumentException("unknown binary operator: " + op.trim());
+		if (result == null) throw new IllegalArgumentException("unknown binary operator: " + op.trim());
 		return result;
 	}
 }
@@ -166,7 +166,7 @@ class UnaryExpressionTemplate {
 	static UnaryOperator parseOperator(String op) {
 		if (op == null) throw new IllegalArgumentException("missing operator");
 		UnaryOperator result = UnaryOperator.fromSymbol(op.trim());
-		if (result != null) throw new IllegalArgumentException("unknown unary operator: " + op.trim());
+		if (result == null) throw new IllegalArgumentException("unknown unary operator: " + op.trim());
 		return result;
 	}
 }
@@ -175,6 +175,8 @@ class UnaryExpressionTemplate {
 class TypeTemplate {
 	@NotChildOfNode(initialValue = "lombok.astWildcardKind.NONE")
 	@NonNull WildcardKind wildcard;
+	@NotChildOfNode
+	int arrayDimensions;
 	
 	List<TypePart> parts;
 	
@@ -185,6 +187,8 @@ class TypeTemplate {
 			if (out.length() > 0) out.append(".");
 			out.append(p.getTypeName());
 		}
+		
+		for (int i = 0; i < t.getArrayDimensions(); i++) out.append("[]");
 		
 		return out.toString();
 	}
@@ -235,4 +239,15 @@ class TypePartTemplate {
 		}
 		return out.append(">").toString();
 	}
+}
+
+@GenerateAstNode(extending=Expression.class)
+class CastTemplate {
+	@NonNull Type type;
+	@NonNull Expression operand;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class IdentifierExpressionTemplate {
+	@NonNull Identifier identifier;
 }

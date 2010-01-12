@@ -35,7 +35,13 @@ public class AstException extends RuntimeException {
 	@Override public String toString() {
 		if (problemNode == null && getMessage() == null) return "AstException (unknown cause)";
 		if (problemNode == null) return "AstException: " + getMessage();
-		if (getMessage() == null) return "AstException at " + problemNode;
-		return String.format("AstException: %s (at %s)", getMessage(), problemNode);
+		String nodeDescription = problemNode == null ? "(null)" : (problemNode.getClass().getName() + "(toString failed)");
+		try {
+			nodeDescription = problemNode.toString();
+		} catch (Throwable ignore) {
+			//throwing exceptions in toString() is bad.
+		}
+		if (getMessage() == null) return "AstException at " + nodeDescription;
+		return String.format("AstException: %s (at %s)", getMessage(), nodeDescription);
 	}
 }

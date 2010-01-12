@@ -1,9 +1,32 @@
+/*
+ * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package lombok.ast.grammar;
 
 import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.BinaryExpression;
+import lombok.ast.Cast;
+import lombok.ast.IdentifierExpression;
 import lombok.ast.IncrementExpression;
 import lombok.ast.InlineIfExpression;
 import lombok.ast.Node;
@@ -53,28 +76,33 @@ public class OperatorsActions extends BaseActions<Node> {
 		return currentNode;
 	}
 	
-	public Node createPostfixOperation(Node operand, List<String> postfixOperators) {
+	public Node createUnaryOperation(String operator, Node operand) {
 		Node current = operand;
-		
-		for (String postfix : postfixOperators) {
-			if (postfix != null && postfix.trim().equals("++")) current = new IncrementExpression().setRawOperand(current);
-			if (postfix != null && postfix.trim().equals("--")) current = new IncrementExpression().setRawOperand(current).setDecrement(true);
-		}
-		
-		return current;
-	}
-	
-	public Node createUnaryOperation(String operator, Node operand, List<String> postfixOperators) {
-		Node current = operand;
-		
-		for (String postfix : postfixOperators) {
-			if (postfix != null && postfix.trim().equals("++")) current = new IncrementExpression().setRawOperand(current);
-			if (postfix != null && postfix.trim().equals("--")) current = new IncrementExpression().setRawOperand(current).setDecrement(true);
-		}
 		
 		if (operator != null && operator.trim().equals("++")) return new IncrementExpression().setRawOperand(current).setPrefix(true);
 		if (operator != null && operator.trim().equals("--")) return new IncrementExpression().setRawOperand(current).setPrefix(true).setDecrement(true);
 		
 		return new UnaryExpression().setRawOperand(current).setRawOperator(operator);
+	}
+	
+	public Node createPostfixOperation(Node value, List<String> texts) {
+		if (texts == null) return value;
+		
+		Node current = value;
+		for (String op : texts) {
+			if (op == null) continue;
+			op = op.trim();
+			if (op.equals("++")) current = new IncrementExpression().setRawOperand(current);
+			else if (op.equals("--")) current = new IncrementExpression().setRawOperand(current).setDecrement(true);
+		}
+		return current;
+	}
+	
+	public Node createTypeCastExpression(Node type, Node operand) {
+		return new Cast().setRawOperand(operand).setRawType(type);
+	}
+	
+	public Node createIdentifierExpression(Node identifier) {
+		return new IdentifierExpression().setRawIdentifier(identifier);
 	}
 }

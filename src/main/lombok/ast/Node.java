@@ -177,6 +177,14 @@ public abstract class Node {
 			return "(" + ((IncrementExpression)this).getOperand() + (((IncrementExpression)this).isDecrement() ? "--" : "++") + ")";
 		} else if (this instanceof InlineIfExpression) {
 			return String.format("(%s?%s:%s)", ((InlineIfExpression)this).getRawCondition(), ((InlineIfExpression)this).getRawIfTrue(), ((InlineIfExpression)this).getRawIfFalse());
+		} else if (this instanceof Type) {
+			return ((Type)this).getTypeName();
+		} else if (this instanceof TypePart) {
+			return ((TypePart)this).getTypeName();
+		} else if (this instanceof Identifier) {
+			return ((Identifier)this).getName();
+		} else if (this instanceof Cast) {
+			return "(C:" + ((Cast)this).getType() + ")_" + ((Cast)this).getOperand() + "_";
 		} else {
 			return "NODE: " + this.getClass().getSimpleName();
 		}

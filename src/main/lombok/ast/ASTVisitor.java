@@ -48,4 +48,6 @@ public interface ASTVisitor {
 	public boolean visitInlineIfExpression(InlineIfExpression node);
 	public boolean visitIncrementExpression(IncrementExpression node);
 	public boolean visitTypePart(TypePart node);
+	public boolean visitCast(Cast node);
+	public boolean visitIdentifierExpression(IdentifierExpression node);
 }

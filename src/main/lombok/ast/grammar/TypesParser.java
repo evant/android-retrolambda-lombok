@@ -21,26 +21,28 @@
  */
 package lombok.ast.grammar;
 
-import org.parboiled.Actions;
+import lombok.ast.Node;
+
 import org.parboiled.BaseParser;
 import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
-public class TypesParser extends BaseParser<Object, Actions<Object>> {
+public class TypesParser extends BaseParser<Node, TypesActions> {
 	private final BasicsParser basics = Parboiled.createParser(BasicsParser.class);
+	
+	public TypesParser() {
+		super(Parboiled.createActions(TypesActions.class));
+	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2
 	 */
 	public Rule type() {
-		return firstOf(arrayType(), primitiveType(), referenceType());
-	}
-	
-	public Rule arrayType() {
 		return sequence(
 				firstOf(primitiveType(), referenceType()),
-				oneOrMore(
-						sequence(ch('['), basics.optWS(), ch(']'), basics.optWS())));
+				zeroOrMore(sequence(
+						ch('['), basics.optWS(), ch(']'), basics.optWS())),
+				SET(actions.addArrayDimensionsToType(VALUE("firstOf"), TEXTS("zeroOrMore/sequence")))).label("type");
 	}
 	
 	/**
@@ -56,8 +58,9 @@ public class TypesParser extends BaseParser<Object, Actions<Object>> {
 						sequence(string("float"), basics.testLexBreak()),
 						sequence(string("short"), basics.testLexBreak()),
 						sequence(string("char"), basics.testLexBreak()),
-						sequence(string("byte"), basics.testLexBreak())),
-						sequence(string("void"), basics.testLexBreak()),
+						sequence(string("byte"), basics.testLexBreak()),
+						sequence(string("void"), basics.testLexBreak())),
+				SET(actions.createPrimitiveType(TEXT("firstOf/sequence"))),
 				basics.optWS());
 	}
 	
@@ -66,11 +69,20 @@ public class TypesParser extends BaseParser<Object, Actions<Object>> {
 	 */
 	public Rule referenceType() {
 		return sequence(
-				basics.identifier(), optional(typeArguments()), basics.optWS(),
-				zeroOrMore(enforcedSequence(
+				referenceTypePart().label("head"),
+				zeroOrMore(sequence(
 						ch('.'),
 						basics.optWS(),
-						basics.identifier(), optional(typeArguments()), basics.optWS())));
+						referenceTypePart().label("tail"))),
+				SET(actions.createReferenceType(VALUE("head"), VALUES("zeroOrMore/sequence/tail"))));
+	}
+	
+	private Rule referenceTypePart() {
+		return sequence(
+				basics.identifier().label("partName"),
+				optional(typeArguments().label("partArgs")),
+				SET(actions.createTypePart(VALUE("partName"), VALUE("optional/partArgs"))),
+				basics.optWS());
 	}
 	
 	/**
@@ -81,24 +93,30 @@ public class TypesParser extends BaseParser<Object, Actions<Object>> {
 				ch('<'),
 				basics.optWS(),
 				optional(enforcedSequence(
-						genericsParam(),
+						genericsParam().label("head"),
 						zeroOrMore(enforcedSequence(
 								ch(','),
 								basics.optWS(),
-								genericsParam())))),
+								genericsParam().label("tail"))))),
 				ch('>'),
+				SET(actions.createTypeArguments(VALUE("optional/enforcedSequence/head"), VALUES("optional/enforcedSequence/zeroOrMore/enforcedSequence/tail"))),
 				basics.optWS()));
 	}
 	
 	public Rule genericsParam() {
-		return sequence(
-				firstOf(
-						enforcedSequence(
-								sequence(ch('?'), basics.optWS(), firstOf(string("extends"), string("super")), basics.mandatoryWS()),
-								type()),
-						sequence(ch('?'), basics.optWS(), test(firstOf(ch(','), ch('>')))),
-						type()
-						),
-				basics.optWS());
+		return firstOf(
+				type(),
+				sequence(
+						ch('?'),
+						basics.optWS(),
+						firstOf(string("extends"), string("super")),
+						basics.testLexBreak(),
+						basics.optWS(),
+						type(),
+						SET(actions.createWildcardedType(TEXT("firstOf"), VALUE("type")))),
+				sequence(
+						ch('?'),
+						SET(actions.createUnboundedWildcardType()),
+						basics.optWS()));
 	}
 }

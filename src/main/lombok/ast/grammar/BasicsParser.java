@@ -29,9 +29,9 @@ import java.io.Writer;
 
 import lombok.ast.Node;
 
-import org.parboiled.Actions;
 import org.parboiled.BaseParser;
 import org.parboiled.MatcherContext;
+import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 import org.parboiled.matchers.AbstractMatcher;
 import org.parboiled.support.Characters;
@@ -39,7 +39,10 @@ import org.parboiled.support.Characters;
 /**
  * Contains the basics of java parsing: Whitespace and comment handling, as well as applying backslash-u escapes.
  */
-public class BasicsParser extends BaseParser<Node, Actions<Node>> {
+public class BasicsParser extends BaseParser<Node, BasicsActions> {
+	public BasicsParser() {
+		super(Parboiled.createActions(BasicsActions.class));
+	}
 	/**
 	 * Eats up any whitespace and comments at the current position.
 	 */
@@ -59,12 +62,20 @@ public class BasicsParser extends BaseParser<Node, Actions<Node>> {
 		return testNot(identifierPart());
 	}
 	
-	public Rule fqn() {
-		return enforcedSequence(identifier(), optWS(), zeroOrMore(sequence(ch('.'), optWS(), identifier(), optWS())));
+	public Rule identifier() {
+		return sequence(testNot(expressionSensitiveKeyword()), identifierStart(), zeroOrMore(identifierPart()),
+				SET(actions.createIdentifier(TEXT("identifierStart"), TEXTS("zeroOrMore/identifierPart"))),
+				optWS());
 	}
 	
-	public Rule identifier() {
-		return sequence(identifierStart(), zeroOrMore(identifierPart()), optWS());
+	private Rule expressionSensitiveKeyword() {
+		return sequence(
+				firstOf(
+						string("class"),
+						string("new"),
+						string("instanceof")),
+				testLexBreak(),
+				optWS());
 	}
 	
 	public Rule identifierStart() {

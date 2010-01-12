@@ -66,14 +66,39 @@ public class JavaParser extends BaseParser<Node, JavaActions> {
 	}
 	
 	public Rule importDeclaration() {
-		return enforcedSequence(string("import"), basics.mandatoryWS(), basics.fqn(), ';');
+		return enforcedSequence(
+				sequence(
+					string("import"),
+					basics.testLexBreak(),
+					basics.optWS()),
+				optional(sequence(
+						string("static"),
+						basics.testLexBreak(),
+						basics.optWS())).label("static"),
+				sequenceOfIdentifiers(),
+				optional(sequence(
+						ch('.'), basics.optWS(), ch('*'), basics.optWS())).label("starImport"),
+				ch(';'),
+				basics.optWS());
+	}
+	
+	private Rule sequenceOfIdentifiers() {
+		return sequence(
+				basics.identifier(),
+				zeroOrMore(sequence(
+						ch('.'),
+						basics.optWS(),
+						basics.identifier())));
 	}
 	
 	public Rule packageDeclaration() {
-		return enforcedSequence(string("package"), basics.mandatoryWS(), basics.fqn(), ';');
-	}
-	
-	public Rule annotation() {
-		return enforcedSequence(ch('@'), basics.optWS(), basics.fqn());
+		return enforcedSequence(
+				sequence(
+						string("package"),
+						basics.testLexBreak(),
+						basics.optWS()),
+				sequenceOfIdentifiers(),
+				ch(';'),
+				basics.optWS());
 	}
 }
