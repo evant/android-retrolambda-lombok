@@ -177,15 +177,15 @@ public abstract class Node {
 			return "(" + ((IncrementExpression)this).getOperand() + (((IncrementExpression)this).isDecrement() ? "--" : "++") + ")";
 		} else if (this instanceof InlineIfExpression) {
 			return String.format("(%s?%s:%s)", ((InlineIfExpression)this).getRawCondition(), ((InlineIfExpression)this).getRawIfTrue(), ((InlineIfExpression)this).getRawIfFalse());
-		} else if (this instanceof Type) {
+		} else if (this instanceof TypeReference) {
 			try {
-				return ((Type)this).getTypeName();
+				return ((TypeReference)this).getTypeName();
 			} catch (AstException e) {
 				return "<Broken type>";
 			}
-		} else if (this instanceof TypePart) {
+		} else if (this instanceof TypeReferencePart) {
 			try {
-				return ((TypePart)this).getTypeName();
+				return ((TypeReferencePart)this).getTypeName();
 			} catch (AstException e) {
 				return "<Broken typePart>";
 			}

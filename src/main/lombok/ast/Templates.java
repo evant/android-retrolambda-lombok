@@ -104,7 +104,7 @@ class TryTemplate {
 
 @GenerateAstNode(extending=Statement.class)
 class VariableDeclarationTemplate {
-	@NonNull Type type;
+	@NonNull TypeReference type;
 	List<VariableDeclarationEntry> variables;
 }
 
@@ -174,22 +174,22 @@ class UnaryExpressionTemplate {
 @GenerateAstNode
 class TypeVariableTemplate {
 	@NonNull Identifier name;
-	List<Type> extending;
+	List<TypeReference> extending;
 }
 
 @GenerateAstNode
-class TypeTemplate {
+class TypeReferenceTemplate {
 	@NotChildOfNode(initialValue = "lombok.ast.WildcardKind.NONE")
 	@NonNull WildcardKind wildcard;
 	@NotChildOfNode
 	int arrayDimensions;
 	
-	List<TypePart> parts;
+	List<TypeReferencePart> parts;
 	
 	@CopyMethod
-	static String getTypeName(Type t) {
+	static String getTypeName(TypeReference t) {
 		StringBuilder out = new StringBuilder();
-		for (TypePart p : t.parts().getContents()) {
+		for (TypeReferencePart p : t.parts().getContents()) {
 			if (out.length() > 0) out.append(".");
 			out.append(p.getTypeName());
 		}
@@ -200,29 +200,29 @@ class TypeTemplate {
 	}
 	
 	@CopyMethod
-	static boolean hasGenerics(Type t) {
+	static boolean hasGenerics(TypeReference t) {
 		return getGenerics(t).isEmpty();
 	}
 	
 	@CopyMethod
-	static ListAccessor<Type, Type> getGenerics(Type t) {
+	static ListAccessor<TypeReference, TypeReference> getGenerics(TypeReference t) {
 		return t.parts().last().generics().wrap(t);
 	}
 }
 
 @GenerateAstNode
-class TypePartTemplate {
+class TypeReferencePartTemplate {
 	@NonNull Identifier identifier;
-	List<Type> generics;
+	List<TypeReference> generics;
 	
 	@CopyMethod
-	static String getTypeName(TypePart p) {
+	static String getTypeName(TypeReferencePart p) {
 		if (p.generics().isEmpty()) return p.getIdentifier().getName();
 		
 		StringBuilder out = new StringBuilder();
 		out.append(p.getIdentifier().getName()).append("<");
 		boolean first = true;
-		for (Type t : p.generics().getContents()) {
+		for (TypeReference t : p.generics().getContents()) {
 			if (!first) out.append(", ");
 			first = false;
 			switch (t.getWildcard()) {
@@ -249,7 +249,7 @@ class TypePartTemplate {
 
 @GenerateAstNode(extending=Expression.class)
 class CastTemplate {
-	@NonNull Type type;
+	@NonNull TypeReference type;
 	@NonNull Expression operand;
 }
 

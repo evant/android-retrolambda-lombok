@@ -25,8 +25,8 @@ import java.util.List;
 
 import lombok.ast.Identifier;
 import lombok.ast.Node;
-import lombok.ast.Type;
-import lombok.ast.TypePart;
+import lombok.ast.TypeReference;
+import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
 import lombok.ast.WildcardKind;
 
@@ -34,14 +34,14 @@ import org.parboiled.BaseActions;
 
 public class TypesActions extends BaseActions<Node> {
 	public Node createPrimitiveType(String text) {
-		return new Type().parts().addToStartRaw(new TypePart().setRawIdentifier(new Identifier().setName(text)));
+		return new TypeReference().parts().addToStartRaw(new TypeReferencePart().setRawIdentifier(new Identifier().setName(text)));
 	}
 	
 	public Node createTypePart(Node identifier, Node typePart) {
-		if (!(typePart instanceof TypePart)) return new TypePart().setRawIdentifier(identifier);
+		if (!(typePart instanceof TypeReferencePart)) return new TypeReferencePart().setRawIdentifier(identifier);
 		//todo add screwed up typePart as dangling tail to returned node.
 		
-		return ((TypePart)typePart).setRawIdentifier(identifier);
+		return ((TypeReferencePart)typePart).setRawIdentifier(identifier);
 	}
 	
 	public Node createWildcardedType(String extendsOrSuper, Node type) {
@@ -50,18 +50,18 @@ public class TypesActions extends BaseActions<Node> {
 		if ("extends".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.EXTENDS;
 		if ("super".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.SUPER;
 		
-		if (!(type instanceof Type)) return new Type().setWildcard(wildcard);
+		if (!(type instanceof TypeReference)) return new TypeReference().setWildcard(wildcard);
 		//todo add screwed up typePart as dangling tail to returned node.
 		
-		return ((Type)type).setWildcard(wildcard);
+		return ((TypeReference)type).setWildcard(wildcard);
 	}
 	
 	public Node createUnboundedWildcardType() {
-		return new Type().setWildcard(WildcardKind.UNBOUND);
+		return new TypeReference().setWildcard(WildcardKind.UNBOUND);
 	}
 	
 	public Node createTypeArguments(Node head, List<Node> tail) {
-		TypePart tp = new TypePart();
+		TypeReferencePart tp = new TypeReferencePart();
 		if (head != null) tp.generics().addToEndRaw(head);
 		if (tail != null) for (Node n : tail) {
 			if (n != null) tp.generics().addToEndRaw(n);
@@ -71,7 +71,7 @@ public class TypesActions extends BaseActions<Node> {
 	}
 	
 	public Node createReferenceType(Node head, List<Node> tail) {
-		Type t = new Type();
+		TypeReference t = new TypeReference();
 		if (head != null) t.parts().addToEndRaw(head);
 		if (tail != null) for (Node n : tail) {
 			if (n != null) t.parts().addToEndRaw(n);
@@ -81,9 +81,9 @@ public class TypesActions extends BaseActions<Node> {
 	}
 	
 	public Node addArrayDimensionsToType(Node value, List<String> bracketPairs) {
-		if (value instanceof Type) {
+		if (value instanceof TypeReference) {
 			int arrayDimensions = bracketPairs == null ? 0 : bracketPairs.size();
-			return ((Type)value).setArrayDimensions(arrayDimensions);
+			return ((TypeReference)value).setArrayDimensions(arrayDimensions);
 		}
 		
 		return value;

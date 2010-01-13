@@ -34,7 +34,7 @@ public interface ASTVisitor {
 	public boolean visitAssert(Assert node);
 	public boolean visitVariableDeclaration(VariableDeclaration node);
 	public boolean visitVariableDeclarationEntry(VariableDeclarationEntry node);
-	public boolean visitType(Type node);
+	public boolean visitTypeReference(TypeReference node);
 	public boolean visitIdentifier(Identifier node);
 	public boolean visitIntegralLiteral(IntegralLiteral node);
 	public boolean visitFloatingPointLiteral(FloatingPointLiteral node);
@@ -47,7 +47,7 @@ public interface ASTVisitor {
 	public boolean visitUnaryExpression(UnaryExpression node);
 	public boolean visitInlineIfExpression(InlineIfExpression node);
 	public boolean visitIncrementExpression(IncrementExpression node);
-	public boolean visitTypePart(TypePart node);
+	public boolean visitTypeReferencePart(TypeReferencePart node);
 	public boolean visitCast(Cast node);
 	public boolean visitIdentifierExpression(IdentifierExpression node);
 	public boolean visitTypeVariable(TypeVariable node);
