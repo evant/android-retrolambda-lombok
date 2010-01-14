@@ -19,7 +19,7 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 -->
-<project name="lombok.ast" default="compile"  xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="lombok.ast" default="compile" xmlns:ivy="antlib:org.apache.ivy.ant">
 	<property name="build.compiler" value="javac1.6" />
 	
 	<path id="libs.path">
@@ -28,24 +28,16 @@
 		</fileset>
 	</path>
 	
-	<target name="clean">
+	<target name="clean" description="Deletes build artefacts (but does not delete downloaded dependencies)">
 		<delete dir="build" quiet="true" />
 	</target>
 	
-	<target name="-checkIfDepsMissing">
-		<condition property="deps.missing">
-			<or>
-				<not><available file="lib/build/lombok.jar" /></not>
-				<not><available file="lib/build/parboiled.jar" /></not>
-			</or>
-		</condition>
+	<target name="distclean" depends="clean" description="Deletes everything that this build script has ever generated.">
+		<delete file="lib/ivy.jar" quiet="true" />
+		<delete dir="lib/build" quiet="true" />
 	</target>
 	
-	<target name="-checkDeps" depends="-checkIfDepsMissing" if="deps.missing">
-		<fail>You are missing some dependencies; try running "ant updateDependencies" to fix this</fail>
-	</target>
-	
-	<target name="templateProcessor" depends="-checkDeps" description="Compiles the Template Processor, which produces the AST API classes">
+	<target name="templateProcessor" depends="ensureDeps" description="Compiles the Template Processor, which produces the AST API classes">
 		<mkdir dir="build/templateProcessor" />
 		<javac destdir="build/templateProcessor" debug="true" target="1.6" source="1.6">
 			<classpath refid="libs.path" />
@@ -57,7 +49,7 @@
 		<jar destfile="build/templateProcessor.jar" basedir="build/templateProcessor" />
 	</target>
 	
-	<target name="generateSource" depends="-checkDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
+	<target name="generateSource" depends="ensureDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6">
 			<classpath refid="libs.path" />
@@ -69,7 +61,7 @@
 		</javac>
 	</target>
 	
-	<target name="compile" depends="-checkDeps, templateProcessor" description="Compiles all code for lombok.ast">
+	<target name="compile" depends="ensureDeps, templateProcessor" description="Compiles all code for lombok.ast">
 		<mkdir dir="build/lombok.ast" />
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6">
@@ -91,10 +83,7 @@
 	
 	<target name="ensure-ivy">
 		<ant antfile="buildScripts/ivy.ant.xml" target="init-ivy" dir="." />
-	</target>
-	
-	<target name="dependencyReport" depends="config-ivy" description="Generates a pretty html page showing this project's dependencies">
-		<ivy:report todir="." />
+		<taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="lib/ivy.jar" />
 	</target>
 	
 	<target name="config-ivy" depends="ensure-ivy">
@@ -102,7 +91,13 @@
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
 	</target>
 	
-	<target name="updateDependencies" depends="config-ivy" description="Download / Update lombok's dependencies via ivy, which will be downloaded automatically if you don't have it.">
+	<target name="showDependencyReport" depends="config-ivy">
+		<ant antfile="buildScripts/ivy.ant.xml" target="showDependencyReport" dir=".">
+			<property name="build.report" value="build/report" />
+		</ant>
+	</target>
+	
+	<target name="ensureDeps" depends="config-ivy" description="Download / Update lombok's dependencies via ivy, which will be downloaded automatically if you don't have it.">
 		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
 	</target>
 </project>
