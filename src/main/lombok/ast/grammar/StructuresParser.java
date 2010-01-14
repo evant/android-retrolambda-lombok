@@ -23,12 +23,12 @@ public class StructuresParser extends BaseParser<Node, StructuresAction> {
 		return enforcedSequence(
 				ch('('),
 				group.basics.optWS(),
-				/*optional(sequence(
-						group.operators.anyExpression(),
+				optional(sequence(
+						group.literals.anyLiteral(),
 						zeroOrMore(sequence(
 								ch(','),
 								group.basics.optWS(),
-								group.operators.anyExpression()))))*/
+								group.operators.anyExpression())))),
 				ch(')'),
 				group.basics.optWS());
 	}
