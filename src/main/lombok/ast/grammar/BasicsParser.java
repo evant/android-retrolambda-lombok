@@ -98,7 +98,13 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 		}
 		
 		@Override public Characters getStarterChars() {
-			return Characters.ALL_EXCEPT_EMPTY;
+			Characters c = Characters.NONE;
+			
+			for (char a = 'a'; a <= 'z'; a++) c = c.add(a);
+			for (char a = 'A'; a <= 'Z'; a++) c = c.add(a);
+			if (!start) for (char a = '0'; a <= '9'; a++) c = c.add(a);
+			
+			return c;
 		}
 		
 		@Override public boolean match(MatcherContext<Node> context, boolean enforced) {
