@@ -103,6 +103,7 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 			for (char a = 'a'; a <= 'z'; a++) c = c.add(a);
 			for (char a = 'A'; a <= 'Z'; a++) c = c.add(a);
 			if (!start) for (char a = '0'; a <= '9'; a++) c = c.add(a);
+			c = c.add('$').add('_');
 			
 			return c;
 		}
