@@ -29,6 +29,7 @@ import lombok.ast.Cast;
 import lombok.ast.IdentifierExpression;
 import lombok.ast.IncrementExpression;
 import lombok.ast.InlineIfExpression;
+import lombok.ast.InstanceOf;
 import lombok.ast.Node;
 import lombok.ast.UnaryExpression;
 
@@ -76,20 +77,43 @@ public class OperatorsActions extends BaseActions<Node> {
 		return currentNode;
 	}
 	
-	public Node createUnaryOperation(String operator, Node operand) {
+	public Node createUnaryPrefixOperation(Node operand, List<org.parboiled.Node<Node>> operators, List<String> operatorTexts) {
+		if (operators == null || operators.isEmpty()) return operand;
+		
 		Node current = operand;
 		
-		if (operator != null && operator.trim().equals("++")) return new IncrementExpression().setRawOperand(current).setPrefix(true);
-		if (operator != null && operator.trim().equals("--")) return new IncrementExpression().setRawOperand(current).setPrefix(true).setDecrement(true);
+		for (int i = operators.size()-1; i >= 0; i--) {
+			org.parboiled.Node<Node> operator = operators.get(i);
+			if (operator == null) continue;
+			if ("cast".equals(operator.getLabel())) {
+				current = new Cast().setRawOperand(current).setRawType(operator.getValue());
+			} else {
+				String symbol = operatorTexts.get(i);
+				if (symbol == null) continue;
+				symbol = symbol.trim();
+				if (symbol.isEmpty()) continue;
+				
+				if (symbol.equals("--")) {
+					current = new IncrementExpression().setRawOperand(current).setPrefix(true);
+					continue;
+				}
+				if (symbol.equals("++")) {
+					current = new IncrementExpression().setRawOperand(current).setPrefix(true).setDecrement(true);
+					continue;
+				}
+				
+				current = new UnaryExpression().setRawOperand(current).setRawOperator(symbol);
+			}
+		}
 		
-		return new UnaryExpression().setRawOperand(current).setRawOperator(operator);
+		return current;
 	}
 	
-	public Node createPostfixOperation(Node value, List<String> texts) {
-		if (texts == null) return value;
+	public Node createUnaryPostfixOperation(Node operand, List<String> operators) {
+		if (operators == null) return operand;
 		
-		Node current = value;
-		for (String op : texts) {
+		Node current = operand;
+		for (String op : operators) {
 			if (op == null) continue;
 			op = op.trim();
 			if (op.equals("++")) current = new IncrementExpression().setRawOperand(current);
@@ -104,5 +128,9 @@ public class OperatorsActions extends BaseActions<Node> {
 	
 	public Node createIdentifierExpression(Node identifier) {
 		return new IdentifierExpression().setRawIdentifier(identifier);
+	}
+	
+	public Node createInstanceOf(Node operand, Node type) {
+		return new InstanceOf().setRawObjectReference(operand).setRawType(type);
 	}
 }

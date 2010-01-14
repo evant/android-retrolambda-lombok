@@ -257,3 +257,9 @@ class CastTemplate {
 class IdentifierExpressionTemplate {
 	@NonNull Identifier identifier;
 }
+
+@GenerateAstNode(extending=Expression.class)
+class InstanceOfTemplate {
+	@NonNull Expression objectReference;
+	@NonNull TypeReference type;
+}

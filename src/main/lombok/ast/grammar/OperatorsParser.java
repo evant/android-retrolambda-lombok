@@ -25,13 +25,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.TreeMap;
 
-import lombok.Lombok;
 import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
@@ -45,7 +39,6 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 		super(Parboiled.createActions(OperatorsActions.class));
 		this.group = group;
 	}
-	
 	
 	/*
 	 * level 0: paren grouping, primitive
@@ -73,284 +66,232 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	}
 	
 	public Rule anyExpression() {
-		return firstOf(
-				assignmentOperation(),
-				inlineIfOperation(),
-				conditionalOrOperation(),
-				conditionalXorOperation(),
-				conditionalAndOperation(),
-				bitwiseOrOperation(),
-				bitwiseXorOperation(),
-				bitwiseAndOperation(),
-				equalityOperation(),
-				relationalOperation(),
-				shiftOperation(),
-				additiveOperation(),
-				multiplicativeOperation(),
-				level2Operation(),
-				postfixIncrementOperation(),
-				dotNewOperation(),
-				primaryExpression());
+		return assignmentOperation();
 	}
 	
-	@PrecedencePlayer(101)
+	/**
+	 * P2''
+	 * 
+	 * This is the relational new operator; not just 'new', but new with context, so: "a.new InnerClass(params)". It is grouped with P2, but for some reason has higher precedence
+	 * in all java parsers, and so we give it its own little precedence group here.
+	 */
 	public Rule dotNewOperation() {
-		return enforcedSequence(
-				sequence(
-						higher("dotNewOperation"),
-						ch('.'),
-						group.basics.optWS(),
-						string("new"),
-						group.basics.testLexBreak(),
-						group.basics.optWS()),
-				group.types.typeArguments(),
-				group.basics.identifier(),
-				group.types.typeArguments(),
-				group.basics.optWS(),
-				group.structures.methodArguments(),
-				group.basics.optWS(),
-				optional(group.structures.classBody()));
+		return sequence(
+				primaryExpression(),
+				zeroOrMore(enforcedSequence(
+						sequence(
+								ch('.'),
+								group.basics.optWS(),
+								string("new"),
+								group.basics.testLexBreak(),
+								group.basics.optWS()),
+						group.types.typeArguments(),
+						group.basics.identifier(),
+						group.types.typeArguments(),
+						group.structures.methodArguments(),
+						optional(group.structures.classBody()))));
 	}
 	
-	//Technically, postfix increment operations are in group 2 along with all the unary operators like ~ and !, as well as typecasts, and targeted new expressions.
-	//However, because ALL of the group 2 operations are right-associative, the postfix operators can be considered as a higher level of precedence.
-	@PrecedencePlayer(190)
+	/**
+	 * P2'
+	 * Technically, postfix increment operations are in group 2 along with all the unary operators like ~ and !, as well as typecasts.
+	 * However, because ALL of the group 2 operations are right-associative, the postfix operators can be considered as a higher level of precedence.
+	 */
 	public Rule postfixIncrementOperation() {
 		return sequence(
-				higher("postfixIncrementOperation"),
-				SET(),
-				group.basics.optWS(),
+				dotNewOperation(), SET(),
 				zeroOrMore(sequence(
-						firstOf(string("++"), string("--")).label("postfixOperator"), group.basics.optWS())),
-				SET(actions.createPostfixOperation(VALUE(), TEXTS("zeroOrMore/sequence/postfixOperator"))));
-	}
-	
-	@PrecedencePlayer(200)
-	public Rule level2Operation() {
-		return firstOf(
-				numericUnaryOperation(),
-				castExpression());
-	}
-	
-	private Rule castExpression() {
-		return sequence(
-				ch('('),
-				group.basics.optWS(),
-				group.types.type(),
-				ch(')'),
-				firstOf(level2Operation(), higher("level2Operation")).label("operand"),
-				SET(actions.createTypeCastExpression(VALUE("type"), VALUE("operand"))));
-	}
-	
-	private Rule numericUnaryOperation() {
-		return sequence(
-				firstOf(string("++"), string("--"), ch('!'), ch('~'), solitarySymbol('+'), solitarySymbol('-')).label("operator"),
-				group.basics.optWS(),
-				firstOf(level2Operation(), higher("level2Operation")).label("operand"),
-				group.basics.optWS(),
-				SET(actions.createUnaryOperation(TEXT("operator"), VALUE("operand"))));
+						firstOf(string("++"), string("--")).label("operator"),
+						group.basics.optWS()).label("operatorCt")),
+				SET(actions.createUnaryPostfixOperation(VALUE(), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
 	/**
+	 * P2
+	 */
+	public Rule level2Operation() {
+		return sequence(
+				zeroOrMore(sequence(
+						firstOf(
+								string("++"), string("--"),
+								ch('!'), ch('~'),
+								solitarySymbol('+'), solitarySymbol('-'),
+								sequence(
+										ch('('), group.basics.optWS(),
+										group.types.type(),
+										ch(')')).label("cast")
+								).label("operator"),
+						group.basics.optWS()).label("operatorCt")),
+				postfixIncrementOperation(), SET(),
+				SET(actions.createUnaryPrefixOperation(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
+	}
+	
+	/**
+	 * P3
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17
 	 */
-	@PrecedencePlayer(300)
 	public Rule multiplicativeOperation() {
-		return forBinaryOperation(firstOf(ch('*'), solitarySymbol('/'), ch('%')), true);
+		return forBinaryOperation(firstOf(ch('*'), solitarySymbol('/'), ch('%')), level2Operation(), true);
 	}
 	
 	/**
+	 * P4
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18
 	 */
-	@PrecedencePlayer(400)
 	public Rule additiveOperation() {
-		return forBinaryOperation(firstOf(solitarySymbol('+'), solitarySymbol('-')), true);
+		return forBinaryOperation(firstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeOperation(), true);
 	}
 	
 	/**
+	 * P5
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19
 	 */
-	@PrecedencePlayer(500)
 	public Rule shiftOperation() {
-		return forBinaryOperation(firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), true);
+		return forBinaryOperation(firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), additiveOperation(), true);
 	}
 	
 	/**
+	 * P6
+	 * 
+	 * Technically 'instanceof' is on equal footing with the other operators, but practically speaking this doesn't hold;
+	 * for starters, the RHS of instanceof is a Type and not an expression, and the inevitable type of an instanceof expression (boolean) is
+	 * not compatible as LHS to *ANY* of the operators in this class, including instanceof itself. Therefore, pragmatically speaking, there can only
+	 * be one instanceof, and it has to appear at the end of the chain.
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.20
 	 */
-	@PrecedencePlayer(600)
 	public Rule relationalOperation() {
-		return forBinaryOperation(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>'), sequence(string("instanceof"), group.basics.testLexBreak())), true);
+		return sequence(
+				forBinaryOperation(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftOperation(), true),
+				SET(),
+				optional(enforcedSequence(
+						sequence(string("instanceof"), group.basics.testLexBreak(), group.basics.optWS()),
+						group.types.type(),
+						UP(UP(SET(actions.createInstanceOf(VALUE(), LAST_VALUE())))))));
 	}
 	
 	/**
+	 * P7
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21
 	 */
-	@PrecedencePlayer(700)
 	public Rule equalityOperation() {
-		return forBinaryOperation(firstOf(string("==="), string("!=="), string("=="), string("!=")), true);
+		return forBinaryOperation(firstOf(string("==="), string("!=="), string("=="), string("!=")), relationalOperation(), true);
 	}
 	
 	/**
+	 * P8
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	@PrecedencePlayer(800)
 	public Rule bitwiseAndOperation() {
-		return forBinaryOperation(solitarySymbol('&'), true);
+		return forBinaryOperation(solitarySymbol('&'), equalityOperation(), true);
 	}
 	
 	/**
+	 * P9
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	@PrecedencePlayer(900)
 	public Rule bitwiseXorOperation() {
-		return forBinaryOperation(solitarySymbol('^'), true);
+		return forBinaryOperation(solitarySymbol('^'), bitwiseAndOperation(), true);
 	}
 	
 	/**
+	 * P10
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	@PrecedencePlayer(1000)
 	public Rule bitwiseOrOperation() {
-		return forBinaryOperation(solitarySymbol('|'), true);
+		return forBinaryOperation(solitarySymbol('|'), bitwiseXorOperation(), true);
 	}
 	
 	/**
+	 * P11
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23
 	 */
 	@PrecedencePlayer(1100)
 	public Rule conditionalAndOperation() {
-		return forBinaryOperation(string("&&"), true);
-	}
-	
-	@PrecedencePlayer(1150)
-	public Rule conditionalXorOperation() {
-		return forBinaryOperation(string("^^"), true);
+		return forBinaryOperation(string("&&"), bitwiseOrOperation(), true);
 	}
 	
 	/**
+	 * P12'
+	 * 
+	 * This is not a legal operator; however, it is entirely imaginable someone presumes it does exist.
+	 * It also has no other sensible meaning, so we will parse it and flag it as a syntax error in AST phase.
+	 */
+	public Rule conditionalXorOperation() {
+		return forBinaryOperation(string("^^"), conditionalAndOperation(), true);
+	}
+	
+	/**
+	 * P12
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24
 	 */
-	@PrecedencePlayer(1200)
 	public Rule conditionalOrOperation() {
-		return forBinaryOperation(string("||"), true);
+		return forBinaryOperation(string("||"), conditionalXorOperation(), true);
 	}
 	
 	/**
+	 * P13
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.25
 	 */
-	@PrecedencePlayer(1300)
 	public Rule inlineIfOperation() {
 		return sequence(
-				higher("inlineIfOperation"),
+				conditionalOrOperation(),
 				SET(),
-				group.basics.optWS(),
-				oneOrMore(
+				zeroOrMore(
 						sequence(
 								sequence(ch('?'), testNot(firstOf(ch('.'), ch(':'), ch('?')))).label("operator1"),
 								group.basics.optWS(),
-								higher("inlineIfOperation").label("tail1"),
-								group.basics.optWS(),
+								conditionalOrOperation().label("tail1"),
 								ch(':').label("operator2"),
 								group.basics.optWS(),
-								higher("inlineIfOperation").label("tail2")
+								conditionalOrOperation().label("tail2")
 								)),
 				SET(actions.createInlineIfOperation(VALUE(),
-						TEXTS("oneOrMore/sequence/operator1"), TEXTS("oneOrMore/sequence/operator2"),
-						VALUES("oneOrMore/sequence/tail1"), VALUES("oneOrMore/sequence/tail2"))),
+						TEXTS("zeroOrMore/sequence/operator1"), TEXTS("zeroOrMore/sequence/operator2"),
+						VALUES("zeroOrMore/sequence/tail1"), VALUES("zeroOrMore/sequence/tail2"))),
 				group.basics.optWS());
 	}
 	
 	/**
+	 * P14
+	 * 
+	 * Not all of the listed operators are actually legal, but if not legal, then they are at least imaginable, so we parse them and flag them as errors in the AST phase.
+	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26
 	 */
-	@PrecedencePlayer(1400)
 	public Rule assignmentOperation() {
 		return forBinaryOperation(firstOf(
 				solitarySymbol('='),
 				string("*="), string("/="), string("+="), string("-="), string("%="),
 				string(">>>="), string("<<<="), string("<<="), string(">>="),
 				string("&="), string("^="), string("|="),
-				string("&&="), string("^^="), string("||=")), false);
+				string("&&="), string("^^="), string("||=")), inlineIfOperation(), false);
 	}
 	
-	private List<Method> precedenceList;
-	
-	private void initReflectionMagic() {
-		if (precedenceList != null) return;
-		
-		TreeMap<Integer, Method> precedenceOperations = new TreeMap<Integer, Method>();
-		
-		for (Method m : OperatorsParser.class.getDeclaredMethods()) {
-			PrecedencePlayer pp = m.getAnnotation(PrecedencePlayer.class);
-			if (pp == null) continue;
-			
-			int order = pp.value();
-			
-			if (precedenceOperations.get(order) != null) throw new IllegalStateException(String.format(
-					"You have 2 @PrecedencePlayer methods that have the same value: %s and %s are both %d",
-					m.getName(), precedenceOperations.get(order).getName(), order));
-			
-			precedenceOperations.put(order, m);
-		}
-		
-		this.precedenceList = new ArrayList<Method>(precedenceOperations.values());
-	}
-	
-	private Rule forBinaryOperation(Rule operator, boolean leftAssociative) {
-		StackTraceElement callerFrame = Thread.currentThread().getStackTrace()[2];
-		String methodName = callerFrame.getMethodName();
-		
+	private Rule forBinaryOperation(Rule operator, Rule nextHigher, boolean leftAssociative) {
 		return sequence(
-				higher(methodName).label("head"),
+				nextHigher, SET(),
 				group.basics.optWS(),
-				oneOrMore(
-						sequence(
-								operator.label("operator"),
-								group.basics.optWS(),
-								higher(methodName).label("tail"),
-								group.basics.optWS())),
+				zeroOrMore(sequence(
+						operator.label("operator"),
+						group.basics.optWS(),
+						nextHigher.label("tail"),
+						group.basics.optWS())),
 				SET(leftAssociative ?
-						actions.createLeftAssociativeBinaryOperation(VALUE("head"), TEXTS("oneOrMore/sequence/operator"), VALUES("oneOrMore/sequence/tail")) :
-						actions.createRightAssociativeBinaryOperation(VALUE("head"), TEXTS("oneOrMore/sequence/operator"), VALUES("oneOrMore/sequence/tail"))
+						actions.createLeftAssociativeBinaryOperation(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail")) :
+						actions.createRightAssociativeBinaryOperation(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail"))
 						),
 				group.basics.optWS());
-	}
-	
-	private Rule higher(String methodName) {
-		initReflectionMagic();
-		
-		List<Rule> firstOfParts = new ArrayList<Rule>();
-		
-		for (Method m : precedenceList) {
-			if (m.getName().equals(methodName)) {
-				break;
-			}
-			firstOfParts.add(invokeRuleMethod(m));
-		}
-		
-		Collections.reverse(firstOfParts);
-		
-		switch (firstOfParts.size()) {
-		case 0:
-			return empty();
-		case 1:
-			return firstOfParts.get(0);
-		default:
-			Object[] extras = new Rule[firstOfParts.size() -2];
-			for (int i = 2; i < firstOfParts.size(); i++) {
-				extras[i-2] = firstOfParts.get(i);
-			}
-			return firstOf(firstOfParts.get(0), firstOfParts.get(1), extras);
-		}
-	}
-	
-	private Rule invokeRuleMethod(Method m) {
-		try {
-			return (Rule)m.invoke(this);
-		} catch (Exception e) {
-			throw Lombok.sneakyThrow(e);
-		}
 	}
 	
 	private Rule solitarySymbol(char c) {

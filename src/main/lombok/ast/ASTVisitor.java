@@ -52,4 +52,5 @@ public interface ASTVisitor {
 	public boolean visitIdentifierExpression(IdentifierExpression node);
 	public boolean visitTypeVariable(TypeVariable node);
 	public boolean visitParseArtefact(Node node);
+	public boolean visitInstanceOf(InstanceOf node);
 }

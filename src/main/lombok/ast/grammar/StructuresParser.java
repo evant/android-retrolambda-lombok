@@ -24,7 +24,7 @@ public class StructuresParser extends BaseParser<Node, StructuresAction> {
 				ch('('),
 				group.basics.optWS(),
 				optional(sequence(
-						group.literals.anyLiteral(),
+						group.operators.anyExpression(),
 						zeroOrMore(sequence(
 								ch(','),
 								group.basics.optWS(),
