@@ -6,11 +6,11 @@ import org.parboiled.BaseParser;
 import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
-public class StructuresParser extends BaseParser<Node, StructuresAction> {
+public class StructuresParser extends BaseParser<Node, StructuresActions> {
 	private final ParserGroup group;
 	
 	public StructuresParser(ParserGroup group) {
-		super(Parboiled.createActions(StructuresAction.class));
+		super(Parboiled.createActions(StructuresActions.class));
 		this.group = group;
 	}
 	

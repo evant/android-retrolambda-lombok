@@ -21,38 +21,25 @@
  */
 package lombok.ast.grammar;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
-public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
+public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	private final ParserGroup group;
 	
-	public OperatorsParser(ParserGroup group) {
-		super(Parboiled.createActions(OperatorsActions.class));
+	public ExpressionsParser(ParserGroup group) {
+		super(Parboiled.createActions(ExpressionsActions.class));
 		this.group = group;
 	}
 	
 	/*
-	 * level 0: paren grouping, primitive
-	 * level 1: array index, method call, member access
-	 * level 2: increment pre/post, unary +-, bit/logical not, any cast, new.
+	 * level 0: paren grouping, primitive (=literal, identifier, type literal)
+	 * level 1: array index, method call, member access, [non-dot constructor]
 	 */
 	
-	@Retention(RetentionPolicy.RUNTIME)
-	@Target(ElementType.METHOD)
-	private static @interface PrecedencePlayer {
-		int value();
-	}
-	
-	@PrecedencePlayer(0)
 	public Rule primaryExpression() {
 		return firstOf(
 				group.literals.anyLiteral(),
@@ -66,7 +53,7 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	}
 	
 	public Rule anyExpression() {
-		return assignmentOperation();
+		return assignmentExpression();
 	}
 	
 	/**
@@ -75,7 +62,7 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * This is the relational new operator; not just 'new', but new with context, so: "a.new InnerClass(params)". It is grouped with P2, but for some reason has higher precedence
 	 * in all java parsers, and so we give it its own little precedence group here.
 	 */
-	public Rule dotNewOperation() {
+	public Rule dotNewExpression() {
 		return sequence(
 				primaryExpression(),
 				zeroOrMore(enforcedSequence(
@@ -94,22 +81,22 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	
 	/**
 	 * P2'
-	 * Technically, postfix increment operations are in group 2 along with all the unary operators like ~ and !, as well as typecasts.
-	 * However, because ALL of the group 2 operations are right-associative, the postfix operators can be considered as a higher level of precedence.
+	 * Technically, postfix increment operations are in P2 along with all the unary operators like ~ and !, as well as typecasts.
+	 * However, because ALL of the P2 expression are right-associative, the postfix operators can be considered as a higher level of precedence.
 	 */
-	public Rule postfixIncrementOperation() {
+	public Rule postfixIncrementExpression() {
 		return sequence(
-				dotNewOperation(), SET(),
+				dotNewExpression(), SET(),
 				zeroOrMore(sequence(
 						firstOf(string("++"), string("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				SET(actions.createUnaryPostfixOperation(VALUE(), TEXTS("zeroOrMore/operatorCt/operator"))));
+				SET(actions.createUnaryPostfixExpression(VALUE(), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
 	/**
 	 * P2
 	 */
-	public Rule level2Operation() {
+	public Rule level2Expression() {
 		return sequence(
 				zeroOrMore(sequence(
 						firstOf(
@@ -122,8 +109,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 										ch(')')).label("cast")
 								).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				postfixIncrementOperation(), SET(),
-				SET(actions.createUnaryPrefixOperation(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
+				postfixIncrementExpression(), SET(),
+				SET(actions.createUnaryPrefixExpression(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
 	/**
@@ -131,8 +118,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17
 	 */
-	public Rule multiplicativeOperation() {
-		return forBinaryOperation(firstOf(ch('*'), solitarySymbol('/'), ch('%')), level2Operation(), true);
+	public Rule multiplicativeExpression() {
+		return forBinaryExpression(firstOf(ch('*'), solitarySymbol('/'), ch('%')), level2Expression(), true);
 	}
 	
 	/**
@@ -140,8 +127,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18
 	 */
-	public Rule additiveOperation() {
-		return forBinaryOperation(firstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeOperation(), true);
+	public Rule additiveExpression() {
+		return forBinaryExpression(firstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeExpression(), true);
 	}
 	
 	/**
@@ -149,8 +136,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19
 	 */
-	public Rule shiftOperation() {
-		return forBinaryOperation(firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), additiveOperation(), true);
+	public Rule shiftExpression() {
+		return forBinaryExpression(firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), additiveExpression(), true);
 	}
 	
 	/**
@@ -163,14 +150,14 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.20
 	 */
-	public Rule relationalOperation() {
+	public Rule relationalExpression() {
 		return sequence(
-				forBinaryOperation(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftOperation(), true),
+				forBinaryExpression(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftExpression(), true),
 				SET(),
 				optional(enforcedSequence(
 						sequence(string("instanceof"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type(),
-						UP(UP(SET(actions.createInstanceOf(VALUE(), LAST_VALUE())))))));
+						UP(UP(SET(actions.createInstanceOfExpression(VALUE(), LAST_VALUE())))))));
 	}
 	
 	/**
@@ -178,8 +165,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21
 	 */
-	public Rule equalityOperation() {
-		return forBinaryOperation(firstOf(string("==="), string("!=="), string("=="), string("!=")), relationalOperation(), true);
+	public Rule equalityExpression() {
+		return forBinaryExpression(firstOf(string("==="), string("!=="), string("=="), string("!=")), relationalExpression(), true);
 	}
 	
 	/**
@@ -187,8 +174,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	public Rule bitwiseAndOperation() {
-		return forBinaryOperation(solitarySymbol('&'), equalityOperation(), true);
+	public Rule bitwiseAndExpression() {
+		return forBinaryExpression(solitarySymbol('&'), equalityExpression(), true);
 	}
 	
 	/**
@@ -196,8 +183,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	public Rule bitwiseXorOperation() {
-		return forBinaryOperation(solitarySymbol('^'), bitwiseAndOperation(), true);
+	public Rule bitwiseXorExpression() {
+		return forBinaryExpression(solitarySymbol('^'), bitwiseAndExpression(), true);
 	}
 	
 	/**
@@ -205,8 +192,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	public Rule bitwiseOrOperation() {
-		return forBinaryOperation(solitarySymbol('|'), bitwiseXorOperation(), true);
+	public Rule bitwiseOrExpression() {
+		return forBinaryExpression(solitarySymbol('|'), bitwiseXorExpression(), true);
 	}
 	
 	/**
@@ -214,9 +201,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23
 	 */
-	@PrecedencePlayer(1100)
-	public Rule conditionalAndOperation() {
-		return forBinaryOperation(string("&&"), bitwiseOrOperation(), true);
+	public Rule conditionalAndExpression() {
+		return forBinaryExpression(string("&&"), bitwiseOrExpression(), true);
 	}
 	
 	/**
@@ -225,8 +211,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * This is not a legal operator; however, it is entirely imaginable someone presumes it does exist.
 	 * It also has no other sensible meaning, so we will parse it and flag it as a syntax error in AST phase.
 	 */
-	public Rule conditionalXorOperation() {
-		return forBinaryOperation(string("^^"), conditionalAndOperation(), true);
+	public Rule conditionalXorExpression() {
+		return forBinaryExpression(string("^^"), conditionalAndExpression(), true);
 	}
 	
 	/**
@@ -234,8 +220,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24
 	 */
-	public Rule conditionalOrOperation() {
-		return forBinaryOperation(string("||"), conditionalXorOperation(), true);
+	public Rule conditionalOrExpression() {
+		return forBinaryExpression(string("||"), conditionalXorExpression(), true);
 	}
 	
 	/**
@@ -243,20 +229,20 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.25
 	 */
-	public Rule inlineIfOperation() {
+	public Rule inlineIfExpression() {
 		return sequence(
-				conditionalOrOperation(),
+				conditionalOrExpression(),
 				SET(),
 				zeroOrMore(
 						sequence(
 								sequence(ch('?'), testNot(firstOf(ch('.'), ch(':'), ch('?')))).label("operator1"),
 								group.basics.optWS(),
-								conditionalOrOperation().label("tail1"),
+								conditionalOrExpression().label("tail1"),
 								ch(':').label("operator2"),
 								group.basics.optWS(),
-								conditionalOrOperation().label("tail2")
+								conditionalOrExpression().label("tail2")
 								)),
-				SET(actions.createInlineIfOperation(VALUE(),
+				SET(actions.createInlineIfExpression(VALUE(),
 						TEXTS("zeroOrMore/sequence/operator1"), TEXTS("zeroOrMore/sequence/operator2"),
 						VALUES("zeroOrMore/sequence/tail1"), VALUES("zeroOrMore/sequence/tail2"))),
 				group.basics.optWS());
@@ -269,16 +255,19 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26
 	 */
-	public Rule assignmentOperation() {
-		return forBinaryOperation(firstOf(
+	public Rule assignmentExpression() {
+		return forBinaryExpression(firstOf(
 				solitarySymbol('='),
 				string("*="), string("/="), string("+="), string("-="), string("%="),
 				string(">>>="), string("<<<="), string("<<="), string(">>="),
 				string("&="), string("^="), string("|="),
-				string("&&="), string("^^="), string("||=")), inlineIfOperation(), false);
+				string("&&="), string("^^="), string("||=")), inlineIfExpression(), false);
 	}
 	
-	private Rule forBinaryOperation(Rule operator, Rule nextHigher, boolean leftAssociative) {
+	/**
+	 * @param nextHigher Careful; operator has to match _ONLY_ the operator, not any whitespace around it (otherwise we'd have to remove comments from it, which isn't feasible).
+	 */
+	private Rule forBinaryExpression(Rule operator, Rule nextHigher, boolean leftAssociative) {
 		return sequence(
 				nextHigher, SET(),
 				group.basics.optWS(),
@@ -288,8 +277,8 @@ public class OperatorsParser extends BaseParser<Node, OperatorsActions>{
 						nextHigher.label("tail"),
 						group.basics.optWS())),
 				SET(leftAssociative ?
-						actions.createLeftAssociativeBinaryOperation(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail")) :
-						actions.createRightAssociativeBinaryOperation(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail"))
+						actions.createLeftAssociativeBinaryExpression(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail")) :
+						actions.createRightAssociativeBinaryExpression(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail"))
 						),
 				group.basics.optWS());
 	}

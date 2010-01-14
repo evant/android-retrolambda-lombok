@@ -35,8 +35,8 @@ import lombok.ast.UnaryExpression;
 
 import org.parboiled.BaseActions;
 
-public class OperatorsActions extends BaseActions<Node> {
-	public Node createLeftAssociativeBinaryOperation(Node head, List<String> operators, List<Node> tail) {
+public class ExpressionsActions extends BaseActions<Node> {
+	public Node createLeftAssociativeBinaryExpression(Node head, List<String> operators, List<Node> tail) {
 		Node currentLeft = head;
 		
 		for (int i = 0; i < operators.size(); i++) {
@@ -46,7 +46,7 @@ public class OperatorsActions extends BaseActions<Node> {
 		return currentLeft;
 	}
 	
-	public Node createRightAssociativeBinaryOperation(Node head, List<String> operators, List<Node> tail) {
+	public Node createRightAssociativeBinaryExpression(Node head, List<String> operators, List<Node> tail) {
 		if (tail.size() == 0) return head;
 		
 		Node currentRight = tail.remove(tail.size() -1);
@@ -61,7 +61,7 @@ public class OperatorsActions extends BaseActions<Node> {
 		return currentRight;
 	}
 	
-	public Node createInlineIfOperation(Node head, List<String> operators1, List<String> operators2, List<Node> tail1, List<Node> tail2) {
+	public Node createInlineIfExpression(Node head, List<String> operators1, List<String> operators2, List<Node> tail1, List<Node> tail2) {
 		if (tail1.size() == 0 || tail2.size() == 0) return head;
 		
 		Node currentNode = tail2.remove(tail2.size() -1);
@@ -77,7 +77,7 @@ public class OperatorsActions extends BaseActions<Node> {
 		return currentNode;
 	}
 	
-	public Node createUnaryPrefixOperation(Node operand, List<org.parboiled.Node<Node>> operators, List<String> operatorTexts) {
+	public Node createUnaryPrefixExpression(Node operand, List<org.parboiled.Node<Node>> operators, List<String> operatorTexts) {
 		if (operators == null || operators.isEmpty()) return operand;
 		
 		Node current = operand;
@@ -109,7 +109,7 @@ public class OperatorsActions extends BaseActions<Node> {
 		return current;
 	}
 	
-	public Node createUnaryPostfixOperation(Node operand, List<String> operators) {
+	public Node createUnaryPostfixExpression(Node operand, List<String> operators) {
 		if (operators == null) return operand;
 		
 		Node current = operand;
@@ -130,7 +130,7 @@ public class OperatorsActions extends BaseActions<Node> {
 		return new IdentifierExpression().setRawIdentifier(identifier);
 	}
 	
-	public Node createInstanceOf(Node operand, Node type) {
+	public Node createInstanceOfExpression(Node operand, Node type) {
 		return new InstanceOf().setRawObjectReference(operand).setRawType(type);
 	}
 }
