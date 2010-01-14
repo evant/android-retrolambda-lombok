@@ -6,7 +6,7 @@ See: http://ant.apache.org/ivy. NB: You don't have to download anything - just r
 		<isset property="env.IVY_HOME" />
 	</condition>
 	<available property="ivy.home" value="${user.home}/.ant" file="${user.home}/.ant/lib/ivy.jar" />
-	<property name="ivy.home" value="deps/ivy" />
+	<property name="ivy.home" value="." />
 	<property name="ivy.jar.dir" value="${ivy.home}/lib" />
 	<property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar" />
 	
