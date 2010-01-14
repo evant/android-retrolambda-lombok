@@ -47,6 +47,8 @@ public class ParseSomething {
 		if (src == null) {
 			Scanner s = new Scanner(System.in);
 			System.out.println("Write something to parse, then hit enter to print the node graph of what the parser made of it.");
+			System.out.println("All expressions supported except parens and method calls. Also supported:\n" +
+					"'(any legal type).class' (but not in expressions, by itself).\n Problematic input to try: 5+(10*5+3), a.new(5,5)");
 			while (true) {
 				String line = s.nextLine();
 				if (line.isEmpty()) return;
@@ -62,12 +64,6 @@ public class ParseSomething {
 		System.out.println(ParseTreeUtils.printNodeTree(result, new Function<org.parboiled.Node<Node>, Printability>() {
 			@Override public Printability apply(org.parboiled.Node<Node> from) {
 				return from.getValue() != null ? Printability.PrintAndDescend : Printability.Descend;
-//				if (from.getValue())
-////				if (from.getLabel() != null) {
-////					if (from.getLabel().matches("^(\".*\")|ws|wsChar$")) return Printability.Print;
-////				}
-////				
-//				return Printability.PrintAndDescend;
 			}
 		}));
 		if (result.hasErrors()) {
