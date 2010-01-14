@@ -17,7 +17,7 @@ See: http://ant.apache.org/ivy. NB: You don't have to download anything - just r
 		</and>
 	</condition>
 	
-	<target name="download-ivy" if="ivy.offline">
+	<target name="download-ivy" if="ivy.download">
 		<mkdir dir="${ivy.jar.dir}" />
 		<!-- download Ivy from web site so that it can be used even without any special installation -->
 		<get
