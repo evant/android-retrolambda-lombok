@@ -47,8 +47,8 @@ public class ParseSomething {
 		if (src == null) {
 			Scanner s = new Scanner(System.in);
 			System.out.println("Write something to parse, then hit enter to print the node graph of what the parser made of it.");
-			System.out.println("All expressions supported except parens and method calls. Also supported:\n" +
-					"'(any legal type).class' (but not in expressions, by itself).\n Problematic input to try: 5+(10*5+3), a.new(5,5)");
+			System.out.println("All expressions supported except parens, field selects, and method calls. Also supported:\n" +
+					"'(any legal type).class' (but not in expressions, by itself).\n");
 			while (true) {
 				String line = s.nextLine();
 				if (line.isEmpty()) return;
