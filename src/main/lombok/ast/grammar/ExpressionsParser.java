@@ -35,20 +35,46 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 		this.group = group;
 	}
 	
-	/*
-	 * level 0: paren grouping / literal / unqualified constructor invocation / identifier opt[methodArguments]
+	/* todo:
+	 * [type] '.' "class"
+	 * [opt:[type] '.'] "this"
+	 * [opt:[type] '.'] "super"
 	 */
 	
+	/**
+	 * P0
+	 */
 	public Rule primaryExpression() {
 		return firstOf(
+				parenGrouping(),
 				group.literals.anyLiteral(),
+				unqualifiedConstructorInvocation(),
 				identifierExpression());
+	}
+	
+	private Rule parenGrouping() {
+		return sequence(
+				ch('('), group.basics.optWS(),
+				anyExpression(), SET(),
+				ch(')'));
+	}
+	
+	private Rule unqualifiedConstructorInvocation() {
+		return sequence(
+				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
+				group.types.typeArguments().label("constructorTypeArgs"),
+				group.types.type().label("type"),
+				group.structures.methodArguments().label("args"),
+				optional(group.structures.classBody()).label("classBody"),
+				SET(actions.createUnqualifiedConstructorInvocation(VALUE("constructorTypeArgs"), VALUE("type"), VALUE("args"), VALUE("classBody"))));
 	}
 	
 	private Rule identifierExpression() {
 		return sequence(
 				group.basics.identifier(),
-				SET(actions.createIdentifierExpression(LAST_VALUE())));
+				SET(),
+				optional(sequence(group.structures.methodArguments(), SET()).label("methodArgs")),
+				SET(actions.createPrimary(VALUE(), VALUE("optional/methodArgs"))));
 	}
 	
 	public Rule anyExpression() {
@@ -59,6 +85,9 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 		public static final int x = 10;
 	}
 	
+	/**
+	 * P1
+	 */
 	public Rule level1Expression() {
 		return sequence(
 				primaryExpression(), SET(),

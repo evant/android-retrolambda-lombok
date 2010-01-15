@@ -198,6 +198,20 @@ public class ExpressionsActions extends BaseActions<Node> {
 		if (methodArguments instanceof MethodInvocation) return ((MethodInvocation)methodArguments).setRawName(identifier);
 		//TODO if (methodArguments != null) add dangling node.
 		
+		if (methodArguments != null) System.err.println("WAHUH: " + methodArguments);
+		if (methodArguments == null ) System.err.println("WAHUH2");
+		
 		return new IdentifierExpression().setRawIdentifier(identifier);
+	}
+	
+	public Node createUnqualifiedConstructorInvocation(Node constructorTypeArgs, Node type, Node args, Node anonymousClassBody) {
+		MethodInvocation args0 = (args instanceof MethodInvocation) ? (MethodInvocation)args : new MethodInvocation();
+		//TODO if (args != null) add dangling.
+		
+		return new ConstructorInvocation()
+				.setRawConstructorTypeArguments(constructorTypeArgs)
+				.setRawTypeReference(type)
+				.arguments().migrateAllFromRaw(args0.arguments())
+				.setRawAnonymousClassBody(anonymousClassBody);
 	}
 }

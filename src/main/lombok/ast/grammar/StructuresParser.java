@@ -25,11 +25,13 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				group.basics.optWS(),
 				optional(sequence(
 						group.operators.anyExpression(),
+						SET(),
 						zeroOrMore(sequence(
 								ch(','),
 								group.basics.optWS(),
-								group.operators.anyExpression())))),
+								group.operators.anyExpression(), SET())))),
 				ch(')'),
-				group.basics.optWS());
+				group.basics.optWS(),
+				SET(actions.createMethodArguments(VALUE("optional/sequence"), VALUES("optional/sequence/zeroOrMore/sequence"))));
 	}
 }
