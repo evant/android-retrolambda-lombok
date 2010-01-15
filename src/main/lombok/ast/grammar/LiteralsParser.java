@@ -56,14 +56,6 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 			group.basics.optWS());
 	}
 	
-	public Rule thisLiteral() {
-		return enforcedSequence(
-				sequence(
-						string("this"), group.basics.testLexBreak(), group.basics.optWS(), testNot(ch('('))),
-				SET(actions.createThisLiteral(LAST_TEXT())),
-				group.basics.optWS());
-	}
-	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.5
 	 */
