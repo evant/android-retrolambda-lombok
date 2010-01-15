@@ -60,7 +60,7 @@ public class ParseSomething {
 	}
 	
 	private static void parse(JavaParser parser, String input) {
-		ParsingResult<Node> result = parser.parse(parser.testRules(), input);
+		ParsingResult<Node> result = parser.parse(parser.testRules(), input + "\n");
 		System.out.println(ParseTreeUtils.printNodeTree(result, new Function<org.parboiled.Node<Node>, Printability>() {
 			@Override public Printability apply(org.parboiled.Node<Node> from) {
 				return from.getValue() != null ? Printability.PrintAndDescend : Printability.Descend;
