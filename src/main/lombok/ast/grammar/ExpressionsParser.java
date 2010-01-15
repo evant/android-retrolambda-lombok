@@ -35,12 +35,6 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 		this.group = group;
 	}
 	
-	/* todo:
-	 * [type] '.' "class"
-	 * [opt:[type] '.'] "this"
-	 * [opt:[type] '.'] "super"
-	 */
-	
 	/**
 	 * P0
 	 */
@@ -48,7 +42,10 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 		return firstOf(
 				parenGrouping(),
 				group.literals.anyLiteral(),
+				unqualifiedThisOrSuperLiteral(),
+				arrayCreationExpression(),
 				unqualifiedConstructorInvocation(),
+				qualifiedClassOrThisOrSuperLiteral(),
 				identifierExpression());
 	}
 	
@@ -59,6 +56,28 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				ch(')'));
 	}
 	
+	private Rule unqualifiedThisOrSuperLiteral() {
+		return sequence(
+				firstOf(string("this"), string("super")).label("thisOrSuper"),
+				group.basics.testLexBreak(),
+				group.basics.optWS(),
+				testNot(ch('(')),
+				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuper"), null)));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.8.2
+	 */
+	private Rule qualifiedClassOrThisOrSuperLiteral() {
+		return sequence(
+				group.types.type().label("type"),
+				ch('.'), group.basics.optWS(),
+				firstOf(string("this"), string("super"), string("class")).label("thisOrSuperOrClass"),
+				group.basics.testLexBreak(),
+				group.basics.optWS(),
+				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuperOrClass"), VALUE("type"))));
+	}
+	
 	private Rule unqualifiedConstructorInvocation() {
 		return sequence(
 				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
@@ -67,6 +86,36 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				group.structures.methodArguments().label("args"),
 				optional(group.structures.classBody()).label("classBody"),
 				SET(actions.createUnqualifiedConstructorInvocation(VALUE("constructorTypeArgs"), VALUE("type"), VALUE("args"), VALUE("classBody"))));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/arrays.html#10.3
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.10
+	 */
+	private Rule arrayCreationExpression() {
+		return sequence(
+				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
+				group.types.type().label("type"),
+				oneOrMore(enforcedSequence(
+						ch('['), group.basics.optWS(),
+						optional(anyExpression()).label("dimension"), ch(']'), group.basics.optWS(),
+						SET(actions.createDimension(VALUE("dimension"))))),
+				optional(arrayInitializer()).label("initializer"),
+				SET(actions.createArrayCreationExpression(VALUE("type"), VALUES("oneOrMore/enforcedSequence"), VALUE("initializer"))));
+	}
+	
+	public Rule arrayInitializer() {
+		return sequence(
+				ch('{'), group.basics.optWS(),
+				optional(sequence(
+						firstOf(arrayInitializer(), anyExpression()).label("head"),
+						zeroOrMore(sequence(
+								ch(','), group.basics.optWS(),
+								firstOf(arrayInitializer(), anyExpression()).label("tail"))),
+						optional(ch(',')),
+						group.basics.optWS())),
+				ch('}'), group.basics.optWS(),
+				SET(actions.createArrayInitializerExpression(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))));
 	}
 	
 	private Rule identifierExpression() {

@@ -25,8 +25,12 @@ import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.ArrayAccess;
+import lombok.ast.ArrayCreation;
+import lombok.ast.ArrayDimension;
+import lombok.ast.ArrayInitializer;
 import lombok.ast.BinaryExpression;
 import lombok.ast.Cast;
+import lombok.ast.ClassLiteral;
 import lombok.ast.ConstructorInvocation;
 import lombok.ast.IdentifierExpression;
 import lombok.ast.IncrementExpression;
@@ -35,6 +39,8 @@ import lombok.ast.InstanceOf;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Node;
 import lombok.ast.Select;
+import lombok.ast.Super;
+import lombok.ast.This;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
@@ -210,5 +216,31 @@ public class ExpressionsActions extends BaseActions<Node> {
 				.setRawTypeReference(type)
 				.arguments().migrateAllFromRaw(args0.arguments())
 				.setRawAnonymousClassBody(anonymousClassBody);
+	}
+	
+	public Node createArrayInitializerExpression(Node head, List<Node> tail) {
+		ArrayInitializer ai = new ArrayInitializer();
+		if (head != null) ai.expressions().addToEndRaw(head);
+		if (tail != null) for (Node n : tail) if (n != null) ai.expressions().addToEndRaw(n);
+		return ai;
+	}
+	
+	public Node createDimension(Node dimExpr) {
+		return new ArrayDimension().setRawDimension(dimExpr);
+	}
+	
+	public Node createArrayCreationExpression(Node type, List<Node> dimensions, Node initializer) {
+		ArrayCreation ac = new ArrayCreation().setRawComponentTypeReference(type).setRawInitializer(initializer);
+		if (dimensions != null) for (Node d : dimensions) {
+			if (d != null) ac.dimensions().addToEndRaw(d);
+		}
+		
+		return ac;
+	}
+	
+	public Node createThisOrSuperOrClass(String text, Node qualifier) {
+		if ("super".equals(text)) return new Super().setRawQualifier(qualifier);
+		if ("class".equals(text)) return new ClassLiteral().setRawType(qualifier);
+		return new This().setRawQualifier(qualifier);
 	}
 }

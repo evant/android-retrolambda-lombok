@@ -311,3 +311,35 @@ class ArrayAccessTemplate {
 	@NonNull Expression operand;
 	@NonNull Expression indexExpression;
 }
+
+@GenerateAstNode(extending=Expression.class)
+class ArrayCreationTemplate {
+	@NonNull TypeReference componentTypeReference;
+	List<ArrayDimension> dimensions;
+	ArrayInitializer initializer;
+}
+
+@GenerateAstNode
+class ArrayDimensionTemplate {
+	Expression dimension;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class ArrayInitializerTemplate {
+	List<Expression> expressions;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class ThisTemplate {
+	TypeReference qualifier;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class SuperTemplate {
+	TypeReference qualifier;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class ClassLiteralTemplate {
+	@NonNull TypeReference type;
+}

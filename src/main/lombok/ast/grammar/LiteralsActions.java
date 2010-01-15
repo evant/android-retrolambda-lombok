@@ -28,7 +28,6 @@ import lombok.ast.IntegralLiteral;
 import lombok.ast.Node;
 import lombok.ast.NullLiteral;
 import lombok.ast.StringLiteral;
-import lombok.ast.ThisLiteral;
 
 import org.parboiled.BaseActions;
 
@@ -61,9 +60,5 @@ public class LiteralsActions extends BaseActions<Node> {
 		
 		if (v.contains(".") || v.endsWith("d") || v.endsWith("f")) return new FloatingPointLiteral().setRawValue(raw);
 		else return new IntegralLiteral().setRawValue(raw);
-	}
-	
-	public Node createThisLiteral(String raw) {
-		return new ThisLiteral().setRawValue(raw);
 	}
 }

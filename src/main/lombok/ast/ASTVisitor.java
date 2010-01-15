@@ -42,7 +42,6 @@ public interface ASTVisitor {
 	public boolean visitCharLiteral(CharLiteral node);
 	public boolean visitStringLiteral(StringLiteral node);
 	public boolean visitNullLiteral(NullLiteral node);
-	public boolean visitThisLiteral(ThisLiteral node);
 	public boolean visitBinaryExpression(BinaryExpression node);
 	public boolean visitUnaryExpression(UnaryExpression node);
 	public boolean visitInlineIfExpression(InlineIfExpression node);
@@ -59,4 +58,10 @@ public interface ASTVisitor {
 	public boolean visitMethodInvocation(MethodInvocation node);
 	public boolean visitSelect(Select node);
 	public boolean visitArrayAccess(ArrayAccess node);
+	public boolean visitArrayCreation(ArrayCreation node);
+	public boolean visitArrayInitializer(ArrayInitializer node);
+	public boolean visitArrayDimension(ArrayDimension node);
+	public boolean visitSuper(Super node);
+	public boolean visitClassLiteral(ClassLiteral node);
+	public boolean visitThis(This node);
 }
