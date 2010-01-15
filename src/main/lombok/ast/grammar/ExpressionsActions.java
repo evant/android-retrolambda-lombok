@@ -198,9 +198,6 @@ public class ExpressionsActions extends BaseActions<Node> {
 		if (methodArguments instanceof MethodInvocation) return ((MethodInvocation)methodArguments).setRawName(identifier);
 		//TODO if (methodArguments != null) add dangling node.
 		
-		if (methodArguments != null) System.err.println("WAHUH: " + methodArguments);
-		if (methodArguments == null ) System.err.println("WAHUH2");
-		
 		return new IdentifierExpression().setRawIdentifier(identifier);
 	}
 	
