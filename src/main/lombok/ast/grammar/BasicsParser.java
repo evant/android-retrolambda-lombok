@@ -26,6 +26,9 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import lombok.ast.Node;
 
@@ -67,20 +70,27 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 	}
 	
 	public Rule identifier() {
-		return sequence(testNot(expressionSensitiveKeyword()), identifierStart(), zeroOrMore(identifierPart()),
-				SET(actions.createIdentifier(TEXT("identifierStart"), TEXTS("zeroOrMore/identifierPart"))),
+		return sequence(
+				sequence(identifierStart(), zeroOrMore(identifierPart())).label("identifier"),
+				actions.checkIfKeyword(TEXT("identifier")),
+				SET(actions.createIdentifier(TEXT("identifier"))),
 				optWS()).label("identifier");
 	}
 	
-	private Rule expressionSensitiveKeyword() {
-		return sequence(
-				firstOf(
-						string("class"),
-						string("new"),
-						string("instanceof")),
-				testLexBreak(),
-				optWS());
-	}
+	/**
+	 * Technically {@code null}, {@code true} and {@code false} aren't keywords but specific literals, but, from a parser point of view they are keywords.
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.9
+	 */
+	static final List<String> KEYWORDS = Collections.unmodifiableList(Arrays.asList(
+			"abstract", "class", "interface", "enum", "static", "final", "volatile", "transient", "strictfp", "native",
+			"boolean", "byte", "short", "char", "int", "long", "float", "double", "void",
+			"null", "this", "super", "true", "false",
+			"continue", "break", "goto", "case", "default", "instanceof",
+			"if", "do", "while", "for", "else", "synchronized", "switch", "assert", "throw", "try", "catch", "finally", "new", "return",
+			"throws", "extends", "implements",
+			"import", "package", "const",
+			"public", "private", "protected"
+	));
 	
 	public Rule identifierStart() {
 		return new IdentifierMatcher(true);

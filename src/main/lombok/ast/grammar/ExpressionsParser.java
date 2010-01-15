@@ -99,7 +99,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	}
 	
 	private Rule arrayAccessOperation() {
-		return sequence(
+		return enforcedSequence(
 				ch('['), group.basics.optWS(),
 				anyExpression(), SET(), ch(']'), group.basics.optWS(),
 				SET(actions.createArrayAccessOperation(VALUE())));

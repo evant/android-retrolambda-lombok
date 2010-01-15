@@ -21,21 +21,19 @@
  */
 package lombok.ast.grammar;
 
-import java.util.List;
-
 import lombok.ast.Identifier;
 import lombok.ast.Node;
 
+import org.parboiled.ActionResult;
 import org.parboiled.BaseActions;
 
 public class BasicsActions extends BaseActions<Node> {
-	public Node createIdentifier(String text, List<String> texts) {
-		StringBuilder s = new StringBuilder(1 + (texts == null ? 0 : texts.size()));
-		if (text != null) s.append(text);
-		if (texts != null) for (String p : texts) {
-			if (p != null) s.append(p);
-		}
-		
-		return new Identifier().setName(s.toString());
+	public Node createIdentifier(String text) {
+		return text == null ? new Identifier() : new Identifier().setName(text);
+	}
+	
+	public ActionResult checkIfKeyword(String text) {
+		if (text == null) return ActionResult.CONTINUE;
+		return BasicsParser.KEYWORDS.contains(text) ? ActionResult.CANCEL_MATCH : ActionResult.CONTINUE;
 	}
 }
