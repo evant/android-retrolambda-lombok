@@ -22,6 +22,7 @@
 package lombok.ast;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -52,7 +53,28 @@ public class ListAccessor<T extends Node, P extends Node> {
 		list.clear();
 	}
 	
+	public P migrateAllFrom(ListAccessor<? extends T, ?> otherList) {
+		for (Node n : otherList.list) {
+			if (!tClass.isInstance(n)) throw new AstException(otherList.parent, String.format("List %s contains node that aren't of type %s", otherList.listName, tClass));
+		}
+		
+		return migrateAllFromRaw(otherList);
+	}
+	
+	public P migrateAllFromRaw(ListAccessor<? extends Node, ?> otherList) {
+		Iterator<Node> it = otherList.list.iterator();
+		while (it.hasNext()) {
+			Node n = it.next();
+			otherList.parent.disown(n);
+			it.remove();
+			this.addToEndRaw(n);
+		}
+		
+		return returnAsParent;
+	}
+	
 	public P addToStart(T node) {
+		if (node == null) throw new NullPointerException("node");
 		return addToStartRaw(node);
 	}
 	
@@ -64,23 +86,27 @@ public class ListAccessor<T extends Node, P extends Node> {
 	}
 	
 	public P addToEnd(T node) {
+		if (node == null) throw new NullPointerException("node");
 		return addToEndRaw(node);
 	}
 	
 	public P addToEndRaw(Node node) {
-		if (node == null) throw new NullPointerException("node");
-		parent.adopt(node);
-		list.add(node);
+		if (node != null) {
+			parent.adopt(node);
+			list.add(node);
+		}
 		return returnAsParent;
 	}
 	
 	public P addBefore(T node, Node ref) {
+		if (node == null) throw new NullPointerException("node");
 		return addBeforeRaw(node, ref);
 	}
 	
 	public P addBeforeRaw(Node node, Node ref) {
-		node.ensureParentless();
+		if (node == null) return returnAsParent;
 		if (ref == null) throw new NullPointerException("ref");
+		node.ensureParentless();
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == ref) {
@@ -94,12 +120,14 @@ public class ListAccessor<T extends Node, P extends Node> {
 	}
 	
 	public P addAfter(T node, Node ref) {
+		if (node == null) throw new NullPointerException("node");
 		return addAfterRaw(node, ref);
 	}
 	
 	public P addAfterRaw(Node node, Node ref) {
-		node.ensureParentless();
+		if (node == null) return returnAsParent;
 		if (ref == null) throw new NullPointerException("ref");
+		node.ensureParentless();
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == ref) {
@@ -113,23 +141,25 @@ public class ListAccessor<T extends Node, P extends Node> {
 	}
 	
 	public P replace(Node source, T replacement) {
+		if (replacement == null) throw new NullPointerException("replacement");
 		return replaceRaw(source, replacement);
 	}
 	
 	public P replaceRaw(Node source, Node replacement) {
-		replacement.ensureParentless();
+		if (replacement != null) replacement.ensureParentless();
 		parent.ensureParentage(source);
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == source) {
 				parent.disown(source);
 				try {
-					parent.adopt(replacement);
+					if (replacement != null) parent.adopt(replacement);
 				} catch (IllegalStateException e) {
 					parent.adopt(source);
 					throw e;
 				}
-				list.set(i, replacement);
+				if (replacement == null) list.remove(i);	//screws up for counter, but we return right after anyway, so it doesn't matter.
+				else list.set(i, replacement);
 				return returnAsParent;
 			}
 		}
@@ -138,6 +168,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 	}
 	
 	public P remove(Node source) throws NoSuchElementException {
+		if (source == null) return returnAsParent;
 		parent.ensureParentage(source);
 		
 		for (int i = 0; i < list.size(); i++) {

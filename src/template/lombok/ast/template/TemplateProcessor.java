@@ -51,7 +51,6 @@ import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
 import lombok.Data;
-import lombok.NonNull;
 
 @SupportedAnnotationTypes("lombok.ast.template.GenerateAstNode")
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
@@ -69,13 +68,24 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		public FieldData(VariableElement field) {
 			this.name = String.valueOf(field.getSimpleName());
-			this.mandatory = field.getAnnotation(NonNull.class) != null;
+			boolean isMandatory = false; {
+				for (AnnotationMirror ann :field.getAnnotationMirrors()) {
+					if (ann.getAnnotationType().toString().equals("lombok.NonNull")) {
+						isMandatory = true;
+						break;
+					}
+				}
+			}
+			this.mandatory = isMandatory;
 			TypeMirror type = field.asType();
 			NotChildOfNode ncon = field.getAnnotation(NotChildOfNode.class);
 			this.astNode = ncon == null;
 			this.rawFormParser = astNode ? "" : ncon.rawFormParser();
 			this.rawFormGenerator = astNode ? "" : ncon.rawFormGenerator();
-			this.initialValue = astNode ? "" : ncon.initialValue();
+			/* grab initial value */ {
+				InitialValue iv = field.getAnnotation(InitialValue.class);
+				this.initialValue = iv == null ? "" : iv.value();
+			}
 			
 			if (type instanceof DeclaredType) {
 				DeclaredType t = (DeclaredType) type;

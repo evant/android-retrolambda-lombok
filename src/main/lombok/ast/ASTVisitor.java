@@ -53,4 +53,10 @@ public interface ASTVisitor {
 	public boolean visitTypeVariable(TypeVariable node);
 	public boolean visitParseArtefact(Node node);
 	public boolean visitInstanceOf(InstanceOf node);
+	public boolean visitTypeArguments(TypeArguments node);
+	public boolean visitClassBody(ClassBody node);
+	public boolean visitConstructorInvocation(ConstructorInvocation node);
+	public boolean visitMethodInvocation(MethodInvocation node);
+	public boolean visitSelect(Select node);
+	public boolean visitArrayAccess(ArrayAccess node);
 }

@@ -24,13 +24,19 @@ package lombok.ast.grammar;
 import java.util.Collections;
 import java.util.List;
 
+import lombok.ast.ArrayAccess;
 import lombok.ast.BinaryExpression;
 import lombok.ast.Cast;
+import lombok.ast.ConstructorInvocation;
 import lombok.ast.IdentifierExpression;
 import lombok.ast.IncrementExpression;
 import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceOf;
+import lombok.ast.MethodInvocation;
 import lombok.ast.Node;
+import lombok.ast.Select;
+import lombok.ast.TypeReference;
+import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
 
 import org.parboiled.BaseActions;
@@ -132,5 +138,66 @@ public class ExpressionsActions extends BaseActions<Node> {
 	
 	public Node createInstanceOfExpression(Node operand, Node type) {
 		return new InstanceOf().setRawObjectReference(operand).setRawType(type);
+	}
+	
+	public Node createQualifiedConstructorInvocation(Node constructorTypeArgs, Node identifier, Node classTypeArgs, Node methodArguments, Node classBody) {
+		TypeReferencePart classTypeArgs0 = (classTypeArgs instanceof TypeReferencePart) ? (TypeReferencePart)classTypeArgs : new TypeReferencePart();
+		MethodInvocation methodArguments0 = (methodArguments instanceof MethodInvocation) ? (MethodInvocation)methodArguments : new MethodInvocation();
+		
+		return new ConstructorInvocation()
+				.setRawConstructorTypeArguments(constructorTypeArgs)
+				.setRawTypeReference(new TypeReference().parts().addToEnd(classTypeArgs0.setRawIdentifier(identifier)))
+				.arguments().migrateAllFromRaw(methodArguments0.arguments())
+				.setRawAnonymousClassBody(classBody);
+	}
+	
+	public Node createChainOfQualifiedConstructorInvocations(Node qualifier, List<Node> constructorInvocations) {
+		Node current = qualifier;
+		
+		if (constructorInvocations == null) return current;
+		
+		for (Node n : constructorInvocations) {
+			if (n instanceof ConstructorInvocation)
+				current = ((ConstructorInvocation)n).setRawQualifier(current);
+		}
+		
+		return current;
+	}
+	
+	public Node createMethodInvocationOperation(Node typeArguments, Node name, Node arguments) {
+		MethodInvocation mi = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
+		//TODO hang dangling node on mi if arguments is non null but also not an MI.
+		return mi.setRawName(name).setRawMethodTypeArguments(typeArguments);
+	}
+	
+	public Node createSelectOperation(Node identifier) {
+		return new Select().setRawIdentifier(identifier);
+	}
+	
+	public Node createArrayAccessOperation(Node indexExpression) {
+		return new ArrayAccess().setRawIndexExpression(indexExpression);
+	}
+	
+	public Node createLevel1Expression(Node operand, List<Node> operations) {
+		Node current = operand;
+		if (operations == null) return current;
+		
+		for (Node o : operations) {
+			if (o instanceof ArrayAccess) {
+				current = ((ArrayAccess)o).setRawOperand(current);
+			} else if (o instanceof MethodInvocation) {
+				current = ((MethodInvocation)o).setRawOperand(current);
+			} else if (o instanceof Select) {
+				current = ((Select)o).setRawOperand(operand);
+			}
+		}
+		return current;
+	}
+	
+	public Node createPrimary(Node identifier, Node methodArguments) {
+		if (methodArguments instanceof MethodInvocation) return ((MethodInvocation)methodArguments).setRawName(identifier);
+		//TODO if (methodArguments != null) add dangling node.
+		
+		return new IdentifierExpression().setRawIdentifier(identifier);
 	}
 }

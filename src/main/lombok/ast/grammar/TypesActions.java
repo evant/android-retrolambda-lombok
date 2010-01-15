@@ -25,6 +25,7 @@ import java.util.List;
 
 import lombok.ast.Identifier;
 import lombok.ast.Node;
+import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
@@ -37,11 +38,8 @@ public class TypesActions extends BaseActions<Node> {
 		return new TypeReference().parts().addToStartRaw(new TypeReferencePart().setRawIdentifier(new Identifier().setName(text)));
 	}
 	
-	public Node createTypePart(Node identifier, Node typePart) {
-		if (!(typePart instanceof TypeReferencePart)) return new TypeReferencePart().setRawIdentifier(identifier);
-		//todo add screwed up typePart as dangling tail to returned node.
-		
-		return ((TypeReferencePart)typePart).setRawIdentifier(identifier);
+	public Node createTypeReferencePart(Node identifier, Node typeArguments) {
+		return new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments);
 	}
 	
 	public Node createWildcardedType(String extendsOrSuper, Node type) {
@@ -61,13 +59,13 @@ public class TypesActions extends BaseActions<Node> {
 	}
 	
 	public Node createTypeArguments(Node head, List<Node> tail) {
-		TypeReferencePart tp = new TypeReferencePart();
-		if (head != null) tp.generics().addToEndRaw(head);
+		TypeArguments ta = new TypeArguments();
+		if (head != null) ta.generics().addToEndRaw(head);
 		if (tail != null) for (Node n : tail) {
-			if (n != null) tp.generics().addToEndRaw(n);
+			if (n != null) ta.generics().addToEndRaw(n);
 		}
 		
-		return tp;
+		return ta;
 	}
 	
 	public Node createReferenceType(Node head, List<Node> tail) {

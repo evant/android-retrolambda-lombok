@@ -36,8 +36,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	}
 	
 	/*
-	 * level 0: paren grouping, primitive (=literal, identifier, type literal)
-	 * level 1: array index, method call, member access, [non-dot constructor]
+	 * level 0: paren grouping / literal / unqualified constructor invocation / identifier opt[methodArguments]
 	 */
 	
 	public Rule primaryExpression() {
@@ -56,6 +55,44 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 		return assignmentExpression();
 	}
 	
+	public static class Foo<T> {
+		public static final int x = 10;
+	}
+	
+	public Rule level1Expression() {
+		return sequence(
+				primaryExpression(), SET(),
+				zeroOrMore(firstOf(
+						arrayAccessOperation().label("arrayAccess"),
+						methodInvocationWithTypeArgsOperation().label("methodInvocation"),
+						select().label("select"))),
+				SET(actions.createLevel1Expression(VALUE(), VALUES("zeroOrMore/firstOf"))));
+	}
+	
+	private Rule arrayAccessOperation() {
+		return sequence(
+				ch('['), group.basics.optWS(),
+				anyExpression(), SET(), ch(']'), group.basics.optWS(),
+				SET(actions.createArrayAccessOperation(VALUE())));
+	}
+	
+	public Rule methodInvocationWithTypeArgsOperation() {
+		return sequence(
+				ch('.'), group.basics.optWS(),
+				group.types.typeArguments().label("typeArguments"),
+				group.basics.identifier().label("name"),
+				group.structures.methodArguments().label("methodArguments"),
+				SET(actions.createMethodInvocationOperation(VALUE("typeArguments"), VALUE("name"), VALUE("methodArguments"))));
+	}
+	
+	public Rule select() {
+		return sequence(
+				ch('.'), group.basics.optWS(),
+				group.basics.identifier().label("identifier"),
+				testNot(ch('(')),
+				SET(actions.createSelectOperation(VALUE("identifier"))));
+	}
+	
 	/**
 	 * P2''
 	 * 
@@ -64,7 +101,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 */
 	public Rule dotNewExpression() {
 		return sequence(
-				primaryExpression(),
+				level1Expression(), SET(),
 				zeroOrMore(enforcedSequence(
 						sequence(
 								ch('.'),
@@ -72,11 +109,13 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 								string("new"),
 								group.basics.testLexBreak(),
 								group.basics.optWS()),
-						group.types.typeArguments(),
-						group.basics.identifier(),
-						group.types.typeArguments(),
-						group.structures.methodArguments(),
-						optional(group.structures.classBody()))));
+						group.types.typeArguments().label("constructorTypeArgs"),
+						group.basics.identifier().label("innerClassName"),
+						group.types.typeArguments().label("classTypeArgs"),
+						group.structures.methodArguments().label("methodArguments"),
+						optional(group.structures.classBody()).label("classBody"),
+						SET(actions.createQualifiedConstructorInvocation(VALUE("constructorTypeArgs"), VALUE("innerClassName"), VALUE("classTypeArgs"), VALUE("methodArguments"), VALUE("classBody"))))),
+				SET(actions.createChainOfQualifiedConstructorInvocations(VALUE(), VALUES("zeroOrMore/enforcedSequence"))));
 	}
 	
 	/**

@@ -27,6 +27,7 @@ import lombok.NonNull;
 import lombok.ast.template.AdditionalCheck;
 import lombok.ast.template.CopyMethod;
 import lombok.ast.template.GenerateAstNode;
+import lombok.ast.template.InitialValue;
 import lombok.ast.template.NotChildOfNode;
 
 @GenerateAstNode(extending=Statement.class)
@@ -179,8 +180,10 @@ class TypeVariableTemplate {
 
 @GenerateAstNode
 class TypeReferenceTemplate {
-	@NotChildOfNode(initialValue = "lombok.ast.WildcardKind.NONE")
+	@NotChildOfNode
+	@InitialValue("lombok.ast.WildcardKind.NONE")
 	@NonNull WildcardKind wildcard;
+	
 	@NotChildOfNode
 	int arrayDimensions;
 	
@@ -213,7 +216,13 @@ class TypeReferenceTemplate {
 @GenerateAstNode
 class TypeReferencePartTemplate {
 	@NonNull Identifier identifier;
-	List<TypeReference> generics;
+	@InitialValue("new TypeArguments()")
+	@NonNull TypeArguments typeArguments;
+	
+	@CopyMethod
+	static ListAccessor<TypeReference, TypeReferencePart> generics(TypeReferencePart self) {
+		return self.getTypeArguments().generics().wrap(self);
+	}
 	
 	@CopyMethod
 	static String getTypeName(TypeReferencePart p) {
@@ -247,6 +256,11 @@ class TypeReferencePartTemplate {
 	}
 }
 
+@GenerateAstNode
+class TypeArgumentsTemplate {
+	List<TypeReference> generics;
+}
+
 @GenerateAstNode(extending=Expression.class)
 class CastTemplate {
 	@NonNull TypeReference type;
@@ -262,4 +276,38 @@ class IdentifierExpressionTemplate {
 class InstanceOfTemplate {
 	@NonNull Expression objectReference;
 	@NonNull TypeReference type;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class ConstructorInvocationTemplate {
+	Expression qualifier;
+	TypeArguments constructorTypeArguments;
+	@NonNull TypeReference typeReference;
+	List<Expression> arguments;
+	ClassBody anonymousClassBody;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class MethodInvocationTemplate {
+	Expression operand;
+	TypeArguments methodTypeArguments;
+	@NonNull Identifier name;
+	List<Expression> arguments;
+}
+
+@GenerateAstNode
+class ClassBodyTemplate {
+	
+}
+
+@GenerateAstNode(extending=Expression.class)
+class SelectTemplate {
+	@NonNull Expression operand;
+	@NonNull Identifier identifier;
+}
+
+@GenerateAstNode(extending=Expression.class)
+class ArrayAccessTemplate {
+	@NonNull Expression operand;
+	@NonNull Expression indexExpression;
 }

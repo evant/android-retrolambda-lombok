@@ -82,7 +82,7 @@ public class TypesParser extends BaseParser<Node, TypesActions> {
 		return sequence(
 				group.basics.identifier().label("partName"),
 				optional(typeArguments()),
-				SET(actions.createTypePart(VALUE("partName"), VALUE("optional/typeArguments"))),
+				SET(actions.createTypeReferencePart(VALUE("partName"), VALUE("optional/typeArguments"))),
 				group.basics.optWS());
 	}
 	
