@@ -47,7 +47,7 @@ public class JavaParser extends BaseParser<Node, Actions<Node>> {
 	public Rule testRules() {
 		return sequence(
 				zeroOrMore(firstOf(
-						group.operators.anyExpression(),
+						group.expressions.anyExpression(),
 						sequence(group.types.type(), group.basics.optWS(), ch('.'), group.basics.optWS(), string("class")))),
 				eoi());
 	}

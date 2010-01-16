@@ -343,3 +343,9 @@ class SuperTemplate {
 class ClassLiteralTemplate {
 	@NonNull TypeReference typeReference;
 }
+
+@GenerateAstNode
+class KeywordModifierTemplate {
+	@NotChildOfNode
+	@NonNull String name;
+}

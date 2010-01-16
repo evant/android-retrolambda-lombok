@@ -64,4 +64,5 @@ public interface ASTVisitor {
 	public boolean visitSuper(Super node);
 	public boolean visitClassLiteral(ClassLiteral node);
 	public boolean visitThis(This node);
+	public boolean visitKeywordModifier(KeywordModifier node);
 }
