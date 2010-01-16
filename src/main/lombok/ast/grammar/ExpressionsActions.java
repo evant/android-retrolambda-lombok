@@ -98,7 +98,7 @@ public class ExpressionsActions extends BaseActions<Node> {
 			org.parboiled.Node<Node> operator = operators.get(i);
 			if (operator == null) continue;
 			if ("cast".equals(operator.getLabel())) {
-				current = new Cast().setRawOperand(current).setRawType(operator.getValue());
+				current = new Cast().setRawOperand(current).setRawTypeReference(operator.getValue());
 			} else {
 				String symbol = operatorTexts.get(i);
 				if (symbol == null) continue;
@@ -135,7 +135,7 @@ public class ExpressionsActions extends BaseActions<Node> {
 	}
 	
 	public Node createTypeCastExpression(Node type, Node operand) {
-		return new Cast().setRawOperand(operand).setRawType(type);
+		return new Cast().setRawOperand(operand).setRawTypeReference(type);
 	}
 	
 	public Node createIdentifierExpression(Node identifier) {
@@ -143,7 +143,7 @@ public class ExpressionsActions extends BaseActions<Node> {
 	}
 	
 	public Node createInstanceOfExpression(Node operand, Node type) {
-		return new InstanceOf().setRawObjectReference(operand).setRawType(type);
+		return new InstanceOf().setRawObjectReference(operand).setRawTypeReference(type);
 	}
 	
 	public Node createQualifiedConstructorInvocation(Node constructorTypeArgs, Node identifier, Node classTypeArgs, Node methodArguments, Node classBody) {
@@ -240,7 +240,7 @@ public class ExpressionsActions extends BaseActions<Node> {
 	
 	public Node createThisOrSuperOrClass(String text, Node qualifier) {
 		if ("super".equals(text)) return new Super().setRawQualifier(qualifier);
-		if ("class".equals(text)) return new ClassLiteral().setRawType(qualifier);
+		if ("class".equals(text)) return new ClassLiteral().setRawTypeReference(qualifier);
 		return new This().setRawQualifier(qualifier);
 	}
 }

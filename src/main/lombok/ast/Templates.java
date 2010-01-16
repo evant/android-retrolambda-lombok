@@ -105,7 +105,7 @@ class TryTemplate {
 
 @GenerateAstNode(extending=Statement.class)
 class VariableDeclarationTemplate {
-	@NonNull TypeReference type;
+	@NonNull TypeReference typeReference;
 	List<VariableDeclarationEntry> variables;
 }
 
@@ -263,7 +263,7 @@ class TypeArgumentsTemplate {
 
 @GenerateAstNode(extending=Expression.class)
 class CastTemplate {
-	@NonNull TypeReference type;
+	@NonNull TypeReference typeReference;
 	@NonNull Expression operand;
 }
 
@@ -275,7 +275,7 @@ class IdentifierExpressionTemplate {
 @GenerateAstNode(extending=Expression.class)
 class InstanceOfTemplate {
 	@NonNull Expression objectReference;
-	@NonNull TypeReference type;
+	@NonNull TypeReference typeReference;
 }
 
 @GenerateAstNode(extending=Expression.class)
@@ -341,5 +341,5 @@ class SuperTemplate {
 
 @GenerateAstNode(extending=Expression.class)
 class ClassLiteralTemplate {
-	@NonNull TypeReference type;
+	@NonNull TypeReference typeReference;
 }

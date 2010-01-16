@@ -192,7 +192,7 @@ public abstract class Node {
 		} else if (this instanceof Identifier) {
 			return ((Identifier)this).getName();
 		} else if (this instanceof Cast) {
-			return "(C:" + ((Cast)this).getType() + ")_" + ((Cast)this).getOperand() + "_";
+			return "(C:" + ((Cast)this).getTypeReference() + ")_" + ((Cast)this).getOperand() + "_";
 		} else {
 			return "NODE: " + this.getClass().getSimpleName();
 		}
