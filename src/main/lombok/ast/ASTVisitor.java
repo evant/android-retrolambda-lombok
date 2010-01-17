@@ -65,4 +65,9 @@ public interface ASTVisitor {
 	public boolean visitClassLiteral(ClassLiteral node);
 	public boolean visitThis(This node);
 	public boolean visitKeywordModifier(KeywordModifier node);
+	public boolean visitEmptyStatement(EmptyStatement node);
+	public boolean visitLabelledStatement(LabelledStatement node);
+	public boolean visitSwitch(Switch node);
+	public boolean visitCase(Case node);
+	public boolean visitDefault(Default node);
 }

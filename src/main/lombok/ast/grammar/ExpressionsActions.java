@@ -45,6 +45,7 @@ import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
 
+import org.parboiled.ActionResult;
 import org.parboiled.BaseActions;
 
 public class ExpressionsActions extends BaseActions<Node> {
@@ -58,19 +59,8 @@ public class ExpressionsActions extends BaseActions<Node> {
 		return currentLeft;
 	}
 	
-	public Node createRightAssociativeBinaryExpression(Node head, List<String> operators, List<Node> tail) {
-		if (tail.size() == 0) return head;
-		
-		Node currentRight = tail.remove(tail.size() -1);
-		Collections.reverse(tail);
-		Collections.reverse(operators);
-		tail.add(head);
-		
-		for (int i = 0; i < operators.size(); i++) {
-			currentRight = new BinaryExpression().setRawLeft(tail.get(i)).setRawRight(currentRight).setRawOperator(operators.get(i));
-		}
-		
-		return currentRight;
+	public Node createAssignmentExpression(Node lhs, String operator, Node rhs) {
+		return new BinaryExpression().setRawLeft(lhs).setRawRight(rhs).setRawOperator(operator);
 	}
 	
 	public Node createInlineIfExpression(Node head, List<String> operators1, List<String> operators2, List<Node> tail1, List<Node> tail2) {
@@ -242,5 +232,16 @@ public class ExpressionsActions extends BaseActions<Node> {
 		if ("super".equals(text)) return new Super().setRawQualifier(qualifier);
 		if ("class".equals(text)) return new ClassLiteral().setRawTypeReference(qualifier);
 		return new This().setRawQualifier(qualifier);
+	}
+	
+	public ActionResult checkIfLevel1ExprIsValidForAssignment(Node node) {
+		if (node instanceof IdentifierExpression) return ActionResult.CONTINUE;
+		if (node instanceof Select) return ActionResult.CONTINUE;
+		if (node instanceof ArrayAccess) return ActionResult.CONTINUE;
+		return ActionResult.CANCEL_MATCH;
+	}
+	
+	public ActionResult checkIfMethodOrConstructorInvocation(Node node) {
+		return (node instanceof MethodInvocation || node instanceof ConstructorInvocation) ? ActionResult.CONTINUE : ActionResult.CANCEL_MATCH;
 	}
 }

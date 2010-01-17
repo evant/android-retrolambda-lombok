@@ -349,3 +349,27 @@ class KeywordModifierTemplate {
 	@NotChildOfNode
 	@NonNull String name;
 }
+
+@GenerateAstNode(extending=Statement.class)
+class EmptyStatementTemplate {}
+
+@GenerateAstNode(extending=Statement.class)
+class LabelledStatementTemplate {
+	@NonNull Identifier label;
+	@NonNull Statement statement;
+}
+
+@GenerateAstNode(extending=Statement.class)
+class SwitchTemplate {
+	@NonNull Expression condition;
+	@NonNull Block body;
+}
+
+@GenerateAstNode(extending=Statement.class)
+class CaseTemplate {
+	@NonNull Expression condition;
+}
+
+@GenerateAstNode(extending=Statement.class)
+class DefaultTemplate {
+}
