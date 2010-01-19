@@ -75,7 +75,7 @@
 	</target>
 	
 	<target name="testParser" depends="compile" description="Runs the testRules parse target, and will parse standard input, line by line.">
-		<java classname="lombok.ast.grammar.ParseSomething">
+		<java classname="lombok.ast.grammar.ParseSomething" fork="true">
 			<classpath location="build/lombok.ast" />
 			<classpath refid="libs.path" />
 		</java>
@@ -91,7 +91,7 @@
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
 	</target>
 	
-	<target name="showDependencyReport" depends="config-ivy">
+	<target name="showDependencyReport" depends="config-ivy" description="Generates dependency report as HTML file.">
 		<ant antfile="buildScripts/ivy.ant.xml" target="showDependencyReport" dir=".">
 			<property name="build.report" value="build/report" />
 		</ant>
