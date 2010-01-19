@@ -33,6 +33,8 @@ public class Position {
 	private int start, end;
 	private Node generatedBy;
 	
+	public static Position UNPLACED = new Position(0, 0);
+	
 	public Position(int start, int end) {
 		this.start = start;
 		this.end = end;
@@ -43,5 +45,9 @@ public class Position {
 		this.start = start;
 		this.end = end;
 		this.generatedBy = generatedBy;
+	}
+	
+	public Position withGeneratedBy(Node generatedBy) {
+		return new Position(start, end, generatedBy);
 	}
 }

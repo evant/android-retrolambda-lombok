@@ -43,7 +43,6 @@ public class ParseSomething {
 		}
 		
 		ParserGroup group = new ParserGroup();
-		
 		if (src == null) {
 			Scanner s = new Scanner(System.in);
 			System.out.println("Write something to parse, then hit enter to print the node graph of what the parser made of it.");
@@ -60,7 +59,9 @@ public class ParseSomething {
 	}
 	
 	private static void parse(JavaParser parser, String input) {
+		long now = System.nanoTime();
 		ParsingResult<Node> result = parser.parse(parser.testRules(), input + "\n");
+		long taken = System.nanoTime() - now;
 		System.out.println(ParseTreeUtils.printNodeTree(result, new Function<org.parboiled.Node<Node>, Printability>() {
 			@Override public Printability apply(org.parboiled.Node<Node> from) {
 				return from.getValue() != null ? Printability.PrintAndDescend : Printability.Descend;
@@ -69,6 +70,11 @@ public class ParseSomething {
 		if (result.hasErrors()) {
 			System.out.println(StringUtils.join(result.parseErrors, "---\n"));
 		}
+		
+		long msec = taken / 1000000;
+		long nano = taken % 1000000;
+		
+		System.out.printf("Time taken: %d msec(+ %d nanos)\n", msec, nano);
 	}
 	
 	private static String readFile(String[] args) throws FileNotFoundException, IOException {

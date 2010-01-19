@@ -96,7 +96,7 @@ public class TypesActions extends BaseActions<Node> {
 	}
 	
 	public Node createTypeVariables(Node head, List<Node> tail) {
-		OrphanedTypeVariables otv = new OrphanedTypeVariables();
+		TemporaryNodes.OrphanedTypeVariables otv = new TemporaryNodes.OrphanedTypeVariables();
 		if (head != null) otv.variables.add(head);
 		if (tail != null) for (Node t : tail) otv.variables.add(t);
 		return otv;

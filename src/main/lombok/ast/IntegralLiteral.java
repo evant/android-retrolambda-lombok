@@ -31,6 +31,15 @@ public class IntegralLiteral extends Expression implements Literal {
 	private String errorReason = "Missing value";
 	@Getter private boolean markedAsLong;
 	
+	public IntegralLiteral copy() {
+		IntegralLiteral result = new IntegralLiteral();
+		result.value = value;
+		result.rawValue = rawValue;
+		result.errorReason = errorReason;
+		result.markedAsLong = markedAsLong;
+		return result;
+	}
+	
 	public IntegralLiteral setIntValue(int value) {
 		this.value = Long.valueOf(value);
 		this.rawValue = "" + value;

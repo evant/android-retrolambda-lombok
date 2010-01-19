@@ -140,18 +140,18 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 				blockComment());
 	}
 	
-	private Rule lineComment() {
+	Rule lineComment() {
 		return enforcedSequence(string("//"), zeroOrMore(sequence(testNot(lineTerminator()), any())), lineTerminator());
 	}
 	
-	private Rule blockComment() {
+	Rule blockComment() {
 		return enforcedSequence(string("/*"), zeroOrMore(sequence(testNot(string("*/")), any())), string("*/"));
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.4
 	 */
-	private Rule whitespaceChar() {
+	Rule whitespaceChar() {
 		return firstOf(ch(' '), ch('\t'), ch('\f'), lineTerminator());
 	}
 	

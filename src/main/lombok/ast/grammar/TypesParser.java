@@ -78,7 +78,7 @@ public class TypesParser extends BaseParser<Node, TypesActions> {
 				SET(actions.createReferenceType(VALUE("head"), VALUES("zeroOrMore/sequence/tail"))));
 	}
 	
-	private Rule referenceTypePart() {
+	Rule referenceTypePart() {
 		return sequence(
 				group.basics.identifier().label("partName"),
 				optional(typeArguments()),
@@ -101,7 +101,7 @@ public class TypesParser extends BaseParser<Node, TypesActions> {
 				group.basics.optWS()));
 	}
 	
-	private Rule typeVariable() {
+	Rule typeVariable() {
 		return sequence(
 				group.basics.identifier(),
 				optional(enforcedSequence(

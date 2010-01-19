@@ -63,15 +63,15 @@ class WhileTemplate {
 
 @GenerateAstNode(extending=Statement.class)
 class ForTemplate {
-	Statement initialization;
+	List<Statement> inits;
 	Expression condition;
-	List<Statement> increments;
+	List<Statement> updates;
 	@NonNull Statement statement;
 }
 
 @GenerateAstNode(extending=Statement.class)
 class ForEachTemplate {
-	@NonNull VariableDeclaration element;
+	@NonNull VariableDeclaration variable;
 	@NonNull Expression iterable;
 	@NonNull Statement statement;
 }
@@ -103,6 +103,68 @@ class TryTemplate {
 	}
 }
 
+@GenerateAstNode
+class AnnotationTemplate {
+	
+}
+
+@GenerateAstNode
+class ModifiersTemplate {
+	//moet AnnotationMod en KeywMod een common interface hebben of zo??
+	//what shoud this even look like?
+	//2 lists: 1 for key...
+	
+	//en dan een stack of utility methods for isPublic en zo?
+	//how about 1 iterator to iterate through ALL keywords? And as what? "Node"? Or common interface?
+	
+	//what would it have? 9the common interface)
+	
+	//'isKeyword' - silly, instanceof check works as well
+	
+	List<KeywordModifier> keywords;
+	List<Annotation> annotations;
+	
+	@CopyMethod
+	static boolean isPublic(Modifiers m) {
+		return contains(m, "public");
+	}
+	
+	@CopyMethod
+	static boolean isProtected(Modifiers m) {
+		return contains(m, "protected");
+	}
+	
+	@CopyMethod
+	static boolean isPrivate(Modifiers m) {
+		return contains(m, "private");
+	}
+	
+	@CopyMethod
+	static boolean isPackagePrivate(Modifiers m) {
+		return !contains(m, "public") && !contains(m, "protected") && !contains(m, "private");
+	}
+	
+	@CopyMethod
+	static boolean isStatic(Modifiers m) {
+		return contains(m, "static");
+	}
+	
+	@CopyMethod
+	static boolean isFinal(Modifiers m) {
+		return contains(m, "final");
+	}
+	
+	@CopyMethod
+	static boolean isAbstract(Modifiers m) {
+		return contains(m, "abstract");
+	}
+	
+	private static boolean contains(Modifiers m, String keyword) {
+		for (Node k : m.keywords().getRawContents()) if (k instanceof KeywordModifier && "public".equals(((KeywordModifier)k).getName())) return true;
+		return false;
+	}
+}
+
 @GenerateAstNode(extending=Statement.class)
 class VariableDeclarationTemplate {
 	@NonNull TypeReference typeReference;
@@ -112,7 +174,18 @@ class VariableDeclarationTemplate {
 @GenerateAstNode
 class VariableDeclarationEntryTemplate {
 	@NonNull Identifier name;
+	@NotChildOfNode int dimensions;
 	Expression initializer;
+	
+	@CopyMethod
+	static TypeReference getTypeReference(VariableDeclarationEntry self) {
+		if (!(self.getParent() instanceof VariableDeclaration)) throw new AstException(
+				self, "Cannot calculate type reference of a VariableDeclarationEntry without a VariableDeclaration as parent");
+		
+		
+		TypeReference typeRef = ((VariableDeclaration)self.getParent()).getTypeReference().copy();
+		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getDimensions());
+	}
 }
 
 @GenerateAstNode(extending=Expression.class)
@@ -372,4 +445,223 @@ class CaseTemplate {
 
 @GenerateAstNode(extending=Statement.class)
 class DefaultTemplate {
+}
+
+@GenerateAstNode(extending=Expression.class, implementing=Literal.class)
+class BooleanLiteralTemplate {
+	@NotChildOfNode(rawFormParser="parseBoolean", rawFormGenerator="generateBoolean")
+	@NonNull Boolean value;
+	
+	static String generateBoolean(Boolean bool) {
+		return String.valueOf(bool);
+	}
+	
+	static Boolean parseBoolean(String bool) {
+		if (bool == null) throw new IllegalArgumentException("missing boolean");
+		bool = bool.trim();
+		if (bool.equals("true")) return true;
+		if (bool.equals("false")) return false;
+		throw new IllegalArgumentException("invalid boolean literal:" + bool); 
+	}
+}
+
+@GenerateAstNode(extending=Expression.class, implementing=Literal.class)
+class CharLiteralTemplate {
+	@NotChildOfNode(rawFormParser="parseChar", rawFormGenerator="generateChar")
+	@NonNull Character value;
+	
+	static String toEscape(char c, boolean forCharLiteral, char next) {
+		if (c == '\'') return forCharLiteral ? "\\'" : "'";
+		if (c == '"') return forCharLiteral ? "\"" : "\\\"";
+		if (c == '\b') return "\\b";
+		if (c == '\t') return "\\t";
+		if (c == '\n') return "\\n";
+		if (c == '\f') return "\\f";
+		if (c == '\r') return "\\r";
+		if (c == '\\') return "\\\\";
+		if (c < 0x20 || c == 127) {
+			String octalEscape = Integer.toString(c, 010);
+			boolean fill = (next >= '0' && next <= '7') && octalEscape.length() < 3;
+			while (fill && octalEscape.length() < 3) octalEscape = "0" + octalEscape;
+			return "\\" + octalEscape;
+		}
+		return "" + c;
+	}
+	
+	static char fromEscape(char x) {
+		if (x == 'b') return '\b';
+		if (x == 't') return '\t';
+		if (x == 'n') return '\n';
+		if (x == 'f') return '\f';
+		if (x == 'r') return '\r';
+		if (x == '\'') return '\'';
+		if (x == '"') return '"';
+		if (x == '\\') return '\\';
+		return 0;
+	}
+	
+	static String generateChar(Character c) {
+		return "'" + toEscape(c, true, 'a') + "'";
+	}
+	
+	static Character parseChar(String raw) {
+		if (raw == null) throw new IllegalArgumentException("missing character literal");
+		String v = raw.trim();
+		
+		if (!v.startsWith("'") || !v.endsWith("'")) throw new IllegalArgumentException(
+				"Character literals should be enclosed in single quotes: " + v);
+		
+		String content = v.substring(1, v.length()-1);
+		if (content.length() == 0) throw new IllegalArgumentException(
+				"Empty character literal not allowed");
+		
+		if (content.charAt(0) == '\\') {
+			if (content.length() == 1) throw new IllegalArgumentException("Incomplete backslash escape: '\\'");
+			char x = content.charAt(1);
+			char fromEscape = fromEscape(x);
+			if (fromEscape != 0 && content.length() == 2) return fromEscape;
+			if (x >= '0' && x <= '7') {
+				try {
+					int possible = Integer.parseInt(content.substring(1), 010);
+					if (possible <= 0377) return (char)possible;
+				} catch (NumberFormatException e) {
+					//fallthrough
+				}
+			}
+			
+			throw new IllegalArgumentException("Not a valid character literal: " + v);
+		}
+		
+		if (content.length() == 1) {
+			char x = content.charAt(0);
+			if (x == '\'' || x == '\n' || x == '\r') {
+				throw new IllegalArgumentException("Not a valid character literal: " + v);
+			} else {
+				return x;
+			}
+		}
+		
+		throw new IllegalArgumentException("Not a valid character literal: " + v);
+	}
+}
+
+@GenerateAstNode(extending=Expression.class, implementing=Literal.class)
+class StringLiteralTemplate {
+	@NotChildOfNode(rawFormParser="parseString", rawFormGenerator="generateString")
+	@NonNull String value;
+	
+	static String generateString(String literal) {
+		StringBuilder raw = new StringBuilder().append('"');
+		char[] cs = literal.toCharArray();
+		for (int i = 0; i < cs.length; i++) {
+			char c = cs[i];
+			char next = (i < cs.length-1) ? cs[i+1] : 'a';
+			raw.append(CharLiteralTemplate.toEscape(c, false, next));
+		}
+		return raw.append('"').toString();
+	}
+	
+	static String parseString(String raw) {
+		if (raw == null) throw new IllegalArgumentException("missing string literal");
+		String v = raw.trim();
+		
+		if (!v.startsWith("\"") || !v.endsWith("\"")) throw new IllegalArgumentException(
+				"String literals should be enclosed in double quotes: " + v);
+		
+		String content = v.substring(1, v.length()-1);
+		char[] cs = content.toCharArray();
+		StringBuilder value = new StringBuilder();
+		
+		for (int i = 0; i < cs.length; i++) {
+			if (cs[i] == '\n' || cs[i] == '\r') {
+				throw new IllegalArgumentException("newlines not allowed in string literal: " + v);
+			}
+			
+			if (cs[i] == '"') {
+				throw new IllegalArgumentException("unescaped double quotes not allowed in string literal: " + v);
+			}
+			
+			if (cs[i] == '\\') {
+				if (i == v.length() -1) {
+					throw new IllegalArgumentException("Incomplete backslash escape: " + v);
+				}
+				char x = cs[++i];
+				char fromEscape = CharLiteralTemplate.fromEscape(x);
+				if (fromEscape != 0) {
+					value.append(fromEscape);
+					continue;
+				}
+				
+				if (x >= '0' && x <= '7') {
+					char first = x;
+					char second = (i < cs.length -1) ? cs[i+1] : 'a';
+					char third = (i < cs.length -2) ? cs[i+2] : 'a';
+					
+					boolean secondFits = second >= '0' && second <= '7';
+					boolean thirdFits = second >= '0' && second <= '7';
+					
+					if (first > '3') {
+						if (secondFits) {
+							i++;
+							value.append((first - '0') * 010 + (second - '0'));
+							continue;
+						}
+						value.append(first - '0');
+						continue;
+					}
+					
+					if (secondFits && thirdFits) {
+						i += 2;
+						value.append((first - '0') * 0100 + (second - '0') * 010 + (third - '0'));
+						continue;
+					}
+					
+					if (secondFits) {
+						i++;
+						value.append((first - '0') * 010 + (second - '0'));
+						continue;
+					}
+					
+					value.append(first - '0');
+					continue;
+				}
+				
+				throw new IllegalArgumentException("Invalid string literal (invalid backslash escape): " + v);
+			}
+			
+			value.append(cs[i]);
+		}
+		
+		return value.toString();
+	}
+}
+
+@GenerateAstNode(extending=Statement.class)
+class BreakTemplate {
+	Identifier label;
+	
+	@CopyMethod
+	static boolean hasLabel(Break self) {
+		return self.getRawLabel() != null;
+	}
+}
+
+@GenerateAstNode(extending=Statement.class)
+class ContinueTemplate {
+	Identifier label;
+	
+	@CopyMethod
+	static boolean hasLabel(Continue self) {
+		return self.getRawLabel() != null;
+	}
+}
+
+@GenerateAstNode(extending=Statement.class)
+class ReturnTemplate {
+	Expression value;
+}
+
+@GenerateAstNode(extending=Statement.class)
+class ThrowTemplate {
+	@NonNull Expression throwable;
 }

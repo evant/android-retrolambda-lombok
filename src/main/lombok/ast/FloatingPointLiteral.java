@@ -49,6 +49,15 @@ public class FloatingPointLiteral extends Expression implements Literal {
 		return this;
 	}
 	
+	public FloatingPointLiteral copy() {
+		FloatingPointLiteral result = new FloatingPointLiteral();
+		result.value = value;
+		result.rawValue = result.rawValue;
+		result.errorReason = result.errorReason;
+		result.markedAsFloat = result.markedAsFloat;
+		return result;
+	}
+	
 	private void checkSpecialValues(double value) throws AstException {
 		if (Double.isNaN(value)) throw new AstException(this, "NaN cannot be expressed as a floating point literal");
 		if (Double.isInfinite(value)) throw new AstException(this, "Infinity cannot be expressed as a floating point literal");

@@ -65,4 +65,11 @@ public class NullLiteral extends Expression implements Literal {
 	@Override public void checkSyntacticValidity(List<SyntaxProblem> problems) {
 		if (errorReason != null) problems.add(new SyntaxProblem(this, errorReason));
 	}
+	
+	@Override public NullLiteral copy() {
+		NullLiteral result = new NullLiteral();
+		result.rawValue = rawValue;
+		result.errorReason = errorReason;
+		return result;
+	}
 }

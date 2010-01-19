@@ -64,7 +64,7 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.6
 	 */
-	private Rule emptyStatement() {
+	Rule emptyStatement() {
 		return sequence(
 				ch(';'),
 				group.basics.optWS(),
@@ -95,7 +95,9 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 						caseStatement(),
 						defaultStatement(),
 						whileStatement(),
-						doWhileStatement()
+						doWhileStatement(),
+						basicForStatement(),
+						enhancedForStatement()
 				).label("statement"),
 				SET(actions.createLabelledStatement(VALUES("zeroOrMore/sequence/labelName"), VALUE("statement"))));
 	}
@@ -198,5 +200,101 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 				ch(')'), group.basics.optWS(),
 				ch(';'), group.basics.optWS(),
 				SET(actions.createDoStatement(VALUE("condition"), VALUE())));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.14.1.1
+	 */
+	public Rule basicForStatement() {
+		return sequence(
+				string("for"), group.basics.testLexBreak(), group.basics.optWS(),
+				ch('('), group.basics.optWS(),
+				forInit().label("init"),
+				ch(';'), group.basics.optWS(),
+				optional(group.expressions.anyExpression()).label("condition"),
+				ch(';'), group.basics.optWS(),
+				forUpdate().label("update"),
+				ch(')'), group.basics.optWS(),
+				anyStatement().label("statement"),
+				SET(actions.createBasicFor(VALUE("init"), VALUE("condition"), VALUE("update"), VALUE("statement"))));
+	}
+	
+	Rule forInit() {
+		return optional(firstOf(
+				localVariableDeclaration(),
+				statementExpressionList()));
+	}
+	
+	Rule forUpdate() {
+		return optional(statementExpressionList());
+	}
+	
+	Rule statementExpressionList() {
+		return sequence(
+				group.expressions.statementExpression().label("head"),
+				zeroOrMore(sequence(
+						ch(','), group.basics.optWS(),
+						group.expressions.statementExpression()).label("tail")),
+				SET(actions.createStatementExpressionList(VALUE("head"), VALUES("zeroOrMore/tail"))));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.14.2
+	 * @see http://bugs.sun.com/view_bug.do?bug_id=1699917
+	 */
+	public Rule enhancedForStatement() {
+		return sequence(
+				string("for"), group.basics.testLexBreak(), group.basics.optWS(),
+				ch('('), group.basics.optWS(),
+				zeroOrMore(group.structures.anyModifier().label("modifier")),
+				group.types.type().label("type"),
+				group.basics.identifier().label("varName"),
+				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				ch(':'), group.basics.optWS(),
+				group.expressions.anyExpression().label("iterable"),
+				ch(')'), group.basics.optWS(),
+				anyStatement().label("statement"),
+				SET(actions.createEnhancedFor(VALUES("zeroOrMore/modifier"), VALUE("type"), VALUE("varName"), TEXTS("dims/dim"), VALUE("iterable"), VALUE("statement"))));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.15
+	 */
+	public Rule breakStatement() {
+		return sequence(
+				string("break"), group.basics.testLexBreak(), group.basics.optWS(),
+				optional(group.basics.identifier()).label("identifier"),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createBreak(VALUE("identifier"))));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.16
+	 */
+	public Rule continueStatement() {
+		return sequence(
+				string("continue"), group.basics.testLexBreak(), group.basics.optWS(),
+				optional(group.basics.identifier()).label("identifier"),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createContinue(VALUE("identifier"))));
+	}
+	
+	/**
+	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.16
+	 */
+	public Rule returnStatement() {
+		return sequence(
+				string("return"), group.basics.testLexBreak(), group.basics.optWS(),
+				optional(group.expressions.anyExpression()).label("value"),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createReturn(VALUE("value"))));
+	}
+	
+	public Rule throwStatement() {
+		return sequence(
+				string("throw"), group.basics.testLexBreak(), group.basics.optWS(),
+				group.expressions.anyExpression().label("throwable"),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createThrow(VALUE("throwable"))));
 	}
 }

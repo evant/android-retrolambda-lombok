@@ -70,4 +70,10 @@ public interface ASTVisitor {
 	public boolean visitSwitch(Switch node);
 	public boolean visitCase(Case node);
 	public boolean visitDefault(Default node);
+	public boolean visitModifiers(Modifiers node);
+	public boolean visitAnnotation(Annotation node);
+	public boolean visitBreak(Break node);
+	public boolean visitContinue(Continue node);
+	public boolean visitReturn(Return node);
+	public boolean visitThrow(Throw node);
 }

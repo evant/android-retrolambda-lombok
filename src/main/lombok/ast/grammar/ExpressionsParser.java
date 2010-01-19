@@ -49,14 +49,14 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				identifierExpression());
 	}
 	
-	private Rule parenGrouping() {
+	Rule parenGrouping() {
 		return sequence(
 				ch('('), group.basics.optWS(),
 				anyExpression(), SET(),
 				ch(')'));
 	}
 	
-	private Rule unqualifiedThisOrSuperLiteral() {
+	Rule unqualifiedThisOrSuperLiteral() {
 		return sequence(
 				firstOf(string("this"), string("super")).label("thisOrSuper"),
 				group.basics.testLexBreak(),
@@ -68,7 +68,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.8.2
 	 */
-	private Rule qualifiedClassOrThisOrSuperLiteral() {
+	Rule qualifiedClassOrThisOrSuperLiteral() {
 		return sequence(
 				group.types.type().label("type"),
 				ch('.'), group.basics.optWS(),
@@ -78,7 +78,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuperOrClass"), VALUE("type"))));
 	}
 	
-	private Rule unqualifiedConstructorInvocation() {
+	Rule unqualifiedConstructorInvocation() {
 		return sequence(
 				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.types.typeArguments().label("constructorTypeArgs"),
@@ -92,7 +92,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/arrays.html#10.3
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.10
 	 */
-	private Rule arrayCreationExpression() {
+	Rule arrayCreationExpression() {
 		return sequence(
 				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.types.type().label("type"),
@@ -118,7 +118,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				SET(actions.createArrayInitializerExpression(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))));
 	}
 	
-	private Rule identifierExpression() {
+	Rule identifierExpression() {
 		return sequence(
 				group.basics.identifier(),
 				SET(),
@@ -134,6 +134,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8
 	 */
 	public Rule statementExpression() {
+		for (int i = 0; i < 10 ; new int[10].equals(null)) {}
 		return firstOf(
 				assignmentExpression(),
 				postfixIncrementExpression(),
@@ -144,7 +145,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	/**
 	 * P1
 	 */
-	private Rule level1ExpressionChaining() {
+	Rule level1ExpressionChaining() {
 		return sequence(
 				primaryExpression(), SET(),
 				zeroOrMore(firstOf(
@@ -154,14 +155,14 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				SET(actions.createLevel1Expression(VALUE(), VALUES("zeroOrMore/firstOf"))));
 	}
 	
-	private Rule arrayAccessOperation() {
+	Rule arrayAccessOperation() {
 		return enforcedSequence(
 				ch('['), group.basics.optWS(),
 				anyExpression(), SET(), ch(']'), group.basics.optWS(),
 				SET(actions.createArrayAccessOperation(VALUE())));
 	}
 	
-	private Rule methodInvocationWithTypeArgsOperation() {
+	Rule methodInvocationWithTypeArgsOperation() {
 		return sequence(
 				ch('.'), group.basics.optWS(),
 				group.types.typeArguments().label("typeArguments"),
@@ -170,7 +171,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				SET(actions.createMethodInvocationOperation(VALUE("typeArguments"), VALUE("name"), VALUE("methodArguments"))));
 	}
 	
-	private Rule select() {
+	Rule select() {
 		return sequence(
 				ch('.'), group.basics.optWS(),
 				group.basics.identifier().label("identifier"),
@@ -184,7 +185,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * This is the relational new operator; not just 'new', but new with context, so: "a.new InnerClass(params)". It is grouped with P2, but for some reason has higher precedence
 	 * in all java parsers, and so we give it its own little precedence group here.
 	 */
-	private Rule dotNewExpressionChaining() {
+	Rule dotNewExpressionChaining() {
 		return sequence(
 				level1ExpressionChaining(), SET(),
 				zeroOrMore(enforcedSequence(
@@ -208,7 +209,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * Technically, postfix increment operations are in P2 along with all the unary operators like ~ and !, as well as typecasts.
 	 * However, because ALL of the P2 expression are right-associative, the postfix operators can be considered as a higher level of precedence.
 	 */
-	private Rule postfixIncrementExpressionChaining() {
+	Rule postfixIncrementExpressionChaining() {
 		return sequence(
 				dotNewExpressionChaining(), SET(),
 				zeroOrMore(sequence(
@@ -217,7 +218,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				SET(actions.createUnaryPostfixExpression(VALUE(), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
-	private Rule postfixIncrementExpression() {
+	Rule postfixIncrementExpression() {
 		return sequence(
 				dotNewExpressionChaining(), SET(),
 				oneOrMore(sequence(
@@ -226,7 +227,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				SET(actions.createUnaryPostfixExpression(VALUE(), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
-	private Rule prefixIncrementExpression() {
+	Rule prefixIncrementExpression() {
 		return sequence(
 				oneOrMore(sequence(
 						firstOf(string("++"), string("--")).label("operator"),
@@ -238,7 +239,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	/**
 	 * P2
 	 */
-	private Rule level2ExpressionChaining() {
+	Rule level2ExpressionChaining() {
 		return sequence(
 				zeroOrMore(sequence(
 						firstOf(
@@ -260,7 +261,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17
 	 */
-	private Rule multiplicativeExpressionChaining() {
+	Rule multiplicativeExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(firstOf(ch('*'), solitarySymbol('/'), ch('%')), level2ExpressionChaining());
 	}
 	
@@ -269,7 +270,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18
 	 */
-	private Rule additiveExpressionChaining() {
+	Rule additiveExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(firstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeExpressionChaining());
 	}
 	
@@ -278,7 +279,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19
 	 */
-	private Rule shiftExpressionChaining() {
+	Rule shiftExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), additiveExpressionChaining());
 	}
 	
@@ -292,7 +293,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.20
 	 */
-	private Rule relationalExpressionChaining() {
+	Rule relationalExpressionChaining() {
 		return sequence(
 				forLeftAssociativeBinaryExpression(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftExpressionChaining()),
 				SET(),
@@ -307,7 +308,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21
 	 */
-	private Rule equalityExpressionChaining() {
+	Rule equalityExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(firstOf(string("==="), string("!=="), string("=="), string("!=")), relationalExpressionChaining());
 	}
 	
@@ -316,7 +317,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	private Rule bitwiseAndExpressionChaining() {
+	Rule bitwiseAndExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(solitarySymbol('&'), equalityExpressionChaining());
 	}
 	
@@ -325,7 +326,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	private Rule bitwiseXorExpressionChaining() {
+	Rule bitwiseXorExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(solitarySymbol('^'), bitwiseAndExpressionChaining());
 	}
 	
@@ -334,7 +335,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
-	private Rule bitwiseOrExpressionChaining() {
+	Rule bitwiseOrExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(solitarySymbol('|'), bitwiseXorExpressionChaining());
 	}
 	
@@ -343,7 +344,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23
 	 */
-	private Rule conditionalAndExpressionChaining() {
+	Rule conditionalAndExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(string("&&"), bitwiseOrExpressionChaining());
 	}
 	
@@ -353,7 +354,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * This is not a legal operator; however, it is entirely imaginable someone presumes it does exist.
 	 * It also has no other sensible meaning, so we will parse it and flag it as a syntax error in AST phase.
 	 */
-	private Rule conditionalXorExpressionChaining() {
+	Rule conditionalXorExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(string("^^"), conditionalAndExpressionChaining());
 	}
 	
@@ -362,7 +363,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24
 	 */
-	private Rule conditionalOrExpressionChaining() {
+	Rule conditionalOrExpressionChaining() {
 		return forLeftAssociativeBinaryExpression(string("||"), conditionalXorExpressionChaining());
 	}
 	
@@ -371,7 +372,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.25
 	 */
-	private Rule inlineIfExpressionChaining() {
+	Rule inlineIfExpressionChaining() {
 		return sequence(
 				conditionalOrExpressionChaining(),
 				SET(),
@@ -397,7 +398,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * 
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26
 	 */
-	private Rule assignmentExpressionChaining() {
+	Rule assignmentExpressionChaining() {
 		return firstOf(
 				assignmentExpression(),
 				inlineIfExpressionChaining());
@@ -412,13 +413,13 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				SET(actions.createAssignmentExpression(VALUE(), TEXT("operator"), LAST_VALUE())));
 	}
 	
-	private Rule assignmentLHS() {
+	Rule assignmentLHS() {
 		return sequence(
 				level1ExpressionChaining(), SET(),
 				actions.checkIfLevel1ExprIsValidForAssignment(VALUE()));
 	}
 	
-	private Rule assignmentOperator() {
+	Rule assignmentOperator() {
 		return firstOf(
 				solitarySymbol('='),
 				string("*="), string("/="), string("+="), string("-="), string("%="),
@@ -430,7 +431,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	/**
 	 * @param operator Careful; operator has to match _ONLY_ the operator, not any whitespace around it (otherwise we'd have to remove comments from it, which isn't feasible).
 	 */
-	private Rule forLeftAssociativeBinaryExpression(Rule operator, Rule nextHigher) {
+	Rule forLeftAssociativeBinaryExpression(Rule operator, Rule nextHigher) {
 		return sequence(
 				nextHigher, SET(),
 				group.basics.optWS(),
@@ -443,7 +444,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				group.basics.optWS());
 	}
 	
-	private Rule solitarySymbol(char c) {
+	Rule solitarySymbol(char c) {
 		return sequence(ch(c), testNot(ch(c)));
 	}
 }

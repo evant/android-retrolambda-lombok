@@ -24,6 +24,7 @@ package lombok.ast.template;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -102,6 +103,11 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 	}
 	
+	private static String getClassName(Object type) {
+		String c = type.toString();
+		return c.endsWith(".class") ? c.substring(0, c.length() - ".class".length()) : c;
+	}
+	
 	@Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 		for (Element element : roundEnv.getElementsAnnotatedWith(GenerateAstNode.class)) {
 			if (element.getKind() != ElementKind.CLASS) {
@@ -115,6 +121,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			String className;
 			String extending = null;
+			List<String> implementing = new ArrayList<String>();
 			
 			TypeElement annotated;
 			/* Calculate file and class name of the source file we need to generate */ {
@@ -127,14 +134,18 @@ public class TemplateProcessor extends AbstractProcessor {
 				}
 			}
 			
-			/* Pick up the 1 parameter of the annotation (this is the type that the class to be generated must extend) */ {
+			/* Pick up the parameters of the annotation (this is the type that the class to be generated must extend / implement) */ {
 				for (AnnotationMirror annotation : annotated.getAnnotationMirrors()) {
 					if (!annotation.getAnnotationType().toString().equals(GenerateAstNode.class.getName())) continue;
 					
 					for (Entry<? extends ExecutableElement, ? extends AnnotationValue> value : annotation.getElementValues().entrySet()) {
-						extending = value.getValue().toString();
-						if (extending.endsWith(".class")) {
-							extending = extending.substring(0, extending.length() - ".class".length());
+						if (value.getKey().getSimpleName().contentEquals("extending")) {
+							extending = getClassName(value.getValue().getValue());
+						}
+						
+						if (value.getKey().getSimpleName().contentEquals("implementing")) {
+							Collection<?> list = (Collection<?>)value.getValue().getValue();
+							for (Object type : list) implementing.add(getClassName(type));
 						}
 					}
 					
@@ -283,8 +294,8 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		/* accept */ {
-			out.write("\t@java.lang.Override public void accept(lombok.ast.ASTVisitor visitor) {\n" +
-					"\t\tif (visitor.visit");
+			out.write("\t@java.lang.Override public void accept(lombok.ast.ASTVisitor visitor) {\n");
+			out.write("\t\tif (visitor.visit");
 			out.write(typeName);
 			out.write("(this)) return;\n");
 			for (FieldData field : fields) {
@@ -301,7 +312,54 @@ public class TemplateProcessor extends AbstractProcessor {
 				out.write(field.getName());
 				out.write(".accept(visitor);\n");
 			}
-			out.write("\t}\n");
+			out.write("\t}\n\t\n");
+		}
+		
+		/* copy */ {
+			out.write("\t@java.lang.Override public ");
+			out.write(typeName);
+			out.write(" copy() {\n\t\t");
+			out.write(typeName);
+			out.write(" result = new ");
+			out.write(typeName);
+			out.write("();\n");
+			for (FieldData field : fields) {
+				if (!field.isAstNode()) {
+					out.write("\t\tresult.");
+					out.write(field.getName());
+					out.write(" = this.");
+					out.write(field.getName());
+					out.write(";\n");
+					if (!field.getRawFormParser().isEmpty()) {
+						out.write("\t\tresult.raw");
+						out.write(field.titleCasedName());
+						out.write(" = this.raw");
+						out.write(field.titleCasedName());
+						out.write(";\n");
+						
+						out.write("\t\tresult.errorReasonFor");
+						out.write(field.titleCasedName());
+						out.write(" = this.errorReasonFor");
+						out.write(field.titleCasedName());
+						out.write(";\n");
+					}
+				} else if (field.isList()) {
+					out.write("for (Node n : this.");
+					out.write(field.getName());
+					out.write(") {\n\t\t\tresult.");
+					out.write(field.getName());
+					out.write("Accessor.addToEndRaw(n == null ? null : n.copy());\n\t\t}\n");
+				} else {
+					out.write("\t\tif (this.");
+					out.write(field.getName());
+					out.write(" != null) result.setRaw");
+					out.write(field.titleCasedName());
+					out.write("(this.");
+					out.write(field.getName());
+					out.write(");\n");
+				}
+			}
+			out.write("\t\treturn result;\n\t}\n\t\n");
 		}
 		
 		/* extra methods */ {

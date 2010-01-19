@@ -83,7 +83,7 @@ public class JavaParser extends BaseParser<Node, Actions<Node>> {
 				group.basics.optWS());
 	}
 	
-	private Rule sequenceOfIdentifiers() {
+	Rule sequenceOfIdentifiers() {
 		return sequence(
 				group.basics.identifier(),
 				zeroOrMore(sequence(

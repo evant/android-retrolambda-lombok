@@ -27,7 +27,7 @@ import java.util.List;
 import lombok.Getter;
 
 public abstract class Node {
-	@Getter private Position position;
+	@Getter private Position position = Position.UNPLACED;
 	@Getter private Node parent;
 	
 	public boolean isSyntacticallyValid() {
@@ -159,7 +159,14 @@ public abstract class Node {
 				child.getClass().getName(), this.getClass().getName()));
 	}
 	
+	public void setPosition(Position position) {
+		if (position == null) throw new NullPointerException("position");
+		this.position = position;
+	}
+	
 	public abstract void accept(ASTVisitor visitor);
+	
+	public abstract Node copy();
 	
 	@Override public String toString() {
 //		SourcePrinter printer = new SourcePrinter();

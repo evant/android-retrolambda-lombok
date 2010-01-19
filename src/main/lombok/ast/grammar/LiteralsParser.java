@@ -95,18 +95,18 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.6
 	 */
-	private Rule escapedSequence() {
+	Rule escapedSequence() {
 		return enforcedSequence(ch('\\'),
 				firstOf(
 						sequence(optional(zeroToThree()), octalDigit(), optional(octalDigit())),
 						any()));
 	}
 	
-	private Rule zeroToThree() {
+	Rule zeroToThree() {
 		return firstOf(ch('0'), ch('1'), ch('2'), ch('3'));
 	}
 	
-	private Rule octalDigit() {
+	Rule octalDigit() {
 		return firstOf(ch('0'), ch('1'), ch('2'), ch('3'), ch('4'), ch('5'), ch('6'), ch('7'));
 	}
 	
@@ -138,7 +138,7 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
-	private Rule fpLiteral() {
+	Rule fpLiteral() {
 		return enforcedSequence(
 				sequence(
 						firstOf(
@@ -157,7 +157,7 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
-	private Rule hexLiteral() {
+	Rule hexLiteral() {
 		return enforcedSequence(
 				enforcedSequence(
 						sequence(ch('0'), charIgnoreCase('x')),
@@ -171,7 +171,7 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
-	private Rule hexFP() {
+	Rule hexFP() {
 		return sequence(
 				firstOf(
 						enforcedSequence(ch('.'), oneOrMore(hexDigit())),
@@ -185,15 +185,15 @@ public class LiteralsParser extends BaseParser<Node, LiteralsActions> {
 				numberTypeSuffix());
 	}
 	
-	private Rule numberTypeSuffix() {
+	Rule numberTypeSuffix() {
 		return optional(firstOf(charIgnoreCase('d'), charIgnoreCase('f'), charIgnoreCase('l')));
 	}
 	
-	private Rule digit() {
+	Rule digit() {
 		return firstOf(ch('0'), ch('1'), ch('2'), ch('3'), ch('4'), ch('5'), ch('6'), ch('7'), ch('8'), ch('9'), ch('0'));
 	}
 	
-	private Rule hexDigit() {
+	Rule hexDigit() {
 		return firstOf(digit(),
 				charIgnoreCase('a'), charIgnoreCase('b'), charIgnoreCase('c'), charIgnoreCase('d'), charIgnoreCase('e'), charIgnoreCase('f'));
 	}
