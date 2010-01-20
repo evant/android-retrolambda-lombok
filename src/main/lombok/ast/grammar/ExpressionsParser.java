@@ -418,7 +418,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	
 	Rule assignmentLHS() {
 		return sequence(
-				allPrimaryExpressions(), SET(),
+				level1ExpressionChaining(), SET(),
 				actions.checkIfLevel1ExprIsValidForAssignment(VALUE()));
 	}
 	
