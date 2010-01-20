@@ -134,7 +134,6 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8
 	 */
 	public Rule statementExpression() {
-		for (int i = 0; i < 10 ; new int[10].equals(null)) {}
 		return firstOf(
 				assignmentExpression(),
 				postfixIncrementExpression(),

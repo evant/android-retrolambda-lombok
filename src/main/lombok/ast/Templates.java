@@ -665,3 +665,12 @@ class ReturnTemplate {
 class ThrowTemplate {
 	@NonNull Expression throwable;
 }
+
+@GenerateAstNode
+class CommentTemplate {
+	@NotChildOfNode
+	boolean blockComment;
+	
+	@NotChildOfNode
+	String content;
+}

@@ -76,4 +76,5 @@ public interface ASTVisitor {
 	public boolean visitContinue(Continue node);
 	public boolean visitReturn(Return node);
 	public boolean visitThrow(Throw node);
+	public boolean visitComment(Comment node);
 }

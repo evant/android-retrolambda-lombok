@@ -141,11 +141,19 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 	}
 	
 	Rule lineComment() {
-		return enforcedSequence(string("//"), zeroOrMore(sequence(testNot(lineTerminator()), any())), lineTerminator());
+		return enforcedSequence(
+				string("//"),
+				zeroOrMore(sequence(testNot(lineTerminator()), any())).label("comment"),
+				lineTerminator(),
+				SET(actions.createLineComment(TEXT("comment"))));
 	}
 	
 	Rule blockComment() {
-		return enforcedSequence(string("/*"), zeroOrMore(sequence(testNot(string("*/")), any())), string("*/"));
+		return enforcedSequence(
+				string("/*"),
+				zeroOrMore(sequence(testNot(string("*/")), any())).label("comment"),
+				string("*/"),
+				SET(actions.createBlockComment(TEXT("comment"))));
 	}
 	
 	/**
@@ -208,7 +216,7 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 				//Gobbling hex digits. state-2 is our current position. We want 4.
 				buffer.append(c);
 				if (c == 'u') {
-					//True WTF moment in the JLS: backslash-u-u-u-u-u-u-u-u-u-4hexdigits means the same thing as just 1 u.
+					//JLS Puzzler: backslash-u-u-u-u-u-u-u-u-u-4hexdigits means the same thing as just 1 u.
 					break;
 				}
 				if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {

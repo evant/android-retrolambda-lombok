@@ -25,6 +25,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 import lombok.ast.Node;
@@ -58,13 +60,21 @@ public class ParseSomething {
 		}
 	}
 	
-	private static void parse(JavaParser parser, String input) {
+	private static void parse(JavaParser parser, final String input) {
 		long now = System.nanoTime();
 		ParsingResult<Node> result = parser.parse(parser.testRules(), input + "\n");
 		long taken = System.nanoTime() - now;
+		final Map<Object, Object> visited = new IdentityHashMap<Object, Object>();
 		System.out.println(ParseTreeUtils.printNodeTree(result, new Function<org.parboiled.Node<Node>, Printability>() {
 			@Override public Printability apply(org.parboiled.Node<Node> from) {
-				return from.getValue() != null ? Printability.PrintAndDescend : Printability.Descend;
+				if (from.getValue() != null && from.getValue().getParent() == null) {
+					if (visited.put(from.getValue(), from.getValue()) != null) return Printability.Descend;
+					System.out.println(from.getValue().getClass());
+					System.out.println(from.getValue());
+					System.out.println((input + "\n").substring(from.getStartLocation().index, from.getEndLocation().index));
+				}
+				return Printability.Descend;
+//				return from.getValue() != null ? Printability.PrintAndDescend : Printability.Descend;
 			}
 		}));
 		if (result.hasErrors()) {

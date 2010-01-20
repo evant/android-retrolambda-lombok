@@ -184,7 +184,7 @@ public class ExpressionsActions extends BaseActions<Node> {
 			} else if (o instanceof MethodInvocation) {
 				current = ((MethodInvocation)o).setRawOperand(current);
 			} else if (o instanceof Select) {
-				current = ((Select)o).setRawOperand(operand);
+				current = ((Select)o).setRawOperand(current);
 			}
 		}
 		return current;

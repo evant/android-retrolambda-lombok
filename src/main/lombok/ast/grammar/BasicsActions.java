@@ -21,6 +21,7 @@
  */
 package lombok.ast.grammar;
 
+import lombok.ast.Comment;
 import lombok.ast.Identifier;
 import lombok.ast.Node;
 
@@ -35,5 +36,13 @@ public class BasicsActions extends BaseActions<Node> {
 	public ActionResult checkIfKeyword(String text) {
 		if (text == null) return ActionResult.CONTINUE;
 		return BasicsParser.KEYWORDS.contains(text) ? ActionResult.CANCEL_MATCH : ActionResult.CONTINUE;
+	}
+	
+	public Node createBlockComment(String text) {
+		return new Comment().setBlockComment(true).setContent(text);
+	}
+	
+	public Node createLineComment(String text) {
+		return new Comment().setBlockComment(false).setContent(text);
 	}
 }

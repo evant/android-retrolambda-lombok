@@ -488,18 +488,20 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateRawSetter(Writer out, String className, FieldData field) throws IOException {
-		out.write("\tpublic ");
-		out.write(className);
-		out.write(" setRaw");
-		out.write(field.titleCasedName());
-		out.write("(lombok.ast.Node ");
-		out.write(field.getName());
-		out.write(") {\n");
-		out.write("\t\tthis.");
-		out.write(field.getName());
-		out.write(" = ");
-		out.write(field.getName());
-		out.write(";\n\t\treturn this;\n\t}\n\t\n");
+		Object[] params = {
+				className,
+				field.titleCasedName(),
+				field.getName()
+		};
+		
+		out.write(String.format(
+				"\tpublic %1$s setRaw%2$s(lombok.ast.Node %3$s) {\n" +
+				"\t\tif (%3$s == this.%3$s) return this;\n" +
+				"\t\tif (%3$s != null) this.adopt(%3$s);\n" +
+				"\t\tif (this.%3$s != null) this.disown(this.%3$s);\n" +
+				"\t\tthis.%3$s = %3$s;\n" +
+				"\t\treturn this;\n" +
+				"\t}\n\t\n", params));
 	}
 	
 	
@@ -561,11 +563,21 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write(field.getName());
 			out.write(" is mandatory\");\n");
 		}
-		out.write("\t\tthis.");
-		out.write(field.getName());
-		out.write(" = ");
-		out.write(field.getName());
-		out.write(";\n\t\treturn this;\n\t}\n\t\n");
+		if (field.isAstNode()) {
+			out.write("\t\treturn this.setRaw");
+			out.write(field.titleCasedName());
+			out.write("(");
+			out.write(field.getName());
+			out.write(");\n");
+		} else {
+			out.write("\t\tthis.");
+			out.write(field.getName());
+			out.write(" = ");
+			out.write(field.getName());
+			out.write(";\n\t\treturn this;\n");
+		}
+		
+		out.write("\t}\n\t\n");
 	}
 	
 	private void generateFairWeatherSetterForRawBasics(Writer out, String className, FieldData field) throws IOException {
