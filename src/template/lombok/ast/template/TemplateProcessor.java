@@ -344,7 +344,7 @@ public class TemplateProcessor extends AbstractProcessor {
 						out.write(";\n");
 					}
 				} else if (field.isList()) {
-					out.write("for (Node n : this.");
+					out.write("\t\tfor (Node n : this.");
 					out.write(field.getName());
 					out.write(") {\n\t\t\tresult.");
 					out.write(field.getName());
@@ -379,8 +379,9 @@ public class TemplateProcessor extends AbstractProcessor {
 				/* Add parameters, but skip the first one which is used to transport 'this' reference */ {
 					int idx = 0;
 					for (VariableElement p : delegate.getParameters()) {
-						if (idx++ == 0) continue;
-						if (idx > 1) out.write(", ");
+						idx++;
+						if (idx == 1) continue;
+						if (idx > 2) out.write(", ");
 						out.write(p.asType().toString());
 						out.write(" ");
 						out.write(p.getSimpleName().toString());
@@ -403,7 +404,7 @@ public class TemplateProcessor extends AbstractProcessor {
 						out.write(p.getSimpleName().toString());
 					}
 				}
-				out.write(");\n\t}\n");
+				out.write(");\n\t}\n\t\n");
 			}
 		}
 		

@@ -54,7 +54,9 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 	 * Eats up any whitespace and comments at the current position.
 	 */
 	public Rule optWS() {
-		return zeroOrMore(firstOf(comment(), whitespaceChar()));
+		return sequence(
+				zeroOrMore(firstOf(comment(), whitespaceChar())),
+				SET((Node) NULL()));
 	}
 	
 	/**

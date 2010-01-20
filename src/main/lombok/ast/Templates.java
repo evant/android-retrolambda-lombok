@@ -21,6 +21,8 @@
  */
 package lombok.ast;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import lombok.NonNull;
@@ -103,24 +105,49 @@ class TryTemplate {
 	}
 }
 
-@GenerateAstNode
+@GenerateAstNode(extending=Expression.class)
 class AnnotationTemplate {
+	@NonNull TypeReference annotationTypeReference;
+	List<AnnotationElement> elements;
 	
+	@CopyMethod
+	static List<Node> getValueValues(Annotation self) {
+		List<Node> result = getValues(self, null);
+		return result.isEmpty() ? getValues(self, "value") : result;
+	}
+	
+	@CopyMethod
+	static List<Node> getValues(Annotation self, String key) {
+		for (AnnotationElement elem : self.elements().getContents()) {
+			if (key == null && elem.getRawName() == null) return elem.getValues();
+			if (elem.getRawName() instanceof Identifier) {
+				if (key != null && key.equals(elem.getName().getName())) return elem.getValues();
+			}
+		}
+		
+		return Collections.emptyList();
+	}
+}
+
+@GenerateAstNode
+class AnnotationElementTemplate {
+	Identifier name;
+	@NonNull Expression value;
+	
+	@CopyMethod
+	static List<Node> getValues(AnnotationElement self) {
+		if (self.getRawValue() == null) return Collections.emptyList();
+		if (self.getRawValue() instanceof ArrayInitializer) {
+			List<Node> result = new ArrayList<Node>();
+			for (Node n : ((ArrayInitializer)self.getRawValue()).expressions().getRawContents()) if (n != null) result.add(n);
+			return result;
+		}
+		return Collections.singletonList(self.getRawValue());
+	}
 }
 
 @GenerateAstNode
 class ModifiersTemplate {
-	//moet AnnotationMod en KeywMod een common interface hebben of zo??
-	//what shoud this even look like?
-	//2 lists: 1 for key...
-	
-	//en dan een stack of utility methods for isPublic en zo?
-	//how about 1 iterator to iterate through ALL keywords? And as what? "Node"? Or common interface?
-	
-	//what would it have? 9the common interface)
-	
-	//'isKeyword' - silly, instanceof check works as well
-	
 	List<KeywordModifier> keywords;
 	List<Annotation> annotations;
 	
@@ -167,8 +194,13 @@ class ModifiersTemplate {
 
 @GenerateAstNode(extending=Statement.class)
 class VariableDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
 	@NonNull TypeReference typeReference;
 	List<VariableDeclarationEntry> variables;
+	
+	@NotChildOfNode
+	boolean varargs;
 }
 
 @GenerateAstNode
@@ -183,8 +215,10 @@ class VariableDeclarationEntryTemplate {
 				self, "Cannot calculate type reference of a VariableDeclarationEntry without a VariableDeclaration as parent");
 		
 		
-		TypeReference typeRef = ((VariableDeclaration)self.getParent()).getTypeReference().copy();
-		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getDimensions());
+		VariableDeclaration parent = (VariableDeclaration) self.getParent();
+		
+		TypeReference typeRef = parent.getTypeReference().copy();
+		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getDimensions() + (parent.isVarargs() ? 1 : 0));
 	}
 }
 
@@ -358,6 +392,19 @@ class ConstructorInvocationTemplate {
 	@NonNull TypeReference typeReference;
 	List<Expression> arguments;
 	ClassBody anonymousClassBody;
+}
+
+@GenerateAstNode(extending=Statement.class)
+class AlternateConstructorInvocationTemplate {
+	TypeArguments constructorTypeArguments;
+	List<Expression> arguments;
+}
+
+@GenerateAstNode(extending=Statement.class)
+class SuperConstructorInvocationTemplate {
+	Expression qualifier;
+	TypeArguments constructorTypeArguments;
+	List<Expression> arguments;
 }
 
 @GenerateAstNode(extending=Expression.class)
@@ -673,4 +720,39 @@ class CommentTemplate {
 	
 	@NotChildOfNode
 	String content;
+}
+
+@GenerateAstNode
+class MethodDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
+	
+	List<TypeVariable> typeVariables;
+	@NonNull TypeReference returnTypeReference;
+	@NonNull Identifier methodName;
+	List<VariableDeclaration> parameters;
+	List<TypeReference> thrownTypeReferences;
+	@NonNull Block body;
+}
+
+@GenerateAstNode
+class ConstructorDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
+	
+	List<TypeVariable> typeVariables;
+	@NonNull Identifier typeName;
+	List<VariableDeclaration> parameters;
+	List<TypeReference> thrownTypeReferences;
+	@NonNull Block body;
+}
+
+@GenerateAstNode
+class InstanceInitializerTemplate {
+	@NonNull Block body;
+}
+
+@GenerateAstNode
+class StaticInitializerTemplate {
+	@NonNull Block body;
 }

@@ -3,10 +3,12 @@ package lombok.ast.grammar;
 import java.util.Collections;
 import java.util.List;
 
+import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Assert;
 import lombok.ast.Block;
 import lombok.ast.Break;
 import lombok.ast.Case;
+import lombok.ast.Catch;
 import lombok.ast.Continue;
 import lombok.ast.Default;
 import lombok.ast.DoWhile;
@@ -15,10 +17,14 @@ import lombok.ast.For;
 import lombok.ast.ForEach;
 import lombok.ast.If;
 import lombok.ast.LabelledStatement;
+import lombok.ast.MethodInvocation;
 import lombok.ast.Node;
 import lombok.ast.Return;
+import lombok.ast.SuperConstructorInvocation;
 import lombok.ast.Switch;
+import lombok.ast.Synchronized;
 import lombok.ast.Throw;
+import lombok.ast.Try;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDeclarationEntry;
 import lombok.ast.While;
@@ -103,10 +109,10 @@ public class StatementsActions extends BaseActions<Node> {
 		return result;
 	}
 	
-	public Node createEnhancedFor(List<Node> modifiers, Node type, Node varName, List<String> dims, Node iterable, Node statement) {
-		//TODO integrate modifiers
+	public Node createEnhancedFor(Node modifiers, Node type, Node varName, List<String> dims, Node iterable, Node statement) {
 		VariableDeclaration decl = new VariableDeclaration().setRawTypeReference(type).variables().addToEndRaw(
-				new VariableDeclarationEntry().setRawName(varName).setDimensions(dims.size()));
+				new VariableDeclarationEntry().setRawName(varName).setDimensions(dims == null ? 0 : dims.size()));
+		if (modifiers != null) decl.setRawModifiers(modifiers);
 		return new ForEach().setRawVariable(decl).setRawIterable(iterable).setRawStatement(statement);
 	}
 	
@@ -124,5 +130,40 @@ public class StatementsActions extends BaseActions<Node> {
 	
 	public Node createThrow(Node throwable) {
 		return new Throw().setRawThrowable(throwable);
+	}
+	
+	public Node createSynchronizedStatement(Node lock, Node body) {
+		return new Synchronized().setRawLock(lock).setRawBody(body);
+	}
+	
+	public Node createCatch(Node modifiers, Node type, Node varName, Node body) {
+		VariableDeclaration decl = new VariableDeclaration().setRawTypeReference(type).variables().addToEndRaw(
+				new VariableDeclarationEntry().setRawName(varName));
+		if (modifiers != null) decl.setRawModifiers(modifiers);
+		return new Catch().setRawExceptionDeclaration(decl).setRawBody(body);
+	}
+	
+	public Node createTryStatement(Node body, List<Node> catches, Node finallyBody) {
+		Try result = new Try().setRawBody(body).setRawFinally(finallyBody);
+		if (catches != null) for (Node c : catches) if (c != null) result.catches().addToEndRaw(c);
+		return result;
+	}
+	
+	public Node addLocalVariableModifiers(Node variableDeclaration, Node modifiers) {
+		if (modifiers != null && variableDeclaration instanceof VariableDeclaration) {
+			return ((VariableDeclaration)variableDeclaration).setRawModifiers(modifiers);
+		}
+		
+		return variableDeclaration;
+	}
+	
+	public Node createAlternateConstructorInvocation(Node typeArguments, Node arguments) {
+		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
+		return new AlternateConstructorInvocation().setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments());
+	}
+	
+	public Node createSuperConstructorInvocation(Node qualifier, Node typeArguments, Node arguments) {
+		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
+		return new SuperConstructorInvocation().setRawQualifier(qualifier).setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments());
 	}
 }

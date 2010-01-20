@@ -77,4 +77,11 @@ public interface ASTVisitor {
 	public boolean visitReturn(Return node);
 	public boolean visitThrow(Throw node);
 	public boolean visitComment(Comment node);
+	public boolean visitMethodDeclaration(MethodDeclaration node);
+	public boolean visitConstructorDeclaration(ConstructorDeclaration node);
+	public boolean visitInstanceInitializer(InstanceInitializer node);
+	public boolean visitStaticInitializer(StaticInitializer node);
+	public boolean visitSuperConstructorInvocation(SuperConstructorInvocation node);
+	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node);
+	public boolean visitAnnotationElement(AnnotationElement node);
 }

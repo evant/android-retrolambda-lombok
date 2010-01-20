@@ -141,6 +141,10 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				sequence(dotNewExpressionChaining(), SET(), actions.checkIfMethodOrConstructorInvocation(VALUE())));
 	}
 	
+	public Rule allPrimaryExpressions() {
+		return level1ExpressionChaining();
+	}
+	
 	/**
 	 * P1
 	 */
@@ -414,7 +418,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	
 	Rule assignmentLHS() {
 		return sequence(
-				level1ExpressionChaining(), SET(),
+				allPrimaryExpressions(), SET(),
 				actions.checkIfLevel1ExprIsValidForAssignment(VALUE()));
 	}
 	
