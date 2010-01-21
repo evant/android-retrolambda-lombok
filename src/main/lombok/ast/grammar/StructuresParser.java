@@ -18,10 +18,25 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 		this.group = group;
 	}
 	
-	public Rule classBody() {
-		//TODO dummy
+	public Rule typeBody() {
 		return enforcedSequence(
-				ch('{'), group.basics.optWS(), ch('}'), group.basics.optWS());
+				ch('{'), group.basics.optWS(),
+				typeBodyDeclarations(),
+				ch('}'), group.basics.optWS());
+	}
+	
+	Rule typeBodyDeclarations() {
+		return sequence(
+				zeroOrMore(firstOf(
+						anyTypeDeclaration(),
+						fieldDeclaration(),
+						methodDeclaration(),
+						constructorDeclaration(),
+						staticInitializer(),
+						instanceInitializer(),
+						sequence(ch(';'), group.basics.optWS())
+						).label("member")).label("members"),
+				SET(actions.createTypeBody(VALUES("members/member"))));
 	}
 	
 	public Rule methodArguments() {
@@ -40,7 +55,14 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				SET(actions.createMethodArguments(VALUE("optional/sequence"), VALUES("optional/sequence/zeroOrMore/sequence"))));
 	}
 	
-	public Rule classDeclaration() {
+	public Rule anyTypeDeclaration() {
+		return firstOf(
+				classOrInterfaceDeclaration(),
+				enumDeclaration(),
+				annotationDeclaration());
+	}
+	
+	public Rule classOrInterfaceDeclaration() {
 		return sequence(
 				typeDeclarationModifiers().label("modifiers"),
 				firstOf(string("class"), string("interface")).label("kind"),
@@ -50,7 +72,7 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				zeroOrMore(firstOf(
 						extendsClause(),
 						implementsClause()).label("addon")).label("addons"),
-				classBody().label("body"),
+				typeBody().label("body"),
 				SET(actions.createTypeDeclaration(TEXT("kind"), VALUE("modifiers"), VALUE("typeName"), VALUE("typeParameters"), VALUE("body"), VALUES("addons/addon"))));
 	}
 	
@@ -74,6 +96,64 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				SET(actions.createImplementsClause(VALUE("head"), VALUES("zeroOrMore/tail"))));
 	}
 	
+	public Rule enumDeclaration() {
+		return sequence(
+				typeDeclarationModifiers().label("modifiers"),
+				string("enum"), group.basics.testLexBreak(), group.basics.optWS(),
+				group.basics.identifier().label("typeName"),
+				zeroOrMore(firstOf(
+						extendsClause(),
+						implementsClause()).label("addon")).label("addons"),
+				enumBody().label("body"),
+				SET(actions.createEnumDeclaration(VALUE("modifiers"), VALUE("typeName"), VALUE("body"), VALUES("addons/addon"))));
+	}
+	
+	public Rule annotationDeclaration() {
+		return sequence(
+				typeDeclarationModifiers().label("modifiers"),
+				ch('@'), group.basics.optWS(),
+				string("interface"), group.basics.testLexBreak(), group.basics.optWS(),
+				group.basics.identifier().label("name"),
+				ch('{'), group.basics.optWS(),
+				zeroOrMore(annotationElementDeclaration().label("member")).label("members"),
+				ch('}'), group.basics.optWS(),
+				SET(actions.createAnnotationDeclaration(VALUE("modifiers"), VALUE("name"), VALUES("members/member"))));
+	}
+	
+	Rule annotationElementDeclaration() {
+		return firstOf(
+				annotationMethodDeclaration(),
+				fieldDeclaration(),
+				classOrInterfaceDeclaration(),
+				enumDeclaration(),
+				annotationDeclaration(),
+				sequence(ch(';'), group.basics.optWS())
+				);
+	}
+	
+	Rule enumBody() {
+		return sequence(
+				optional(sequence(
+						enumConstant().label("head"),
+						zeroOrMore(sequence(
+								ch(','), group.basics.optWS(),
+								enumConstant()).label("tail")),
+						optional(sequence(ch(','), group.basics.optWS())))).label("constants"),
+				optional(sequence(
+						ch(';'), group.basics.optWS(),
+						typeBodyDeclarations())).label("typeBodyDeclarations"),
+				SET(actions.createEnumFromContents(VALUE("constants/sequence/head"), VALUES("constants/sequence/zeroOrMore/tail"), VALUE("typeBodyDeclarations"))));
+	}
+	
+	Rule enumConstant() {
+		return sequence(
+				zeroOrMore(annotation().label("annotation")).label("annotations"),
+				group.basics.identifier().label("name"),
+				optional(methodArguments()).label("arguments"),
+				optional(typeBody()).label("body"),
+				SET(actions.createEnumConstant(VALUES("annotations/annotation"), VALUE("name"), VALUE("arguments"), VALUE("body"))));
+	}
+	
 	public Rule constructorDeclaration() {
 		return sequence(
 				methodDeclarationModifiers().label("modifiers"),
@@ -93,6 +173,19 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				SET(actions.createConstructorDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("typeName"), VALUES("params/param"), 
 						VALUE("throwsClause/enforcedSequence/throwsHead"), VALUES("throwsClause/enforcedSequence/zeroOrMore/throwsTail"),
 						VALUE("body"))));
+	}
+	
+	public Rule annotationMethodDeclaration() {
+		return sequence(
+				methodDeclarationModifiers().label("modifiers"),
+				group.types.type().label("resultType"),
+				group.basics.identifier().label("methodName"),
+				ch('('), group.basics.optWS(),
+				ch(')'), group.basics.optWS(),
+				optional(enforcedSequence(
+						sequence(string("default"), group.basics.testLexBreak(), group.basics.optWS()),
+						annotationElementValue())).label("defaultValue"),
+				SET(actions.createAnnotationMethodDeclaration(VALUE("modifiers"), VALUE("resultType"), VALUE("methodName"), VALUE("defaultValue"))));
 	}
 	
 	public Rule methodDeclaration() {
@@ -134,7 +227,7 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				SET(actions.createInstanceInitializer(VALUE("initializer"))));
 	}
 	
-	public Rule staticInitializerBlock() {
+	public Rule staticInitializer() {
 		return sequence(
 				string("static"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.statements.blockStatement().label("initializer"),
@@ -263,5 +356,42 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 	
 	public Rule anyModifier() {
 		return firstOf(annotation(), keywordModifier());
+	}
+	
+	public Rule packageDeclaration() {
+		return enforcedSequence(
+				sequence(
+						zeroOrMore(annotation().label("annotation")).label("annotations"),
+						string("package"), group.basics.testLexBreak(), group.basics.optWS()),
+				group.basics.identifier().label("head"),
+				zeroOrMore(sequence(
+						ch('.'), group.basics.optWS(),
+						group.basics.identifier()).label("tail")),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createPackageDeclaration(VALUES("sequence/annotations/annotation"), VALUE("head"), VALUES("zeroOrMore/tail"))));
+	}
+	
+	public Rule importDeclaration() {
+		return enforcedSequence(
+				sequence(string("import"), group.basics.testLexBreak(), group.basics.optWS()),
+				optional(sequence(string("static"), group.basics.testLexBreak(), group.basics.optWS())).label("static"),
+				group.basics.identifier().label("head"),
+				zeroOrMore(sequence(
+						ch('.'), group.basics.optWS(),
+						group.basics.identifier()).label("tail")),
+				optional(sequence(
+						ch('.'), group.basics.optWS(),
+						ch('*'), group.basics.optWS())).label("dotStar"),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createImportDeclaration(TEXT("static"), VALUE("head"), VALUES("zeroOrMore/tail"), TEXT("dotStar"))));
+	}
+	
+	public Rule compilationUnit() {
+		return sequence(
+				group.basics.optWS(),
+				optional(packageDeclaration()).label("package"),
+				zeroOrMore(importDeclaration().label("import")).label("imports"),
+				zeroOrMore(anyTypeDeclaration().label("type")).label("types"),
+				SET(actions.createCompilationUnit(VALUE("package"), VALUES("imports/import"), VALUES("types/type"))));
 	}
 }

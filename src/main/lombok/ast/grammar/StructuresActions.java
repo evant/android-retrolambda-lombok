@@ -3,10 +3,16 @@ package lombok.ast.grammar;
 import java.util.List;
 
 import lombok.ast.Annotation;
+import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
+import lombok.ast.AnnotationMethodDeclaration;
 import lombok.ast.ArrayInitializer;
 import lombok.ast.ClassDeclaration;
+import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
+import lombok.ast.EnumConstant;
+import lombok.ast.EnumDeclaration;
+import lombok.ast.ImportDeclaration;
 import lombok.ast.InstanceInitializer;
 import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
@@ -14,7 +20,9 @@ import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.PackageDeclaration;
 import lombok.ast.StaticInitializer;
+import lombok.ast.TypeBody;
 import lombok.ast.TypeReference;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDeclarationEntry;
@@ -176,6 +184,7 @@ public class StructuresActions extends BaseActions<Node> {
 		
 		if (addons != null) for (Node n : addons) {
 			if (n instanceof TemporaryNode.ExtendsClause) {
+				//if (!decl.extending().isEmpty()) //TODO add error node: multiple extends clauses.
 				List<Node> superClasses = ((TemporaryNode.ExtendsClause)n).superTypes;
 				if (superClasses != null) for (Node superClass : superClasses) if (superClass != null) decl.extending().addToEndRaw(n);
 			}
@@ -201,7 +210,7 @@ public class StructuresActions extends BaseActions<Node> {
 		if (addons != null) for (Node n : addons) {
 			if (n instanceof TemporaryNode.ExtendsClause) {
 				//if (!decl.implementing().isEmpty()) //TODO add error node: implements must come after extends
-				
+				//if (!decl.extending().isEmpty()) //TODO add error node: multiple extends clauses.
 				List<Node> superClasses = ((TemporaryNode.ExtendsClause)n).superTypes;
 				if (superClasses != null && superClasses.size() > 0) {
 					//if (superClasses.size() > 1) //TODO add error node: 'extends' on class can only accept 1 type.
@@ -210,10 +219,83 @@ public class StructuresActions extends BaseActions<Node> {
 			}
 			
 			if (n instanceof TemporaryNode.ImplementsClause) {
+				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
 				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
 				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.implementing().addToEndRaw(i);
 			}
 		}
 		return decl;
+	}
+	
+	public Node createTypeBody(List<Node> values) {
+		TypeBody body = new TypeBody();
+		if (values != null) for (Node n : values) if (n != null) body.members().addToEndRaw(n);
+		return body;
+	}
+	
+	public Node createEnumConstant(List<Node> annotations, Node name, Node arguments, Node body) {
+		EnumConstant result = new EnumConstant().setRawName(name).setRawBody(body);
+		if (annotations != null) for (Node n : annotations) if (n != null) result.annotations().addToEndRaw(n);
+		if (arguments instanceof MethodInvocation) result.arguments().migrateAllFromRaw(((MethodInvocation)arguments).arguments());
+		return result;
+	}
+	
+	public Node createEnumFromContents(Node head, List<Node> tail, Node body) {
+		EnumDeclaration decl = new EnumDeclaration().setRawBody(body);
+		if (head != null) decl.constants().addToEndRaw(head);
+		if (tail != null) for (Node n : tail) if (n != null) decl.constants().addToEndRaw(n);
+		return decl;
+	}
+	
+	public Node createEnumDeclaration(Node modifiers, Node name, Node enumDeclaration, List<Node> addons) {
+		if (enumDeclaration != null && (enumDeclaration instanceof EnumDeclaration)) return enumDeclaration;
+		EnumDeclaration decl = enumDeclaration == null ? new EnumDeclaration() : (EnumDeclaration)enumDeclaration;
+		decl.setRawName(name);
+		if (modifiers != null) decl.setRawModifiers(modifiers);
+		if (addons != null) for (Node n : addons) {
+			//if (n instanceof ExtendsClause) //TODO add error node: implements not allowed here.
+			if (n instanceof TemporaryNode.ImplementsClause) {
+				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
+				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
+				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.implementing().addToEndRaw(i);
+			}
+		}
+		return decl;
+	}
+	
+	public Node createAnnotationDeclaration(Node modifiers, Node name, List<Node> members) {
+		AnnotationDeclaration decl = new AnnotationDeclaration().setRawName(name).setRawBody(createTypeBody(members));
+		if (modifiers != null) decl.setRawModifiers(modifiers);
+		return decl;
+	}
+	
+	public Node createAnnotationMethodDeclaration(Node modifiers, Node typeReference, Node name, Node defaultValue) {
+		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration().setRawMethodName(name).setRawDefaultValue(defaultValue).setRawReturnTypeReference(typeReference);
+		if (modifiers != null) decl.setRawModifiers(modifiers);
+		return decl;
+	}
+	
+	public Node createPackageDeclaration(List<Node> annotations, Node head, List<Node> tail) {
+		PackageDeclaration decl = new PackageDeclaration();
+		if (annotations != null) for (Node n : annotations) if (n != null) decl.annotations().addToEndRaw(n);
+		if (head != null) decl.parts().addToEndRaw(head);
+		if (tail != null) for (Node n : tail) if (n != null) decl.parts().addToEndRaw(n);
+		return decl;
+	}
+	
+	public Node createImportDeclaration(String staticKeyword, Node head, List<Node> tail, String dotStar) {
+		ImportDeclaration decl = new ImportDeclaration();
+		if (head != null) decl.parts().addToEndRaw(head);
+		if (tail != null) for (Node n : tail) if (n != null) decl.parts().addToEndRaw(n);
+		if (staticKeyword != null && staticKeyword.length() > 0) decl.setStaticImport(true);
+		if (dotStar != null && dotStar.length() > 0) decl.setStarImport(true);
+		return decl;
+	}
+	
+	public Node createCompilationUnit(Node packageDeclaration, List<Node> importDeclarations, List<Node> typeDeclarations) {
+		CompilationUnit unit = new CompilationUnit().setRawPackageDeclaration(packageDeclaration);
+		if (importDeclarations != null) for (Node n : importDeclarations) if (n != null) unit.importDeclarations().addToEndRaw(n);
+		if (typeDeclarations != null) for (Node n : typeDeclarations) if (n != null) unit.typeDeclarations().addToEndRaw(n);
+		return unit;
 	}
 }

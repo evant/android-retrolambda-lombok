@@ -84,7 +84,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				group.types.typeArguments().label("constructorTypeArgs"),
 				group.types.type().label("type"),
 				group.structures.methodArguments().label("args"),
-				optional(group.structures.classBody()).label("classBody"),
+				optional(group.structures.typeBody()).label("classBody"),
 				SET(actions.createUnqualifiedConstructorInvocation(VALUE("constructorTypeArgs"), VALUE("type"), VALUE("args"), VALUE("classBody"))));
 	}
 	
@@ -202,7 +202,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 						group.basics.identifier().label("innerClassName"),
 						group.types.typeArguments().label("classTypeArgs"),
 						group.structures.methodArguments().label("methodArguments"),
-						optional(group.structures.classBody()).label("classBody"),
+						optional(group.structures.typeBody()).label("classBody"),
 						SET(actions.createQualifiedConstructorInvocation(VALUE("constructorTypeArgs"), VALUE("innerClassName"), VALUE("classTypeArgs"), VALUE("methodArguments"), VALUE("classBody"))))),
 				SET(actions.createChainOfQualifiedConstructorInvocations(VALUE(), VALUES("zeroOrMore/enforcedSequence"))));
 	}

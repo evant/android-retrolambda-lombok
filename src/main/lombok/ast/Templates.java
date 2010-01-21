@@ -391,7 +391,7 @@ class ConstructorInvocationTemplate {
 	TypeArguments constructorTypeArguments;
 	@NonNull TypeReference typeReference;
 	List<Expression> arguments;
-	ClassBody anonymousClassBody;
+	TypeBody anonymousClassBody;
 }
 
 @GenerateAstNode(implementing=Statement.class)
@@ -413,11 +413,6 @@ class MethodInvocationTemplate {
 	TypeArguments methodTypeArguments;
 	@NonNull Identifier name;
 	List<Expression> arguments;
-}
-
-@GenerateAstNode
-class ClassBodyTemplate {
-	
 }
 
 @GenerateAstNode(implementing=Expression.class)
@@ -723,6 +718,16 @@ class CommentTemplate {
 }
 
 @GenerateAstNode(implementing=TypeMember.class)
+class AnnotationMethodDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
+	
+	@NonNull TypeReference returnTypeReference;
+	@NonNull Identifier methodName;
+	Expression defaultValue;
+}
+
+@GenerateAstNode(implementing=TypeMember.class)
 class MethodDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -762,7 +767,16 @@ class TypeBodyTemplate {
 	List<TypeMember> members;
 }
 
-@GenerateAstNode(implementing={TypeMember.class, Statement.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+class AnnotationDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
+	
+	@NonNull Identifier name;
+	@NonNull TypeBody body;
+}
+
+@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class})
 class ClassDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -774,7 +788,7 @@ class ClassDeclarationTemplate {
 	List<TypeReference> implementing;
 }
 
-@GenerateAstNode(implementing=TypeMember.class)
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class InterfaceDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -783,4 +797,47 @@ class InterfaceDeclarationTemplate {
 	@NonNull TypeBody body;
 	List<TypeVariable> typeVariables;
 	List<TypeReference> extending;
+}
+
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+class EnumConstantTemplate {
+	TypeBody body;
+	@NonNull Identifier name;
+	List<Annotation> annotations;
+	List<Expression> arguments;
+}
+
+@GenerateAstNode(implementing=TypeMember.class)
+class EnumDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
+	
+	@NonNull Identifier name;
+	@NonNull TypeBody body;
+	List<EnumConstant> constants;
+	List<TypeReference> implementing;
+}
+
+@GenerateAstNode
+class PackageDeclarationTemplate {
+	List<Annotation> annotations;
+	List<Identifier> parts;
+}
+
+@GenerateAstNode
+class ImportDeclarationTemplate {
+	@NotChildOfNode
+	boolean staticImport;
+	
+	List<Identifier> parts;
+	
+	@NotChildOfNode
+	boolean starImport;
+}
+
+@GenerateAstNode
+class CompilationUnitTemplate {
+	PackageDeclaration packageDeclaration;
+	List<ImportDeclaration> importDeclarations;
+	List<TypeDeclaration> typeDeclarations;
 }

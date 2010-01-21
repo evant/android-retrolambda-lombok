@@ -33,7 +33,7 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.3
 	 */
 	public Rule localClassDeclaration() {
-		return group.structures.classDeclaration();
+		return group.structures.classOrInterfaceDeclaration();
 	}
 	
 	/**

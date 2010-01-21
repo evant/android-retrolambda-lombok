@@ -53,7 +53,6 @@ public interface ASTVisitor {
 	public boolean visitParseArtefact(Node node);
 	public boolean visitInstanceOf(InstanceOf node);
 	public boolean visitTypeArguments(TypeArguments node);
-	public boolean visitClassBody(ClassBody node);
 	public boolean visitConstructorInvocation(ConstructorInvocation node);
 	public boolean visitMethodInvocation(MethodInvocation node);
 	public boolean visitSelect(Select node);
@@ -87,4 +86,11 @@ public interface ASTVisitor {
 	public boolean visitClassDeclaration(ClassDeclaration node);
 	public boolean visitTypeBody(TypeBody node);
 	public boolean visitInterfaceDeclaration(InterfaceDeclaration node);
+	public boolean visitEnumConstant(EnumConstant node);
+	public boolean visitEnumDeclaration(EnumDeclaration node);
+	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node);
+	public boolean visitAnnotationDeclaration(AnnotationDeclaration node);
+	public boolean visitPackageDeclaration(PackageDeclaration node);
+	public boolean visitImportDeclaration(ImportDeclaration node);
+	public boolean visitCompilationUnit(CompilationUnit node);
 }
