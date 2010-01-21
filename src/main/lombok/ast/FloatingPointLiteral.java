@@ -25,7 +25,7 @@ import java.util.List;
 
 import lombok.Getter;
 
-public class FloatingPointLiteral extends Expression implements Literal {
+public class FloatingPointLiteral extends AbstractNode implements Literal, Expression {
 	private Double value;
 	private String rawValue;
 	private String errorReason = "Missing value";

@@ -5,8 +5,10 @@ import java.util.List;
 import lombok.ast.Annotation;
 import lombok.ast.AnnotationElement;
 import lombok.ast.ArrayInitializer;
+import lombok.ast.ClassDeclaration;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.InstanceInitializer;
+import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
@@ -42,8 +44,8 @@ public class StructuresActions extends BaseActions<Node> {
 			((TypeReference)returnType).setArrayDimensions(((TypeReference)returnType).getArrayDimensions() + extraDims);
 		}
 		decl.setRawReturnTypeReference(returnType);
-		if (typeParameters instanceof TemporaryNodes.OrphanedTypeVariables) {
-			TemporaryNodes.OrphanedTypeVariables otv = (TemporaryNodes.OrphanedTypeVariables)typeParameters;
+		if (typeParameters instanceof TemporaryNode.OrphanedTypeVariables) {
+			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)typeParameters;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
 				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
 			}
@@ -60,8 +62,8 @@ public class StructuresActions extends BaseActions<Node> {
 		
 		ConstructorDeclaration decl = new ConstructorDeclaration().setRawTypeName(name).setRawBody(body);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
-		if (typeParameters instanceof TemporaryNodes.OrphanedTypeVariables) {
-			for (Node typeParameter : ((TemporaryNodes.OrphanedTypeVariables)typeParameters).variables) {
+		if (typeParameters instanceof TemporaryNode.OrphanedTypeVariables) {
+			for (Node typeParameter : ((TemporaryNode.OrphanedTypeVariables)typeParameters).variables) {
 				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
 			}
 		}
@@ -100,7 +102,7 @@ public class StructuresActions extends BaseActions<Node> {
 	
 	public Node addFieldModifiers(Node variableDeclaration, Node modifiers) {
 		if (modifiers != null && variableDeclaration instanceof VariableDeclaration) {
-			return ((VariableDeclaration)variableDeclaration).setRawModifiers(modifiers);
+			((VariableDeclaration)variableDeclaration).setRawModifiers(modifiers);
 		}
 		
 		return variableDeclaration;
@@ -146,5 +148,72 @@ public class StructuresActions extends BaseActions<Node> {
 			return ((Annotation)annotation).setRawAnnotationTypeReference(type);
 		}
 		return new Annotation().setRawAnnotationTypeReference(type);
+	}
+	
+	public Node createExtendsClause(Node head, List<Node> tail) {
+		TemporaryNode.ExtendsClause result = new TemporaryNode.ExtendsClause();
+		if (head != null) result.superTypes.add(head);
+		if (tail != null) for (Node n : tail) if (n != null) result.superTypes.add(n);
+		return result;
+	}
+	
+	public Node createImplementsClause(Node head, List<Node> tail) {
+		TemporaryNode.ImplementsClause result = new TemporaryNode.ImplementsClause();
+		if (head != null) result.superInterfaces.add(head);
+		if (tail != null) for (Node n : tail) if (n != null) result.superInterfaces.add(n);
+		return result;
+	}
+	
+	public Node createInterfaceDeclaration(Node modifiers, Node name, Node params, Node body, List<Node> addons) {
+		InterfaceDeclaration decl = new InterfaceDeclaration().setRawName(name).setRawBody(body);
+		if (modifiers != null) decl.setRawModifiers(modifiers);
+		if (params instanceof TemporaryNode.OrphanedTypeVariables) {
+			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)params;
+			if (otv.variables != null) for (Node typeParameter : otv.variables) {
+				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
+			}
+		}
+		
+		if (addons != null) for (Node n : addons) {
+			if (n instanceof TemporaryNode.ExtendsClause) {
+				List<Node> superClasses = ((TemporaryNode.ExtendsClause)n).superTypes;
+				if (superClasses != null) for (Node superClass : superClasses) if (superClass != null) decl.extending().addToEndRaw(n);
+			}
+			
+			//if (n instanceof TemporaryNode.ImplementsClause) //TODO add error node: implements not allowed here.
+		}
+		
+		return decl;
+	}
+	
+	public Node createTypeDeclaration(String kind, Node modifiers, Node name, Node params, Node body, List<Node> addons) {
+		if (kind.equals("interface")) return createInterfaceDeclaration(modifiers, name, params, body, addons);
+		
+		ClassDeclaration decl = new ClassDeclaration().setRawName(name).setRawBody(body);
+		if (modifiers != null) decl.setRawModifiers(modifiers);
+		if (params instanceof TemporaryNode.OrphanedTypeVariables) {
+			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)params;
+			if (otv.variables != null) for (Node typeParameter : otv.variables) {
+				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
+			}
+		}
+		
+		if (addons != null) for (Node n : addons) {
+			if (n instanceof TemporaryNode.ExtendsClause) {
+				//if (!decl.implementing().isEmpty()) //TODO add error node: implements must come after extends
+				
+				List<Node> superClasses = ((TemporaryNode.ExtendsClause)n).superTypes;
+				if (superClasses != null && superClasses.size() > 0) {
+					//if (superClasses.size() > 1) //TODO add error node: 'extends' on class can only accept 1 type.
+					decl.setRawExtending(superClasses.get(0));
+				}
+			}
+			
+			if (n instanceof TemporaryNode.ImplementsClause) {
+				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
+				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.implementing().addToEndRaw(i);
+			}
+		}
+		return decl;
 	}
 }

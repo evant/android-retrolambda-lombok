@@ -149,7 +149,7 @@ public class TemplateProcessor extends AbstractProcessor {
 						}
 					}
 					
-					if (extending == null) extending = "lombok.ast.Node";
+					if (extending == null) extending = "lombok.ast.AbstractNode";
 				}
 			}
 			
@@ -413,9 +413,9 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateFieldsForList(Writer out, String className, String typeName, int fieldsSize, FieldData field) throws IOException {
-		out.write("\tprivate final java.util.List<lombok.ast.Node> ");
+		out.write("\tprivate final java.util.List<lombok.ast.AbstractNode> ");
 		out.write(field.getName());
-		out.write(" = new java.util.ArrayList<lombok.ast.Node>();\n");
+		out.write(" = new java.util.ArrayList<lombok.ast.AbstractNode>();\n");
 		
 		// private lombok.ast.ListAccessor<CatchBlock, Try> catchesAccessor = ListAccessor.of(catches, this, CatchBlock.class, "Try.catches");
 		out.write("\tprivate lombok.ast.ListAccessor<");
@@ -498,9 +498,9 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(String.format(
 				"\tpublic %1$s setRaw%2$s(lombok.ast.Node %3$s) {\n" +
 				"\t\tif (%3$s == this.%3$s) return this;\n" +
-				"\t\tif (%3$s != null) this.adopt(%3$s);\n" +
+				"\t\tif (%3$s != null) this.adopt((lombok.ast.AbstractNode)%3$s);\n" +
 				"\t\tif (this.%3$s != null) this.disown(this.%3$s);\n" +
-				"\t\tthis.%3$s = %3$s;\n" +
+				"\t\tthis.%3$s = (lombok.ast.AbstractNode)%3$s;\n" +
 				"\t\treturn this;\n" +
 				"\t}\n\t\n", params));
 	}
@@ -656,7 +656,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateFieldsForNode(Writer out, FieldData field) throws IOException {
-		out.write("\tprivate lombok.ast.Node ");
+		out.write("\tprivate lombok.ast.AbstractNode ");
 		out.write(field.getName());
 		out.write(";\n");
 	}

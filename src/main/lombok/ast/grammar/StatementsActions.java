@@ -82,7 +82,7 @@ public class StatementsActions extends BaseActions<Node> {
 	}
 	
 	public Node createStatementExpressionList(Node head, List<Node> tail) {
-		TemporaryNodes.StatementExpressionList result = new TemporaryNodes.StatementExpressionList();
+		TemporaryNode.StatementExpressionList result = new TemporaryNode.StatementExpressionList();
 		if (head != null) result.expressions.add(head);
 		if (tail != null) for (Node n : tail) if (n != null) result.expressions.add(n);
 		return result;
@@ -92,14 +92,14 @@ public class StatementsActions extends BaseActions<Node> {
 		For result = new For().setRawCondition(condition).setRawStatement(statement);
 		List<Node> inits, updates;
 		
-		if (init instanceof TemporaryNodes.StatementExpressionList) {
-			inits = ((TemporaryNodes.StatementExpressionList)init).expressions;
+		if (init instanceof TemporaryNode.StatementExpressionList) {
+			inits = ((TemporaryNode.StatementExpressionList)init).expressions;
 		} else {
 			inits = Collections.singletonList(init);
 		}
 		
-		if (update instanceof TemporaryNodes.StatementExpressionList) {
-			updates = ((TemporaryNodes.StatementExpressionList)update).expressions;
+		if (update instanceof TemporaryNode.StatementExpressionList) {
+			updates = ((TemporaryNode.StatementExpressionList)update).expressions;
 		} else {
 			updates = Collections.singletonList(update);
 		}
@@ -151,7 +151,7 @@ public class StatementsActions extends BaseActions<Node> {
 	
 	public Node addLocalVariableModifiers(Node variableDeclaration, Node modifiers) {
 		if (modifiers != null && variableDeclaration instanceof VariableDeclaration) {
-			return ((VariableDeclaration)variableDeclaration).setRawModifiers(modifiers);
+			((VariableDeclaration)variableDeclaration).setRawModifiers(modifiers);
 		}
 		
 		return variableDeclaration;

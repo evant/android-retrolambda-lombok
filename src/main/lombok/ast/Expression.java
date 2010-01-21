@@ -21,6 +21,6 @@
  */
 package lombok.ast;
 
-public abstract class Expression extends Node {
+public interface Expression extends Node {
 	
 }

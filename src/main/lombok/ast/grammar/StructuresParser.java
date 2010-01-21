@@ -41,13 +41,37 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 	}
 	
 	public Rule classDeclaration() {
-		//TODO dummy
 		return sequence(
-				string("class"),
-				group.basics.testLexBreak(),
-				group.basics.optWS(),
-				group.basics.identifier(),
-				classBody());
+				typeDeclarationModifiers().label("modifiers"),
+				firstOf(string("class"), string("interface")).label("kind"),
+				group.basics.testLexBreak(), group.basics.optWS(),
+				group.basics.identifier().label("typeName"),
+				group.types.typeVariables().label("typeParameters"),
+				zeroOrMore(firstOf(
+						extendsClause(),
+						implementsClause()).label("addon")).label("addons"),
+				classBody().label("body"),
+				SET(actions.createTypeDeclaration(TEXT("kind"), VALUE("modifiers"), VALUE("typeName"), VALUE("typeParameters"), VALUE("body"), VALUES("addons/addon"))));
+	}
+	
+	Rule extendsClause() {
+		return enforcedSequence(
+				sequence(string("extends"), group.basics.testLexBreak(), group.basics.optWS()),
+				group.types.type().label("head"),
+				zeroOrMore(enforcedSequence(
+						ch(','), group.basics.optWS(),
+						group.types.type()).label("tail")),
+				SET(actions.createExtendsClause(VALUE("head"), VALUES("zeroOrMore/tail"))));
+	}
+	
+	Rule implementsClause() {
+		return enforcedSequence(
+				sequence(string("extends"), group.basics.testLexBreak(), group.basics.optWS()),
+				group.types.type().label("head"),
+				zeroOrMore(enforcedSequence(
+						ch(','), group.basics.optWS(),
+						group.types.type()).label("tail")),
+				SET(actions.createImplementsClause(VALUE("head"), VALUES("zeroOrMore/tail"))));
 	}
 	
 	public Rule constructorDeclaration() {
@@ -211,6 +235,12 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				group.basics.testLexBreak(),
 				SET(actions.createKeywordModifier(TEXT("keyword"))),
 				group.basics.optWS());
+	}
+	
+	public Rule typeDeclarationModifiers() {
+		return sequence(
+				zeroOrMore(anyModifier().label("modifier")),
+				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
 	}
 	
 	public Rule methodDeclarationModifiers() {

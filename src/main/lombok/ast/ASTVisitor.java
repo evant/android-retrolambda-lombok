@@ -84,4 +84,7 @@ public interface ASTVisitor {
 	public boolean visitSuperConstructorInvocation(SuperConstructorInvocation node);
 	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node);
 	public boolean visitAnnotationElement(AnnotationElement node);
+	public boolean visitClassDeclaration(ClassDeclaration node);
+	public boolean visitTypeBody(TypeBody node);
+	public boolean visitInterfaceDeclaration(InterfaceDeclaration node);
 }

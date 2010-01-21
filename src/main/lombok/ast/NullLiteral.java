@@ -23,7 +23,7 @@ package lombok.ast;
 
 import java.util.List;
 
-public class NullLiteral extends Expression implements Literal {
+public class NullLiteral extends AbstractNode implements Literal, Expression {
 	private String rawValue;
 	private String errorReason = "Missing value";
 	

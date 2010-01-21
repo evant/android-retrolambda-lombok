@@ -32,13 +32,13 @@ import lombok.ast.template.GenerateAstNode;
 import lombok.ast.template.InitialValue;
 import lombok.ast.template.NotChildOfNode;
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class AssertTemplate {
 	@NonNull Expression assertion;
 	Expression message;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class CatchTemplate {
 	@NonNull VariableDeclaration exceptionDeclaration;
 	@NonNull Block body;
@@ -46,24 +46,24 @@ class CatchTemplate {
 	/* check: exDecl must have exactly 1 VDEntry */
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class BlockTemplate {
 	List<Statement> contents;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class DoWhileTemplate {
 	@NonNull Expression condition;
 	@NonNull Statement statement;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class WhileTemplate {
 	@NonNull Expression condition;
 	@NonNull Statement statement;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class ForTemplate {
 	List<Statement> inits;
 	Expression condition;
@@ -71,27 +71,27 @@ class ForTemplate {
 	@NonNull Statement statement;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class ForEachTemplate {
 	@NonNull VariableDeclaration variable;
 	@NonNull Expression iterable;
 	@NonNull Statement statement;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class IfTemplate {
 	@NonNull Expression condition;
 	@NonNull Statement statement;
 	Statement elseStatement;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class SynchronizedTemplate {
 	@NonNull Expression lock;
 	@NonNull Block body;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class TryTemplate {
 	@NonNull Block body;
 	List<Catch> catches;
@@ -105,7 +105,7 @@ class TryTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class AnnotationTemplate {
 	@NonNull TypeReference annotationTypeReference;
 	List<AnnotationElement> elements;
@@ -192,7 +192,7 @@ class ModifiersTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing={Statement.class, TypeMember.class})
 class VariableDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -222,14 +222,14 @@ class VariableDeclarationEntryTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class InlineIfExpressionTemplate {
 	@NonNull Expression condition;
 	@NonNull Expression ifTrue;
 	@NonNull Expression ifFalse;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class IncrementExpressionTemplate {
 	@NonNull Expression operand;
 	@NotChildOfNode boolean decrement = false;
@@ -242,7 +242,7 @@ class IdentifierTemplate {
 	@NonNull String name;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class BinaryExpressionTemplate {
 	@NonNull Expression left;
 	@NonNull Expression right;
@@ -261,7 +261,7 @@ class BinaryExpressionTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class UnaryExpressionTemplate {
 	@NonNull Expression operand;
 	@NotChildOfNode(rawFormParser="parseOperator", rawFormGenerator="generateOperator")
@@ -368,24 +368,24 @@ class TypeArgumentsTemplate {
 	List<TypeReference> generics;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class CastTemplate {
 	@NonNull TypeReference typeReference;
 	@NonNull Expression operand;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class IdentifierExpressionTemplate {
 	@NonNull Identifier identifier;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class InstanceOfTemplate {
 	@NonNull Expression objectReference;
 	@NonNull TypeReference typeReference;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class ConstructorInvocationTemplate {
 	Expression qualifier;
 	TypeArguments constructorTypeArguments;
@@ -394,20 +394,20 @@ class ConstructorInvocationTemplate {
 	ClassBody anonymousClassBody;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class AlternateConstructorInvocationTemplate {
 	TypeArguments constructorTypeArguments;
 	List<Expression> arguments;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class SuperConstructorInvocationTemplate {
 	Expression qualifier;
 	TypeArguments constructorTypeArguments;
 	List<Expression> arguments;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class MethodInvocationTemplate {
 	Expression operand;
 	TypeArguments methodTypeArguments;
@@ -420,19 +420,19 @@ class ClassBodyTemplate {
 	
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class SelectTemplate {
 	@NonNull Expression operand;
 	@NonNull Identifier identifier;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class ArrayAccessTemplate {
 	@NonNull Expression operand;
 	@NonNull Expression indexExpression;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class ArrayCreationTemplate {
 	@NonNull TypeReference componentTypeReference;
 	List<ArrayDimension> dimensions;
@@ -444,22 +444,22 @@ class ArrayDimensionTemplate {
 	Expression dimension;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class ArrayInitializerTemplate {
 	List<Expression> expressions;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class ThisTemplate {
 	TypeReference qualifier;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class SuperTemplate {
 	TypeReference qualifier;
 }
 
-@GenerateAstNode(extending=Expression.class)
+@GenerateAstNode(implementing=Expression.class)
 class ClassLiteralTemplate {
 	@NonNull TypeReference typeReference;
 }
@@ -470,31 +470,31 @@ class KeywordModifierTemplate {
 	@NonNull String name;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class EmptyStatementTemplate {}
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class LabelledStatementTemplate {
 	@NonNull Identifier label;
 	@NonNull Statement statement;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class SwitchTemplate {
 	@NonNull Expression condition;
 	@NonNull Block body;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class CaseTemplate {
 	@NonNull Expression condition;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class DefaultTemplate {
 }
 
-@GenerateAstNode(extending=Expression.class, implementing=Literal.class)
+@GenerateAstNode(implementing={Literal.class, Expression.class})
 class BooleanLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseBoolean", rawFormGenerator="generateBoolean")
 	@NonNull Boolean value;
@@ -512,7 +512,7 @@ class BooleanLiteralTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Expression.class, implementing=Literal.class)
+@GenerateAstNode(implementing={Expression.class, Literal.class})
 class CharLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseChar", rawFormGenerator="generateChar")
 	@NonNull Character value;
@@ -592,7 +592,7 @@ class CharLiteralTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Expression.class, implementing=Literal.class)
+@GenerateAstNode(implementing={Literal.class, Expression.class})
 class StringLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseString", rawFormGenerator="generateString")
 	@NonNull String value;
@@ -683,7 +683,7 @@ class StringLiteralTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class BreakTemplate {
 	Identifier label;
 	
@@ -693,7 +693,7 @@ class BreakTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class ContinueTemplate {
 	Identifier label;
 	
@@ -703,12 +703,12 @@ class ContinueTemplate {
 	}
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class ReturnTemplate {
 	Expression value;
 }
 
-@GenerateAstNode(extending=Statement.class)
+@GenerateAstNode(implementing=Statement.class)
 class ThrowTemplate {
 	@NonNull Expression throwable;
 }
@@ -722,7 +722,7 @@ class CommentTemplate {
 	String content;
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=TypeMember.class)
 class MethodDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -735,7 +735,7 @@ class MethodDeclarationTemplate {
 	@NonNull Block body;
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=TypeMember.class)
 class ConstructorDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -747,12 +747,40 @@ class ConstructorDeclarationTemplate {
 	@NonNull Block body;
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=TypeMember.class)
 class InstanceInitializerTemplate {
 	@NonNull Block body;
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=TypeMember.class)
 class StaticInitializerTemplate {
 	@NonNull Block body;
+}
+
+@GenerateAstNode
+class TypeBodyTemplate {
+	List<TypeMember> members;
+}
+
+@GenerateAstNode(implementing={TypeMember.class, Statement.class})
+class ClassDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
+	
+	@NonNull Identifier name;
+	@NonNull TypeBody body;
+	List<TypeVariable> typeVariables;
+	TypeReference extending;
+	List<TypeReference> implementing;
+}
+
+@GenerateAstNode(implementing=TypeMember.class)
+class InterfaceDeclarationTemplate {
+	@InitialValue("new lombok.ast.Modifiers()")
+	@NonNull Modifiers modifiers;
+	
+	@NonNull Identifier name;
+	@NonNull TypeBody body;
+	List<TypeVariable> typeVariables;
+	List<TypeReference> extending;
 }

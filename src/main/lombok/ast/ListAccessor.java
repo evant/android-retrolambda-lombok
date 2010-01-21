@@ -27,13 +27,13 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 public class ListAccessor<T extends Node, P extends Node> {
-	private final List<Node> list;
-	private final Node parent;
+	private final List<AbstractNode> list;
+	private final AbstractNode parent;
 	private final Class<T> tClass;
 	private final String listName;
 	private final P returnAsParent;
 	
-	private ListAccessor(List<Node> list, Node parent, Class<T> tClass, String listName, P returnAsParent) {
+	private ListAccessor(List<AbstractNode> list, AbstractNode parent, Class<T> tClass, String listName, P returnAsParent) {
 		this.list = list;
 		this.parent = parent;
 		this.tClass = tClass;
@@ -41,7 +41,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 		this.returnAsParent = returnAsParent;
 	}
 	
-	static <T extends Node, P extends Node> ListAccessor<T, P> of(List<Node> list, P parent, Class<T> tClass, String listName) {
+	static <T extends Node, P extends AbstractNode> ListAccessor<T, P> of(List<AbstractNode> list, P parent, Class<T> tClass, String listName) {
 		return new ListAccessor<T, P>(list, parent, tClass, listName, parent);
 	}
 	
@@ -62,9 +62,9 @@ public class ListAccessor<T extends Node, P extends Node> {
 	}
 	
 	public P migrateAllFromRaw(ListAccessor<? extends Node, ?> otherList) {
-		Iterator<Node> it = otherList.list.iterator();
+		Iterator<AbstractNode> it = otherList.list.iterator();
 		while (it.hasNext()) {
-			Node n = it.next();
+			AbstractNode n = it.next();
 			otherList.parent.disown(n);
 			it.remove();
 			this.addToEndRaw(n);
@@ -80,8 +80,8 @@ public class ListAccessor<T extends Node, P extends Node> {
 	
 	public P addToStartRaw(Node node) {
 		if (node == null) throw new NullPointerException("node");
-		parent.adopt(node);
-		list.add(0, node);
+		parent.adopt((AbstractNode)node);
+		list.add(0, (AbstractNode)node);
 		return returnAsParent;
 	}
 	
@@ -92,8 +92,8 @@ public class ListAccessor<T extends Node, P extends Node> {
 	
 	public P addToEndRaw(Node node) {
 		if (node != null) {
-			parent.adopt(node);
-			list.add(node);
+			parent.adopt((AbstractNode)node);
+			list.add((AbstractNode)node);
 		}
 		return returnAsParent;
 	}
@@ -106,12 +106,12 @@ public class ListAccessor<T extends Node, P extends Node> {
 	public P addBeforeRaw(Node node, Node ref) {
 		if (node == null) return returnAsParent;
 		if (ref == null) throw new NullPointerException("ref");
-		node.ensureParentless();
+		((AbstractNode)node).ensureParentless();
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == ref) {
-				parent.adopt(node);
-				list.add(i, node);
+				parent.adopt((AbstractNode)node);
+				list.add(i, (AbstractNode)node);
 				return returnAsParent;
 			}
 		}
@@ -127,12 +127,12 @@ public class ListAccessor<T extends Node, P extends Node> {
 	public P addAfterRaw(Node node, Node ref) {
 		if (node == null) return returnAsParent;
 		if (ref == null) throw new NullPointerException("ref");
-		node.ensureParentless();
+		((AbstractNode)node).ensureParentless();
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == ref) {
-				parent.adopt(node);
-				list.add(i+1, node);
+				parent.adopt((AbstractNode)node);
+				list.add(i+1, (AbstractNode)node);
 				return returnAsParent;
 			}
 		}
@@ -146,20 +146,20 @@ public class ListAccessor<T extends Node, P extends Node> {
 	}
 	
 	public P replaceRaw(Node source, Node replacement) {
-		if (replacement != null) replacement.ensureParentless();
-		parent.ensureParentage(source);
+		if (replacement != null) ((AbstractNode)replacement).ensureParentless();
+		parent.ensureParentage((AbstractNode)source);
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == source) {
-				parent.disown(source);
+				parent.disown((AbstractNode)source);
 				try {
-					if (replacement != null) parent.adopt(replacement);
+					if (replacement != null) parent.adopt((AbstractNode)replacement);
 				} catch (IllegalStateException e) {
-					parent.adopt(source);
+					parent.adopt((AbstractNode)source);
 					throw e;
 				}
 				if (replacement == null) list.remove(i);	//screws up for counter, but we return right after anyway, so it doesn't matter.
-				else list.set(i, replacement);
+				else list.set(i, (AbstractNode)replacement);
 				return returnAsParent;
 			}
 		}
@@ -169,11 +169,11 @@ public class ListAccessor<T extends Node, P extends Node> {
 	
 	public P remove(Node source) throws NoSuchElementException {
 		if (source == null) return returnAsParent;
-		parent.ensureParentage(source);
+		parent.ensureParentage((AbstractNode)source);
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == source) {
-				parent.disown(source);
+				parent.disown((AbstractNode)source);
 				list.remove(i);
 				return returnAsParent;
 			}

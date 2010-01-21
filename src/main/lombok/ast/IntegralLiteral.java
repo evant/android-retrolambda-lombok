@@ -25,7 +25,7 @@ import java.util.List;
 
 import lombok.Getter;
 
-public class IntegralLiteral extends Expression implements Literal {
+public class IntegralLiteral extends AbstractNode implements Literal, Expression {
 	private Long value;
 	private String rawValue;
 	private String errorReason = "Missing value";
