@@ -113,16 +113,21 @@ public class HtmlPrinter extends HtmlBuilder {
 	//Basics
 	public boolean visitTypeReference(TypeReference node) {
 		WildcardKind kind = node.getWildcard();
+		buildInline(node);
 		if (kind == WildcardKind.UNBOUND) {
-			buildInline(node, "?");
+			append("?");
 			closeInline();
 			return true;
 		} else if (kind == WildcardKind.EXTENDS) {
-			buildInline(node, "? extends ");
+			append("?");
+			space();
+			keyword("extends");
+			space();
 		} else if (kind == WildcardKind.SUPER) {
-			buildInline(node, "? super ");
-		} else {
-			buildInline(node, "");
+			append("?");
+			space();
+			keyword("super");
+			space();
 		}
 		
 		visitAll(node.parts(), ".", "", "");
@@ -134,7 +139,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitTypeReferencePart(TypeReferencePart node) {
-		buildInline(node, "");
+		buildInline(node);
 		visit(node.getRawIdentifier());
 		visit(node.getRawTypeArguments());
 		closeInline();
@@ -159,7 +164,8 @@ public class HtmlPrinter extends HtmlBuilder {
 		else if (name.isEmpty()) name = FAIL + "EMPTY_IDENTIFIER" + FAIL;
 		else if (!isValidJavaIdentifier(name)) name = FAIL + "INVALID_IDENTIFIER: " + name + FAIL;
 		
-		buildInline(node, name);
+		buildInline(node);
+		append(name);
 		closeInline();
 		return true;
 	}
@@ -177,7 +183,8 @@ public class HtmlPrinter extends HtmlBuilder {
 			}
 		}
 		
-		buildInline(node, raw);
+		buildInline(node);
+		append(raw);
 		closeInline();
 		return true;
 	}
@@ -195,7 +202,8 @@ public class HtmlPrinter extends HtmlBuilder {
 			}
 		}
 		
-		buildInline(node, raw);
+		buildInline(node);
+		append(raw);
 		closeInline();
 		return true;
 	}
@@ -210,7 +218,8 @@ public class HtmlPrinter extends HtmlBuilder {
 			}
 		}
 		
-		buildInline(node, raw);
+		buildInline(node);
+		append(raw);
 		closeInline();
 		return true;
 	}
@@ -225,7 +234,8 @@ public class HtmlPrinter extends HtmlBuilder {
 			}
 		}
 		
-		buildInline(node, raw);
+		buildInline(node);
+		append(raw);
 		closeInline();
 		return true;
 	}
@@ -240,13 +250,14 @@ public class HtmlPrinter extends HtmlBuilder {
 			}
 		}
 		
-		buildInline(node, raw);
+		buildInline(node);
+		append(raw);
 		closeInline();
 		return true;
 	}
 	
 	public boolean visitNullLiteral(NullLiteral node) {
-		buildInline(node, "");
+		buildInline(node);
 		keyword("null");
 		closeInline();
 		return true;
@@ -254,7 +265,7 @@ public class HtmlPrinter extends HtmlBuilder {
 
 	//Expressions
 	public boolean visitBinaryExpression(BinaryExpression node) {
-		buildInline(node, "");
+		buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) append("(");
 		visit(node.getRawLeft());
@@ -272,7 +283,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitUnaryExpression(UnaryExpression node) {
-		buildInline(node, "");
+		buildInline(node);
 		UnaryOperator op;
 		try {
 			op = node.getOperator();
@@ -292,7 +303,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitCast(Cast node) {
-		buildInline(node, "");
+		buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) append("(");
 		append("(");
@@ -306,7 +317,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
-		buildInline(node, "");
+		buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) append("(");
 		visit(node.getRawCondition());
@@ -324,7 +335,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitInstanceOf(InstanceOf node) {
-		buildInline(node, "");
+		buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) append("(");
 		visit(node.getRawObjectReference());
@@ -338,7 +349,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitConstructorInvocation(ConstructorInvocation node) {
-		buildInline(node, "");
+		buildInline(node);
 		if (node.getRawQualifier() != null) {
 			visit(node.getRawQualifier());
 			append(".");
@@ -355,7 +366,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitMethodInvocation(MethodInvocation node) {
-		buildInline(node, "");
+		buildInline(node);
 		if (node.getRawOperand() != null) {
 			visit(node.getRawOperand());
 			append(".");
@@ -370,7 +381,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitSelect(Select node) {
-		buildInline(node, "");
+		buildInline(node);
 		if (node.getRawOperand() != null) {
 			visit(node.getRawOperand());
 			append(".");
@@ -381,7 +392,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitArrayAccess(ArrayAccess node) {
-		buildInline(node, "");
+		buildInline(node);
 		visit(node.getRawOperand());
 		append("[");
 		visit(node.getRawIndexExpression());
@@ -391,7 +402,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitArrayCreation(ArrayCreation node) {
-		buildInline(node, "");
+		buildInline(node);
 		keyword("new");
 		space();
 		visit(node.getRawComponentTypeReference());
@@ -405,7 +416,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitArrayInitializer(ArrayInitializer node) {
-		buildInline(node, "");
+		buildInline(node);
 		append("{");
 		visitAll(node.expressions(), ", ", "", "");
 		append("}");
@@ -414,7 +425,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitArrayDimension(ArrayDimension node) {
-		buildInline(node, "");
+		buildInline(node);
 		append("[");
 		visit(node.getRawDimension());
 		append("]");
@@ -437,8 +448,9 @@ public class HtmlPrinter extends HtmlBuilder {
 //	public abstract boolean visitDoWhile(DoWhile node);
 //	public abstract boolean visitSynchronized(Synchronized node);
 	public boolean visitBlock(Block node) {
-		buildInline(node, "{");
-		buildBlock(null, "");
+		buildInline(node);
+		append("{");
+		buildBlock(null);
 		visitAll(node.contents(), "", "", "");
 		closeBlock();
 		append("}");
@@ -457,14 +469,14 @@ public class HtmlPrinter extends HtmlBuilder {
 //	
 //	//Structural
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		visit(node.getRawDefinition());
 		append(";");
 		closeBlock();
 		return true;
 	}
 	public boolean visitVariableDefinition(VariableDefinition node) {
-		buildInline(node, "");
+		buildInline(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			space();
@@ -478,7 +490,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {
-		buildInline(node, "");
+		buildInline(node);
 		visit(node.getRawName());
 		for (int i = 0; i < node.getDimensions(); i++) append("[]");
 		if (node.getRawInitializer() != null) {
@@ -491,14 +503,14 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitTypeArguments(TypeArguments node) {
-		buildInline(node, "");
+		buildInline(node);
 		visitAll(node.generics(), ", ", "<", ">");
 		closeInline();
 		return true;
 	}
 	
 	public boolean visitTypeVariable(TypeVariable node) {
-		buildInline(node, "");
+		buildInline(node);
 		visit(node.getRawName());
 		if (!node.extending().isEmpty()) {
 			keyword("extends");
@@ -509,7 +521,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitKeywordModifier(KeywordModifier node) {
-		buildInline(node, "");
+		buildInline(node);
 		if (node.getName() == null || node.getName().isEmpty()) fail("MISSING_MODIFIER");
 		else keyword(node.getName());
 		closeInline();
@@ -517,7 +529,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitModifiers(Modifiers node) {
-		buildInline(node, "");
+		buildInline(node);
 		visitAll(node.annotations(), "", "", "");
 		visitAll(node.keywords(), " ", "", "");
 		closeInline();
@@ -528,8 +540,9 @@ public class HtmlPrinter extends HtmlBuilder {
 //	public abstract boolean visitAnnotationElement(AnnotationElement node);
 	
 	public boolean visitTypeBody(TypeBody node) {
-		buildInline(node, "{");
-		buildBlock(null, "");
+		buildInline(node);
+		append("{");
+		buildBlock(null);
 		visitAll(node.members(), "\n", "", "");
 		closeBlock();
 		append("}");
@@ -539,7 +552,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	
 //	//Class Bodies
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			space();
@@ -567,14 +580,14 @@ public class HtmlPrinter extends HtmlBuilder {
 //	public abstract boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node);
 	
 	public boolean visitInstanceInitializer(InstanceInitializer node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		visit(node.getRawBody());
 		closeBlock();
 		return true;
 	}
 	
 	public boolean visitStaticInitializer(StaticInitializer node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		keyword("static");
 		space();
 		visit(node.getRawBody());
@@ -583,7 +596,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitClassDeclaration(ClassDeclaration node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			space();
@@ -614,7 +627,7 @@ public class HtmlPrinter extends HtmlBuilder {
 //	public abstract boolean visitAnnotationDeclaration(AnnotationDeclaration node);
 //	public abstract boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node);
 	public boolean visitCompilationUnit(CompilationUnit node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		if (node.getRawPackageDeclaration() != null) {
 			visit(node.getRawPackageDeclaration());
 			newline();
@@ -626,7 +639,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		visitAll(node.annotations(), "", "", "");
 		keyword("package");
 		space();
@@ -637,7 +650,7 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 	
 	public boolean visitImportDeclaration(ImportDeclaration node) {
-		buildBlock(node, "");
+		buildBlock(node);
 		keyword("import");
 		space();
 		if (node.isStaticImport()) {

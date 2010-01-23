@@ -95,9 +95,8 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 		sb.append(escapeHtml(text));
 	}
 	
-	void buildInline(Node node, String representation) {
+	void buildInline(Node node) {
 		generateOpenTag(node, "span");
-		append(representation);
 	}
 	
 	void closeInline() {
@@ -106,9 +105,8 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 	
 	private static final Pattern HTML_CLASS_SIGNIFICANT_NODE = Pattern.compile("^lombok\\.ast\\.(\\w+)$");
 	
-	void buildBlock(Node node, String representation) {
+	void buildBlock(Node node) {
 		generateOpenTag(node, "div");
-		append(representation);
 	}
 	
 	private void generateOpenTag(Node node, String tagName) {
@@ -136,7 +134,8 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 	}
 	
 	@Override public boolean visitNode(Node node) {
-		buildBlock(node, HtmlPrinter.FAIL + "NOT_IMPLEMENTED: " + node.getClass().getSimpleName() + HtmlPrinter.FAIL);
+		buildBlock(node);
+		append(FAIL + "NOT_IMPLEMENTED: " + node.getClass().getSimpleName() + FAIL);
 		closeBlock();
 		return false;
 	}
