@@ -166,6 +166,7 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 				.replace("{{@css}}", "")
 				.replace("{{@body}}", sb.toString())
 				.replace("{{@errors}}", printErrors())
+				.replace("{{@rawSource}}", escapeHtml(rawSource))
 				.replace("{{@timeTaken}}", "" + timeTaken);
 	}
 	

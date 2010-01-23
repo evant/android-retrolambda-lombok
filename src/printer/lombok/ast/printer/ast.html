@@ -55,6 +55,11 @@
 				margin-left: 0;
 			}
 			
+			.rawSource {
+				width: 80%;
+				height: 600px;
+			}
+			
 			{{@css}}
 		</style>
 	</head>
@@ -67,5 +72,7 @@
 		{{@errors}}
 		<h2>Time taken</h2>
 		{{@timeTaken}}
+		<h2>raw source</h2>
+		<textarea class="rawSource">{{@rawSource}}</textarea>
 	</body>
 </html>

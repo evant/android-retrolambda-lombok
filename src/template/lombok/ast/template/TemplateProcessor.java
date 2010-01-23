@@ -51,8 +51,6 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
-import org.apache.commons.lang.StringUtils;
-
 import lombok.Data;
 
 @SupportedAnnotationTypes("lombok.ast.template.GenerateAstNode")

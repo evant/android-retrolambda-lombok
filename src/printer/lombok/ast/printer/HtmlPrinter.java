@@ -1,8 +1,5 @@
 package lombok.ast.printer;
 
-import org.parboiled.support.InputLocation;
-
-import lombok.ast.ASTVisitor;
 import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
@@ -14,7 +11,6 @@ import lombok.ast.ArrayDimension;
 import lombok.ast.ArrayInitializer;
 import lombok.ast.Assert;
 import lombok.ast.BinaryExpression;
-import lombok.ast.BinaryOperator;
 import lombok.ast.Block;
 import lombok.ast.BooleanLiteral;
 import lombok.ast.Break;
@@ -558,6 +554,8 @@ public class HtmlPrinter extends HtmlBuilder {
 		visitAll(node.catches(), " ", " ", "");
 		if (node.getRawFinally() != null) {
 			space();
+			keyword("finally");
+			space();
 			startSuppressBlock();
 			visit(node.getRawFinally());
 			endSuppressBlock();
@@ -581,9 +579,54 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitWhile(While node);
-//	public abstract boolean visitDoWhile(DoWhile node);
-//	public abstract boolean visitSynchronized(Synchronized node);
+	public boolean visitWhile(While node) {
+		buildBlock(node);
+		keyword("while");
+		space();
+		append("(");
+		visit(node.getRawCondition());
+		append(")");
+		space();
+		startSuppressBlock();
+		visit(node.getRawStatement());
+		endSuppressBlock();
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitDoWhile(DoWhile node) {
+		buildBlock(node);
+		keyword("do");
+		space();
+		startSuppressBlock();
+		visit(node.getRawStatement());
+		endSuppressBlock();
+		space();
+		keyword("while");
+		space();
+		append("(");
+		visit(node.getRawCondition());
+		append(")");
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitSynchronized(Synchronized node) {
+		buildBlock(node);
+		keyword("synchronized");
+		space();
+		append("(");
+		visit(node.getRawLock());
+		append(")");
+		space();
+		startSuppressBlock();
+		visit(node.getBody());
+		endSuppressBlock();
+		closeBlock();
+		return true;
+	}
+	
 	public boolean visitBlock(Block node) {
 		buildBlock(node);
 		append("{");
@@ -594,17 +637,109 @@ public class HtmlPrinter extends HtmlBuilder {
 		closeBlock();
 		return true;
 	}
-//	public abstract boolean visitAssert(Assert node);
-//	public abstract boolean visitEmptyStatement(EmptyStatement node);
-//	public abstract boolean visitSwitch(Switch node);
-//	public abstract boolean visitCase(Case node);
-//	public abstract boolean visitDefault(Default node);
-//	public abstract boolean visitBreak(Break node);
-//	public abstract boolean visitContinue(Continue node);
-//	public abstract boolean visitReturn(Return node);
-//	public abstract boolean visitThrow(Throw node);
-//	
-//	//Structural
+	
+	public boolean visitAssert(Assert node) {
+		buildBlock(node);
+		keyword("assert");
+		space();
+		visit(node.getRawAssertion());
+		if (node.getRawMessage() != null) {
+			space();
+			append(":");
+			space();
+			visit(node.getRawMessage());
+		}
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitEmptyStatement(EmptyStatement node) {
+		buildBlock(node);
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitSwitch(Switch node) {
+		buildBlock(node);
+		keyword("switch");
+		space();
+		append("(");
+		visit(node.getRawCondition());
+		append(")");
+		space();
+		startSuppressBlock();
+		visit(node.getRawBody());
+		endSuppressBlock();
+		return true;
+	}
+	
+	public boolean visitCase(Case node) {
+		buildBlock(node);
+		keyword("case");
+		space();
+		visit(node.getRawCondition());
+		append(":");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitDefault(Default node) {
+		buildBlock(node);
+		keyword("default");
+		append(":");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitBreak(Break node) {
+		buildBlock(node);
+		keyword("break");
+		if (node.getRawLabel() != null) {
+			space();
+			visit(node.getRawLabel());
+		}
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitContinue(Continue node) {
+		buildBlock(node);
+		keyword("continue");
+		if (node.getRawLabel() != null) {
+			space();
+			visit(node.getRawLabel());
+		}
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitReturn(Return node) {
+		buildBlock(node);
+		keyword("return");
+		if (node.getRawValue() != null) {
+			space();
+			visit(node.getRawValue());
+		}
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitThrow(Throw node) {
+		buildBlock(node);
+		keyword("throw");
+		space();
+		node.getRawThrowable();
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	//Structural
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
 		buildBlock(node);
 		visit(node.getRawDefinition());
@@ -675,13 +810,38 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitAnnotation(Annotation node);
-//	public abstract boolean visitAnnotationElement(AnnotationElement node);
+	public boolean visitAnnotation(Annotation node) {
+		buildInline(node);
+		append("@");
+		visit(node.getRawAnnotationTypeReference());
+		visitAll(node.elements(), ", ", "(", ")");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitAnnotationElement(AnnotationElement node) {
+		buildInline(node);
+		if (node.getRawName() != null) {
+			visit(node.getRawName());
+			space();
+			append("=");
+			space();
+		}
+		visit(node.getValue());
+		closeInline();
+		return true;
+	}
 	
 	public boolean visitTypeBody(TypeBody node) {
 		buildBlock(node);
 		append("{");
 		buildBlock(null);
+		if (node.getParent() instanceof EnumDeclaration) {
+			buildBlock(null);
+			visitAll(((EnumDeclaration)node.getParent()).constants(), ", ", "", "");
+			if (!node.members().isEmpty()) append(";");
+			closeBlock();
+		}
 		visitAll(node.members(), "\n", "", "");
 		closeBlock();
 		append("}");
@@ -689,36 +849,96 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	//Class Bodies
+	//Class Bodies
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
 		buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			space();
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
 		}
 		visitAll(node.typeVariables(), ", ", "<", ">");
 		if (!node.typeVariables().isEmpty()) space();
 		visit(node.getRawReturnTypeReference());
 		space();
 		visit(node.getRawMethodName());
-		if (node.parameters().isEmpty()) append("()");
-		else visitAll(node.parameters(), ", ", "(", ")");
+		append("(");
+		visitAll(node.parameters(), ", ", "", "");
+		append(")");
 		space();
 		if (!node.thrownTypeReferences().isEmpty()) {
 			keyword("throws");
 			visitAll(node.thrownTypeReferences(), ", ", " ", " ");
 		}
 		startSuppressBlock();
-		visit(node.getBody());
-		startSuppressBlock();
+		visit(node.getRawBody());
+		if (node.getRawBody() == null) {
+			append(";");
+		}
+		endSuppressBlock();
 		closeBlock();
 		
 		return true;
 	}
 	
-//	public abstract boolean visitConstructorDeclaration(ConstructorDeclaration node);
-//	public abstract boolean visitSuperConstructorInvocation(SuperConstructorInvocation node);
-//	public abstract boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node);
+	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
+		buildBlock(node);
+		if (node.getRawModifiers() != null) {
+			visit(node.getRawModifiers());
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
+		}
+		visitAll(node.typeVariables(), ", ", "<", ">");
+		if (!node.typeVariables().isEmpty()) space();
+		visit(node.getRawTypeName());
+		append("(");
+		visitAll(node.parameters(), ", ", "", "");
+		append(")");
+		space();
+		if (!node.thrownTypeReferences().isEmpty()) {
+			keyword("throws");
+			visitAll(node.thrownTypeReferences(), ", ", " ", " ");
+		}
+		startSuppressBlock();
+		visit(node.getRawBody());
+		if (node.getRawBody() == null) {
+			append(";");
+		}
+		endSuppressBlock();
+		closeBlock();
+		
+		return true;
+	}
+	
+	public boolean visitSuperConstructorInvocation(SuperConstructorInvocation node) {
+		buildBlock(node);
+		if (node.getRawQualifier() != null) {
+			visit(node.getRawQualifier());
+			append(".");
+		}
+		visit(node.getRawConstructorTypeArguments());
+		keyword("super");
+		append("(");
+		visitAll(node.arguments(), ", ", "", "");
+		append(")");
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
+		buildBlock(node);
+		visit(node.getRawConstructorTypeArguments());
+		keyword("this");
+		append("(");
+		visitAll(node.arguments(), ", ", "", "");
+		append(")");
+		append(";");
+		closeBlock();
+		return true;
+	}
 	
 	public boolean visitInstanceInitializer(InstanceInitializer node) {
 		buildBlock(node);
@@ -744,7 +964,9 @@ public class HtmlPrinter extends HtmlBuilder {
 		buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			space();
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
 		}
 		keyword("class");
 		space();
@@ -768,11 +990,112 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitInterfaceDeclaration(InterfaceDeclaration node);
-//	public abstract boolean visitEnumDeclaration(EnumDeclaration node);
-//	public abstract boolean visitEnumConstant(EnumConstant node);
-//	public abstract boolean visitAnnotationDeclaration(AnnotationDeclaration node);
-//	public abstract boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node);
+	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
+		buildBlock(node);
+		if (node.getRawModifiers() != null) {
+			visit(node.getRawModifiers());
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
+		}
+		keyword("interface");
+		space();
+		visit(node.getRawName());
+		visitAll(node.typeVariables(), ", ", "<", ">");
+		space();
+		if (!node.extending().isEmpty()) {
+			keyword("extends");
+			visitAll(node.extending(), ", ", " ", " ");
+		}
+		startSuppressBlock();
+		visit(node.getRawBody());
+		endSuppressBlock();
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitEnumDeclaration(EnumDeclaration node) {
+		buildBlock(node);
+		if (node.getRawModifiers() != null) {
+			visit(node.getRawModifiers());
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
+		}
+		keyword("enum");
+		space();
+		visit(node.getRawName());
+		space();
+		if (!node.implementing().isEmpty()) {
+			keyword("implements");
+			visitAll(node.implementing(), ", ", " ", " ");
+		}
+		
+		//logic of printing enum constants is in visitTypeBody
+		startSuppressBlock();
+		visit(node.getRawBody());
+		endSuppressBlock();
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitEnumConstant(EnumConstant node) {
+		buildInline(node);
+		visitAll(node.annotations(), "", "", "");
+		visit(node.getRawName());
+		visitAll(node.arguments(), ", ", "(", ")");
+		if (node.getRawBody() != null) {
+			space();
+			visit(node.getRawBody());
+		}
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
+		buildBlock(node);
+		if (node.getRawModifiers() != null) {
+			visit(node.getRawModifiers());
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
+		}
+		append("@");
+		keyword("interface");
+		space();
+		visit(node.getRawName());
+		space();
+		startSuppressBlock();
+		visit(node.getRawBody());
+		endSuppressBlock();
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
+		buildBlock(node);
+		if (node.getRawModifiers() != null) {
+			visit(node.getRawModifiers());
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
+		}
+		visit(node.getRawReturnTypeReference());
+		space();
+		visit(node.getRawMethodName());
+		append("(");
+		append(")");
+		if (node.getRawDefaultValue() != null) {
+			space();
+			keyword("default");
+			space();
+			visit(node.getRawDefaultValue());
+		}
+		append(";");
+		closeBlock();
+		return true;
+	}
+	
 	public boolean visitCompilationUnit(CompilationUnit node) {
 		buildBlock(node);
 		if (node.getRawPackageDeclaration() != null) {
@@ -814,8 +1137,22 @@ public class HtmlPrinter extends HtmlBuilder {
 	}
 //	
 //	//Various
-//	public abstract boolean visitParseArtefact(Node node);
-//	public abstract boolean visitComment(Comment node);
+	public boolean visitParseArtefact(Node node) {
+		buildInline(node);
+		fail("ARTEFACT: " + node.getClass().getSimpleName());
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitComment(Comment node) {
+		buildBlock(node);
+		append(node.isBlockComment() ? "/*" : "//");
+		if (node.getContent() == null) fail("MISSING_COMMENT");
+		else append(node.getContent());
+		if (node.isBlockComment()) append("*/");
+		closeBlock();
+		return true;
+	}
 	
 	public void setTimeTaken(long taken) {
 		super.setTimeTaken(taken);
