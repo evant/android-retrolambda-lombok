@@ -71,6 +71,7 @@ import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
 import lombok.ast.UnaryExpression;
+import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
@@ -78,6 +79,7 @@ import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
 public class HtmlPrinter extends HtmlBuilder {
+	//Private utility methods
 	private void visit(Node node) {
 		if (node != null) node.accept(this);
 	}
@@ -94,6 +96,18 @@ public class HtmlPrinter extends HtmlBuilder {
 			visit(n);
 		}
 		append(suffix);
+	}
+	
+	private boolean isValidJavaIdentifier(String in) {
+		if (in == null || in.length() == 0) return false;
+		
+		char c = in.charAt(0);
+		if (!Character.isJavaIdentifierStart(c)) return false;
+		char[] cs = in.toCharArray();
+		for (int i = 1; i < cs.length; i++) {
+			if (!Character.isJavaIdentifierPart(cs[i])) return false;
+		}
+		return true;
 	}
 	
 	//Basics
@@ -147,18 +161,6 @@ public class HtmlPrinter extends HtmlBuilder {
 		
 		buildInline(node, name);
 		closeInline();
-		return true;
-	}
-	
-	private boolean isValidJavaIdentifier(String in) {
-		if (in == null || in.length() == 0) return false;
-		
-		char c = in.charAt(0);
-		if (!Character.isJavaIdentifierStart(c)) return false;
-		char[] cs = in.toCharArray();
-		for (int i = 1; i < cs.length; i++) {
-			if (!Character.isJavaIdentifierPart(cs[i])) return false;
-		}
 		return true;
 	}
 	
@@ -269,7 +271,39 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitUnaryExpression(UnaryExpression node);
+	public boolean visitUnaryExpression(UnaryExpression node) {
+		buildInline(node, "");
+		UnaryOperator op;
+		try {
+			op = node.getOperator();
+		} catch (Exception e) {
+			visitNode(node.getOperand());
+			closeInline();
+			return true;
+		}
+		boolean parens = node.needsParentheses();
+		if (parens) append("(");
+		if (!op.isPostfix()) operator(op.getSymbol());
+		visitNode(node.getOperand());
+		if (op.isPostfix()) operator(op.getSymbol());
+		if (parens) append(")");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitCast(Cast node) {
+		buildInline(node, "");
+		boolean parens = node.needsParentheses();
+		if (parens) append("(");
+		append("(");
+		visitNode(node.getRawTypeReference());
+		append(")");
+		space();
+		visitNode(node.getRawOperand());
+		if (parens) append(")");
+		closeInline();
+		return true;
+	}
 	
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
 		buildInline(node, "");
@@ -289,8 +323,6 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitCast(Cast node);
-	
 	public boolean visitInstanceOf(InstanceOf node) {
 		buildInline(node, "");
 		boolean parens = node.needsParentheses();
@@ -305,13 +337,91 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitConstructorInvocation(ConstructorInvocation node);
-//	public abstract boolean visitMethodInvocation(MethodInvocation node);
-//	public abstract boolean visitSelect(Select node);
-//	public abstract boolean visitArrayAccess(ArrayAccess node);
-//	public abstract boolean visitArrayCreation(ArrayCreation node);
-//	public abstract boolean visitArrayInitializer(ArrayInitializer node);
-//	public abstract boolean visitArrayDimension(ArrayDimension node);
+	public boolean visitConstructorInvocation(ConstructorInvocation node) {
+		buildInline(node, "");
+		if (node.getRawQualifier() != null) {
+			visit(node.getRawQualifier());
+			append(".");
+		}
+		keyword("new");
+		space();
+		visit(node.getRawConstructorTypeArguments());
+		visit(node.getRawTypeReference());
+		append("(");
+		visitAll(node.arguments(), ", ", "", "");
+		append(")");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitMethodInvocation(MethodInvocation node) {
+		buildInline(node, "");
+		if (node.getRawOperand() != null) {
+			visit(node.getRawOperand());
+			append(".");
+		}
+		visit(node.getRawMethodTypeArguments());
+		visit(node.getRawName());
+		append("(");
+		visitAll(node.arguments(), ", ", "", "");
+		append(")");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitSelect(Select node) {
+		buildInline(node, "");
+		if (node.getRawOperand() != null) {
+			visit(node.getRawOperand());
+			append(".");
+		}
+		visit(node.getRawIdentifier());
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitArrayAccess(ArrayAccess node) {
+		buildInline(node, "");
+		visit(node.getRawOperand());
+		append("[");
+		visit(node.getRawIndexExpression());
+		append("]");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitArrayCreation(ArrayCreation node) {
+		buildInline(node, "");
+		keyword("new");
+		space();
+		visit(node.getRawComponentTypeReference());
+		visitAll(node.dimensions(), "", "", "");
+		if (node.getRawInitializer() != null) {
+			space();
+			visit(node.getRawInitializer());
+		}
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitArrayInitializer(ArrayInitializer node) {
+		buildInline(node, "");
+		append("{");
+		visitAll(node.expressions(), ", ", "", "");
+		append("}");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitArrayDimension(ArrayDimension node) {
+		buildInline(node, "");
+		append("[");
+		visit(node.getRawDimension());
+		append("]");
+		closeInline();
+		return true;
+	}
+	
 //	public abstract boolean visitClassLiteral(ClassLiteral node);
 //	public abstract boolean visitSuper(Super node);
 //	public abstract boolean visitThis(This node);

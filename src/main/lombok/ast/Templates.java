@@ -278,15 +278,38 @@ class BinaryExpressionTemplate {
 	
 	static boolean needsParentheses(Node self, int pLevel) {
 		Node parent = self.getParent();
+		
 		if (parent instanceof InlineIfExpression) {
 			if (!(self instanceof InlineIfExpression)) {
 				return pLevel >= BinaryOperator.ASSIGN.pLevel();
 			}
 			return ((InlineIfExpression)parent).getRawIfFalse() != self;
 		}
-		if (parent instanceof UnaryExpression) return true;
+		
+		if (parent instanceof UnaryExpression || parent instanceof Cast || parent instanceof ConstructorInvocation) {
+			if (parent instanceof ConstructorInvocation && ((ConstructorInvocation)parent).getRawQualifier() != self) return false;
+			final int otherPLevel = 1;
+			if (otherPLevel > pLevel) return false;
+			if (otherPLevel < pLevel) return true;
+			
+			boolean otherIsPostfix = false;
+			boolean selfIsPostfix = false;
+			
+			try {
+				if (parent instanceof ConstructorInvocation) otherIsPostfix = true;
+				else otherIsPostfix = ((UnaryExpression)parent).getOperator().isPostfix();
+			} catch (Throwable ignore) {}
+			try {
+				if (self instanceof ConstructorInvocation) selfIsPostfix = true;
+				else selfIsPostfix = ((UnaryExpression)self).getOperator().isPostfix();
+			} catch (Throwable ignore) {}
+			return (!selfIsPostfix && otherIsPostfix);
+		}
+		
 		if (parent instanceof ConstructorInvocation) return self == ((ConstructorInvocation)parent).getRawQualifier();
-		if (parent instanceof Cast) return true;
+		if (parent instanceof MethodInvocation) return self == ((MethodInvocation)parent).getRawOperand();
+		if (parent instanceof ArrayAccess) return self == ((ArrayAccess)parent).getRawOperand();
+		if (parent instanceof Select) return self == ((Select)parent).getRawOperand();
 		if (parent instanceof InstanceOf) return pLevel > BinaryOperator.LESS.pLevel();
 		if (parent instanceof BinaryExpression) {
 			BinaryExpression be = (BinaryExpression)parent;
@@ -316,6 +339,15 @@ class UnaryExpressionTemplate {
 	@NonNull Expression operand;
 	@NotChildOfNode
 	@NonNull UnaryOperator operator;
+	
+	@CopyMethod
+	static boolean needsParentheses(UnaryExpression self) {
+		try {
+			return BinaryExpressionTemplate.needsParentheses(self, 1);
+		} catch (Throwable ignore) {
+			return true;
+		}
+	}
 }
 
 @GenerateAstNode
@@ -411,6 +443,15 @@ class TypeArgumentsTemplate {
 class CastTemplate {
 	@NonNull TypeReference typeReference;
 	@NonNull Expression operand;
+	
+	@CopyMethod
+	static boolean needsParentheses(Cast self) {
+		try {
+			return BinaryExpressionTemplate.needsParentheses(self, 1);
+		} catch (Throwable ignore) {
+			return true;
+		}
+	}
 }
 
 @GenerateAstNode(implementing=Expression.class)
