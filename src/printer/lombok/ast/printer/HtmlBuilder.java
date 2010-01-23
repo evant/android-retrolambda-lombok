@@ -103,6 +103,14 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 		sb.append("</span>");
 	}
 	
+	void startSuppressBlock() {
+		sb.append("<span class=\"blockSuppress\">");
+	}
+	
+	void endSuppressBlock() {
+		sb.append("</span>");
+	}
+	
 	private static final Pattern HTML_CLASS_SIGNIFICANT_NODE = Pattern.compile("^lombok\\.ast\\.(\\w+)$");
 	
 	void buildBlock(Node node) {

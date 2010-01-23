@@ -34,6 +34,7 @@ import lombok.ast.DoWhile;
 import lombok.ast.EmptyStatement;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
+import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.For;
 import lombok.ast.ForEach;
@@ -433,13 +434,79 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitClassLiteral(ClassLiteral node);
-//	public abstract boolean visitSuper(Super node);
-//	public abstract boolean visitThis(This node);
-//	
+	public boolean visitClassLiteral(ClassLiteral node) {
+		buildInline(node);
+		visit(node.getRawTypeReference());
+		append(".");
+		keyword("class");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitSuper(Super node) {
+		buildInline(node);
+		if (node.getRawQualifier() != null) {
+			visit(node.getRawQualifier());
+			append(".");
+		}
+		keyword("super");
+		closeInline();
+		return true;
+	}
+	
+	public boolean visitThis(This node) {
+		buildInline(node);
+		if (node.getRawQualifier() != null) {
+			visit(node.getRawQualifier());
+			append(".");
+		}
+		keyword("this");
+		closeInline();
+		return true;
+	}
+	
 //	//Statements
-//	public abstract boolean visitLabelledStatement(LabelledStatement node);
-//	public abstract boolean visitIf(If node);
+	public boolean visitExpressionStatement(ExpressionStatement node) {
+		buildBlock(node);
+		visit(node.getRawExpression());
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitLabelledStatement(LabelledStatement node) {
+		buildBlock(node);
+		if (node.getRawLabel() != null) {
+			visit(node.getRawLabel());
+			append(":");
+		}
+		visit(node.getRawStatement());
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitIf(If node) {
+		buildBlock(node);
+		keyword("if");
+		space();
+		append("(");
+		visit(node.getRawCondition());
+		append(")");
+		space();
+		startSuppressBlock();
+		visit(node.getRawStatement());
+		startSuppressBlock();
+		if (node.getRawElseStatement() != null) {
+			space();
+			keyword("else");
+			space();
+			startSuppressBlock();
+			visit(node.getRawElseStatement());
+			startSuppressBlock();
+		}
+		closeBlock();
+		return true;
+	}
+	
 //	public abstract boolean visitFor(For node);
 //	public abstract boolean visitForEach(ForEach node);
 //	public abstract boolean visitTry(Try node);
@@ -448,13 +515,13 @@ public class HtmlPrinter extends HtmlBuilder {
 //	public abstract boolean visitDoWhile(DoWhile node);
 //	public abstract boolean visitSynchronized(Synchronized node);
 	public boolean visitBlock(Block node) {
-		buildInline(node);
+		buildBlock(node);
 		append("{");
 		buildBlock(null);
 		visitAll(node.contents(), "", "", "");
 		closeBlock();
 		append("}");
-		closeInline();
+		closeBlock();
 		return true;
 	}
 //	public abstract boolean visitAssert(Assert node);
@@ -540,13 +607,13 @@ public class HtmlPrinter extends HtmlBuilder {
 //	public abstract boolean visitAnnotationElement(AnnotationElement node);
 	
 	public boolean visitTypeBody(TypeBody node) {
-		buildInline(node);
+		buildBlock(node);
 		append("{");
 		buildBlock(null);
 		visitAll(node.members(), "\n", "", "");
 		closeBlock();
 		append("}");
-		closeInline();
+		closeBlock();
 		return true;
 	}
 	
@@ -569,7 +636,9 @@ public class HtmlPrinter extends HtmlBuilder {
 			keyword("throws");
 			visitAll(node.thrownTypeReferences(), ", ", " ", " ");
 		}
+		startSuppressBlock();
 		visit(node.getBody());
+		startSuppressBlock();
 		closeBlock();
 		
 		return true;
@@ -581,7 +650,9 @@ public class HtmlPrinter extends HtmlBuilder {
 	
 	public boolean visitInstanceInitializer(InstanceInitializer node) {
 		buildBlock(node);
+		startSuppressBlock();
 		visit(node.getRawBody());
+		startSuppressBlock();
 		closeBlock();
 		return true;
 	}
@@ -590,7 +661,9 @@ public class HtmlPrinter extends HtmlBuilder {
 		buildBlock(node);
 		keyword("static");
 		space();
+		startSuppressBlock();
 		visit(node.getRawBody());
+		startSuppressBlock();
 		closeBlock();
 		return true;
 	}
@@ -616,7 +689,9 @@ public class HtmlPrinter extends HtmlBuilder {
 			keyword("implements");
 			visitAll(node.implementing(), ", ", " ", " ");
 		}
+		startSuppressBlock();
 		visit(node.getRawBody());
+		endSuppressBlock();
 		closeBlock();
 		return true;
 	}
