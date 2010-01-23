@@ -465,10 +465,11 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	//Statements
+	//Statements
 	public boolean visitExpressionStatement(ExpressionStatement node) {
 		buildBlock(node);
 		visit(node.getRawExpression());
+		append(";");
 		closeBlock();
 		return true;
 	}
@@ -507,10 +508,79 @@ public class HtmlPrinter extends HtmlBuilder {
 		return true;
 	}
 	
-//	public abstract boolean visitFor(For node);
-//	public abstract boolean visitForEach(ForEach node);
-//	public abstract boolean visitTry(Try node);
-//	public abstract boolean visitCatch(Catch node);
+	public boolean visitFor(For node) {
+		buildBlock(node);
+		keyword("for");
+		space();
+		append("(");
+		visitAll(node.inits(), ", ", "", "");
+		append(";");
+		space();
+		visit(node.getRawCondition());
+		append(";");
+		space();
+		visitAll(node.updates(), ", ", "", "");
+		append(")");
+		space();
+		startSuppressBlock();
+		visit(node.getRawStatement());
+		endSuppressBlock();
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitForEach(ForEach node) {
+		buildBlock(node);
+		keyword("for");
+		space();
+		append("(");
+		visit(node.getRawVariable());
+		space();
+		append(":");
+		space();
+		visit(node.getRawIterable());
+		append(")");
+		space();
+		startSuppressBlock();
+		visit(node.getRawStatement());
+		endSuppressBlock();
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitTry(Try node) {
+		buildBlock(node);
+		keyword("try");
+		space();
+		startSuppressBlock();
+		visit(node.getRawBody());
+		endSuppressBlock();
+		visitAll(node.catches(), " ", " ", "");
+		if (node.getRawFinally() != null) {
+			space();
+			startSuppressBlock();
+			visit(node.getRawFinally());
+			endSuppressBlock();
+		}
+		closeBlock();
+		return true;
+	}
+	
+	public boolean visitCatch(Catch node) {
+		buildInline(node);
+		keyword("catch");
+		space();
+		append("(");
+		visit(node.getRawExceptionDeclaration());
+		append(")");
+		space();
+		startSuppressBlock();
+		visit(node.getRawBody());
+		endSuppressBlock();
+		closeInline();
+		return true;
+	}
+	
 //	public abstract boolean visitWhile(While node);
 //	public abstract boolean visitDoWhile(DoWhile node);
 //	public abstract boolean visitSynchronized(Synchronized node);
@@ -546,7 +616,9 @@ public class HtmlPrinter extends HtmlBuilder {
 		buildInline(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			space();
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+				space();
+			}
 		}
 		visit(node.getRawTypeReference());
 		space();
