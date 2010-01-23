@@ -24,9 +24,9 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 	public Rule blockStatement() {
 		return sequence(
 				ch('{'), group.basics.optWS(),
-				zeroOrMore(anyStatement()),
+				zeroOrMore(anyStatement().label("statement")),
 				ch('}'), group.basics.optWS(),
-				SET(actions.createBlock(VALUES("zeroOrMore/anyStatement"))));
+				SET(actions.createBlock(VALUES("zeroOrMore/statement"))));
 	}
 	
 	/**
@@ -39,11 +39,18 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.4
 	 */
+	public Rule variableDefinition() {
+		return sequence(
+				group.structures.variableDefinitionModifiers().label("modifiers"),
+				group.structures.variableDefinition(), SET(),
+				SET(actions.addLocalVariableModifiers(VALUE(), VALUE("modifiers"))));
+	}
+	
 	public Rule localVariableDeclaration() {
 		return sequence(
-				group.structures.variableDeclarationModifiers().label("modifiers"),
-				group.structures.variableDeclaration(), SET(),
-				SET(actions.addLocalVariableModifiers(VALUE(), VALUE("modifiers"))));
+				variableDefinition().label("definition"),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createVariableDeclaration(VALUE("definition"))));
 	}
 	
 	public Rule explicitAlternateConstructorInvocation() {
@@ -118,7 +125,10 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8
 	 */
 	public Rule expressionStatement() {
-		return sequence(group.expressions.statementExpression(), ch(';'), group.basics.optWS());
+		return sequence(
+				group.expressions.statementExpression().label("expression"),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createExpressionStatement(VALUE("expression"))));
 	}
 	
 	/**
@@ -233,7 +243,7 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 	
 	Rule forInit() {
 		return optional(firstOf(
-				localVariableDeclaration(),
+				variableDefinition(),
 				statementExpressionList()));
 	}
 	
@@ -258,7 +268,7 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 		return sequence(
 				string("for"), group.basics.testLexBreak(), group.basics.optWS(),
 				ch('('), group.basics.optWS(),
-				group.structures.variableDeclarationModifiers().label("modifiers"),
+				group.structures.variableDefinitionModifiers().label("modifiers"),
 				group.types.type().label("type"),
 				group.basics.identifier().label("varName"),
 				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
@@ -344,7 +354,7 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 		return sequence(
 				string("catch"), group.basics.testLexBreak(), group.basics.optWS(),
 				ch('('), group.basics.optWS(),
-				group.structures.variableDeclarationModifiers().label("modifiers"),
+				group.structures.variableDefinitionModifiers().label("modifiers"),
 				group.types.type().label("type"),
 				group.basics.identifier().label("varName"),
 				ch(')'), group.basics.optWS(),

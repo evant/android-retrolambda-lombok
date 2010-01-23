@@ -22,22 +22,24 @@
 package lombok.ast;
 
 public enum BinaryOperator {
-	AND_ASSIGN("&="), XOR_ASSIGN("^="), OR_ASSIGN("|="), SHIFT_LEFT_ASSIGN("<<="), SHIFT_RIGHT_ASSIGN(">>="), BITWISE_SHIFT_RIGHT_ASSIGN(">>>="), ASSIGN("="),
-	LOGICAL_OR("||"),
-	LOGICAL_AND("&&"),
-	BITWISE_OR("|"),
-	BITWISE_XOR("^"),
-	BITWISE_AND("&"),
-	EQUALS("=="), NOT_EQUALS("!="),
-	INSTANCEOF("instanceof"), GREATER(">"), GREATER_OR_EQUAL(">="), LESS("<"), LESS_OR_EQUAL("<="),
-	SHIFT_LEFT("<<"), SHIFT_RIGHT(">>"), BITWISE_SHIFT_RIGHT(">>>"),
-	PLUS("+"), MINUS("-"),
-	MULTIPLY("*"), DIVIDE("/"), REMAINDER("%");
+	AND_ASSIGN("&=", 14), XOR_ASSIGN("^=", 14), OR_ASSIGN("|=", 14), SHIFT_LEFT_ASSIGN("<<=", 14), SHIFT_RIGHT_ASSIGN(">>=", 14), BITWISE_SHIFT_RIGHT_ASSIGN(">>>=", 14), ASSIGN("=", 14),
+	LOGICAL_OR("||", 12),
+	LOGICAL_AND("&&", 11),
+	BITWISE_OR("|", 10),
+	BITWISE_XOR("^", 9),
+	BITWISE_AND("&", 8),
+	EQUALS("==", 7), NOT_EQUALS("!=", 7),
+	GREATER(">", 6), GREATER_OR_EQUAL(">=", 6), LESS("<", 6), LESS_OR_EQUAL("<=", 6),
+	SHIFT_LEFT("<<", 5), SHIFT_RIGHT(">>", 5), BITWISE_SHIFT_RIGHT(">>>", 5),
+	PLUS("+", 4), MINUS("-", 4),
+	MULTIPLY("*", 3), DIVIDE("/", 3), REMAINDER("%", 3);
 	
 	private final String symbol;
+	private final int pLevel;
 	
-	BinaryOperator(String symbol) {
+	BinaryOperator(String symbol, int pLevel) {
 		this.symbol = symbol;
+		this.pLevel = pLevel;
 	}
 	
 	public String getSymbol() {
@@ -50,5 +52,9 @@ public enum BinaryOperator {
 		}
 		
 		return null;
+	}
+	
+	int pLevel() {
+		return pLevel;
 	}
 }

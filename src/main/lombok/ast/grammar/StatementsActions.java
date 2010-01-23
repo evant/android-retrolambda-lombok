@@ -13,6 +13,7 @@ import lombok.ast.Continue;
 import lombok.ast.Default;
 import lombok.ast.DoWhile;
 import lombok.ast.EmptyStatement;
+import lombok.ast.ExpressionStatement;
 import lombok.ast.For;
 import lombok.ast.ForEach;
 import lombok.ast.If;
@@ -26,7 +27,8 @@ import lombok.ast.Synchronized;
 import lombok.ast.Throw;
 import lombok.ast.Try;
 import lombok.ast.VariableDeclaration;
-import lombok.ast.VariableDeclarationEntry;
+import lombok.ast.VariableDefinition;
+import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.While;
 
 import org.parboiled.BaseActions;
@@ -110,8 +112,8 @@ public class StatementsActions extends BaseActions<Node> {
 	}
 	
 	public Node createEnhancedFor(Node modifiers, Node type, Node varName, List<String> dims, Node iterable, Node statement) {
-		VariableDeclaration decl = new VariableDeclaration().setRawTypeReference(type).variables().addToEndRaw(
-				new VariableDeclarationEntry().setRawName(varName).setDimensions(dims == null ? 0 : dims.size()));
+		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables().addToEndRaw(
+				new VariableDefinitionEntry().setRawName(varName).setDimensions(dims == null ? 0 : dims.size()));
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		return new ForEach().setRawVariable(decl).setRawIterable(iterable).setRawStatement(statement);
 	}
@@ -137,8 +139,8 @@ public class StatementsActions extends BaseActions<Node> {
 	}
 	
 	public Node createCatch(Node modifiers, Node type, Node varName, Node body) {
-		VariableDeclaration decl = new VariableDeclaration().setRawTypeReference(type).variables().addToEndRaw(
-				new VariableDeclarationEntry().setRawName(varName));
+		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables().addToEndRaw(
+				new VariableDefinitionEntry().setRawName(varName));
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		return new Catch().setRawExceptionDeclaration(decl).setRawBody(body);
 	}
@@ -149,12 +151,12 @@ public class StatementsActions extends BaseActions<Node> {
 		return result;
 	}
 	
-	public Node addLocalVariableModifiers(Node variableDeclaration, Node modifiers) {
-		if (modifiers != null && variableDeclaration instanceof VariableDeclaration) {
-			((VariableDeclaration)variableDeclaration).setRawModifiers(modifiers);
+	public Node addLocalVariableModifiers(Node variableDefinition, Node modifiers) {
+		if (modifiers != null && variableDefinition instanceof VariableDefinition) {
+			((VariableDefinition)variableDefinition).setRawModifiers(modifiers);
 		}
 		
-		return variableDeclaration;
+		return variableDefinition;
 	}
 	
 	public Node createAlternateConstructorInvocation(Node typeArguments, Node arguments) {
@@ -165,5 +167,13 @@ public class StatementsActions extends BaseActions<Node> {
 	public Node createSuperConstructorInvocation(Node qualifier, Node typeArguments, Node arguments) {
 		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
 		return new SuperConstructorInvocation().setRawQualifier(qualifier).setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments());
+	}
+	
+	public Node createExpressionStatement(Node expression) {
+		return new ExpressionStatement().setRawExpression(expression);
+	}
+	
+	public Node createVariableDeclaration(Node definition) {
+		return new VariableDeclaration().setRawDefinition(definition);
 	}
 }

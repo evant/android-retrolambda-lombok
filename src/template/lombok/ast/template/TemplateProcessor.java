@@ -51,6 +51,8 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
+import org.apache.commons.lang.StringUtils;
+
 import lombok.Data;
 
 @SupportedAnnotationTypes("lombok.ast.template.GenerateAstNode")
@@ -172,7 +174,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 			
 			try {
-				generateSourceFile(annotated, className, extending, fields, methodsToCopy, additionalChecks);
+				generateSourceFile(annotated, className, extending, implementing, fields, methodsToCopy, additionalChecks);
 			} catch (IOException e) {
 				processingEnv.getMessager().printMessage(Kind.ERROR, String.format(
 						"Can't generate sourcefile %s: %s",
@@ -183,7 +185,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		return true;
 	}
 	
-	private void generateSourceFile(Element originatingElement, String className, String extending, List<FieldData> fields,
+	private void generateSourceFile(Element originatingElement, String className, String extending, List<String> implementing, List<FieldData> fields,
 			List<ExecutableElement> methodsToCopy, List<ExecutableElement> additionalChecks) throws IOException {
 		
 		JavaFileObject file = processingEnv.getFiler().createSourceFile(className, originatingElement);
@@ -212,6 +214,15 @@ public class TemplateProcessor extends AbstractProcessor {
 		if (extending != null) {
 			out.write(" extends ");
 			out.write(extending);
+		}
+		if (implementing != null && !implementing.isEmpty()) {
+			out.write(" implements ");
+			boolean first = true;
+			for (String impl : implementing) {
+				if (!first) out.write(", ");
+				first = false;
+				out.write(impl);
+			}
 		}
 		
 		out.write(" {\n");

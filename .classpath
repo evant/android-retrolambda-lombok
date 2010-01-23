@@ -2,6 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="src/main"/>
 	<classpathentry kind="src" path="src/template"/>
+	<classpathentry kind="src" path="src/printer"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/parboiled"/>
 	<classpathentry kind="src" path=".apt_generated">
@@ -10,5 +11,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/build/lombok.jar"/>
+	<classpathentry kind="lib" path="lib/build/commons-lang.jar"/>
+	<classpathentry kind="lib" path="lib/build/commons-io.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

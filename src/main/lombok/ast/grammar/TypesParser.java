@@ -120,7 +120,7 @@ public class TypesParser extends BaseParser<Node, TypesActions> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.5
 	 */
 	public Rule typeArguments() {
-		return optional(enforcedSequence(
+		return optional(sequence(
 				ch('<'),
 				group.basics.optWS(),
 				optional(enforcedSequence(

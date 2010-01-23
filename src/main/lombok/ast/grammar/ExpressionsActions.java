@@ -32,8 +32,7 @@ import lombok.ast.BinaryExpression;
 import lombok.ast.Cast;
 import lombok.ast.ClassLiteral;
 import lombok.ast.ConstructorInvocation;
-import lombok.ast.IdentifierExpression;
-import lombok.ast.IncrementExpression;
+import lombok.ast.Identifier;
 import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceOf;
 import lombok.ast.MethodInvocation;
@@ -44,6 +43,7 @@ import lombok.ast.This;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
+import lombok.ast.UnaryOperator;
 
 import org.parboiled.ActionResult;
 import org.parboiled.BaseActions;
@@ -96,15 +96,18 @@ public class ExpressionsActions extends BaseActions<Node> {
 				if (symbol.isEmpty()) continue;
 				
 				if (symbol.equals("--")) {
-					current = new IncrementExpression().setRawOperand(current).setPrefix(true);
+					current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.PREFIX_DECREMENT);
 					continue;
 				}
 				if (symbol.equals("++")) {
-					current = new IncrementExpression().setRawOperand(current).setPrefix(true).setDecrement(true);
+					current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.PREFIX_INCREMENT);
 					continue;
 				}
 				
-				current = new UnaryExpression().setRawOperand(current).setRawOperator(symbol);
+				UnaryOperator op = UnaryOperator.fromSymbol(symbol, false);
+				UnaryExpression expr = new UnaryExpression().setRawOperand(current);
+				if (op != null) expr.setOperator(op);
+				current = expr;
 			}
 		}
 		
@@ -118,18 +121,14 @@ public class ExpressionsActions extends BaseActions<Node> {
 		for (String op : operators) {
 			if (op == null) continue;
 			op = op.trim();
-			if (op.equals("++")) current = new IncrementExpression().setRawOperand(current);
-			else if (op.equals("--")) current = new IncrementExpression().setRawOperand(current).setDecrement(true);
+			if (op.equals("++")) current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.POSTFIX_INCREMENT);
+			else if (op.equals("--")) current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.POSTFIX_DECREMENT);
 		}
 		return current;
 	}
 	
 	public Node createTypeCastExpression(Node type, Node operand) {
 		return new Cast().setRawOperand(operand).setRawTypeReference(type);
-	}
-	
-	public Node createIdentifierExpression(Node identifier) {
-		return new IdentifierExpression().setRawIdentifier(identifier);
 	}
 	
 	public Node createInstanceOfExpression(Node operand, Node type) {
@@ -194,7 +193,7 @@ public class ExpressionsActions extends BaseActions<Node> {
 		if (methodArguments instanceof MethodInvocation) return ((MethodInvocation)methodArguments).setRawName(identifier);
 		//TODO if (methodArguments != null) add dangling node.
 		
-		return new IdentifierExpression().setRawIdentifier(identifier);
+		return identifier;
 	}
 	
 	public Node createUnqualifiedConstructorInvocation(Node constructorTypeArgs, Node type, Node args, Node anonymousClassBody) {
@@ -235,7 +234,7 @@ public class ExpressionsActions extends BaseActions<Node> {
 	}
 	
 	public ActionResult checkIfLevel1ExprIsValidForAssignment(Node node) {
-		if (node instanceof IdentifierExpression) return ActionResult.CONTINUE;
+		if (node instanceof Identifier) return ActionResult.CONTINUE;
 		if (node instanceof Select) return ActionResult.CONTINUE;
 		if (node instanceof ArrayAccess) return ActionResult.CONTINUE;
 		return ActionResult.CANCEL_MATCH;

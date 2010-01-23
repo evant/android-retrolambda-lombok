@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>{{@title}}</title>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+		<script type="text/javascript"><!--
+			{{@script}}
+			
+			(function() {
+				$(function() {
+					parenHighlighting();
+				});
+				
+				function parenHighlighting() {
+					$(".open, .clos").hover(function(evt) {
+						var me = $(evt.currentTarget);
+						var i = me.attr("id");
+						if (!i) return;
+						i = i.substring(5);
+						$("#clos_" + i + ", #open_" + i).toggleClass("outlined");
+					});
+				}
+			})();
+			
+		// -->
+		</script>
+		<style type="text/css">
+			.ast {
+				font-family: "Inconsolata", "DejaVu Sans Mono", "Consolidas", "Monaco", monospace;
+				font-size: 18px;
+			}
+			
+			.outlined {
+				outline: solid black 1px;
+			}
+			
+			div {
+				margin-left: 2em;
+			}
+			
+			div.Node {
+				margin-left: 0;
+			}
+			
+			.keyword {
+				color: maroon;
+			}
+			
+			.Literal {
+				color: DarkBlue;
+			}
+			
+			{{@css}}
+		</style>
+	</head>
+	<body>
+		<h1>HTML tree for source file: <span class="filename">{{@file}}</span></h1>
+		<div class="ast">
+			{{@body}}
+		</div>
+		<h2>Parse Errors</h2>
+		{{@errors}}
+		<h2>Time taken</h2>
+		{{@timeTaken}}
+	</body>
+</html>

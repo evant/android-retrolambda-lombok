@@ -25,7 +25,8 @@ import lombok.ast.StaticInitializer;
 import lombok.ast.TypeBody;
 import lombok.ast.TypeReference;
 import lombok.ast.VariableDeclaration;
-import lombok.ast.VariableDeclarationEntry;
+import lombok.ast.VariableDefinition;
+import lombok.ast.VariableDefinitionEntry;
 
 import org.parboiled.BaseActions;
 
@@ -92,8 +93,8 @@ public class StructuresActions extends BaseActions<Node> {
 	}
 	
 	public Node createMethodParameter(Node modifiers, Node type, String varargs, Node name, List<String> dims) {
-		VariableDeclarationEntry e = new VariableDeclarationEntry().setRawName(name).setDimensions(dims == null ? 0 : dims.size());
-		VariableDeclaration decl = new VariableDeclaration().setRawTypeReference(type);
+		VariableDefinitionEntry e = new VariableDefinitionEntry().setRawName(name).setDimensions(dims == null ? 0 : dims.size());
+		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		if ("...".equals(varargs)) decl.setVarargs(true);
 		decl.variables().addToEndRaw(e);
@@ -108,20 +109,20 @@ public class StructuresActions extends BaseActions<Node> {
 		return new StaticInitializer().setRawBody(body);
 	}
 	
-	public Node addFieldModifiers(Node variableDeclaration, Node modifiers) {
-		if (modifiers != null && variableDeclaration instanceof VariableDeclaration) {
-			((VariableDeclaration)variableDeclaration).setRawModifiers(modifiers);
+	public Node createFieldDeclaration(Node variableDefinition, Node modifiers) {
+		if (modifiers != null && variableDefinition instanceof VariableDefinition) {
+			((VariableDefinition)variableDefinition).setRawModifiers(modifiers);
 		}
 		
-		return variableDeclaration;
+		return new VariableDeclaration().setRawDefinition(variableDefinition);
 	}
 	
-	public Node createVariableDelarationPart(Node varName, List<String> dims, Node initializer) {
-		return new VariableDeclarationEntry().setRawName(varName).setRawInitializer(initializer).setDimensions(dims == null ? 0 : dims.size());
+	public Node createVariableDefinitionPart(Node varName, List<String> dims, Node initializer) {
+		return new VariableDefinitionEntry().setRawName(varName).setRawInitializer(initializer).setDimensions(dims == null ? 0 : dims.size());
 	}
 	
-	public Node createVariableDeclaration(Node type, Node head, List<Node> tail) {
-		VariableDeclaration result = new VariableDeclaration().setRawTypeReference(type);
+	public Node createVariableDefinition(Node type, Node head, List<Node> tail) {
+		VariableDefinition result = new VariableDefinition().setRawTypeReference(type);
 		if (head != null) result.variables().addToEndRaw(head);
 		if (tail != null) for (Node n : tail) if (n != null) result.variables().addToEndRaw(n);
 		return result;

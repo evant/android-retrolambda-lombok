@@ -142,7 +142,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	}
 	
 	public Rule allPrimaryExpressions() {
-		return level1ExpressionChaining();
+		return sequence(level1ExpressionChaining(), empty());
 	}
 	
 	/**

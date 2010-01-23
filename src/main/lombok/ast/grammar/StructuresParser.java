@@ -213,7 +213,7 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 	
 	Rule methodParameter() {
 		return sequence(
-				variableDeclarationModifiers().label("modifiers"),
+				variableDefinitionModifiers().label("modifiers"),
 				group.types.type().label("type"),
 				optional(string("...")).label("varargs"),
 				group.basics.identifier().label("name"),
@@ -237,25 +237,25 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 	public Rule fieldDeclaration() {
 		return sequence(
 				fieldDeclarationModifiers().label("modifiers"),
-				variableDeclaration(), SET(),
-				SET(actions.addFieldModifiers(VALUE(), VALUE("modifiers"))));
+				variableDefinition(), SET(),
+				ch(';'), group.basics.optWS(),
+				SET(actions.createFieldDeclaration(VALUE(), VALUE("modifiers"))));
 	}
 	
 	/**
 	 * Add your own modifiers!
 	 */
-	Rule variableDeclaration() {
+	Rule variableDefinition() {
 		return sequence(
 				group.types.type().label("type"),
-				variableDeclarationPart().label("head"),
+				variableDefinitionPart().label("head"),
 				zeroOrMore(sequence(
 						ch(','), group.basics.optWS(),
-						variableDeclarationPart()).label("tail")),
-				ch(';'), group.basics.optWS(),
-				SET(actions.createVariableDeclaration(VALUE("type"), VALUE("head"), VALUES("zeroOrMore/tail"))));
+						variableDefinitionPart()).label("tail")),
+				SET(actions.createVariableDefinition(VALUE("type"), VALUE("head"), VALUES("zeroOrMore/tail"))));
 	}
 	
-	Rule variableDeclarationPart() {
+	Rule variableDefinitionPart() {
 		return sequence(
 				group.basics.identifier().label("varName"),
 				zeroOrMore(enforcedSequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
@@ -264,7 +264,7 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 						firstOf(
 								group.expressions.arrayInitializer(),
 								group.expressions.anyExpression()))).label("initializer"),
-				SET(actions.createVariableDelarationPart(VALUE("varName"), TEXTS("dims/dim"), VALUE("initializer"))));
+				SET(actions.createVariableDefinitionPart(VALUE("varName"), TEXTS("dims/dim"), VALUE("initializer"))));
 	}
 	
 	public Rule annotation() {
@@ -348,7 +348,7 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
 	}
 	
-	public Rule variableDeclarationModifiers() {
+	public Rule variableDefinitionModifiers() {
 		return sequence(
 				zeroOrMore(anyModifier().label("modifier")),
 				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));

@@ -22,21 +22,28 @@
 package lombok.ast;
 
 public enum UnaryOperator {
-	BINARY_NOT("~"), LOGICAL_NOT("!"), UNARY_PLUS("+"), UNARY_MINUS("-");
+	BINARY_NOT("~", false), LOGICAL_NOT("!", false), UNARY_PLUS("+", false), UNARY_MINUS("-", false),
+	PREFIX_INCREMENT("++", false), PREFIX_DECREMENT("--", false), POSTFIX_INCREMENT("++", true), POSTFIX_DECREMENT("--", true);
 	
 	private final String symbol;
+	private final boolean postfix;
 	
-	UnaryOperator(String symbol) {
+	UnaryOperator(String symbol, boolean postfix) {
 		this.symbol = symbol;
+		this.postfix = postfix;
 	}
 	
 	public String getSymbol() {
 		return symbol;
 	}
 	
-	public static UnaryOperator fromSymbol(String symbol) {
+	public boolean isPostfix() {
+		return postfix;
+	}
+	
+	public static UnaryOperator fromSymbol(String symbol, boolean postfix) {
 		for (UnaryOperator op : values()) {
-			if (op.symbol.equals(symbol)) return op;
+			if (op.symbol.equals(symbol) && op.postfix == postfix) return op;
 		}
 		
 		return null;

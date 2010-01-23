@@ -160,36 +160,6 @@ abstract class AbstractNode implements Node {
 //		SourcePrinter printer = new SourcePrinter();
 //		this.accept(printer);
 //		return printer.toString();
-		if (this instanceof Literal) {
-			return "[" + ((Literal)this).getRawValue() + "]";
-		} else if (this instanceof BinaryExpression) {
-			return "(" + ((BinaryExpression)this).getRawLeft() + " " + ((BinaryExpression)this).getOperator() + " " + ((BinaryExpression)this).getRawRight() + ")";
-		} else if (this instanceof UnaryExpression) {
-			return "(" + ((UnaryExpression)this).getRawOperator() + ((UnaryExpression)this).getOperand() + ")";
-		} else if (this instanceof IncrementExpression && ((IncrementExpression)this).isPrefix()) {
-			return "(" + (((IncrementExpression)this).isDecrement() ? "--" : "++") + ((IncrementExpression)this).getOperand() + ")";
-		} else if (this instanceof IncrementExpression && !((IncrementExpression)this).isPrefix()) {
-			return "(" + ((IncrementExpression)this).getOperand() + (((IncrementExpression)this).isDecrement() ? "--" : "++") + ")";
-		} else if (this instanceof InlineIfExpression) {
-			return String.format("(%s?%s:%s)", ((InlineIfExpression)this).getRawCondition(), ((InlineIfExpression)this).getRawIfTrue(), ((InlineIfExpression)this).getRawIfFalse());
-		} else if (this instanceof TypeReference) {
-			try {
-				return ((TypeReference)this).getTypeName();
-			} catch (AstException e) {
-				return "<Broken type>";
-			}
-		} else if (this instanceof TypeReferencePart) {
-			try {
-				return ((TypeReferencePart)this).getTypeName();
-			} catch (AstException e) {
-				return "<Broken typePart>";
-			}
-		} else if (this instanceof Identifier) {
-			return ((Identifier)this).getName();
-		} else if (this instanceof Cast) {
-			return "(C:" + ((Cast)this).getTypeReference() + ")_" + ((Cast)this).getOperand() + "_";
-		} else {
-			return "NODE: " + this.getClass().getSimpleName();
-		}
+		return super.toString();
 	}
 }

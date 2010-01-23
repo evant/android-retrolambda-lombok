@@ -40,7 +40,7 @@ class AssertTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class CatchTemplate {
-	@NonNull VariableDeclaration exceptionDeclaration;
+	@NonNull VariableDefinition exceptionDeclaration;
 	@NonNull Block body;
 	
 	/* check: exDecl must have exactly 1 VDEntry */
@@ -73,7 +73,7 @@ class ForTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class ForEachTemplate {
-	@NonNull VariableDeclaration variable;
+	@NonNull VariableDefinition variable;
 	@NonNull Expression iterable;
 	@NonNull Statement statement;
 }
@@ -194,28 +194,33 @@ class ModifiersTemplate {
 
 @GenerateAstNode(implementing={Statement.class, TypeMember.class})
 class VariableDeclarationTemplate {
+	@NonNull VariableDefinition definition;
+}
+
+@GenerateAstNode
+class VariableDefinitionTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
 	@NonNull TypeReference typeReference;
-	List<VariableDeclarationEntry> variables;
+	List<VariableDefinitionEntry> variables;
 	
 	@NotChildOfNode
 	boolean varargs;
 }
 
 @GenerateAstNode
-class VariableDeclarationEntryTemplate {
+class VariableDefinitionEntryTemplate {
 	@NonNull Identifier name;
 	@NotChildOfNode int dimensions;
 	Expression initializer;
 	
 	@CopyMethod
-	static TypeReference getTypeReference(VariableDeclarationEntry self) {
-		if (!(self.getParent() instanceof VariableDeclaration)) throw new AstException(
-				self, "Cannot calculate type reference of a VariableDeclarationEntry without a VariableDeclaration as parent");
+	static TypeReference getTypeReference(VariableDefinitionEntry self) {
+		if (!(self.getParent() instanceof VariableDefinition)) throw new AstException(
+				self, "Cannot calculate type reference of a VariableDefinitionEntry without a VariableDefinition as parent");
 		
 		
-		VariableDeclaration parent = (VariableDeclaration) self.getParent();
+		VariableDefinition parent = (VariableDefinition) self.getParent();
 		
 		TypeReference typeRef = parent.getTypeReference().copy();
 		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getDimensions() + (parent.isVarargs() ? 1 : 0));
@@ -227,16 +232,18 @@ class InlineIfExpressionTemplate {
 	@NonNull Expression condition;
 	@NonNull Expression ifTrue;
 	@NonNull Expression ifFalse;
+	
+	@CopyMethod
+	static boolean needsParentheses(InlineIfExpression self) {
+		try {
+			return BinaryExpressionTemplate.needsParentheses(self, BinaryOperator.ASSIGN.pLevel()-1);
+		} catch (Throwable ignore) {
+			return true;
+		}
+	}
 }
 
 @GenerateAstNode(implementing=Expression.class)
-class IncrementExpressionTemplate {
-	@NonNull Expression operand;
-	@NotChildOfNode boolean decrement = false;
-	@NotChildOfNode boolean prefix = false;
-}
-
-@GenerateAstNode
 class IdentifierTemplate {
 	@NotChildOfNode
 	@NonNull String name;
@@ -259,24 +266,56 @@ class BinaryExpressionTemplate {
 		if (result == null) throw new IllegalArgumentException("unknown binary operator: " + op.trim());
 		return result;
 	}
+	
+	@CopyMethod
+	static boolean needsParentheses(BinaryExpression self) {
+		try {
+			return needsParentheses(self, self.getOperator().pLevel());
+		} catch (Throwable ignore) {
+			return true;
+		}
+	}
+	
+	static boolean needsParentheses(Node self, int pLevel) {
+		Node parent = self.getParent();
+		if (parent instanceof InlineIfExpression) {
+			if (!(self instanceof InlineIfExpression)) {
+				return pLevel >= BinaryOperator.ASSIGN.pLevel();
+			}
+			return ((InlineIfExpression)parent).getRawIfFalse() != self;
+		}
+		if (parent instanceof UnaryExpression) return true;
+		if (parent instanceof ConstructorInvocation) return self == ((ConstructorInvocation)parent).getRawQualifier();
+		if (parent instanceof Cast) return true;
+		if (parent instanceof InstanceOf) return pLevel > BinaryOperator.LESS.pLevel();
+		if (parent instanceof BinaryExpression) {
+			BinaryExpression be = (BinaryExpression)parent;
+			int otherPLevel;
+			try {
+				otherPLevel = be.getOperator().pLevel();
+			} catch (Throwable ignore) {
+				return true;
+			}
+			if (otherPLevel > pLevel) return false;
+			if (otherPLevel < pLevel) return true;
+			if (be.getRawLeft() == self) {
+				return pLevel == BinaryOperator.ASSIGN.pLevel();
+			}
+			if (be.getRawRight() == self) {
+				return pLevel != BinaryOperator.ASSIGN.pLevel();
+			}
+			return true;
+		}
+		
+		return false;
+	}
 }
 
 @GenerateAstNode(implementing=Expression.class)
 class UnaryExpressionTemplate {
 	@NonNull Expression operand;
-	@NotChildOfNode(rawFormParser="parseOperator", rawFormGenerator="generateOperator")
+	@NotChildOfNode
 	@NonNull UnaryOperator operator;
-	
-	static String generateOperator(UnaryOperator op) {
-		return op.getSymbol();
-	}
-	
-	static UnaryOperator parseOperator(String op) {
-		if (op == null) throw new IllegalArgumentException("missing operator");
-		UnaryOperator result = UnaryOperator.fromSymbol(op.trim());
-		if (result == null) throw new IllegalArgumentException("unknown unary operator: " + op.trim());
-		return result;
-	}
 }
 
 @GenerateAstNode
@@ -375,14 +414,18 @@ class CastTemplate {
 }
 
 @GenerateAstNode(implementing=Expression.class)
-class IdentifierExpressionTemplate {
-	@NonNull Identifier identifier;
-}
-
-@GenerateAstNode(implementing=Expression.class)
 class InstanceOfTemplate {
 	@NonNull Expression objectReference;
 	@NonNull TypeReference typeReference;
+	
+	@CopyMethod
+	static boolean needsParentheses(InstanceOf self) {
+		try {
+			return BinaryExpressionTemplate.needsParentheses(self, BinaryOperator.LESS.pLevel());
+		} catch (Throwable ignore) {
+			return true;
+		}
+	}
 }
 
 @GenerateAstNode(implementing=Expression.class)
@@ -735,7 +778,7 @@ class MethodDeclarationTemplate {
 	List<TypeVariable> typeVariables;
 	@NonNull TypeReference returnTypeReference;
 	@NonNull Identifier methodName;
-	List<VariableDeclaration> parameters;
+	List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
 	@NonNull Block body;
 }
@@ -747,7 +790,7 @@ class ConstructorDeclarationTemplate {
 	
 	List<TypeVariable> typeVariables;
 	@NonNull Identifier typeName;
-	List<VariableDeclaration> parameters;
+	List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
 	@NonNull Block body;
 }
@@ -841,3 +884,9 @@ class CompilationUnitTemplate {
 	List<ImportDeclaration> importDeclarations;
 	List<TypeDeclaration> typeDeclarations;
 }
+
+@GenerateAstNode(implementing=Statement.class)
+class ExpressionStatementTemplate {
+	@NonNull Expression expression;
+}
+
