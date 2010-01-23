@@ -347,7 +347,7 @@ public class StatementsParser extends BaseParser<Node, StatementsActions> {
 				optional(sequence(
 						string("finally"), group.basics.testLexBreak(), group.basics.optWS(),
 						blockStatement().label("finallyBody"))),
-				SET(actions.createTryStatement(VALUE("body"), VALUES("zeroOrMore/catchBlock"), VALUE("optional/finallyBody"))));
+				SET(actions.createTryStatement(VALUE("body"), VALUES("zeroOrMore/catchBlock"), VALUE("optional/sequence/finallyBody"))));
 	}
 	
 	Rule catchBlock() {
