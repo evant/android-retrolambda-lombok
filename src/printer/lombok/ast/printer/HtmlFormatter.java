@@ -1,3 +1,24 @@
+/*
+ * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package lombok.ast.printer;
 
 import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
@@ -13,26 +34,23 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import lombok.Cleanup;
-import lombok.ast.ForwardingASTVisitor;
 import lombok.ast.Node;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.parboiled.support.InputLocation;
 
-abstract class HtmlBuilder extends ForwardingASTVisitor {
-	static final char FAIL = '‽';
-	
+public class HtmlFormatter implements SourceFormatter {
 	private final StringBuilder sb = new StringBuilder();
 	private final List<String> inserts = new ArrayList<String>();
 	private final String rawSource;
 	private final List<String> errors = new ArrayList<String>();
 	
-	public HtmlBuilder(String rawSource) {
+	public HtmlFormatter(String rawSource) {
 		this.rawSource = rawSource;
 	}
 	
-	void reportAssertionFailureNext(Node node, String message, Throwable error) {
+	@Override public void reportAssertionFailureNext(Node node, String message, Throwable error) {
 		inserts.add("<span class=\"assertionError\">" + escapeHtml(message) + "</span>");
 	}
 	
@@ -46,33 +64,33 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 	private final ArrayDeque<Integer> parenStack = new ArrayDeque<Integer>();
 	
 	
-	void fail(String fail) {
+	@Override public void fail(String fail) {
 		sb.append("<span class=\"fail\">").append(FAIL).append(escapeHtml(fail)).append(FAIL).append("</span>");
 	}
 	
-	void keyword(String text) {
+	@Override public void keyword(String text) {
 		sb.append("<span class=\"keyword\">").append(escapeHtml(text)).append("</span>");
 	}
 	
-	void operator(String text) {
+	@Override public void operator(String text) {
 		sb.append("<span class=\"operator\">").append(escapeHtml(text)).append("</span>");
 	}
 	
-	void newline() {
+	@Override public void verticalSpace() {
 		sb.append("<br />");
 	}
 	
-	void space() {
+	@Override public void space() {
 		sb.append(" ");
 	}
 	
-	void append(String text) {
+	@Override public void append(String text) {
 		if (" ".equals(text)) {
 			space();
 			return;
 		}
 		if ("\n".equals(text)) {
-			newline();
+			verticalSpace();
 			return;
 		}
 		if (text.length() == 1) {
@@ -95,25 +113,25 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 		sb.append(escapeHtml(text));
 	}
 	
-	void buildInline(Node node) {
+	@Override public void buildInline(Node node) {
 		generateOpenTag(node, "span");
 	}
 	
-	void closeInline() {
+	@Override public void closeInline() {
 		sb.append("</span>");
 	}
 	
-	void startSuppressBlock() {
+	@Override public void startSuppressBlock() {
 		sb.append("<span class=\"blockSuppress\">");
 	}
 	
-	void endSuppressBlock() {
+	@Override public void endSuppressBlock() {
 		sb.append("</span>");
 	}
 	
 	private static final Pattern HTML_CLASS_SIGNIFICANT_NODE = Pattern.compile("^lombok\\.ast\\.(\\w+)$");
 	
-	void buildBlock(Node node) {
+	@Override public void buildBlock(Node node) {
 		generateOpenTag(node, "div");
 	}
 	
@@ -137,22 +155,15 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 		for (Class<?> i : c.getInterfaces()) findHtmlClassSignificantNodes(names, i);
 	}
 	
-	void closeBlock() {
+	@Override public void closeBlock() {
 		sb.append("</div>");
 	}
 	
-	@Override public boolean visitNode(Node node) {
-		buildBlock(node);
-		append(FAIL + "NOT_IMPLEMENTED: " + node.getClass().getSimpleName() + FAIL);
-		closeBlock();
-		return false;
-	}
-	
-	public void addError(InputLocation errorStart, InputLocation errorEnd, String errorMessage) {
+	@Override public void addError(InputLocation errorStart, InputLocation errorEnd, String errorMessage) {
 		errors.add(String.format("<div class=\"parseError\">[(%d %d), (%d %d)] %s</div>", errorStart.row, errorStart.column, errorEnd.row, errorEnd.column, escapeHtml(errorMessage)));
 	}
 	
-	public String toHtml() throws IOException {
+	@Override public String finish() throws IOException {
 		String template;
 		{
 			@Cleanup InputStream in = getClass().getResourceAsStream("ast.html");
@@ -181,7 +192,7 @@ abstract class HtmlBuilder extends ForwardingASTVisitor {
 	
 	private String timeTaken = "(Unknown)";
 	
-	public void setTimeTaken(long taken) {
+	@Override public void setTimeTaken(long taken) {
 		timeTaken = taken + " milliseconds.";
 	}
 }

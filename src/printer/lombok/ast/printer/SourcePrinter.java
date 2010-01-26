@@ -1,4 +1,27 @@
+/*
+ * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package lombok.ast.printer;
+
+import static lombok.ast.printer.SourceFormatter.FAIL;
 
 import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
@@ -34,6 +57,7 @@ import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.For;
 import lombok.ast.ForEach;
+import lombok.ast.ForwardingASTVisitor;
 import lombok.ast.Identifier;
 import lombok.ast.If;
 import lombok.ast.ImportDeclaration;
@@ -75,24 +99,37 @@ import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
-public class HtmlPrinter extends HtmlBuilder {
+public class SourcePrinter extends ForwardingASTVisitor {
+	private final SourceFormatter formatter;
+	
+	public SourcePrinter(SourceFormatter formatter) {
+		this.formatter = formatter;
+	}
+	
 	//Private utility methods
 	private void visit(Node node) {
 		if (node != null) node.accept(this);
 	}
 	
+	@Override public boolean visitNode(Node node) {
+		formatter.buildBlock(node);
+		formatter.fail("NOT_IMPLEMENTED: " + node.getClass().getSimpleName());
+		formatter.closeBlock();
+		return false;
+	}
+	
 	private void visitAll(ListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
 		if (nodes.isEmpty()) return;
-		append(prefix);
+		formatter.append(prefix);
 		boolean first = true;
 		for (Node n : nodes.getRawContents()) {
 			if (!first) {
-				append(separator);
+				formatter.append(separator);
 			}
 			first = false;
 			visit(n);
 		}
-		append(suffix);
+		formatter.append(suffix);
 	}
 	
 	private boolean isValidJavaIdentifier(String in) {
@@ -110,50 +147,47 @@ public class HtmlPrinter extends HtmlBuilder {
 	//Basics
 	public boolean visitTypeReference(TypeReference node) {
 		WildcardKind kind = node.getWildcard();
-		buildInline(node);
+		formatter.buildInline(node);
 		if (kind == WildcardKind.UNBOUND) {
-			append("?");
-			closeInline();
+			formatter.append("?");
+			formatter.closeInline();
 			return true;
 		} else if (kind == WildcardKind.EXTENDS) {
-			append("?");
-			space();
-			keyword("extends");
-			space();
+			formatter.append("?");
+			formatter.space();
+			formatter.keyword("extends");
+			formatter.space();
 		} else if (kind == WildcardKind.SUPER) {
-			append("?");
-			space();
-			keyword("super");
-			space();
+			formatter.append("?");
+			formatter.space();
+			formatter.keyword("super");
+			formatter.space();
 		}
 		
 		visitAll(node.parts(), ".", "", "");
 		
-		for (int i = 0 ; i < node.getArrayDimensions(); i++) append("[]");
+		for (int i = 0 ; i < node.getArrayDimensions(); i++)
+			formatter.append("[]");
 		
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitTypeReferencePart(TypeReferencePart node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visit(node.getRawIdentifier());
 		visit(node.getRawTypeArguments());
-		closeInline();
+		formatter.closeInline();
 		return true;
-	}
-	
-	public HtmlPrinter(String rawSource) {
-		super(rawSource);
 	}
 	
 	public boolean visitIdentifier(Identifier node) {
 		String name = node.getName();
 		if (!node.isSyntacticallyValid()) {
 			if (name == null || name.isEmpty()) {
-				reportAssertionFailureNext(node, "null or empty identifier that is nevertheless syntactically valid", null);
+				formatter.reportAssertionFailureNext(node, "null or empty identifier that is nevertheless syntactically valid", null);
 			} else if (!isValidJavaIdentifier(name)) {
-				reportAssertionFailureNext(node, "identifier name contains characters that aren't legal in an identifier", null);
+				formatter.reportAssertionFailureNext(node, "identifier name contains characters that aren't legal in an identifier", null);
 			}
 		}
 		
@@ -161,9 +195,9 @@ public class HtmlPrinter extends HtmlBuilder {
 		else if (name.isEmpty()) name = FAIL + "EMPTY_IDENTIFIER" + FAIL;
 		else if (!isValidJavaIdentifier(name)) name = FAIL + "INVALID_IDENTIFIER: " + name + FAIL;
 		
-		buildInline(node);
-		append(name);
-		closeInline();
+		formatter.buildInline(node);
+		formatter.append(name);
+		formatter.closeInline();
 		return true;
 	}
 	
@@ -176,13 +210,13 @@ public class HtmlPrinter extends HtmlBuilder {
 			raw = il.getRawValue();
 		} catch (Exception e) {
 			if (node.isSyntacticallyValid()) {
-				reportAssertionFailureNext(node, "correct integral literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
+				formatter.reportAssertionFailureNext(node, "correct integral literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
 			}
 		}
 		
-		buildInline(node);
-		append(raw);
-		closeInline();
+		formatter.buildInline(node);
+		formatter.append(raw);
+		formatter.closeInline();
 		return true;
 	}
 	
@@ -195,13 +229,13 @@ public class HtmlPrinter extends HtmlBuilder {
 			raw = fpl.getRawValue();
 		} catch (Exception e) {
 			if (node.isSyntacticallyValid()) {
-				reportAssertionFailureNext(node, "correct floating point literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
+				formatter.reportAssertionFailureNext(node, "correct floating point literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
 			}
 		}
 		
-		buildInline(node);
-		append(raw);
-		closeInline();
+		formatter.buildInline(node);
+		formatter.append(raw);
+		formatter.closeInline();
 		return true;
 	}
 	
@@ -211,13 +245,13 @@ public class HtmlPrinter extends HtmlBuilder {
 			raw = new BooleanLiteral().setValue(node.getValue()).getRawValue();
 		} catch (Exception e) {
 			if (node.isSyntacticallyValid()) {
-				reportAssertionFailureNext(node, "correct boolean literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
+				formatter.reportAssertionFailureNext(node, "correct boolean literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
 			}
 		}
 		
-		buildInline(node);
-		append(raw);
-		closeInline();
+		formatter.buildInline(node);
+		formatter.append(raw);
+		formatter.closeInline();
 		return true;
 	}
 	
@@ -227,13 +261,13 @@ public class HtmlPrinter extends HtmlBuilder {
 			raw = new CharLiteral().setValue(node.getValue()).getRawValue();
 		} catch (Exception e) {
 			if (node.isSyntacticallyValid()) {
-				reportAssertionFailureNext(node, "correct char literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
+				formatter.reportAssertionFailureNext(node, "correct char literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
 			}
 		}
 		
-		buildInline(node);
-		append(raw);
-		closeInline();
+		formatter.buildInline(node);
+		formatter.append(raw);
+		formatter.closeInline();
 		return true;
 	}
 	
@@ -243,918 +277,917 @@ public class HtmlPrinter extends HtmlBuilder {
 			raw = new StringLiteral().setValue(node.getValue()).getRawValue();
 		} catch (Exception e) {
 			if (node.isSyntacticallyValid()) {
-				reportAssertionFailureNext(node, "correct string literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
+				formatter.reportAssertionFailureNext(node, "correct string literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
 			}
 		}
 		
-		buildInline(node);
-		append(raw);
-		closeInline();
+		formatter.buildInline(node);
+		formatter.append(raw);
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitNullLiteral(NullLiteral node) {
-		buildInline(node);
-		keyword("null");
-		closeInline();
+		formatter.buildInline(node);
+		formatter.keyword("null");
+		formatter.closeInline();
 		return true;
 	}
 
 	//Expressions
 	public boolean visitBinaryExpression(BinaryExpression node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
-		if (parens) append("(");
+		if (parens) formatter.append("(");
 		visit(node.getRawLeft());
-		space();
+		formatter.space();
 		try {
-			operator(node.getOperator().getSymbol());
+			formatter.operator(node.getOperator().getSymbol());
 		} catch (Exception e) {
-			operator(node.getRawOperator());
+			formatter.operator(node.getRawOperator());
 		}
-		space();
+		formatter.space();
 		visit(node.getRawRight());
-		if (parens) append(")");
-		closeInline();
+		if (parens) formatter.append(")");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitUnaryExpression(UnaryExpression node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		UnaryOperator op;
 		try {
 			op = node.getOperator();
 		} catch (Exception e) {
 			visitNode(node.getOperand());
-			closeInline();
+			formatter.closeInline();
 			return true;
 		}
 		boolean parens = node.needsParentheses();
-		if (parens) append("(");
-		if (!op.isPostfix()) operator(op.getSymbol());
+		if (parens) formatter.append("(");
+		if (!op.isPostfix()) formatter.operator(op.getSymbol());
 		visitNode(node.getOperand());
-		if (op.isPostfix()) operator(op.getSymbol());
-		if (parens) append(")");
-		closeInline();
+		if (op.isPostfix()) formatter.operator(op.getSymbol());
+		if (parens) formatter.append(")");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitCast(Cast node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
-		if (parens) append("(");
-		append("(");
+		if (parens) formatter.append("(");
+		formatter.append("(");
 		visitNode(node.getRawTypeReference());
-		append(")");
-		space();
+		formatter.append(")");
+		formatter.space();
 		visitNode(node.getRawOperand());
-		if (parens) append(")");
-		closeInline();
+		if (parens) formatter.append(")");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
-		if (parens) append("(");
+		if (parens) formatter.append("(");
 		visit(node.getRawCondition());
-		space();
-		operator("?");
-		space();
+		formatter.space();
+		formatter.operator("?");
+		formatter.space();
 		visit(node.getRawIfTrue());
-		space();
-		operator(":");
-		space();
+		formatter.space();
+		formatter.operator(":");
+		formatter.space();
 		visit(node.getRawIfFalse());
-		if (parens) append(")");
-		closeInline();
+		if (parens) formatter.append(")");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitInstanceOf(InstanceOf node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
-		if (parens) append("(");
+		if (parens) formatter.append("(");
 		visit(node.getRawObjectReference());
-		space();
-		keyword("instanceof");
-		space();
+		formatter.space();
+		formatter.keyword("instanceof");
+		formatter.space();
 		visit(node.getRawTypeReference());
-		if (parens) append(")");
-		closeInline();
+		if (parens) formatter.append(")");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitConstructorInvocation(ConstructorInvocation node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		if (node.getRawQualifier() != null) {
 			visit(node.getRawQualifier());
-			append(".");
+			formatter.append(".");
 		}
-		keyword("new");
-		space();
+		formatter.keyword("new");
+		formatter.space();
 		visit(node.getRawConstructorTypeArguments());
 		visit(node.getRawTypeReference());
-		append("(");
+		formatter.append("(");
 		visitAll(node.arguments(), ", ", "", "");
-		append(")");
-		closeInline();
+		formatter.append(")");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitMethodInvocation(MethodInvocation node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		if (node.getRawOperand() != null) {
 			visit(node.getRawOperand());
-			append(".");
+			formatter.append(".");
 		}
 		visit(node.getRawMethodTypeArguments());
 		visit(node.getRawName());
-		append("(");
+		formatter.append("(");
 		visitAll(node.arguments(), ", ", "", "");
-		append(")");
-		closeInline();
+		formatter.append(")");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitSelect(Select node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		if (node.getRawOperand() != null) {
 			visit(node.getRawOperand());
-			append(".");
+			formatter.append(".");
 		}
 		visit(node.getRawIdentifier());
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitArrayAccess(ArrayAccess node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visit(node.getRawOperand());
-		append("[");
+		formatter.append("[");
 		visit(node.getRawIndexExpression());
-		append("]");
-		closeInline();
+		formatter.append("]");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitArrayCreation(ArrayCreation node) {
-		buildInline(node);
-		keyword("new");
-		space();
+		formatter.buildInline(node);
+		formatter.keyword("new");
+		formatter.space();
 		visit(node.getRawComponentTypeReference());
 		visitAll(node.dimensions(), "", "", "");
 		if (node.getRawInitializer() != null) {
-			space();
+			formatter.space();
 			visit(node.getRawInitializer());
 		}
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitArrayInitializer(ArrayInitializer node) {
-		buildInline(node);
-		append("{");
+		formatter.buildInline(node);
+		formatter.append("{");
 		visitAll(node.expressions(), ", ", "", "");
-		append("}");
-		closeInline();
+		formatter.append("}");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitArrayDimension(ArrayDimension node) {
-		buildInline(node);
-		append("[");
+		formatter.buildInline(node);
+		formatter.append("[");
 		visit(node.getRawDimension());
-		append("]");
-		closeInline();
+		formatter.append("]");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitClassLiteral(ClassLiteral node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visit(node.getRawTypeReference());
-		append(".");
-		keyword("class");
-		closeInline();
+		formatter.append(".");
+		formatter.keyword("class");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitSuper(Super node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		if (node.getRawQualifier() != null) {
 			visit(node.getRawQualifier());
-			append(".");
+			formatter.append(".");
 		}
-		keyword("super");
-		closeInline();
+		formatter.keyword("super");
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitThis(This node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		if (node.getRawQualifier() != null) {
 			visit(node.getRawQualifier());
-			append(".");
+			formatter.append(".");
 		}
-		keyword("this");
-		closeInline();
+		formatter.keyword("this");
+		formatter.closeInline();
 		return true;
 	}
 	
 	//Statements
 	public boolean visitExpressionStatement(ExpressionStatement node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		visit(node.getRawExpression());
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitLabelledStatement(LabelledStatement node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawLabel() != null) {
 			visit(node.getRawLabel());
-			append(":");
+			formatter.append(":");
 		}
 		visit(node.getRawStatement());
-		closeBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitIf(If node) {
-		buildBlock(node);
-		keyword("if");
-		space();
-		append("(");
+		formatter.buildBlock(node);
+		formatter.keyword("if");
+		formatter.space();
+		formatter.append("(");
 		visit(node.getRawCondition());
-		append(")");
-		space();
-		startSuppressBlock();
+		formatter.append(")");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawStatement());
-		startSuppressBlock();
+		formatter.startSuppressBlock();
 		if (node.getRawElseStatement() != null) {
-			space();
-			keyword("else");
-			space();
-			startSuppressBlock();
+			formatter.space();
+			formatter.keyword("else");
+			formatter.space();
+			formatter.startSuppressBlock();
 			visit(node.getRawElseStatement());
-			startSuppressBlock();
+			formatter.startSuppressBlock();
 		}
-		closeBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitFor(For node) {
-		buildBlock(node);
-		keyword("for");
-		space();
-		append("(");
+		formatter.buildBlock(node);
+		formatter.keyword("for");
+		formatter.space();
+		formatter.append("(");
 		visitAll(node.inits(), ", ", "", "");
-		append(";");
-		space();
+		formatter.append(";");
+		formatter.space();
 		visit(node.getRawCondition());
-		append(";");
-		space();
+		formatter.append(";");
+		formatter.space();
 		visitAll(node.updates(), ", ", "", "");
-		append(")");
-		space();
-		startSuppressBlock();
+		formatter.append(")");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawStatement());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitForEach(ForEach node) {
-		buildBlock(node);
-		keyword("for");
-		space();
-		append("(");
+		formatter.buildBlock(node);
+		formatter.keyword("for");
+		formatter.space();
+		formatter.append("(");
 		visit(node.getRawVariable());
-		space();
-		append(":");
-		space();
+		formatter.space();
+		formatter.append(":");
+		formatter.space();
 		visit(node.getRawIterable());
-		append(")");
-		space();
-		startSuppressBlock();
+		formatter.append(")");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawStatement());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitTry(Try node) {
-		buildBlock(node);
-		keyword("try");
-		space();
-		startSuppressBlock();
+		formatter.buildBlock(node);
+		formatter.keyword("try");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		endSuppressBlock();
+		formatter.endSuppressBlock();
 		visitAll(node.catches(), " ", " ", "");
 		if (node.getRawFinally() != null) {
-			space();
-			keyword("finally");
-			space();
-			startSuppressBlock();
+			formatter.space();
+			formatter.keyword("finally");
+			formatter.space();
+			formatter.startSuppressBlock();
 			visit(node.getRawFinally());
-			endSuppressBlock();
+			formatter.endSuppressBlock();
 		}
-		closeBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitCatch(Catch node) {
-		buildInline(node);
-		keyword("catch");
-		space();
-		append("(");
+		formatter.buildInline(node);
+		formatter.keyword("catch");
+		formatter.space();
+		formatter.append("(");
 		visit(node.getRawExceptionDeclaration());
-		append(")");
-		space();
-		startSuppressBlock();
+		formatter.append(")");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		endSuppressBlock();
-		closeInline();
+		formatter.endSuppressBlock();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitWhile(While node) {
-		buildBlock(node);
-		keyword("while");
-		space();
-		append("(");
+		formatter.buildBlock(node);
+		formatter.keyword("while");
+		formatter.space();
+		formatter.append("(");
 		visit(node.getRawCondition());
-		append(")");
-		space();
-		startSuppressBlock();
+		formatter.append(")");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawStatement());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitDoWhile(DoWhile node) {
-		buildBlock(node);
-		keyword("do");
-		space();
-		startSuppressBlock();
+		formatter.buildBlock(node);
+		formatter.keyword("do");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawStatement());
-		endSuppressBlock();
-		space();
-		keyword("while");
-		space();
-		append("(");
+		formatter.endSuppressBlock();
+		formatter.space();
+		formatter.keyword("while");
+		formatter.space();
+		formatter.append("(");
 		visit(node.getRawCondition());
-		append(")");
-		append(";");
-		closeBlock();
+		formatter.append(")");
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitSynchronized(Synchronized node) {
-		buildBlock(node);
-		keyword("synchronized");
-		space();
-		append("(");
+		formatter.buildBlock(node);
+		formatter.keyword("synchronized");
+		formatter.space();
+		formatter.append("(");
 		visit(node.getRawLock());
-		append(")");
-		space();
-		startSuppressBlock();
+		formatter.append(")");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getBody());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitBlock(Block node) {
-		buildBlock(node);
-		append("{");
-		buildBlock(null);
+		formatter.buildBlock(node);
+		formatter.append("{");
+		formatter.buildBlock(null);
 		visitAll(node.contents(), "", "", "");
-		closeBlock();
-		append("}");
-		closeBlock();
+		formatter.closeBlock();
+		formatter.append("}");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitAssert(Assert node) {
-		buildBlock(node);
-		keyword("assert");
-		space();
+		formatter.buildBlock(node);
+		formatter.keyword("assert");
+		formatter.space();
 		visit(node.getRawAssertion());
 		if (node.getRawMessage() != null) {
-			space();
-			append(":");
-			space();
+			formatter.space();
+			formatter.append(":");
+			formatter.space();
 			visit(node.getRawMessage());
 		}
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitEmptyStatement(EmptyStatement node) {
-		buildBlock(node);
-		append(";");
-		closeBlock();
+		formatter.buildBlock(node);
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitSwitch(Switch node) {
-		buildBlock(node);
-		keyword("switch");
-		space();
-		append("(");
+		formatter.buildBlock(node);
+		formatter.keyword("switch");
+		formatter.space();
+		formatter.append("(");
 		visit(node.getRawCondition());
-		append(")");
-		space();
-		startSuppressBlock();
+		formatter.append(")");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		endSuppressBlock();
+		formatter.endSuppressBlock();
 		return true;
 	}
 	
 	public boolean visitCase(Case node) {
-		buildBlock(node);
-		keyword("case");
-		space();
+		formatter.buildBlock(node);
+		formatter.keyword("case");
+		formatter.space();
 		visit(node.getRawCondition());
-		append(":");
-		closeBlock();
+		formatter.append(":");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitDefault(Default node) {
-		buildBlock(node);
-		keyword("default");
-		append(":");
-		closeBlock();
+		formatter.buildBlock(node);
+		formatter.keyword("default");
+		formatter.append(":");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitBreak(Break node) {
-		buildBlock(node);
-		keyword("break");
+		formatter.buildBlock(node);
+		formatter.keyword("break");
 		if (node.getRawLabel() != null) {
-			space();
+			formatter.space();
 			visit(node.getRawLabel());
 		}
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitContinue(Continue node) {
-		buildBlock(node);
-		keyword("continue");
+		formatter.buildBlock(node);
+		formatter.keyword("continue");
 		if (node.getRawLabel() != null) {
-			space();
+			formatter.space();
 			visit(node.getRawLabel());
 		}
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitReturn(Return node) {
-		buildBlock(node);
-		keyword("return");
+		formatter.buildBlock(node);
+		formatter.keyword("return");
 		if (node.getRawValue() != null) {
-			space();
+			formatter.space();
 			visit(node.getRawValue());
 		}
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitThrow(Throw node) {
-		buildBlock(node);
-		keyword("throw");
-		space();
+		formatter.buildBlock(node);
+		formatter.keyword("throw");
+		formatter.space();
 		node.getRawThrowable();
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	//Structural
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		visit(node.getRawDefinition());
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	public boolean visitVariableDefinition(VariableDefinition node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
 		visit(node.getRawTypeReference());
-		space();
+		formatter.space();
 		visitAll(node.variables(), ", ", "", "");
-		closeInline();
+		formatter.closeInline();
 		
 		return true;
 	}
 	
 	public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visit(node.getRawName());
-		for (int i = 0; i < node.getDimensions(); i++) append("[]");
+		for (int i = 0; i < node.getDimensions(); i++)
+			formatter.append("[]");
 		if (node.getRawInitializer() != null) {
-			append(" = ");
+			formatter.append(" = ");
 			visit(node.getRawInitializer());
 		}
-		closeInline();
+		formatter.closeInline();
 		
 		return true;
 	}
 	
 	public boolean visitTypeArguments(TypeArguments node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visitAll(node.generics(), ", ", "<", ">");
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitTypeVariable(TypeVariable node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visit(node.getRawName());
 		if (!node.extending().isEmpty()) {
-			keyword("extends");
+			formatter.keyword("extends");
 			visitAll(node.extending(), " & ", " ", "");
 		}
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitKeywordModifier(KeywordModifier node) {
-		buildInline(node);
-		if (node.getName() == null || node.getName().isEmpty()) fail("MISSING_MODIFIER");
-		else keyword(node.getName());
-		closeInline();
+		formatter.buildInline(node);
+		if (node.getName() == null || node.getName().isEmpty()) formatter.fail("MISSING_MODIFIER");
+		else
+			formatter.keyword(node.getName());
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitModifiers(Modifiers node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visitAll(node.annotations(), "", "", "");
 		visitAll(node.keywords(), " ", "", "");
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitAnnotation(Annotation node) {
-		buildInline(node);
-		append("@");
+		formatter.buildInline(node);
+		formatter.append("@");
 		visit(node.getRawAnnotationTypeReference());
 		visitAll(node.elements(), ", ", "(", ")");
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitAnnotationElement(AnnotationElement node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		if (node.getRawName() != null) {
 			visit(node.getRawName());
-			space();
-			append("=");
-			space();
+			formatter.space();
+			formatter.append("=");
+			formatter.space();
 		}
 		visit(node.getValue());
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitTypeBody(TypeBody node) {
-		buildBlock(node);
-		append("{");
-		buildBlock(null);
+		formatter.buildBlock(node);
+		formatter.append("{");
+		formatter.buildBlock(null);
 		if (node.getParent() instanceof EnumDeclaration) {
-			buildBlock(null);
+			formatter.buildBlock(null);
 			visitAll(((EnumDeclaration)node.getParent()).constants(), ", ", "", "");
-			if (!node.members().isEmpty()) append(";");
-			closeBlock();
+			if (!node.members().isEmpty()) formatter.append(";");
+			formatter.closeBlock();
 		}
 		visitAll(node.members(), "\n", "", "");
-		closeBlock();
-		append("}");
-		closeBlock();
+		formatter.closeBlock();
+		formatter.append("}");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	//Class Bodies
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
 		visitAll(node.typeVariables(), ", ", "<", ">");
-		if (!node.typeVariables().isEmpty()) space();
+		if (!node.typeVariables().isEmpty()) formatter.space();
 		visit(node.getRawReturnTypeReference());
-		space();
+		formatter.space();
 		visit(node.getRawMethodName());
-		append("(");
+		formatter.append("(");
 		visitAll(node.parameters(), ", ", "", "");
-		append(")");
-		space();
+		formatter.append(")");
+		formatter.space();
 		if (!node.thrownTypeReferences().isEmpty()) {
-			keyword("throws");
+			formatter.keyword("throws");
 			visitAll(node.thrownTypeReferences(), ", ", " ", " ");
 		}
-		startSuppressBlock();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
 		if (node.getRawBody() == null) {
-			append(";");
+			formatter.append(";");
 		}
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		
 		return true;
 	}
 	
 	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
 		visitAll(node.typeVariables(), ", ", "<", ">");
-		if (!node.typeVariables().isEmpty()) space();
+		if (!node.typeVariables().isEmpty()) formatter.space();
 		visit(node.getRawTypeName());
-		append("(");
+		formatter.append("(");
 		visitAll(node.parameters(), ", ", "", "");
-		append(")");
-		space();
+		formatter.append(")");
+		formatter.space();
 		if (!node.thrownTypeReferences().isEmpty()) {
-			keyword("throws");
+			formatter.keyword("throws");
 			visitAll(node.thrownTypeReferences(), ", ", " ", " ");
 		}
-		startSuppressBlock();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
 		if (node.getRawBody() == null) {
-			append(";");
+			formatter.append(";");
 		}
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		
 		return true;
 	}
 	
 	public boolean visitSuperConstructorInvocation(SuperConstructorInvocation node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawQualifier() != null) {
 			visit(node.getRawQualifier());
-			append(".");
+			formatter.append(".");
 		}
 		visit(node.getRawConstructorTypeArguments());
-		keyword("super");
-		append("(");
+		formatter.keyword("super");
+		formatter.append("(");
 		visitAll(node.arguments(), ", ", "", "");
-		append(")");
-		append(";");
-		closeBlock();
+		formatter.append(")");
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		visit(node.getRawConstructorTypeArguments());
-		keyword("this");
-		append("(");
+		formatter.keyword("this");
+		formatter.append("(");
 		visitAll(node.arguments(), ", ", "", "");
-		append(")");
-		append(";");
-		closeBlock();
+		formatter.append(")");
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitInstanceInitializer(InstanceInitializer node) {
-		buildBlock(node);
-		startSuppressBlock();
+		formatter.buildBlock(node);
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		startSuppressBlock();
-		closeBlock();
+		formatter.startSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitStaticInitializer(StaticInitializer node) {
-		buildBlock(node);
-		keyword("static");
-		space();
-		startSuppressBlock();
+		formatter.buildBlock(node);
+		formatter.keyword("static");
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		startSuppressBlock();
-		closeBlock();
+		formatter.startSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitClassDeclaration(ClassDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
-		keyword("class");
-		space();
+		formatter.keyword("class");
+		formatter.space();
 		visit(node.getRawName());
 		visitAll(node.typeVariables(), ", ", "<", ">");
-		space();
+		formatter.space();
 		if (node.getRawExtending() != null) {
-			keyword("extends");
-			space();
+			formatter.keyword("extends");
+			formatter.space();
 			visit(node.getRawExtending());
-			space();
+			formatter.space();
 		}
 		if (!node.implementing().isEmpty()) {
-			keyword("implements");
+			formatter.keyword("implements");
 			visitAll(node.implementing(), ", ", " ", " ");
 		}
-		startSuppressBlock();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
-		keyword("interface");
-		space();
+		formatter.keyword("interface");
+		formatter.space();
 		visit(node.getRawName());
 		visitAll(node.typeVariables(), ", ", "<", ">");
-		space();
+		formatter.space();
 		if (!node.extending().isEmpty()) {
-			keyword("extends");
+			formatter.keyword("extends");
 			visitAll(node.extending(), ", ", " ", " ");
 		}
-		startSuppressBlock();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitEnumDeclaration(EnumDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
-		keyword("enum");
-		space();
+		formatter.keyword("enum");
+		formatter.space();
 		visit(node.getRawName());
-		space();
+		formatter.space();
 		if (!node.implementing().isEmpty()) {
-			keyword("implements");
+			formatter.keyword("implements");
 			visitAll(node.implementing(), ", ", " ", " ");
 		}
 		
 		//logic of printing enum constants is in visitTypeBody
-		startSuppressBlock();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitEnumConstant(EnumConstant node) {
-		buildInline(node);
+		formatter.buildInline(node);
 		visitAll(node.annotations(), "", "", "");
 		visit(node.getRawName());
 		visitAll(node.arguments(), ", ", "(", ")");
 		if (node.getRawBody() != null) {
-			space();
+			formatter.space();
 			visit(node.getRawBody());
 		}
-		closeInline();
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
-		append("@");
-		keyword("interface");
-		space();
+		formatter.append("@");
+		formatter.keyword("interface");
+		formatter.space();
 		visit(node.getRawName());
-		space();
-		startSuppressBlock();
+		formatter.space();
+		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		endSuppressBlock();
-		closeBlock();
+		formatter.endSuppressBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
 			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
-				space();
+				formatter.space();
 			}
 		}
 		visit(node.getRawReturnTypeReference());
-		space();
+		formatter.space();
 		visit(node.getRawMethodName());
-		append("(");
-		append(")");
+		formatter.append("(");
+		formatter.append(")");
 		if (node.getRawDefaultValue() != null) {
-			space();
-			keyword("default");
-			space();
+			formatter.space();
+			formatter.keyword("default");
+			formatter.space();
 			visit(node.getRawDefaultValue());
 		}
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitCompilationUnit(CompilationUnit node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		if (node.getRawPackageDeclaration() != null) {
 			visit(node.getRawPackageDeclaration());
-			newline();
+			formatter.verticalSpace();
 		}
 		visitAll(node.importDeclarations(), "", "", "\n");
 		visitAll(node.typeDeclarations(), "\n", "", "");
-		closeBlock();
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
-		buildBlock(node);
+		formatter.buildBlock(node);
 		visitAll(node.annotations(), "", "", "");
-		keyword("package");
-		space();
+		formatter.keyword("package");
+		formatter.space();
 		visitAll(node.parts(), ".", "", "");
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitImportDeclaration(ImportDeclaration node) {
-		buildBlock(node);
-		keyword("import");
-		space();
+		formatter.buildBlock(node);
+		formatter.keyword("import");
+		formatter.space();
 		if (node.isStaticImport()) {
-			keyword("static");
-			space();
+			formatter.keyword("static");
+			formatter.space();
 		}
 		visitAll(node.parts(), ".", "", "");
 		if (node.isStarImport()) {
-			append(".*");
+			formatter.append(".*");
 		}
-		append(";");
-		closeBlock();
+		formatter.append(";");
+		formatter.closeBlock();
 		return true;
 	}
-//	
-//	//Various
+	
+	//Various
 	public boolean visitParseArtefact(Node node) {
-		buildInline(node);
-		fail("ARTEFACT: " + node.getClass().getSimpleName());
-		closeInline();
+		formatter.buildInline(node);
+		formatter.fail("ARTEFACT: " + node.getClass().getSimpleName());
+		formatter.closeInline();
 		return true;
 	}
 	
 	public boolean visitComment(Comment node) {
-		buildBlock(node);
-		append(node.isBlockComment() ? "/*" : "//");
-		if (node.getContent() == null) fail("MISSING_COMMENT");
-		else append(node.getContent());
-		if (node.isBlockComment()) append("*/");
-		closeBlock();
+		formatter.buildBlock(node);
+		formatter.append(node.isBlockComment() ? "/*" : "//");
+		if (node.getContent() == null) formatter.fail("MISSING_COMMENT");
+		else
+			formatter.append(node.getContent());
+		if (node.isBlockComment()) formatter.append("*/");
+		formatter.closeBlock();
 		return true;
-	}
-	
-	public void setTimeTaken(long taken) {
-		super.setTimeTaken(taken);
 	}
 }
