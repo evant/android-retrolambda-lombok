@@ -38,7 +38,6 @@ import lombok.ast.Node;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.parboiled.support.InputLocation;
 
 public class HtmlFormatter implements SourceFormatter {
 	private final StringBuilder sb = new StringBuilder();
@@ -85,14 +84,6 @@ public class HtmlFormatter implements SourceFormatter {
 	}
 	
 	@Override public void append(String text) {
-		if (" ".equals(text)) {
-			space();
-			return;
-		}
-		if ("\n".equals(text)) {
-			verticalSpace();
-			return;
-		}
 		if (text.length() == 1) {
 			if (OPENERS.contains(text)) {
 				parenCounter++;
@@ -159,8 +150,8 @@ public class HtmlFormatter implements SourceFormatter {
 		sb.append("</div>");
 	}
 	
-	@Override public void addError(InputLocation errorStart, InputLocation errorEnd, String errorMessage) {
-		errors.add(String.format("<div class=\"parseError\">[(%d %d), (%d %d)] %s</div>", errorStart.row, errorStart.column, errorEnd.row, errorEnd.column, escapeHtml(errorMessage)));
+	@Override public void addError(int errorStart, int errorEnd, String errorMessage) {
+		errors.add(String.format("<div class=\"parseError\">%s</div>", escapeHtml(errorMessage)));
 	}
 	
 	@Override public String finish() throws IOException {

@@ -25,42 +25,97 @@ import java.io.IOException;
 
 import lombok.ast.Node;
 
-import org.parboiled.support.InputLocation;
-
 public interface SourceFormatter {
+	char FAIL = '‽';
 	
-	public static final char FAIL = '‽';
+	/**
+	 * A bug in the parser logic has been found; it should be rendered as a note on the next {@link #buildInline(Node)} or {@link #buildBlock(Node)} element.
+	 * 
+	 * @param node The node that is causing the problem; should always be the same node as the next {@code buildInline} or {@code buildBlock} call.
+	 * @param message A description of the parser bug found.
+	 * @param error Any associated exception. Can be {@code null}.
+	 */
+	void reportAssertionFailureNext(Node node, String message, Throwable error);
 	
-	public abstract void reportAssertionFailureNext(Node node, String message, Throwable error);
+	/**
+	 * The AST is not valid; it applies to the current level.
+	 * 
+	 * @param fail Human readable explanation of what's wrong with the AST at this level.
+	 */
+	void fail(String fail);
 	
-	public abstract void fail(String fail);
+	void keyword(String text);
+	void operator(String text);
 	
-	public abstract void keyword(String text);
+	/**
+	 * Generate an extra vertical spacer if the output format allows for it. Only occurs between block elements.
+	 * Example: Between a package statement and the import statements, {@code verticalSpace} will be called.
+	 */
+	void verticalSpace();
 	
-	public abstract void operator(String text);
+	/**
+	 * Generate horizontal space. Where relevant, the space should be 1 character wide.
+	 */
+	void space();
 	
-	public abstract void verticalSpace();
+	/**
+	 * Add raw text to the output stream.
+	 * 
+	 * NB: Parentheses, braces and brackets that are structurally relevant as opening and/or closing a group are always appended separately; therefore, if you
+	 * want to do special highlighting on parens that go together, you only have to check if the text appended is a single character long and contains a brace, bracket, or paren.
+	 * 
+	 * @param text The raw text to print. If your output format requires it, it is the implementor's responsibility to escape this text.
+	 */
+	void append(String text);
 	
-	public abstract void space();
+	/**
+	 * Opens a new AST level which is normally rendered inline (example: expressions, literals, modifiers, identifiers, etc).
+	 * 
+	 * @param node The AST node that this level represents. Can be {@code null} which signals that the current node has an inline substructure.
+	 */
+	void buildInline(Node node);
 	
-	public abstract void append(String text);
+	/**
+	 * Closes the previous {@link #buildInline(Node)} call.
+	 */
+	void closeInline();
 	
-	public abstract void buildInline(Node node);
+	/**
+	 * The next {@code buildBlock(Node)} call should <em>NOT</em> be rendered in its own vertical area, but should instead be treated as an {@code inline} element.
+	 * Example: The execution statement is part of an if statement but has to be a statement, which is normally a block element. This call is generated before
+	 * the execution statement so that the execution statement is printed inline with the if statement.
+	 */
+	void startSuppressBlock();
 	
-	public abstract void closeInline();
+	/**
+	 * Closes the previous {@link #startSuppressBlock()} call.
+	 */
+	void endSuppressBlock();
 	
-	public abstract void startSuppressBlock();
+	/**
+	 * Opens a new AST level which is normally rendered as a block (example: statements, methods, type bodies).
+	 * 
+	 * @param node The AST node that this level represents. Can be {@code null} which signals that the current node has a block substructure.
+	 */
+	void buildBlock(Node node);
 	
-	public abstract void endSuppressBlock();
+	/**
+	 * Closes the previous {@link #buildBlock(Node)} call.
+	 */
+	void closeBlock();
 	
-	public abstract void buildBlock(Node node);
+	/**
+	 * Registers a parse error with the formatter.
+	 */
+	void addError(int errorStart, int errorEnd, String errorMessage);
 	
-	public abstract void closeBlock();
+	/**
+	 * Generate the source representation and return it as a string.
+	 */
+	String finish() throws IOException;
 	
-	public abstract void addError(InputLocation errorStart, InputLocation errorEnd, String errorMessage);
-	
-	public abstract String finish() throws IOException;
-	
-	public abstract void setTimeTaken(long taken);
-	
+	/**
+	 * Reports the total time taken in milliseconds by the parser.
+	 */
+	void setTimeTaken(long taken);
 }

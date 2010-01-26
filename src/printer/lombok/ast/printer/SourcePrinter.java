@@ -118,18 +118,24 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		return false;
 	}
 	
+	private void append(String text) {
+		if (" ".equals(text)) formatter.space();
+		else if ("\n".equals(text)) formatter.verticalSpace();
+		else formatter.append(text);
+	}
+	
 	private void visitAll(ListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
 		if (nodes.isEmpty()) return;
-		formatter.append(prefix);
+		append(prefix);
 		boolean first = true;
 		for (Node n : nodes.getRawContents()) {
 			if (!first) {
-				formatter.append(separator);
+				append(separator);
 			}
 			first = false;
 			visit(n);
 		}
-		formatter.append(suffix);
+		append(suffix);
 	}
 	
 	private boolean isValidJavaIdentifier(String in) {

@@ -49,7 +49,7 @@ public class Main {
 		formatter.setTimeTaken(taken);
 		result.parseTreeRoot.getValue().accept(new SourcePrinter(formatter));
 		for (ParseError x : result.parseErrors) {
-			formatter.addError(x.getErrorStart(), x.getErrorEnd(), x.getErrorMessage());
+			formatter.addError(x.getErrorStart().index, x.getErrorEnd().index, x.getErrorMessage());
 		}
 		
 		File outFile = new File(args[0] + ".html");
