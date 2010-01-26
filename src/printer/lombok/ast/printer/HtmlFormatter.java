@@ -44,12 +44,17 @@ public class HtmlFormatter implements SourceFormatter {
 	private final List<String> inserts = new ArrayList<String>();
 	private final String rawSource;
 	private final List<String> errors = new ArrayList<String>();
+	private String nextElementName;
 	
 	public HtmlFormatter(String rawSource) {
 		this.rawSource = rawSource;
 	}
 	
 	@Override public void reportAssertionFailureNext(Node node, String message, Throwable error) {
+		inserts.add("<span class=\"assertionError\">" + escapeHtml(message) + "</span>");
+	}
+	
+	@Override public void reportAssertionFailure(Node node, String message, Throwable error) {
 		inserts.add("<span class=\"assertionError\">" + escapeHtml(message) + "</span>");
 	}
 	
@@ -134,7 +139,10 @@ public class HtmlFormatter implements SourceFormatter {
 		if (!classes.isEmpty()) {
 			sb.append(" class=\"").append(StringUtils.join(classes, " ")).append("\"");
 		}
-		sb.append(">");
+		if (nextElementName != null) {
+			sb.append(" relation=\"").append(escapeHtml(nextElementName)).append("\"");
+			nextElementName = null;
+		}
 		handleInserts();
 	}
 	
@@ -185,5 +193,10 @@ public class HtmlFormatter implements SourceFormatter {
 	
 	@Override public void setTimeTaken(long taken) {
 		timeTaken = taken + " milliseconds.";
+	}
+	
+	@Override public void nameNextElement(String name) {
+		assert nextElementName == null;
+		nextElementName = name;
 	}
 }

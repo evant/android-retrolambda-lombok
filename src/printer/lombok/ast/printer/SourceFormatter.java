@@ -38,6 +38,15 @@ public interface SourceFormatter {
 	void reportAssertionFailureNext(Node node, String message, Throwable error);
 	
 	/**
+	 * A bug in the parser logic has been found; it should be rendered as a note on the current element.
+	 * 
+	 * @param node The node that is causing the problem; should always be the same as the currently activate {@code buildInline} or {@code buildBlock} call.
+	 * @param message A description of the parser bug found.
+	 * @param error Any associated exception. Can be {@code null}.
+	 */
+	void reportAssertionFailure(Node node, String message, Throwable error);
+	
+	/**
 	 * The AST is not valid; it applies to the current level.
 	 * 
 	 * @param fail Human readable explanation of what's wrong with the AST at this level.
@@ -118,4 +127,11 @@ public interface SourceFormatter {
 	 * Reports the total time taken in milliseconds by the parser.
 	 */
 	void setTimeTaken(long taken);
+	
+	/**
+	 * The next {@link #buildInline(Node)} or {@link #buildBlock(Node)}'s relation to the current block is named by this call.
+	 * 
+	 * Not all elements will get a name, and the name only applies to the next {@code buildBlock/Inline} call, not to any further calls.
+	 */
+	void nameNextElement(String name);
 }
