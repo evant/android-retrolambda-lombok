@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -133,7 +134,8 @@ public class HtmlFormatter implements SourceFormatter {
 	
 	private void generateOpenTag(Node node, String tagName) {
 		Set<String> classes = new HashSet<String>();
-		findHtmlClassSignificantNodes(classes, node == null ? null : node.getClass());
+		AtomicReference<String> kind = new AtomicReference<String>();
+		findHtmlClassSignificantNodes(classes, kind, node == null ? null : node.getClass());
 		
 		sb.append("<").append(tagName);
 		if (!classes.isEmpty()) {
@@ -143,15 +145,24 @@ public class HtmlFormatter implements SourceFormatter {
 			sb.append(" relation=\"").append(escapeHtml(nextElementName)).append("\"");
 			nextElementName = null;
 		}
+		if (kind.get() != null) {
+			sb.append(" kind=\"").append(escapeHtml(kind.get())).append("\"");
+		}
+		sb.append(">");
 		handleInserts();
 	}
 	
-	private static void findHtmlClassSignificantNodes(Set<String> names, Class<?> c) {
+	private static void findHtmlClassSignificantNodes(Set<String> names, AtomicReference<String> kind, Class<?> c) {
 		if (c == null) return;
-		Matcher m = HTML_CLASS_SIGNIFICANT_NODE.matcher(c.getName());
-		if (m.matches()) names.add(c.getSimpleName());
-		findHtmlClassSignificantNodes(names, c.getSuperclass());
-		for (Class<?> i : c.getInterfaces()) findHtmlClassSignificantNodes(names, i);
+		if (java.lang.reflect.Modifier.isPublic(c.getModifiers())) {
+			Matcher m = HTML_CLASS_SIGNIFICANT_NODE.matcher(c.getName());
+			if (m.matches()) {
+				names.add(c.getSimpleName());
+				if (kind.get() == null) kind.set(c.getSimpleName());
+			}
+		}
+		findHtmlClassSignificantNodes(names, kind, c.getSuperclass());
+		for (Class<?> i : c.getInterfaces()) findHtmlClassSignificantNodes(names, kind, i);
 	}
 	
 	@Override public void closeBlock() {
