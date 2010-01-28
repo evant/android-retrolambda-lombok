@@ -35,6 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import lombok.Cleanup;
+import lombok.ast.DescribedNode;
 import lombok.ast.Node;
 
 import org.apache.commons.io.IOUtils;
@@ -136,6 +137,7 @@ public class HtmlFormatter implements SourceFormatter {
 		Set<String> classes = new HashSet<String>();
 		AtomicReference<String> kind = new AtomicReference<String>();
 		findHtmlClassSignificantNodes(classes, kind, node == null ? null : node.getClass());
+		String description = node instanceof DescribedNode ? ((DescribedNode)node).getDescription() : null;
 		
 		sb.append("<").append(tagName);
 		if (!classes.isEmpty()) {
@@ -148,6 +150,10 @@ public class HtmlFormatter implements SourceFormatter {
 		if (kind.get() != null) {
 			sb.append(" kind=\"").append(escapeHtml(kind.get())).append("\"");
 		}
+		if (description != null) {
+			sb.append(" description=\"").append(escapeHtml(description)).append("\"");
+		}
+		
 		sb.append(">");
 		handleInserts();
 	}

@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!--
  Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
  
@@ -21,7 +23,6 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 -->
-	<head>
 		<title>{{@title}}</title>
 		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
 		<script type="text/javascript"><!--
@@ -30,6 +31,7 @@
 			(function() {
 				$(function() {
 					parenHighlighting();
+					makeTree();
 				});
 				
 				function parenHighlighting() {
@@ -41,12 +43,69 @@
 						$("#clos_" + i + ", #open_" + i).toggleClass("outlined");
 					});
 				}
+				
+				function makeTreeElement(elem) {
+					var e = $(elem);
+					var kind = e.attr("kind");
+					var desc = e.attr("description");
+					if (!kind) return null;
+					
+					var txt = e.attr("relation");
+					txt = txt ? (txt + ": ") : "";
+					txt += kind;
+					if (desc) txt += " " + desc;
+					var out = $("<div>").addClass("expanded");
+					out.append($("<span>").addClass("treeNodeArrow"));
+					out.append($("<span>").addClass("treeNodeDescription").text(txt));
+					e.children().each(function() {
+						var c = makeTreeElement(this);
+						if (c) out.append(c);
+					});
+					return out;
+				}
+				
+				function makeTree() {
+					$("#source>.Node").each(function() {
+						var elem = makeTreeElement(this);
+						$("#tree").append(elem);
+					});
+				}
 			})();
 			
 		// -->
 		</script>
 		<style type="text/css">
-			.ast {
+			#tree div {
+				margin-left: 4px;
+			}
+			
+			#tree div.collapsed div {
+				display: none;
+			}
+			
+			#tree .treeNodeArrow {
+				padding: 0;
+				margin-top: 4px;
+				margin-right: 8px;
+				width: 0;
+				height: 0;
+			}
+			
+			#tree div.collapsed .treeNodeArrow {
+				border-left: #bbb 10px solid;
+				border-right: 0;
+				border-top: #fff 6px solid;
+				border-bottom: #fff 6px solid;
+			}
+			
+			#tree div.expanded .treeNodeArrow {
+				border-left: #fff 6px solid;
+				border-right: #fff 6px solid;
+				border-top: #bbb 10px solid;
+				border-bottom: 0;
+			}
+			
+			#source {
 				font-family: "Inconsolata", "DejaVu Sans Mono", "Consolidas", "Monaco", monospace;
 				font-size: 18px;
 			}
@@ -81,19 +140,39 @@
 				height: 600px;
 			}
 			
+			#main {
+				height: 67%;
+				width: 95%;
+				position: fixed;
+				overflow: scroll;
+			}
+			
+			#tree {
+				position: fixed;
+				height: 30%;
+				top: 69%;
+				width: 95%;
+				padding: 0;
+				margin: 0;
+				border-top: 2px solid #222;
+				overflow: scroll;
+			}
 			{{@css}}
 		</style>
 	</head>
 	<body>
-		<h1>HTML tree for source file: <span class="filename">{{@file}}</span></h1>
-		<div class="ast">
-			{{@body}}
+		<div id="main">
+			<h1>HTML tree for source file: <span class="filename">{{@file}}</span></h1>
+			<div id="source">
+				{{@body}}
+			</div>
+			<h2>Parse Errors</h2>
+			{{@errors}}
+			<h2>Time taken</h2>
+			{{@timeTaken}}
+			<h2>raw source</h2>
+			<textarea class="rawSource">{{@rawSource}}</textarea>
 		</div>
-		<h2>Parse Errors</h2>
-		{{@errors}}
-		<h2>Time taken</h2>
-		{{@timeTaken}}
-		<h2>raw source</h2>
-		<textarea class="rawSource">{{@rawSource}}</textarea>
+		<div id="tree"></div>
 	</body>
 </html>
