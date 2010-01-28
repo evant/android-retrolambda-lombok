@@ -38,10 +38,19 @@ class AssertTemplate {
 	Expression message;
 }
 
-@GenerateAstNode(implementing=Statement.class)
+@GenerateAstNode(implementing={Statement.class, DescribedNode.class})
 class CatchTemplate {
 	@NonNull VariableDefinition exceptionDeclaration;
 	@NonNull Block body;
+	
+	@CopyMethod
+	static String getDescription(Catch self) {
+		try {
+			return self.getExceptionDeclaration().getTypeReference().getDescription();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 	
 	/* check: exDecl must have exactly 1 VDEntry */
 }
@@ -105,10 +114,19 @@ class TryTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
 class AnnotationTemplate {
 	@NonNull TypeReference annotationTypeReference;
 	List<AnnotationElement> elements;
+	
+	@CopyMethod
+	static String getDescription(Annotation self) {
+		try {
+			return self.getAnnotationTypeReference().getDescription();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 	
 	@CopyMethod
 	static List<Node> getValueValues(Annotation self) {
@@ -129,10 +147,19 @@ class AnnotationTemplate {
 	}
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing={DescribedNode.class})
 class AnnotationElementTemplate {
 	Identifier name;
 	@NonNull Expression value;
+	
+	@CopyMethod
+	static String getDescription(AnnotationElement self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 	
 	@CopyMethod
 	static List<Node> getValues(AnnotationElement self) {
@@ -243,18 +270,32 @@ class InlineIfExpressionTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
 class IdentifierTemplate {
 	@NotChildOfNode
 	@NonNull String name;
+	
+	@CopyMethod
+	static String getDescription(Identifier self) {
+		return self.getName();
+	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
 class BinaryExpressionTemplate {
 	@NonNull Expression left;
 	@NonNull Expression right;
 	@NotChildOfNode(rawFormParser="parseOperator", rawFormGenerator="generateOperator")
 	@NonNull BinaryOperator operator;
+	
+	@CopyMethod
+	static String getDescription(BinaryExpression self) {
+		try {
+			return self.getOperator().getSymbol();
+		} catch (Exception e) {
+			return self.getRawOperator();
+		}
+	}
 	
 	static String generateOperator(BinaryOperator op) {
 		return op.getSymbol();
@@ -334,11 +375,20 @@ class BinaryExpressionTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
 class UnaryExpressionTemplate {
 	@NonNull Expression operand;
 	@NotChildOfNode
 	@NonNull UnaryOperator operator;
+	
+	@CopyMethod
+	static String getDescription(UnaryExpression self) {
+		try {
+			return String.format("%s%s%s", self.getOperator().isPostfix() ? "X" : "", self.getOperator().getSymbol(), self.getOperator().isPostfix() ? "" : "X");
+		} catch (Exception e) {
+			return null;
+		}
+	}
 	
 	@CopyMethod
 	static boolean needsParentheses(UnaryExpression self) {
@@ -350,13 +400,22 @@ class UnaryExpressionTemplate {
 	}
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=DescribedNode.class)
 class TypeVariableTemplate {
 	@NonNull Identifier name;
 	List<TypeReference> extending;
+	
+	@CopyMethod
+	static String getDescription(TypeVariable self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=DescribedNode.class)
 class TypeReferenceTemplate {
 	@NotChildOfNode
 	@InitialValue("lombok.ast.WildcardKind.NONE")
@@ -366,6 +425,15 @@ class TypeReferenceTemplate {
 	int arrayDimensions;
 	
 	List<TypeReferencePart> parts;
+	
+	@CopyMethod
+	static String getDescription(TypeReference self) {
+		try {
+			return self.getTypeName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 	
 	@CopyMethod
 	static String getTypeName(TypeReference t) {
@@ -469,13 +537,22 @@ class InstanceOfTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
 class ConstructorInvocationTemplate {
 	Expression qualifier;
 	TypeArguments constructorTypeArguments;
 	@NonNull TypeReference typeReference;
 	List<Expression> arguments;
 	TypeBody anonymousClassBody;
+	
+	@CopyMethod
+	static String getDescription(ConstructorInvocation self) {
+		try {
+			return self.getTypeReference().getDescription();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
 @GenerateAstNode(implementing=Statement.class)
@@ -491,12 +568,21 @@ class SuperConstructorInvocationTemplate {
 	List<Expression> arguments;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
 class MethodInvocationTemplate {
 	Expression operand;
 	TypeArguments methodTypeArguments;
 	@NonNull Identifier name;
 	List<Expression> arguments;
+	
+	@CopyMethod
+	static String getDescription(MethodInvocation self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
 @GenerateAstNode(implementing=Expression.class)
@@ -538,24 +624,47 @@ class SuperTemplate {
 	TypeReference qualifier;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
 class ClassLiteralTemplate {
 	@NonNull TypeReference typeReference;
+	
+	@CopyMethod
+	static String getDescription(ClassLiteral self) {
+		try {
+			return self.getTypeReference().getDescription();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=DescribedNode.class)
 class KeywordModifierTemplate {
 	@NotChildOfNode
 	@NonNull String name;
+	
+	@CopyMethod
+	static String getDescription(KeywordModifier self) {
+		return self.getName();
+	}
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class EmptyStatementTemplate {}
 
-@GenerateAstNode(implementing=Statement.class)
+@GenerateAstNode(implementing={Statement.class, DescribedNode.class})
 class LabelledStatementTemplate {
 	@NonNull Identifier label;
 	@NonNull Statement statement;
+	
+	@CopyMethod
+	static String getDescription(LabelledStatement self) {
+		try {
+			return self.getLabel().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
 @GenerateAstNode(implementing=Statement.class)
@@ -591,10 +700,15 @@ class BooleanLiteralTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Expression.class, Literal.class})
+@GenerateAstNode(implementing={Expression.class, Literal.class, DescribedNode.class})
 class CharLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseChar", rawFormGenerator="generateChar")
 	@NonNull Character value;
+	
+	@CopyMethod
+	static String getDescription(CharLiteral self) {
+		return self.getValue() != null ? String.valueOf(self.getValue()) : null;
+	}
 	
 	static String toEscape(char c, boolean forCharLiteral, char next) {
 		if (c == '\'') return forCharLiteral ? "\\'" : "'";
@@ -671,10 +785,18 @@ class CharLiteralTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Literal.class, Expression.class})
+@GenerateAstNode(implementing={Literal.class, Expression.class, DescribedNode.class})
 class StringLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseString", rawFormGenerator="generateString")
 	@NonNull String value;
+	
+	@CopyMethod
+	static String getDescription(StringLiteral self) {
+		if (self.getValue() == null) return null;
+		String v = self.getValue();
+		if (v.length() > 17) return v.substring(0, 8) + "\u2026" + v.substring(v.length() - 8);
+		return v;
+	}
 	
 	static String generateString(String literal) {
 		StringBuilder raw = new StringBuilder().append('"');
@@ -801,7 +923,7 @@ class CommentTemplate {
 	String content;
 }
 
-@GenerateAstNode(implementing=TypeMember.class)
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
 class AnnotationMethodDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -809,9 +931,18 @@ class AnnotationMethodDeclarationTemplate {
 	@NonNull TypeReference returnTypeReference;
 	@NonNull Identifier methodName;
 	Expression defaultValue;
+	
+	@CopyMethod
+	static String getDescription(AnnotationMethodDeclaration self) {
+		try {
+			return self.getMethodName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
-@GenerateAstNode(implementing=TypeMember.class)
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
 class MethodDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -822,6 +953,15 @@ class MethodDeclarationTemplate {
 	List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
 	@NonNull Block body;
+	
+	@CopyMethod
+	static String getDescription(MethodDeclaration self) {
+		try {
+			return self.getMethodName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
 @GenerateAstNode(implementing=TypeMember.class)
@@ -858,6 +998,15 @@ class AnnotationDeclarationTemplate {
 	
 	@NonNull Identifier name;
 	@NonNull TypeBody body;
+	
+	@CopyMethod
+	static String getDescription(AnnotationDeclaration self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
 @GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class})
@@ -870,6 +1019,15 @@ class ClassDeclarationTemplate {
 	List<TypeVariable> typeVariables;
 	TypeReference extending;
 	List<TypeReference> implementing;
+	
+	@CopyMethod
+	static String getDescription(ClassDeclaration self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
@@ -881,17 +1039,35 @@ class InterfaceDeclarationTemplate {
 	@NonNull TypeBody body;
 	List<TypeVariable> typeVariables;
 	List<TypeReference> extending;
+	
+	@CopyMethod
+	static String getDescription(InterfaceDeclaration self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
 class EnumConstantTemplate {
 	TypeBody body;
 	@NonNull Identifier name;
 	List<Annotation> annotations;
 	List<Expression> arguments;
+	
+	@CopyMethod
+	static String getDescription(EnumConstant self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
-@GenerateAstNode(implementing=TypeMember.class)
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class EnumDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
 	@NonNull Modifiers modifiers;
@@ -900,6 +1076,15 @@ class EnumDeclarationTemplate {
 	@NonNull TypeBody body;
 	List<EnumConstant> constants;
 	List<TypeReference> implementing;
+	
+	@CopyMethod
+	static String getDescription(EnumDeclaration self) {
+		try {
+			return self.getName().getName();
+		} catch (Exception e) {
+			return null;
+		}
+	}
 }
 
 @GenerateAstNode

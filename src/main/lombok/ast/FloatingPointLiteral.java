@@ -25,11 +25,15 @@ import java.util.List;
 
 import lombok.Getter;
 
-public class FloatingPointLiteral extends AbstractNode implements Literal, Expression {
+public class FloatingPointLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
 	private Double value;
 	private String rawValue;
 	private String errorReason = "Missing value";
 	@Getter private boolean markedAsFloat;
+	
+	@Override public String getDescription() {
+		return value != null ? String.valueOf(value) : null;
+	}
 	
 	public FloatingPointLiteral setDoubleValue(double value) {
 		checkSpecialValues(value);
@@ -49,7 +53,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		return this;
 	}
 	
-	public FloatingPointLiteral copy() {
+	@Override public FloatingPointLiteral copy() {
 		FloatingPointLiteral result = new FloatingPointLiteral();
 		result.value = value;
 		result.rawValue = result.rawValue;
@@ -96,7 +100,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		return value.floatValue();
 	}
 	
-	public String getRawValue() {
+	@Override public String getRawValue() {
 		return rawValue;
 	}
 	

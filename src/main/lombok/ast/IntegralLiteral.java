@@ -25,13 +25,17 @@ import java.util.List;
 
 import lombok.Getter;
 
-public class IntegralLiteral extends AbstractNode implements Literal, Expression {
+public class IntegralLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
 	private Long value;
 	private String rawValue;
 	private String errorReason = "Missing value";
 	@Getter private boolean markedAsLong;
 	
-	public IntegralLiteral copy() {
+	@Override public String getDescription() {
+		return value != null ? String.valueOf(value) : null;
+	}
+	
+	@Override public IntegralLiteral copy() {
 		IntegralLiteral result = new IntegralLiteral();
 		result.value = value;
 		result.rawValue = rawValue;
@@ -100,7 +104,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		return value.intValue();
 	}
 	
-	public String getRawValue() {
+	@Override public String getRawValue() {
 		return rawValue;
 	}
 	

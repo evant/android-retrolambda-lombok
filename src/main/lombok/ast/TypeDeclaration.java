@@ -1,5 +1,5 @@
 package lombok.ast;
 
-public interface TypeDeclaration extends Node {
+public interface TypeDeclaration extends Node, DescribedNode {
 	
 }
