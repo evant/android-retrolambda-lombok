@@ -179,18 +179,23 @@ public class HtmlFormatter implements SourceFormatter {
 		errors.add(String.format("<div class=\"parseError\">%s</div>", escapeHtml(errorMessage)));
 	}
 	
+	private String readResource(String resource) throws IOException {
+		@Cleanup InputStream in = getClass().getResourceAsStream(resource);
+		return IOUtils.toString(in, "UTF-8");
+	}
+	
 	@Override public String finish() throws IOException {
-		String template;
-		{
-			@Cleanup InputStream in = getClass().getResourceAsStream("ast.html");
-			template = IOUtils.toString(in, "UTF-8");
-		}
+		String template = readResource("web/ast.html");
+		String cssContent = readResource("web/ast.css");
+		String scriptContent = readResource("web/ast.js");
+		String jQuery = readResource("web/jquery.js");
 		
 		return template
 				.replace("{{@title}}", "AST nodes")
 				.replace("{{@file}}", "source file name goes here")
-				.replace("{{@script}}", "")
-				.replace("{{@css}}", "")
+				.replace("{{@jQuery}}", jQuery)
+				.replace("{{@script}}", scriptContent)
+				.replace("{{@css}}", cssContent)
 				.replace("{{@body}}", sb.toString())
 				.replace("{{@errors}}", printErrors())
 				.replace("{{@rawSource}}", escapeHtml(rawSource))

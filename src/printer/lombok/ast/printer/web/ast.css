@@ -1,0 +1,91 @@
+#tree div {
+	padding-left: 4px;
+	margin-left: 1em;
+}
+
+#tree>div {
+	padding-left: 0px;
+	margin-left: 0px;
+}
+
+#tree div.collapsed div {
+	display: none;
+}
+
+.highlight {
+	background-color: #ffbcff;
+}
+
+#tree .treeNodeArrow {
+	padding: 0;
+	margin: 0 2px 0 0;
+	width: 10px;
+	height: 16px;
+	display: block;
+	float: left;
+}
+
+#tree div.collapsed>.treeNodeArrow {
+	background: url("data:image/gif;base64,R0lGODlhCgAKAKIAADMzM//M/7u7u2ZmZt3d3f///wAAAAAAACH5BAEHAAEALAAAAAAKAAoAAAMVGLrM0+7BMIpsg1iYBeDeNHwTOUEJADs=") no-repeat 0 3px;
+}
+
+#tree div.expanded>.treeNodeArrow {
+	background: url("data:image/gif;base64,R0lGODlhCgAKAKIAADMzM//M/2ZmZt3d3f///wAAAAAAAAAAACH5BAEHAAEALAAAAAAKAAoAAAMUGLrc/rCJSecCJBPQwBicA4RRuSQAOw==") no-repeat 0 3px;
+}
+
+#tree div.leaf>.treeNodeArrow {
+	background: url("data:image/gif;base64,R0lGODlhCgAKAKIAADMzM//M/2ZmZt3d3f///wAAAAAAAAAAACH5BAEAAAEALAAAAAAKAAoAAAMVGLrc/k6IJwiZDFgLGhhD5wAiZDYJADs=") no-repeat 0 3px;
+}
+
+#source {
+	font-family: "Inconsolata", "DejaVu Sans Mono", "Consolidas", "Monaco", monospace;
+	font-size: 18px;
+}
+
+.outlined {
+	outline: solid black 1px;
+}
+
+#source div {
+	margin-left: 2em;
+}
+
+#source div.Node {
+	margin-left: 0;
+}
+
+.keyword {
+	color: maroon;
+}
+
+.Literal {
+	color: DarkBlue;
+}
+
+#source span.blockSuppress>div {
+	display: inline;
+	margin-left: 0;
+}
+
+.rawSource {
+	width: 80%;
+	height: 600px;
+}
+
+#main {
+	height: 67%;
+	width: 95%;
+	position: fixed;
+	overflow: scroll;
+}
+
+#tree {
+	position: fixed;
+	height: 30%;
+	top: 69%;
+	width: 95%;
+	padding: 0;
+	margin: 0;
+	border-top: 2px solid #222;
+	overflow: scroll;
+}
