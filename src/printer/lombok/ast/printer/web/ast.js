@@ -19,13 +19,6 @@
 		var ctr = 0;
 		var currentHighlight = $();
 		
-		function dehighlightTreeItem() {
-			if (currentHighlight.size() > 0) {
-				currentHighlight.removeClass("highlight");
-				currentHighlight = $();
-			}
-		}
-		
 		function makeTreeElement(elem) {
 			var e = $(elem);
 			var kind = e.attr("kind");
@@ -76,29 +69,22 @@
 			if (elem) $("#tree").append(elem);
 		});
 		
+		var $tree = $("#tree");
+		
 		$("#source .Node").mouseover(function(evt) {
 			var key = evt.currentTarget ? $(evt.currentTarget).data("treeKey") : "";
 			if (!key) return;
 			evt.stopPropagation();
-			var node = key ? $("#" + key) : $();
-			if (node.size() == 0) {
-				dehighlightTreeItem();
-				return;
-			}
-			if (currentHighlight.size() > 0 && currentHighlight.first() == node.first()) return;
-			dehighlightTreeItem();
-			currentHighlight = node;
-			currentHighlight.addClass("highlight");
+			currentHighlight.removeClass("highlight");
+			currentHighlight = $("#" + key).addClass("highlight");
 		}).dblclick(function(evt) {
 			var key = evt.currentTarget ? $(evt.currentTarget).data("treeKey") : "";
-			if (key) {
-				var c = $("#tree");
-				var t = $("#" + key);
-				t.parents(".collapsed").removeClass("collapsed").addClass("expanded");
-				var s = t.offset().top - c.offset().top;
-				c.animate({scrollTop: "+=" + s + "px"}, 250);
-				evt.stopPropagation();
-			}
+			if (!key) return;
+			evt.stopPropagation();
+			var t = $("#" + key);
+			t.parents(".collapsed").removeClass("collapsed").addClass("expanded");
+			var s = t.offset().top - $tree.offset().top;
+			$tree.animate({scrollTop: "+=" + s + "px"}, 250);
 		});
 	}
 })();
