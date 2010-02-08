@@ -23,15 +23,17 @@ package lombok.ast.grammar;
 
 import lombok.ast.Node;
 
+import org.parboiled.Action;
 import org.parboiled.BaseParser;
-import org.parboiled.Parboiled;
+import org.parboiled.Context;
 import org.parboiled.Rule;
+import org.parboiled.support.Cached;
 
-public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
-	private final ParserGroup group;
+public class ExpressionsParser extends BaseParser<Node>{
+	final ParserGroup group;
+	final ExpressionsActions actions = new ExpressionsActions();
 	
 	public ExpressionsParser(ParserGroup group) {
-		super(Parboiled.createActions(ExpressionsActions.class));
 		this.group = group;
 	}
 	
@@ -62,7 +64,7 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 				group.basics.testLexBreak(),
 				group.basics.optWS(),
 				testNot(ch('(')),
-				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuper"), (Node) NULL())));
+				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuper"), null)));
 	}
 	
 	/**
@@ -434,16 +436,27 @@ public class ExpressionsParser extends BaseParser<Node, ExpressionsActions>{
 	/**
 	 * @param operator Careful; operator has to match _ONLY_ the operator, not any whitespace around it (otherwise we'd have to remove comments from it, which isn't feasible).
 	 */
+	@Cached
 	Rule forLeftAssociativeBinaryExpression(Rule operator, Rule nextHigher) {
 		return sequence(
-				nextHigher, SET(),
+				nextHigher, new Action<Node>() {
+					@Override public boolean run(Context<Node> context) {
+						setContext(context);
+						return SET();
+					}
+				},
 				group.basics.optWS(),
 				zeroOrMore(sequence(
 						operator.label("operator"),
 						group.basics.optWS(),
 						nextHigher.label("tail"),
 						group.basics.optWS())),
-				SET(actions.createLeftAssociativeBinaryExpression(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail"))),
+				new Action<Node>() {
+					@Override public boolean run(Context<Node> context) {
+						setContext(context);
+						return SET(actions.createLeftAssociativeBinaryExpression(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail")));
+					}
+				},
 				group.basics.optWS());
 	}
 	

@@ -45,7 +45,6 @@ import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
 import lombok.ast.UnaryOperator;
 
-import org.parboiled.ActionResult;
 import org.parboiled.BaseActions;
 
 public class ExpressionsActions extends BaseActions<Node> {
@@ -233,14 +232,11 @@ public class ExpressionsActions extends BaseActions<Node> {
 		return new This().setRawQualifier(qualifier);
 	}
 	
-	public ActionResult checkIfLevel1ExprIsValidForAssignment(Node node) {
-		if (node instanceof Identifier) return ActionResult.CONTINUE;
-		if (node instanceof Select) return ActionResult.CONTINUE;
-		if (node instanceof ArrayAccess) return ActionResult.CONTINUE;
-		return ActionResult.CANCEL_MATCH;
+	public boolean checkIfLevel1ExprIsValidForAssignment(Node node) {
+		return node instanceof Identifier || node instanceof Select || node instanceof ArrayAccess;
 	}
 	
-	public ActionResult checkIfMethodOrConstructorInvocation(Node node) {
-		return (node instanceof MethodInvocation || node instanceof ConstructorInvocation) ? ActionResult.CONTINUE : ActionResult.CANCEL_MATCH;
+	public boolean checkIfMethodOrConstructorInvocation(Node node) {
+		return node instanceof MethodInvocation || node instanceof ConstructorInvocation;
 	}
 }

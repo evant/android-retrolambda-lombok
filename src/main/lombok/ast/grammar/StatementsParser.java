@@ -3,14 +3,13 @@ package lombok.ast.grammar;
 import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
-import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
-public class StatementsParser extends BaseParser<Node, StatementsActions> {
-	private final ParserGroup group;
+public class StatementsParser extends BaseParser<Node> {
+	final ParserGroup group;
+	final StatementsActions actions = new StatementsActions();
 	
 	public StatementsParser(ParserGroup group) {
-		super(Parboiled.createActions(StatementsActions.class));
 		this.group = group;
 	}
 	

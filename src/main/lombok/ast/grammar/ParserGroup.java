@@ -9,5 +9,4 @@ public class ParserGroup {
 	public final ExpressionsParser expressions = Parboiled.createParser(ExpressionsParser.class, this);
 	public final StatementsParser statements = Parboiled.createParser(StatementsParser.class, this);
 	public final StructuresParser structures = Parboiled.createParser(StructuresParser.class, this);
-	public final JavaParser java = Parboiled.createParser(JavaParser.class, this);
 }

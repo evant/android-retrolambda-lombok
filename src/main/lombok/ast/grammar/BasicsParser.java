@@ -34,7 +34,6 @@ import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.MatcherContext;
-import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 import org.parboiled.matchers.AbstractMatcher;
 import org.parboiled.support.Characters;
@@ -42,12 +41,11 @@ import org.parboiled.support.Characters;
 /**
  * Contains the basics of java parsing: Whitespace and comment handling, as well as applying backslash-u escapes.
  */
-public class BasicsParser extends BaseParser<Node, BasicsActions> {
-	@SuppressWarnings("unused")
-	private final ParserGroup group;
+public class BasicsParser extends BaseParser<Node> {
+	final ParserGroup group;
+	final BasicsActions actions = new BasicsActions();
 	
 	public BasicsParser(ParserGroup group) {
-		super(Parboiled.createActions(BasicsActions.class));
 		this.group = group;
 	}
 	/**
@@ -56,7 +54,7 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 	public Rule optWS() {
 		return sequence(
 				zeroOrMore(firstOf(comment(), whitespaceChar())),
-				SET((Node) NULL()));
+				SET((Node) null));
 	}
 	
 	/**
@@ -120,7 +118,7 @@ public class BasicsParser extends BaseParser<Node, BasicsActions> {
 			return c;
 		}
 		
-		@Override public boolean match(MatcherContext<Node> context, boolean enforced) {
+		@Override public boolean match(MatcherContext<Node> context) {
 			char current = context.getCurrentLocation().currentChar;
 			if (start ? Character.isJavaIdentifierStart(current) : Character.isJavaIdentifierPart(current)) {
 				context.advanceInputLocation();

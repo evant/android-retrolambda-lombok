@@ -25,7 +25,6 @@ import lombok.ast.Comment;
 import lombok.ast.Identifier;
 import lombok.ast.Node;
 
-import org.parboiled.ActionResult;
 import org.parboiled.BaseActions;
 
 public class BasicsActions extends BaseActions<Node> {
@@ -33,9 +32,8 @@ public class BasicsActions extends BaseActions<Node> {
 		return text == null ? new Identifier() : new Identifier().setName(text);
 	}
 	
-	public ActionResult checkIfKeyword(String text) {
-		if (text == null) return ActionResult.CONTINUE;
-		return BasicsParser.KEYWORDS.contains(text) ? ActionResult.CANCEL_MATCH : ActionResult.CONTINUE;
+	public boolean checkIfKeyword(String text) {
+		return text == null || !BasicsParser.KEYWORDS.contains(text);
 	}
 	
 	public Node createBlockComment(String text) {

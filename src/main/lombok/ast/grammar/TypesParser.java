@@ -24,14 +24,13 @@ package lombok.ast.grammar;
 import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
-import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
-public class TypesParser extends BaseParser<Node, TypesActions> {
-	private final ParserGroup group;
+public class TypesParser extends BaseParser<Node> {
+	final ParserGroup group;
+	final TypesActions actions = new TypesActions();
 	
 	public TypesParser(ParserGroup group) {
-		super(Parboiled.createActions(TypesActions.class));
 		this.group = group;
 	}
 	

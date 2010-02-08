@@ -41,9 +41,9 @@ public class Main {
 		
 		String rawSource = FileUtils.readFileToString(new File(args[0]), "UTF-8");
 		ParserGroup group = new ParserGroup();
-		ParsingResult<Node> result = group.structures.parse(group.structures.compilationUnit(), rawSource + "\n");
+		ParsingResult<Node> result = group.structures.parse(group.structures.compilationUnitEoi(), rawSource + "\n");
 		long now = System.currentTimeMillis();
-		result = group.structures.parse(group.structures.compilationUnit(), rawSource + "\n");
+		result = group.structures.parse(group.structures.compilationUnitEoi(), rawSource + "\n");
 		long taken = System.currentTimeMillis() - now;
 		SourceFormatter formatter = new HtmlFormatter(rawSource + "\n");
 		formatter.setTimeTaken(taken);

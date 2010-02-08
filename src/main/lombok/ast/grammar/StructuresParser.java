@@ -1,20 +1,15 @@
 package lombok.ast.grammar;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
-import org.parboiled.Parboiled;
 import org.parboiled.Rule;
 
-public class StructuresParser extends BaseParser<Node, StructuresActions> {
-	private final ParserGroup group;
+public class StructuresParser extends BaseParser<Node> {
+	final ParserGroup group;
+	final StructuresActions actions = new StructuresActions();
 	
 	public StructuresParser(ParserGroup group) {
-		super(Parboiled.createActions(StructuresActions.class));
 		this.group = group;
 	}
 	
@@ -314,17 +309,15 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 				group.expressions.inlineIfExpressionChaining());
 	}
 	
-	private static final List<String> MODIFIER_KEYWORDS = Collections.unmodifiableList(Arrays.asList(
-			"final", "strictfp", "abstract", "transient", "volatile",
-			"public", "protected", "private", "static", "native"
-			));
+	Rule anyKeyword() {
+		return firstOf("final", "strictfp", "abstract", "transient", "volatile",
+				"public", "protected", "private", "static", "native");
+
+	}
 	
 	public Rule keywordModifier() {
-		Object[] tail = new Object[MODIFIER_KEYWORDS.size() - 2];
-		for (int i = 2; i < MODIFIER_KEYWORDS.size(); i++) tail[i-2] = string(MODIFIER_KEYWORDS.get(i));
-		
 		return sequence(
-				firstOf(string(MODIFIER_KEYWORDS.get(0)), string(MODIFIER_KEYWORDS.get(1)), tail).label("keyword"),
+				anyKeyword().label("keyword"),
 				group.basics.testLexBreak(),
 				SET(actions.createKeywordModifier(TEXT("keyword"))),
 				group.basics.optWS());
@@ -384,6 +377,10 @@ public class StructuresParser extends BaseParser<Node, StructuresActions> {
 						ch('*'), group.basics.optWS())).label("dotStar"),
 				ch(';'), group.basics.optWS(),
 				SET(actions.createImportDeclaration(TEXT("static"), VALUE("head"), VALUES("zeroOrMore/tail"), TEXT("dotStar"))));
+	}
+	
+	public Rule compilationUnitEoi() {
+		return enforcedSequence(compilationUnit(), eoi());
 	}
 	
 	public Rule compilationUnit() {
