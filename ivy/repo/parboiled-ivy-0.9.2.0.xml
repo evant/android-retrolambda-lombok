@@ -1,5 +1,5 @@
 <ivy-module version="2.0">
-	<info organisation="projectlombok.org" module="parboiled" revision="0.8.5.0" publication="20100118193400">
+	<info organisation="projectlombok.org" module="parboiled" revision="0.9.2.0" publication="20100202120000">
 		<license name="Apache License" url="http://www.apache.org/licenses/LICENSE-2.0" />
 		<ivyauthor name="Mathias" url="http://github.com/sirthias" />
 		<description homepage="http://parboiled.org/" />
@@ -8,9 +8,6 @@
 		<conf name="runtime" description="Runtime dependencies only" />
 	</configurations>
 	<publications>
-		<artifact name="parboiled" type="jar" conf="runtime" url="http://cloud.github.com/downloads/sirthias/parboiled/parboiled-0.8.5.0.jar" />
+		<artifact name="parboiled" type="jar" conf="runtime" url="http://cloud.github.com/downloads/sirthias/parboiled/parboiled-0.9.2.0.jar" />
 	</publications>
-	<dependencies>
-		<dependency org="cglib" name="cglib-nodep" rev="2.2" conf="runtime->master" />
-	</dependencies>
 </ivy-module>
