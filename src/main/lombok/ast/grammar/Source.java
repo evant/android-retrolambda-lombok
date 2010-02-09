@@ -88,7 +88,8 @@ public class Source {
 	int mapPositionRtrim(int pos) {
 		char c;
 		
-		pos++;
+		pos = Math.min(pos +1, preprocessed.length());
+		
 		do {
 			if (pos == 0) return 0;
 			c = preprocessed.charAt(--pos);
