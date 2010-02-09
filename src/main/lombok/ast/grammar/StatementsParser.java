@@ -7,9 +7,10 @@ import org.parboiled.Rule;
 
 public class StatementsParser extends BaseParser<Node> {
 	final ParserGroup group;
-	final StatementsActions actions = new StatementsActions();
+	final StatementsActions actions;
 	
 	public StatementsParser(ParserGroup group) {
+		this.actions = new StatementsActions(group.getSource());
 		this.group = group;
 	}
 	

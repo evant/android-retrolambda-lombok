@@ -9,6 +9,8 @@ import lombok.ast.Position;
 import lombok.ast.SyntaxProblem;
 
 abstract class TemporaryNode implements Node {
+	private Position position = Position.UNPLACED;
+
 	@Override public void accept(ASTVisitor visitor) {
 		visitor.visitParseArtefact(this);
 	}
@@ -85,11 +87,13 @@ abstract class TemporaryNode implements Node {
 		return false;
 	}
 	
-	@Override public void setPosition(Position position) {
+	@Override public Node setPosition(Position position) {
+		this.position = position;
+		return this;
 	}
 	
 	@Override public Position getPosition() {
-		return null;
+		return position;
 	}
 	
 	@Override public Node getParent() {

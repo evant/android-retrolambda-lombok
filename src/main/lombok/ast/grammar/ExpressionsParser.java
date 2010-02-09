@@ -29,11 +29,12 @@ import org.parboiled.Context;
 import org.parboiled.Rule;
 import org.parboiled.support.Cached;
 
-public class ExpressionsParser extends BaseParser<Node>{
+public class ExpressionsParser extends BaseParser<Node> {
 	final ParserGroup group;
-	final ExpressionsActions actions = new ExpressionsActions();
+	final ExpressionsActions actions;
 	
 	public ExpressionsParser(ParserGroup group) {
+		this.actions = new ExpressionsActions(group.getSource());
 		this.group = group;
 	}
 	
@@ -99,9 +100,9 @@ public class ExpressionsParser extends BaseParser<Node>{
 				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.types.type().label("type"),
 				oneOrMore(enforcedSequence(
-						ch('['), group.basics.optWS(),
+						ch('[').label("openArray"), group.basics.optWS(),
 						optional(anyExpression()).label("dimension"), ch(']'), group.basics.optWS(),
-						SET(actions.createDimension(VALUE("dimension"))))),
+						SET(actions.createDimension(VALUE("dimension"), NODE("openArray"))))),
 				optional(arrayInitializer()).label("initializer"),
 				SET(actions.createArrayCreationExpression(VALUE("type"), VALUES("oneOrMore/enforcedSequence"), VALUE("initializer"))));
 	}
@@ -220,7 +221,7 @@ public class ExpressionsParser extends BaseParser<Node>{
 				zeroOrMore(sequence(
 						firstOf(string("++"), string("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				SET(actions.createUnaryPostfixExpression(VALUE(), TEXTS("zeroOrMore/operatorCt/operator"))));
+				SET(actions.createUnaryPostfixExpression(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
 	Rule postfixIncrementExpression() {
@@ -229,7 +230,7 @@ public class ExpressionsParser extends BaseParser<Node>{
 				oneOrMore(sequence(
 						firstOf(string("++"), string("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				SET(actions.createUnaryPostfixExpression(VALUE(), TEXTS("zeroOrMore/operatorCt/operator"))));
+				SET(actions.createUnaryPostfixExpression(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
 	Rule prefixIncrementExpression() {

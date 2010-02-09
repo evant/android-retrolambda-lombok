@@ -40,7 +40,7 @@ public interface Node {
 	
 	boolean hasParent();
 	
-	void setPosition(Position position);
+	Node setPosition(Position position);
 	
 	void accept(ASTVisitor visitor);
 	

@@ -21,28 +21,11 @@
  */
 package lombok.ast.grammar;
 
-import lombok.ast.Comment;
-import lombok.ast.Identifier;
-import lombok.ast.Node;
+import lombok.Data;
+import lombok.ast.Position;
 
-public class BasicsActions extends SourceActions {
-	public BasicsActions(Source source) {
-		super(source);
-	}
-	
-	public Node createIdentifier(String text) {
-		return posify(text == null ? new Identifier() : new Identifier().setName(text));
-	}
-	
-	public boolean checkIfKeyword(String text) {
-		return text == null || !BasicsParser.KEYWORDS.contains(text);
-	}
-	
-	public Node createBlockComment(String text) {
-		return posify(new Comment().setBlockComment(true).setContent(text));
-	}
-	
-	public Node createLineComment(String text) {
-		return posify(new Comment().setBlockComment(false).setContent(text));
-	}
+@Data
+public class ParseProblem {
+	private final Position position;
+	private final String message;
 }

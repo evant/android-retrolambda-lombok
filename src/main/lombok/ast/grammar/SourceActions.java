@@ -21,28 +21,31 @@
  */
 package lombok.ast.grammar;
 
-import lombok.ast.Comment;
-import lombok.ast.Identifier;
 import lombok.ast.Node;
+import lombok.ast.Position;
 
-public class BasicsActions extends SourceActions {
-	public BasicsActions(Source source) {
-		super(source);
+import org.parboiled.BaseActions;
+
+class SourceActions extends BaseActions<Node> {
+	protected final Source source;
+	
+	SourceActions(Source source) {
+		this.source = source;
 	}
 	
-	public Node createIdentifier(String text) {
-		return posify(text == null ? new Identifier() : new Identifier().setName(text));
+	<T extends Node> T posify(T node) {
+		int start = source.mapPosition(getContext().getStartLocation().index);
+		int end = getCurrentLocationRtrim();
+		node.setPosition(new Position(start, end));
+		return node;
 	}
 	
-	public boolean checkIfKeyword(String text) {
-		return text == null || !BasicsParser.KEYWORDS.contains(text);
+	int getCurrentLocationRtrim() {
+		return source.mapPositionRtrim(getContext().getCurrentLocation().index);
 	}
 	
-	public Node createBlockComment(String text) {
-		return posify(new Comment().setBlockComment(true).setContent(text));
-	}
-	
-	public Node createLineComment(String text) {
-		return posify(new Comment().setBlockComment(false).setContent(text));
+	void positionSpan(Node target, Node start, Node end) {
+		if (target == null || start == null || end == null || start.getPosition().isUnplaced() || end.getPosition().isUnplaced()) return;
+		target.setPosition(new Position(start.getPosition().getStart(), end.getPosition().getEnd()));
 	}
 }

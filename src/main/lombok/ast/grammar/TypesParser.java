@@ -28,10 +28,11 @@ import org.parboiled.Rule;
 
 public class TypesParser extends BaseParser<Node> {
 	final ParserGroup group;
-	final TypesActions actions = new TypesActions();
+	final TypesActions actions;
 	
 	public TypesParser(ParserGroup group) {
 		this.group = group;
+		actions = new TypesActions(group.getSource());
 	}
 	
 	/**

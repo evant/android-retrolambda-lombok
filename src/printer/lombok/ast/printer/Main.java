@@ -26,11 +26,10 @@ import java.io.File;
 import java.io.IOException;
 
 import lombok.ast.Node;
-import lombok.ast.grammar.ParserGroup;
+import lombok.ast.grammar.ParseProblem;
+import lombok.ast.grammar.Source;
 
 import org.apache.commons.io.FileUtils;
-import org.parboiled.support.ParseError;
-import org.parboiled.support.ParsingResult;
 
 public class Main {
 	public static void main(String[] args) throws IOException {
@@ -40,16 +39,18 @@ public class Main {
 		}
 		
 		String rawSource = FileUtils.readFileToString(new File(args[0]), "UTF-8");
-		ParserGroup group = new ParserGroup();
-		ParsingResult<Node> result = group.structures.parse(group.structures.compilationUnitEoi(), rawSource + "\n");
+		Source source = new Source(rawSource);
+		source.parseCompilationUnit();
 		long now = System.currentTimeMillis();
-		result = group.structures.parse(group.structures.compilationUnitEoi(), rawSource + "\n");
+		source = new Source(rawSource);
+		source.parseCompilationUnit();
+		Node result = source.getNodes().get(0);
 		long taken = System.currentTimeMillis() - now;
 		SourceFormatter formatter = new HtmlFormatter(rawSource + "\n");
 		formatter.setTimeTaken(taken);
-		result.parseTreeRoot.getValue().accept(new SourcePrinter(formatter));
-		for (ParseError x : result.parseErrors) {
-			formatter.addError(x.getErrorStart().index, x.getErrorEnd().index, x.getErrorMessage());
+		result.accept(new SourcePrinter(formatter));
+		for (ParseProblem x : source.getProblems()) {
+			formatter.addError(x.getPosition().getStart(), x.getPosition().getEnd(), x.getMessage());
 		}
 		
 		File outFile = new File(args[0] + ".html");

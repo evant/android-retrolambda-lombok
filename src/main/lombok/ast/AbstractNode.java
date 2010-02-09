@@ -151,9 +151,10 @@ abstract class AbstractNode implements Node {
 				child.getClass().getName(), this.getClass().getName()));
 	}
 	
-	@Override public void setPosition(Position position) {
+	@Override public Node setPosition(Position position) {
 		if (position == null) throw new NullPointerException("position");
 		this.position = position;
+		return this;
 	}
 	
 	@Override public String toString() {

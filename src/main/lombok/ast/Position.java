@@ -47,6 +47,10 @@ public class Position {
 		this.generatedBy = generatedBy;
 	}
 	
+	public boolean isUnplaced() {
+		return start == UNPLACED.start && end == UNPLACED.end;
+	}
+	
 	public Position withGeneratedBy(Node generatedBy) {
 		return new Position(start, end, generatedBy);
 	}

@@ -28,9 +28,10 @@ import org.parboiled.Rule;
 
 public class LiteralsParser extends BaseParser<Node> {
 	final ParserGroup group;
-	final LiteralsActions actions = new LiteralsActions();
+	final LiteralsActions actions;
 	
 	public LiteralsParser(ParserGroup group) {
+		this.actions = new LiteralsActions(group.getSource());
 		this.group = group;
 	}
 	

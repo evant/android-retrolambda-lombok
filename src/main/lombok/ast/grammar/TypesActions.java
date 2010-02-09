@@ -31,15 +31,17 @@ import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
 import lombok.ast.WildcardKind;
 
-import org.parboiled.BaseActions;
-
-public class TypesActions extends BaseActions<Node> {
+public class TypesActions extends SourceActions {
+	public TypesActions(Source source) {
+		super(source);
+	}
+	
 	public Node createPrimitiveType(String text) {
-		return new TypeReference().parts().addToStartRaw(new TypeReferencePart().setRawIdentifier(new Identifier().setName(text)));
+		return posify(new TypeReference().parts().addToStartRaw(posify(new TypeReferencePart().setRawIdentifier(posify(new Identifier().setName(text))))));
 	}
 	
 	public Node createTypeReferencePart(Node identifier, Node typeArguments) {
-		return new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments);
+		return posify(new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments));
 	}
 	
 	public Node createWildcardedType(String extendsOrSuper, Node type) {
@@ -48,14 +50,14 @@ public class TypesActions extends BaseActions<Node> {
 		if ("extends".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.EXTENDS;
 		if ("super".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.SUPER;
 		
-		if (!(type instanceof TypeReference)) return new TypeReference().setWildcard(wildcard);
-		//todo add screwed up typePart as dangling tail to returned node.
+		if (!(type instanceof TypeReference)) return posify(new TypeReference().setWildcard(wildcard));
+		//TODO add screwed up typePart as dangling tail to returned node.
 		
-		return ((TypeReference)type).setWildcard(wildcard);
+		return posify(((TypeReference)type).setWildcard(wildcard));
 	}
 	
 	public Node createUnboundedWildcardType() {
-		return new TypeReference().setWildcard(WildcardKind.UNBOUND);
+		return posify(new TypeReference().setWildcard(WildcardKind.UNBOUND));
 	}
 	
 	public Node createTypeArguments(Node head, List<Node> tail) {
@@ -65,7 +67,7 @@ public class TypesActions extends BaseActions<Node> {
 			if (n != null) ta.generics().addToEndRaw(n);
 		}
 		
-		return ta;
+		return posify(ta);
 	}
 	
 	public Node createReferenceType(Node head, List<Node> tail) {
@@ -75,16 +77,16 @@ public class TypesActions extends BaseActions<Node> {
 			if (n != null) t.parts().addToEndRaw(n);
 		}
 		
-		return t;
+		return posify(t);
 	}
 	
 	public Node addArrayDimensionsToType(Node value, List<String> bracketPairs) {
 		if (value instanceof TypeReference) {
 			int arrayDimensions = bracketPairs == null ? 0 : bracketPairs.size();
-			return ((TypeReference)value).setArrayDimensions(arrayDimensions);
+			return posify(((TypeReference)value).setArrayDimensions(arrayDimensions));
 		}
 		
-		return value;
+		return posify(value);
 	}
 	
 	public Node createTypeVariable(Node name, Node head, List<Node> tail) {
@@ -92,13 +94,13 @@ public class TypesActions extends BaseActions<Node> {
 		
 		if (head != null) tv.extending().addToEndRaw(head);
 		if (tail != null) for (Node t : tail) if (t != null) tv.extending().addToEndRaw(t);
-		return tv;
+		return posify(tv);
 	}
 	
 	public Node createTypeVariables(Node head, List<Node> tail) {
 		TemporaryNode.OrphanedTypeVariables otv = new TemporaryNode.OrphanedTypeVariables();
 		if (head != null) otv.variables.add(head);
 		if (tail != null) for (Node t : tail) otv.variables.add(t);
-		return otv;
+		return posify(otv);
 	}
 }

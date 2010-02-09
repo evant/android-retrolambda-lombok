@@ -1,3 +1,24 @@
+/*
+ * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package lombok.ast.grammar;
 
 import java.util.Collections;
@@ -20,6 +41,7 @@ import lombok.ast.If;
 import lombok.ast.LabelledStatement;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Node;
+import lombok.ast.Position;
 import lombok.ast.Return;
 import lombok.ast.SuperConstructorInvocation;
 import lombok.ast.Switch;
@@ -31,63 +53,69 @@ import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.While;
 
-import org.parboiled.BaseActions;
-
-public class StatementsActions extends BaseActions<Node> {
+public class StatementsActions extends SourceActions {
+	public StatementsActions(Source source) {
+		super(source);
+	}
+	
 	public Node createBlock(List<Node> statements) {
-		Block b = new Block();
+		Block block = new Block();
 		if (statements != null) for (Node s : statements) {
-			if (s != null) b.contents().addToEndRaw(s);
+			if (s != null) block.contents().addToEndRaw(s);
 		}
 		
-		return b;
+		return posify(block);
 	}
 	
 	public Node createEmptyStatement() {
-		return new EmptyStatement();
+		return posify(new EmptyStatement());
 	}
 	
 	public Node createLabelledStatement(List<Node> labelNames, Node statement) {
 		Node current = statement;
 		if (labelNames != null) for (Node n : labelNames) {
-			if (n != null) current = new LabelledStatement().setRawLabel(n).setRawStatement(current);
+			if (n != null) {
+				Position pos = current == null ? null : new Position(n.getPosition().getStart(), current.getPosition().getEnd());
+				current = new LabelledStatement().setRawLabel(n).setRawStatement(current);
+				current.setPosition(pos);
+			}
 		}
 		return current;
 	}
 	
 	public Node createIfStatement(Node condition, Node statement, Node elseStatement) {
-		return new If().setRawCondition(condition).setRawStatement(statement).setRawElseStatement(elseStatement);
+		return posify(new If().setRawCondition(condition).setRawStatement(statement).setRawElseStatement(elseStatement));
 	}
 	
 	public Node createAssertStatement(Node assertion, Node message) {
-		return new Assert().setRawAssertion(assertion).setRawMessage(message);
+		return posify(new Assert().setRawAssertion(assertion).setRawMessage(message));
 	}
 	
 	public Node createSwitchStatement(Node condition, Node body) {
-		return new Switch().setRawCondition(condition).setRawBody(body);
+		return posify(new Switch().setRawCondition(condition).setRawBody(body));
 	}
 	
 	public Node createCaseStatement(Node condition) {
-		return new Case().setRawCondition(condition);
+		return posify(new Case().setRawCondition(condition));
 	}
 	
 	public Node createDefaultStatement() {
-		return new Default();
+		return posify(new Default());
 	}
 	
 	public Node createWhileStatement(Node condition, Node statement) {
-		return new While().setRawCondition(condition).setRawStatement(statement);
+		return posify(new While().setRawCondition(condition).setRawStatement(statement));
 	}
 	
 	public Node createDoStatement(Node condition, Node statement) {
-		return new DoWhile().setRawCondition(condition).setRawStatement(statement);
+		return posify(new DoWhile().setRawCondition(condition).setRawStatement(statement));
 	}
 	
 	public Node createStatementExpressionList(Node head, List<Node> tail) {
 		TemporaryNode.StatementExpressionList result = new TemporaryNode.StatementExpressionList();
 		if (head != null) result.expressions.add(head);
 		if (tail != null) for (Node n : tail) if (n != null) result.expressions.add(n);
-		return result;
+		return posify(result);
 	}
 	
 	public Node createBasicFor(Node init, Node condition, Node update, Node statement) {
@@ -108,47 +136,50 @@ public class StatementsActions extends BaseActions<Node> {
 		
 		for (Node n : inits) if (n != null) result.inits().addToEndRaw(n);
 		for (Node n : updates) if (n != null) result.updates().addToEndRaw(n);
-		return result;
+		return posify(result);
 	}
 	
 	public Node createEnhancedFor(Node modifiers, Node type, Node varName, List<String> dims, Node iterable, Node statement) {
 		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables().addToEndRaw(
 				new VariableDefinitionEntry().setRawName(varName).setDimensions(dims == null ? 0 : dims.size()));
 		if (modifiers != null) decl.setRawModifiers(modifiers);
-		return new ForEach().setRawVariable(decl).setRawIterable(iterable).setRawStatement(statement);
+		return posify(new ForEach().setRawVariable(decl).setRawIterable(iterable).setRawStatement(statement));
 	}
 	
 	public Node createBreak(Node label) {
-		return new Break().setRawLabel(label);
+		return posify(new Break().setRawLabel(label));
 	}
 	
 	public Node createContinue(Node label) {
-		return new Continue().setRawLabel(label);
+		return posify(new Continue().setRawLabel(label));
 	}
 	
 	public Node createReturn(Node value) {
-		return new Return().setRawValue(value);
+		return posify(new Return().setRawValue(value));
 	}
 	
 	public Node createThrow(Node throwable) {
-		return new Throw().setRawThrowable(throwable);
+		return posify(new Throw().setRawThrowable(throwable));
 	}
 	
 	public Node createSynchronizedStatement(Node lock, Node body) {
-		return new Synchronized().setRawLock(lock).setRawBody(body);
+		return posify(new Synchronized().setRawLock(lock).setRawBody(body));
 	}
 	
 	public Node createCatch(Node modifiers, Node type, Node varName, Node body) {
+		VariableDefinitionEntry varNameEntry = new VariableDefinitionEntry().setRawName(varName);
+		if (varName != null) varNameEntry.setPosition(varName.getPosition());
 		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables().addToEndRaw(
-				new VariableDefinitionEntry().setRawName(varName));
+				varNameEntry);
+		if (type != null && varName != null) decl.setPosition(new Position(type.getPosition().getStart(), varName.getPosition().getEnd()));
 		if (modifiers != null) decl.setRawModifiers(modifiers);
-		return new Catch().setRawExceptionDeclaration(decl).setRawBody(body);
+		return posify(new Catch().setRawExceptionDeclaration(decl).setRawBody(body));
 	}
 	
 	public Node createTryStatement(Node body, List<Node> catches, Node finallyBody) {
 		Try result = new Try().setRawBody(body).setRawFinally(finallyBody);
 		if (catches != null) for (Node c : catches) if (c != null) result.catches().addToEndRaw(c);
-		return result;
+		return posify(result);
 	}
 	
 	public Node addLocalVariableModifiers(Node variableDefinition, Node modifiers) {
@@ -156,24 +187,24 @@ public class StatementsActions extends BaseActions<Node> {
 			((VariableDefinition)variableDefinition).setRawModifiers(modifiers);
 		}
 		
-		return variableDefinition;
+		return posify(variableDefinition);
 	}
 	
 	public Node createAlternateConstructorInvocation(Node typeArguments, Node arguments) {
 		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
-		return new AlternateConstructorInvocation().setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments());
+		return posify(new AlternateConstructorInvocation().setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments()));
 	}
 	
 	public Node createSuperConstructorInvocation(Node qualifier, Node typeArguments, Node arguments) {
 		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
-		return new SuperConstructorInvocation().setRawQualifier(qualifier).setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments());
+		return posify(new SuperConstructorInvocation().setRawQualifier(qualifier).setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments()));
 	}
 	
 	public Node createExpressionStatement(Node expression) {
-		return new ExpressionStatement().setRawExpression(expression);
+		return posify(new ExpressionStatement().setRawExpression(expression));
 	}
 	
 	public Node createVariableDeclaration(Node definition) {
-		return new VariableDeclaration().setRawDefinition(definition);
+		return posify(new VariableDeclaration().setRawDefinition(definition));
 	}
 }

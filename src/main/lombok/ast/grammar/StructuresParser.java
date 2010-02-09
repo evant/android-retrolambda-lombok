@@ -7,9 +7,10 @@ import org.parboiled.Rule;
 
 public class StructuresParser extends BaseParser<Node> {
 	final ParserGroup group;
-	final StructuresActions actions = new StructuresActions();
+	final StructuresActions actions;
 	
 	public StructuresParser(ParserGroup group) {
+		this.actions = new StructuresActions(group.getSource());
 		this.group = group;
 	}
 	
@@ -109,10 +110,10 @@ public class StructuresParser extends BaseParser<Node> {
 				ch('@'), group.basics.optWS(),
 				string("interface"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.basics.identifier().label("name"),
-				ch('{'), group.basics.optWS(),
+				ch('{').label("typeOpen"), group.basics.optWS(),
 				zeroOrMore(annotationElementDeclaration().label("member")).label("members"),
-				ch('}'), group.basics.optWS(),
-				SET(actions.createAnnotationDeclaration(VALUE("modifiers"), VALUE("name"), VALUES("members/member"))));
+				ch('}').label("typeClose"), group.basics.optWS(),
+				SET(actions.createAnnotationDeclaration(VALUE("modifiers"), VALUE("name"), VALUES("members/member"), NODE("typeOpen"), NODE("typeClose"))));
 	}
 	
 	Rule annotationElementDeclaration() {
