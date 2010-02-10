@@ -555,7 +555,7 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.startSuppressBlock();
 		formatter.nameNextElement("ifTrue");
 		visit(node.getRawStatement());
-		formatter.startSuppressBlock();
+		formatter.endSuppressBlock();
 		if (node.getRawElseStatement() != null) {
 			formatter.space();
 			formatter.keyword("else");
@@ -563,7 +563,7 @@ public class SourcePrinter extends ForwardingASTVisitor {
 			formatter.startSuppressBlock();
 			formatter.nameNextElement("ifFalse");
 			visit(node.getRawElseStatement());
-			formatter.startSuppressBlock();
+			formatter.endSuppressBlock();
 		}
 		formatter.closeBlock();
 		return true;
@@ -1031,7 +1031,7 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.buildBlock(node);
 		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		formatter.startSuppressBlock();
+		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
@@ -1042,7 +1042,7 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.space();
 		formatter.startSuppressBlock();
 		visit(node.getRawBody());
-		formatter.startSuppressBlock();
+		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
