@@ -33,7 +33,6 @@ import lombok.ast.printer.TextFormatter;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-
 @RunWith(DirectoryRunner.class)
 public class IdempotencyTest {
 	public static File getDirectory() {
