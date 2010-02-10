@@ -204,14 +204,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	
 	public boolean visitIdentifier(Identifier node) {
 		String name = node.getName();
-		if (!node.isSyntacticallyValid()) {
-			if (name == null || name.isEmpty()) {
-				formatter.reportAssertionFailureNext(node, "null or empty identifier that is nevertheless syntactically valid", null);
-			} else if (!isValidJavaIdentifier(name)) {
-				formatter.reportAssertionFailureNext(node, "identifier name contains characters that aren't legal in an identifier", null);
-			}
-		}
-		
 		if (name == null) name = FAIL + "NULL_IDENTIFIER" + FAIL;
 		else if (name.isEmpty()) name = FAIL + "EMPTY_IDENTIFIER" + FAIL;
 		else if (!isValidJavaIdentifier(name)) name = FAIL + "INVALID_IDENTIFIER: " + name + FAIL;
@@ -224,16 +216,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	
 	public boolean visitIntegralLiteral(IntegralLiteral node) {
 		String raw = node.getRawValue();
-		try {
-			IntegralLiteral il = new IntegralLiteral();
-			if (node.isMarkedAsLong()) il.setLongValue(node.longValue());
-			else il.setIntValue(node.intValue());
-			raw = il.getRawValue();
-		} catch (Exception e) {
-			if (node.isSyntacticallyValid()) {
-				formatter.reportAssertionFailureNext(node, "correct integral literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
-			}
-		}
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -243,16 +225,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	
 	public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {
 		String raw = node.getRawValue();
-		try {
-			FloatingPointLiteral fpl = new FloatingPointLiteral();
-			if (node.isMarkedAsFloat()) fpl.setFloatValue(node.floatValue());
-			else fpl.setDoubleValue(node.doubleValue());
-			raw = fpl.getRawValue();
-		} catch (Exception e) {
-			if (node.isSyntacticallyValid()) {
-				formatter.reportAssertionFailureNext(node, "correct floating point literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
-			}
-		}
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -262,13 +234,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	
 	public boolean visitBooleanLiteral(BooleanLiteral node) {
 		String raw = node.getRawValue();
-		try {
-			raw = new BooleanLiteral().setValue(node.getValue()).getRawValue();
-		} catch (Exception e) {
-			if (node.isSyntacticallyValid()) {
-				formatter.reportAssertionFailureNext(node, "correct boolean literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
-			}
-		}
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -278,13 +243,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	
 	public boolean visitCharLiteral(CharLiteral node) {
 		String raw = node.getRawValue();
-		try {
-			raw = new CharLiteral().setValue(node.getValue()).getRawValue();
-		} catch (Exception e) {
-			if (node.isSyntacticallyValid()) {
-				formatter.reportAssertionFailureNext(node, "correct char literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
-			}
-		}
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -294,13 +252,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	
 	public boolean visitStringLiteral(StringLiteral node) {
 		String raw = node.getRawValue();
-		try {
-			raw = new StringLiteral().setValue(node.getValue()).getRawValue();
-		} catch (Exception e) {
-			if (node.isSyntacticallyValid()) {
-				formatter.reportAssertionFailureNext(node, "correct string literal nevertheless does not pass getValue->setValue->getRawValue process.", e);
-			}
-		}
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -327,9 +278,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 			formatter.operator(node.getOperator().getSymbol());
 		} catch (Exception e) {
 			formatter.operator(node.getRawOperator());
-			if (node.isSyntacticallyValid()) {
-				formatter.reportAssertionFailure(node, "BinaryExpression with failing getOperator() call which nevertheless has no syntax errors", e);
-			}
 		}
 		formatter.space();
 		formatter.nameNextElement("right");
@@ -345,14 +293,14 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		try {
 			op = node.getOperator();
 		} catch (Exception e) {
-			visitNode(node.getOperand());
+			visit(node.getOperand());
 			formatter.closeInline();
 			return true;
 		}
 		boolean parens = node.needsParentheses();
 		if (parens) formatter.append("(");
 		if (!op.isPostfix()) formatter.operator(op.getSymbol());
-		visitNode(node.getOperand());
+		visit(node.getOperand());
 		if (op.isPostfix()) formatter.operator(op.getSymbol());
 		if (parens) formatter.append(")");
 		formatter.closeInline();
@@ -364,10 +312,10 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		boolean parens = node.needsParentheses();
 		if (parens) formatter.append("(");
 		formatter.append("(");
-		visitNode(node.getRawTypeReference());
+		visit(node.getRawTypeReference());
 		formatter.append(")");
 		formatter.space();
-		visitNode(node.getRawOperand());
+		visit(node.getRawOperand());
 		if (parens) formatter.append(")");
 		formatter.closeInline();
 		return true;

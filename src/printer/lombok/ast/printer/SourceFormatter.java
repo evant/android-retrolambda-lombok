@@ -29,24 +29,6 @@ public interface SourceFormatter {
 	char FAIL = '‽';
 	
 	/**
-	 * A bug in the parser logic has been found; it should be rendered as a note on the next {@link #buildInline(Node)} or {@link #buildBlock(Node)} element.
-	 * 
-	 * @param node The node that is causing the problem; should always be the same node as the next {@code buildInline} or {@code buildBlock} call.
-	 * @param message A description of the parser bug found.
-	 * @param error Any associated exception. Can be {@code null}.
-	 */
-	void reportAssertionFailureNext(Node node, String message, Throwable error);
-	
-	/**
-	 * A bug in the parser logic has been found; it should be rendered as a note on the current element.
-	 * 
-	 * @param node The node that is causing the problem; should always be the same as the currently activate {@code buildInline} or {@code buildBlock} call.
-	 * @param message A description of the parser bug found.
-	 * @param error Any associated exception. Can be {@code null}.
-	 */
-	void reportAssertionFailure(Node node, String message, Throwable error);
-	
-	/**
 	 * The AST is not valid; it applies to the current level.
 	 * 
 	 * @param fail Human readable explanation of what's wrong with the AST at this level.

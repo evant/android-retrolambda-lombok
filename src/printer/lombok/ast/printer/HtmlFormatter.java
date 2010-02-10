@@ -43,26 +43,12 @@ import org.apache.commons.lang.StringUtils;
 
 public class HtmlFormatter implements SourceFormatter {
 	private final StringBuilder sb = new StringBuilder();
-	private final List<String> inserts = new ArrayList<String>();
 	private final String rawSource;
 	private final List<String> errors = new ArrayList<String>();
 	private String nextElementName;
 	
 	public HtmlFormatter(String rawSource) {
 		this.rawSource = rawSource;
-	}
-	
-	@Override public void reportAssertionFailureNext(Node node, String message, Throwable error) {
-		inserts.add("<span class=\"assertionError\">" + escapeHtml(message) + "</span>");
-	}
-	
-	@Override public void reportAssertionFailure(Node node, String message, Throwable error) {
-		inserts.add("<span class=\"assertionError\">" + escapeHtml(message) + "</span>");
-	}
-	
-	private void handleInserts() {
-		for (String insert : inserts) sb.append(insert);
-		inserts.clear();
 	}
 	
 	private static final String OPENERS = "{([<", CLOSERS = "})]>";
@@ -155,7 +141,6 @@ public class HtmlFormatter implements SourceFormatter {
 		}
 		
 		sb.append(">");
-		handleInserts();
 	}
 	
 	private static void findHtmlClassSignificantNodes(Set<String> names, AtomicReference<String> kind, Class<?> c) {

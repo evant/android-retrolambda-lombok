@@ -27,14 +27,6 @@ public class TextFormatter implements SourceFormatter {
 		return a(String.valueOf(text));
 	}
 	
-	@Override public void reportAssertionFailureNext(Node node, String message, Throwable error) {
-		//TODO
-	}
-	
-	@Override public void reportAssertionFailure(Node node, String message, Throwable error) {
-		//TODO
-	}
-	
 	@Override public void fail(String fail) {
 		a(FAIL).a(fail).a(FAIL);
 	}

@@ -44,7 +44,7 @@ public class Main {
 			System.exit(1);
 		}
 		
-		String rawSource = FileUtils.readFileToString(new File(args[0]), "UTF-8");
+		String rawSource = FileUtils.readFileToString(new File(args[1]), "UTF-8");
 		Source source = new Source(rawSource);
 		source.parseCompilationUnit();
 		long now = System.currentTimeMillis();
