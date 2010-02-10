@@ -1,12 +1,18 @@
 <project name="lombok.ast-contrib">
+	<property name="junit-src-name" value="junit-4.8.1-src.jar" />
 	<available property="jls-available" file="contrib/jls/j3TOC.html" />
+	<available property="junit-src-available" file="contrib/${junit-src-name}" />
 	
-	<target name="contrib" depends="jls" />
+	<target name="contrib" depends="jls, junit-src" />
 	
 	<target name="jls" unless="jls-available">
 		<mkdir dir="contrib/jls" />
 		<get src="http://java.sun.com/docs/books/jls/third_edition/download/langspec-3.0.zip" dest="contrib/jls/langspec-3.0.zip" verbose="on" />
 		<unzip src="contrib/jls/langspec-3.0.zip" dest="contrib/jls" />
 		<delete file="contrib/jls/langspec-3.0.zip" />
+	</target>
+	
+	<target name="junit-src" unless="junit-src-available">
+		<get src="http://cloud.github.com/downloads/KentBeck/junit/junit-4.8.1-src.jar" dest="contrib/${junit-src-name}" verbose="on" />
 	</target>
 </project>
