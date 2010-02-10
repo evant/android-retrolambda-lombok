@@ -35,15 +35,20 @@ public class TypesParser extends BaseParser<Node> {
 		actions = new TypesActions(group.getSource());
 	}
 	
+	public Rule nonArrayType() {
+		return firstOf(primitiveType(), referenceType());
+	}
+	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2
 	 */
 	public Rule type() {
 		return sequence(
-				firstOf(primitiveType(), referenceType()),
+				nonArrayType(),
+				SET(),
 				zeroOrMore(sequence(
 						ch('['), group.basics.optWS(), ch(']'), group.basics.optWS())),
-				SET(actions.addArrayDimensionsToType(VALUE("firstOf"), TEXTS("zeroOrMore/sequence")))).label("type");
+				SET(actions.addArrayDimensionsToType(VALUE(), TEXTS("zeroOrMore/sequence")))).label("type");
 	}
 	
 	/**

@@ -98,7 +98,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	Rule arrayCreationExpression() {
 		return sequence(
 				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
-				group.types.type().label("type"),
+				group.types.nonArrayType().label("type"),
 				oneOrMore(enforcedSequence(
 						ch('[').label("openArray"), group.basics.optWS(),
 						optional(anyExpression()).label("dimension"), ch(']'), group.basics.optWS(),
