@@ -1,11 +1,11 @@
 <ivysettings>
-	<include file="../ivy/repo/local-repo.xml" />
 	<resolvers>
 		<chain name="projectRepos">
-			<resolver ref="projectLocalRepo" />
+			<filesystem name="projectLocalRepo">
+				<ivy pattern="${ivy.settings.dir}/ivy-repo/[module]-ivy-[revision].xml" />
+			</filesystem>
 			<ibiblio name="maven-repo2" m2compatible="true" root="http://repo2.maven.org/maven2" />
 		</chain>
 	</resolvers>
 	<settings defaultResolver="projectRepos" />
-	<!--<include url="http://projectlombok.org/ivy/ivysettings-public.xml" />-->
 </ivysettings>
