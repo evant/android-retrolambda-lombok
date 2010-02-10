@@ -230,7 +230,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 				oneOrMore(sequence(
 						firstOf(string("++"), string("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				SET(actions.createUnaryPostfixExpression(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
+				SET(actions.createUnaryPostfixExpression(VALUE(), NODES("oneOrMore/operatorCt/operator"), TEXTS("oneOrMore/operatorCt/operator"))));
 	}
 	
 	Rule prefixIncrementExpression() {
