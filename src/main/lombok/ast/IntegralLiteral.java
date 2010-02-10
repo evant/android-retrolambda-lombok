@@ -30,9 +30,18 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	private String rawValue;
 	private String errorReason = "Missing value";
 	@Getter private boolean markedAsLong;
+	@Getter private LiteralType literalType = LiteralType.DECIMAL;
 	
 	@Override public String getDescription() {
 		return value != null ? String.valueOf(value) : null;
+	}
+	
+	public IntegralLiteral setLiteralType(LiteralType type) {
+		if (type == null) throw new NullPointerException("type");
+		this.literalType = type;
+		updateRawValue();
+		
+		return this;
 	}
 	
 	@Override public IntegralLiteral copy() {
@@ -41,6 +50,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		result.rawValue = rawValue;
 		result.errorReason = errorReason;
 		result.markedAsLong = markedAsLong;
+		result.literalType = literalType;
 		return result;
 	}
 	
@@ -49,6 +59,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		this.rawValue = "" + value;
 		this.errorReason = null;
 		this.markedAsLong = false;
+		updateRawValue();
 		return this;
 	}
 	
@@ -57,7 +68,27 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		this.rawValue = "" + value + "L";
 		this.errorReason = null;
 		this.markedAsLong = true;
+		updateRawValue();
 		return this;
+	}
+	
+	private void updateRawValue() {
+		if (errorReason != null) return;
+		String suffix = markedAsLong ? "L" : "";
+		
+		switch (literalType) {
+		case DECIMAL:
+			rawValue = value + suffix;
+			break;
+		case HEXADECIMAL:
+			rawValue = "0x" + Long.toString(value, 0x10) + suffix;
+			break;
+		case OCTAL:
+			rawValue = "0" + Long.toString(value, 010) + suffix;
+			break;
+		default:
+			assert false: "literalType is null";
+		}
 	}
 	
 	public IntegralLiteral setRawValue(String raw) {
@@ -71,19 +102,24 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 			String v = raw.trim();
 			this.markedAsLong = v.endsWith("L") || v.endsWith("l");
 			v = markedAsLong ? raw.substring(0, raw.length()-1) : raw;
+			LiteralType newLT;
 			try {
 				if (v.startsWith("0x")) {
 					this.value = Long.parseLong(v.substring(2), 0x10);
+					newLT = LiteralType.HEXADECIMAL;
 				} else if (v.startsWith("0")) {
 					this.value = Long.parseLong(v, 010);	//010 = octal 8.
+					newLT = LiteralType.OCTAL;
 				} else {
 					this.value = Long.parseLong(v, 10);
+					newLT = LiteralType.DECIMAL;
 				}
 				if (!markedAsLong && (this.value.longValue() != this.value.intValue())) {
 					this.errorReason = "value too large to fit in 'int' type; add a suffix 'L' to fix this.";
 				} else {
 					this.errorReason = null;
 				}
+				this.literalType = newLT;
 			} catch (NumberFormatException e) {
 				this.value = null;
 				this.errorReason = "Not a valid integral literal: " + raw.trim();

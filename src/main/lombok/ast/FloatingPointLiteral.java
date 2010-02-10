@@ -30,26 +30,18 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 	private String rawValue;
 	private String errorReason = "Missing value";
 	@Getter private boolean markedAsFloat;
+	@Getter private LiteralType literalType = LiteralType.DECIMAL;
 	
 	@Override public String getDescription() {
 		return value != null ? String.valueOf(value) : null;
 	}
 	
-	public FloatingPointLiteral setDoubleValue(double value) {
-		checkSpecialValues(value);
-		this.markedAsFloat = false;
-		this.value = value;
-		this.errorReason = null;
-		this.rawValue = "" + value;
-		return this;
-	}
-	
-	public FloatingPointLiteral setFloatValue(float value) {
-		checkSpecialValues(value);
-		this.markedAsFloat = true;
-		this.errorReason = null;
-		this.value = Double.valueOf(value);
-		this.rawValue = "" + value + "F";
+	public FloatingPointLiteral setLiteralType(LiteralType type) {
+		if (type == null) throw new NullPointerException("type");
+		if (type == LiteralType.OCTAL) throw new IllegalArgumentException("there's no such thing as an octal floating point literal");
+		this.literalType = type;
+		updateRawValue();
+		
 		return this;
 	}
 	
@@ -59,12 +51,47 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		result.rawValue = result.rawValue;
 		result.errorReason = result.errorReason;
 		result.markedAsFloat = result.markedAsFloat;
+		result.literalType = literalType;
 		return result;
+	}
+	
+	public FloatingPointLiteral setDoubleValue(double value) {
+		checkSpecialValues(value);
+		this.markedAsFloat = false;
+		this.value = value;
+		this.errorReason = null;
+		updateRawValue();
+		return this;
+	}
+	
+	public FloatingPointLiteral setFloatValue(float value) {
+		checkSpecialValues(value);
+		this.markedAsFloat = true;
+		this.errorReason = null;
+		this.value = Double.valueOf(value);
+		updateRawValue();
+		return this;
 	}
 	
 	private void checkSpecialValues(double value) throws AstException {
 		if (Double.isNaN(value)) throw new AstException(this, "NaN cannot be expressed as a floating point literal");
 		if (Double.isInfinite(value)) throw new AstException(this, "Infinity cannot be expressed as a floating point literal");
+	}
+	
+	private void updateRawValue() {
+		if (errorReason != null) return;
+		String suffix = markedAsFloat ? "F" : "";
+		
+		switch (literalType) {
+		case DECIMAL:
+			rawValue = value + suffix;
+			break;
+		case HEXADECIMAL:
+			rawValue = Double.toHexString(value) + suffix;
+			break;
+		default:
+			assert false: "literalType is null / octal";
+		}
 	}
 	
 	public FloatingPointLiteral setRawValue(String raw) {
@@ -81,9 +108,10 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 			try {
 				//We double-checked the code - Double.parseDouble will parse exactly everything that is legal according to the JLS!
 				value = Double.parseDouble(v);
+				literalType = (v.startsWith("0x") || v.startsWith("0X")) ? LiteralType.HEXADECIMAL : LiteralType.DECIMAL;
 			} catch (NumberFormatException e) {
 				this.value = null;
-				this.errorReason = "Not a valid integral literal: " + raw.trim();
+				this.errorReason = "Not a valid floating point literal: " + raw.trim();
 			}
 		}
 		
