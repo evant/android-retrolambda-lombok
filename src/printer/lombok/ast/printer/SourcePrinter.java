@@ -119,9 +119,19 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	}
 	
 	private void append(String text) {
-		if (" ".equals(text)) formatter.space();
-		else if ("\n".equals(text)) formatter.verticalSpace();
-		else formatter.append(text);
+		StringBuilder sb = new StringBuilder();
+		for (char c : text.toCharArray()) {
+			if (c == '\n') {
+				if (sb.length() > 0) formatter.append(sb.toString());
+				sb.setLength(0);
+				formatter.verticalSpace();
+			} else if (c == ' ') {
+				if (sb.length() > 0) formatter.append(sb.toString());
+				sb.setLength(0);
+				formatter.space();
+			} else sb.append(c);
+		}
+		if (sb.length() > 0) formatter.append(sb.toString());
 	}
 	
 	private void visitAll(String relation, ListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
@@ -920,10 +930,11 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.append("{");
 		formatter.buildBlock(null);
 		if (node.getParent() instanceof EnumDeclaration) {
-			formatter.buildBlock(null);
-			visitAll("constant", ((EnumDeclaration)node.getParent()).constants(), ", ", "", "");
-			if (!node.members().isEmpty()) formatter.append(";");
-			formatter.closeBlock();
+			visitAll("constant", ((EnumDeclaration)node.getParent()).constants(), ",\n", "", "");
+			if (!node.members().isEmpty()) {
+				formatter.append(";");
+				formatter.verticalSpace();
+			}
 		}
 		visitAll(node.members(), "\n", "", "");
 		formatter.closeBlock();
@@ -951,15 +962,17 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.append("(");
 		visitAll("parameter", node.parameters(), ", ", "", "");
 		formatter.append(")");
-		formatter.space();
 		if (!node.thrownTypeReferences().isEmpty()) {
+			formatter.space();
 			formatter.keyword("throws");
-			visitAll("throws", node.thrownTypeReferences(), ", ", " ", " ");
+			visitAll("throws", node.thrownTypeReferences(), ", ", " ", "");
 		}
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
 		if (node.getRawBody() == null) {
 			formatter.append(";");
+		} else {
+			formatter.space();
+			visit(node.getRawBody());
 		}
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
@@ -1138,7 +1151,9 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		visitAll(node.arguments(), ", ", "(", ")");
 		if (node.getRawBody() != null) {
 			formatter.space();
+			formatter.startSuppressBlock();
 			visit(node.getRawBody());
+			formatter.endSuppressBlock();
 		}
 		formatter.closeInline();
 		return true;
