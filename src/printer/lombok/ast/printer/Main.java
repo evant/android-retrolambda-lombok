@@ -33,9 +33,15 @@ import org.apache.commons.io.FileUtils;
 
 public class Main {
 	public static void main(String[] args) throws IOException {
-		if (args.length == 0) {
-			System.out.println("Provide a java source file to parse.");
-			System.exit(0);
+		if (args.length != 2) {
+			System.out.println("Provide as arg 1 'text' or 'html' as well as a java source file to parse as arg 2");
+			System.exit(1);
+		}
+		
+		boolean isText = args[0].equalsIgnoreCase("text");
+		if (!isText && !args[0].equalsIgnoreCase("html")) {
+			System.out.println("Provide as arg 1 'text' or 'html' as well as a java source file to parse as arg 2");
+			System.exit(1);
 		}
 		
 		String rawSource = FileUtils.readFileToString(new File(args[0]), "UTF-8");
@@ -46,16 +52,18 @@ public class Main {
 		source.parseCompilationUnit();
 		Node result = source.getNodes().get(0);
 		long taken = System.currentTimeMillis() - now;
-		SourceFormatter formatter = new HtmlFormatter(rawSource + "\n");
+		SourceFormatter formatter = isText ? new TextFormatter() : new HtmlFormatter(source.getRawInput());
 		formatter.setTimeTaken(taken);
 		result.accept(new SourcePrinter(formatter));
+		
 		for (ParseProblem x : source.getProblems()) {
 			formatter.addError(x.getPosition().getStart(), x.getPosition().getEnd(), x.getMessage());
 		}
 		
-		File outFile = new File(args[0] + ".html");
+		File outFile = new File(args[0] + (isText ? ".out.java" : ".html"));
 		FileUtils.writeStringToFile(outFile, formatter.finish(), "UTF-8");
-		Desktop.getDesktop().browse(outFile.toURI());
+		if (!isText) Desktop.getDesktop().browse(outFile.toURI());
+		System.out.println("Generated " + outFile);
 		System.exit(0);
 	}
 }
