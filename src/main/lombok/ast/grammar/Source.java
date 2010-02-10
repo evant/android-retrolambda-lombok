@@ -58,7 +58,7 @@ public class Source {
 	public void parseCompilationUnit() {
 		preProcess();
 		ParserGroup group = new ParserGroup(this);
-		postProcess(group.structures.parse(group.structures.compilationUnitEoi(), preprocessed + "\n"));
+		postProcess(group.structures.parse(group.structures.compilationUnitEoi(), preprocessed));
 	}
 	
 	private void postProcess(ParsingResult<Node> parsingResult) {
