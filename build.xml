@@ -100,4 +100,8 @@
 	<target name="ensureDeps" depends="config-ivy" description="Download / Update lombok's dependencies via ivy, which will be downloaded automatically if you don't have it.">
 		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
 	</target>
+	
+	<target name="contrib" description="Downloads various non-crucial documentation, sources, etc that are useful when developing lombok.ast.">
+		<ant antfile="buildScripts/contrib.ant.xml" target="contrib" dir="." />
+	</target>
 </project>

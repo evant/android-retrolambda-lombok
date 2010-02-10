@@ -1,0 +1,12 @@
+<project name="lombok.ast-contrib">
+	<available property="jls-available" file="contrib/jls/j3TOC.html" />
+	
+	<target name="contrib" depends="jls" />
+	
+	<target name="jls" unless="jls-available">
+		<mkdir dir="contrib/jls" />
+		<get src="http://java.sun.com/docs/books/jls/third_edition/download/langspec-3.0.zip" dest="contrib/jls/langspec-3.0.zip" verbose="on" />
+		<unzip src="contrib/jls/langspec-3.0.zip" dest="contrib/jls" />
+		<delete file="contrib/jls/langspec-3.0.zip" />
+	</target>
+</project>
