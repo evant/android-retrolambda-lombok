@@ -41,7 +41,11 @@ class SourceActions extends BaseActions<Node> {
 	}
 	
 	int getCurrentLocationRtrim() {
-		return source.mapPositionRtrim(getContext().getCurrentLocation().index);
+		return rtrim(getContext().getCurrentLocation().index);
+	}
+	
+	int rtrim(int position) {
+		return source.mapPositionRtrim(position);
 	}
 	
 	void positionSpan(Node target, Node start, Node end) {

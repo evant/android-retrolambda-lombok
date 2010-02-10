@@ -191,7 +191,7 @@ public class StructuresActions extends SourceActions {
 			if (n instanceof TemporaryNode.ExtendsClause) {
 				//if (!decl.extending().isEmpty()) //TODO add error node: multiple extends clauses.
 				List<Node> superClasses = ((TemporaryNode.ExtendsClause)n).superTypes;
-				if (superClasses != null) for (Node superClass : superClasses) if (superClass != null) decl.extending().addToEndRaw(n);
+				if (superClasses != null) for (Node superClass : superClasses) if (superClass != null) decl.extending().addToEndRaw(superClass);
 			}
 			
 			//if (n instanceof TemporaryNode.ImplementsClause) //TODO add error node: implements not allowed here.
@@ -246,9 +246,17 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createEnumFromContents(Node head, List<Node> tail, Node body) {
-		EnumDeclaration decl = new EnumDeclaration().setRawBody(body);
+		EnumDeclaration decl = new EnumDeclaration();
 		if (head != null) decl.constants().addToEndRaw(head);
 		if (tail != null) for (Node n : tail) if (n != null) decl.constants().addToEndRaw(n);
+		if (body == null) {
+			TypeBody emptyBody = new TypeBody();
+			int pos = rtrim(getContext().getCurrentLocation().index-1);
+			emptyBody.setPosition(new Position(pos, pos));
+			decl.setRawBody(emptyBody);
+		} else {
+			decl.setRawBody(body);
+		}
 		return posify(decl);
 	}
 	

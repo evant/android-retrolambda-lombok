@@ -84,7 +84,7 @@ public class StructuresParser extends BaseParser<Node> {
 	
 	Rule implementsClause() {
 		return enforcedSequence(
-				sequence(string("extends"), group.basics.testLexBreak(), group.basics.optWS()),
+				sequence(string("implements"), group.basics.testLexBreak(), group.basics.optWS()),
 				group.types.type().label("head"),
 				zeroOrMore(enforcedSequence(
 						ch(','), group.basics.optWS(),
@@ -129,6 +129,7 @@ public class StructuresParser extends BaseParser<Node> {
 	
 	Rule enumBody() {
 		return sequence(
+				ch('{'), group.basics.optWS(),
 				optional(sequence(
 						enumConstant().label("head"),
 						zeroOrMore(sequence(
@@ -138,6 +139,7 @@ public class StructuresParser extends BaseParser<Node> {
 				optional(sequence(
 						ch(';'), group.basics.optWS(),
 						typeBodyDeclarations())).label("typeBodyDeclarations"),
+				ch('}'), group.basics.optWS(),
 				SET(actions.createEnumFromContents(VALUE("constants/sequence/head"), VALUES("constants/sequence/zeroOrMore/tail"), VALUE("typeBodyDeclarations"))));
 	}
 	
