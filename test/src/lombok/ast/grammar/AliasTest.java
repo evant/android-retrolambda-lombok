@@ -34,32 +34,27 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(DirectoryRunner.class)
-public class IdempotencyTest {
+public class AliasTest {
 	public static File getDirectory() {
 		return new File("test/idempotency");
 	}
 	
+	public static File getMirrorDirectory() {
+		return new File("test/alias");
+	}
+	
 	@Test
-	public void testIdempotency(Source source) throws IOException {
-		source.parseCompilationUnit();
+	public void testContentEqualsAfterParsePrintCycle(String expected, Source actual) throws IOException {
+		actual.parseCompilationUnit();
 		
-		if (!source.getProblems().isEmpty()) {
-			fail(source.getProblems().get(0).toString());
+		if (!actual.getProblems().isEmpty()) {
+			fail(actual.getProblems().get(0).toString());
 		}
 		
-		Node node = source.getNodes().get(0);
+		Node node = actual.getNodes().get(0);
 		TextFormatter formatter = new TextFormatter();
 		node.accept(new SourcePrinter(formatter));
-		String actual = formatter.finish();
-		try {
-			assertEquals(source.getRawInput(), actual);
-		} catch (AssertionError e) {
-			System.out.println("------------------RAW:");
-			System.out.println(source.getRawInput());
-			System.out.println("-------PARSED-PRINTED:");
-			System.out.println(actual);
-			System.out.println("----------------------");
-			throw e;
-		}
+		String actualString = formatter.finish();
+		assertEquals(expected, actualString);
 	}
 }
