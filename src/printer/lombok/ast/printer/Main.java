@@ -60,7 +60,7 @@ public class Main {
 			formatter.addError(x.getPosition().getStart(), x.getPosition().getEnd(), x.getMessage());
 		}
 		
-		File outFile = new File(args[0] + (isText ? ".out.java" : ".html"));
+		File outFile = new File(args[1] + (isText ? ".out.java" : ".html"));
 		FileUtils.writeStringToFile(outFile, formatter.finish(), "UTF-8");
 		if (!isText) Desktop.getDesktop().browse(outFile.toURI());
 		System.out.println("Generated " + outFile);
