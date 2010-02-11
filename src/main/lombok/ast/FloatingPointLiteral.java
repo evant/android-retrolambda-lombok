@@ -76,6 +76,8 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 	private void checkSpecialValues(double value) throws AstException {
 		if (Double.isNaN(value)) throw new AstException(this, "NaN cannot be expressed as a floating point literal");
 		if (Double.isInfinite(value)) throw new AstException(this, "Infinity cannot be expressed as a floating point literal");
+		if ((Double.doubleToRawLongBits(value) & 0x8000000000000000L) != 0) throw new AstException(this,
+				"Floating Point literals cannot be negative; wrap a literal in a UnaryExpression to accomplish this");
 	}
 	
 	private void updateRawValue() {

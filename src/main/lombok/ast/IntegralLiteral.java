@@ -55,6 +55,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	}
 	
 	public IntegralLiteral setIntValue(int value) {
+		if (value < 0) throw new AstException(this, "Integral literals cannot be negative; wrap a literal in a UnaryExpression to accomplish this");
 		this.value = Long.valueOf(value);
 		this.rawValue = "" + value;
 		this.errorReason = null;
@@ -64,6 +65,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	}
 	
 	public IntegralLiteral setLongValue(long value) {
+		if (value < 0) throw new AstException(this, "Integral literals cannot be negative; wrap a literal in a UnaryExpression to accomplish this");
 		this.value = value;
 		this.rawValue = "" + value + "L";
 		this.errorReason = null;
@@ -107,6 +109,9 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 				if (v.startsWith("0x")) {
 					this.value = Long.parseLong(v.substring(2), 0x10);
 					newLT = LiteralType.HEXADECIMAL;
+				} else if (v.equals("0")) {
+					this.value = 0L;
+					newLT = LiteralType.DECIMAL;
 				} else if (v.startsWith("0")) {
 					this.value = Long.parseLong(v, 010);	//010 = octal 8.
 					newLT = LiteralType.OCTAL;
