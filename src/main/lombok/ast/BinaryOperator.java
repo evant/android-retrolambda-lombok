@@ -22,7 +22,7 @@
 package lombok.ast;
 
 public enum BinaryOperator {
-	AND_ASSIGN("&=", 14), XOR_ASSIGN("^=", 14), OR_ASSIGN("|=", 14), SHIFT_LEFT_ASSIGN("<<=", 14), SHIFT_RIGHT_ASSIGN(">>=", 14), BITWISE_SHIFT_RIGHT_ASSIGN(">>>=", 14), ASSIGN("=", 14),
+	PLUS_ASSIGN("+=", 14), MINUS_ASSIGN("-=", 14), MULTIPLY_ASSIGN("*=", 14), DIVIDE_ASSIGN("/=", 14), REMAINDER_ASSIGN("%=", 14), AND_ASSIGN("&=", 14), XOR_ASSIGN("^=", 14), OR_ASSIGN("|=", 14), SHIFT_LEFT_ASSIGN("<<=", 14), SHIFT_RIGHT_ASSIGN(">>=", 14), BITWISE_SHIFT_RIGHT_ASSIGN(">>>=", 14), ASSIGN("=", 14),
 	LOGICAL_OR("||", 12),
 	LOGICAL_AND("&&", 11),
 	BITWISE_OR("|", 10),
