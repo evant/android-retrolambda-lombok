@@ -94,7 +94,7 @@ public class ExpressionsActions extends SourceActions {
 			org.parboiled.Node<Node> operator = operators.get(i);
 			Node prev = current;
 			if (operator == null) continue;
-			if ("cast".equals(operator.getLabel())) {
+			if (!operator.getChildren().isEmpty() && "cast".equals(operator.getChildren().get(0).getLabel())) {
 				current = new Cast().setRawOperand(current).setRawTypeReference(operator.getValue());
 			} else {
 				String symbol = operatorTexts.get(i);
