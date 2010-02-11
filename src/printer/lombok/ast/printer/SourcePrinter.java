@@ -292,6 +292,7 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		UnaryOperator op;
 		try {
 			op = node.getOperator();
+			if (op == null) throw new Exception();
 		} catch (Exception e) {
 			visit(node.getOperand());
 			formatter.closeInline();
@@ -826,6 +827,7 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.buildInline(node);
 		visit(node.getRawName());
 		if (!node.extending().isEmpty()) {
+			formatter.space();
 			formatter.keyword("extends");
 			visitAll(node.extending(), " & ", " ", "");
 		}
