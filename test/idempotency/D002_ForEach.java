@@ -1,7 +1,8 @@
-public class Statements1ForEach {
+class D002_ForEach {
     {
+        String x;
         for (String name : java.util.Collections.emptyList()) {
-            System.out.println(name);
+            x = name;
         }
     }
 }
