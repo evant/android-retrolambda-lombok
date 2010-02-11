@@ -535,13 +535,16 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.append("(");
 		visitAll("init", node.inits(), ", ", "", "");
 		formatter.append(";");
-		formatter.space();
-		formatter.nameNextElement("condition");
-		visit(node.getRawCondition());
+		if (node.getRawCondition() != null) {
+			formatter.space();
+			formatter.nameNextElement("condition");
+			visit(node.getRawCondition());
+		}
 		formatter.append(";");
-		formatter.space();
-		formatter.nameNextElement("update");
-		visitAll(node.updates(), ", ", "", "");
+		if (!node.updates().isEmpty()) {
+			formatter.space();
+			visitAll(node.updates(), ", ", "", "");
+		}
 		formatter.append(")");
 		formatter.space();
 		formatter.startSuppressBlock();
