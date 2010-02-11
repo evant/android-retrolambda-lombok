@@ -1,0 +1,55 @@
+class C003_SimpleExpressions {
+    {
+        int primitive0 = 0;
+        int primitive1 = primitive0;
+        int unary1 = -1;
+        int unary2 = ~unary1;
+        int unary3 = ++unary2;
+        int unary4 = --unary3;
+        int unary5 = unary2++;
+        int unary6 = unary3--;
+        int unary7 = +5;
+        int unary8 = +unary1;
+        boolean unary9 = !true;
+        int unary10 = (int) 1.1;
+        Object constructor = new Object();
+        Object memberAccess = java.lang.String.CASE_INSENSITIVE_ORDER;
+        int p3a = 5 * 2;
+        int p3b = 5 / 2;
+        int p3c = 5 % 2;
+        int p4a = 5 + 2;
+        int p4b = 5 - 2;
+        String p4c = "a" + "b";
+        int p5a = 5 << 2;
+        int p5b = 5 >> 2;
+        int p5c = 5 >>> 2;
+        boolean p6a = 5 < 2;
+        boolean p6b = 5 > 2;
+        boolean p6c = 5 <= 2;
+        boolean p6d = 5 >= 2;
+        boolean p6e = "a" instanceof String;
+        boolean p7a = 1 == 1;
+        boolean p7b = 5 != 2;
+        boolean p8a = true & false;
+        int p8b = 5 & 2;
+        boolean p9a = true ^ false;
+        int p9b = 5 ^ 2;
+        boolean p10a = true | false;
+        int p10b = 5 | 2;
+        boolean p11 = true && false;
+        boolean p12 = true || false;
+        int p13 = true ? 5 : 2;
+        boolean p14a = p11 = true;
+        int p14b = p3a += p3b;
+        int p14c = p3a -= p3b;
+        int p14d = p3a *= p3b;
+        int p14e = p3a /= 4;
+        int p14f = p3a %= 10;
+        int p14g = p3a <<= p3b;
+        int p14h = p3a >>= p3b;
+        int p14i = p3a >>>= p3b;
+        int p14j = p3a &= p3b;
+        int p14k = p3a ^= p3b;
+        int p14l = p3a |= p3b;
+    }
+}
