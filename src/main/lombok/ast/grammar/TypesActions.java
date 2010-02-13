@@ -25,6 +25,7 @@ import java.util.List;
 
 import lombok.ast.Identifier;
 import lombok.ast.Node;
+import lombok.ast.Position;
 import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
@@ -41,7 +42,9 @@ public class TypesActions extends SourceActions {
 	}
 	
 	public Node createTypeReferencePart(Node identifier, Node typeArguments) {
-		return posify(new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments));
+		Node emptyArgs = null;
+		if (typeArguments == null) emptyArgs = new TypeArguments().setPosition(new Position(getCurrentLocationRtrim(), getCurrentLocationRtrim()));
+		return posify(new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments == null ? emptyArgs : typeArguments));
 	}
 	
 	public Node createWildcardedType(String extendsOrSuper, Node type) {
