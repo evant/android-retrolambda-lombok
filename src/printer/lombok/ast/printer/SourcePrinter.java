@@ -22,7 +22,6 @@
 package lombok.ast.printer;
 
 import static lombok.ast.printer.SourceFormatter.FAIL;
-
 import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
@@ -706,9 +705,31 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		visit(node.getRawCondition());
 		formatter.append(")");
 		formatter.space();
-		formatter.startSuppressBlock();
-		visit(node.getRawBody());
-		formatter.endSuppressBlock();
+		
+		Node body = node.getRawBody();
+		if (!(body instanceof Block)) {
+			visit(body);
+			formatter.closeBlock();
+			return true;
+		}
+		
+		formatter.append("{");
+		formatter.buildBlock(null);
+		
+		for (Node child : ((Block)body).contents().getRawContents()) {
+			if (child instanceof Case || child instanceof Default) {
+				formatter.startSuppressIndent();
+				visit(child);
+				formatter.endSuppressIndent();
+			} else {
+				visit(child);
+			}
+		}
+		
+		formatter.closeBlock();
+		formatter.append("}");
+		
+		formatter.closeBlock();
 		return true;
 	}
 	

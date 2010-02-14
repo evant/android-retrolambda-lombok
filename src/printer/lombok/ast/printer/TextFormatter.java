@@ -65,6 +65,15 @@ public class TextFormatter implements SourceFormatter {
 		suppress = false;
 	}
 	
+	@Override
+	public void startSuppressIndent() {
+		indent--;
+	}
+	@Override
+	public void endSuppressIndent() {
+		indent++;
+	}
+	
 	private void printIndent() {
 		if (sb.length() > 0) sb.append("\n");
 		for (int i = 0; i < indent; i++) sb.append(INDENT);

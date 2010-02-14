@@ -84,6 +84,17 @@ public interface SourceFormatter {
 	void endSuppressBlock();
 	
 	/**
+	 * The next {@code buildBlock(Node)} call should <em>NOT</em> indent.
+	 * Example: The {@code case} or {@code default} statement inside a {@code switch} block.
+	 */
+	void startSuppressIndent();
+	
+	/**
+	 * Closes the previous {@link #startSuppressIndent()} call.
+	 */
+	void endSuppressIndent();
+	
+	/**
 	 * Opens a new AST level which is normally rendered as a block (example: statements, methods, type bodies).
 	 * 
 	 * @param node The AST node that this level represents. Can be {@code null} which signals that the current node has a block substructure.

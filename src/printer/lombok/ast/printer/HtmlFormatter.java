@@ -113,6 +113,16 @@ public class HtmlFormatter implements SourceFormatter {
 		sb.append("</span>");
 	}
 	
+	@Override
+	public void startSuppressIndent() {
+		sb.append("<div class=\"indentSuppress\">");
+	}
+	
+	@Override
+	public void endSuppressIndent() {
+		sb.append("</div>");
+	}
+	
 	private static final Pattern HTML_CLASS_SIGNIFICANT_NODE = Pattern.compile("^lombok\\.ast\\.(\\w+)$");
 	
 	@Override public void buildBlock(Node node) {
