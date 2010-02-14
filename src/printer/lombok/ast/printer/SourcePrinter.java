@@ -792,7 +792,7 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.buildBlock(node);
 		formatter.keyword("throw");
 		formatter.space();
-		node.getRawThrowable();
+		visit(node.getRawThrowable());
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
