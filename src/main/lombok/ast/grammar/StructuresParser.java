@@ -185,6 +185,7 @@ public class StructuresParser extends BaseParser<Node> {
 				optional(enforcedSequence(
 						sequence(string("default"), group.basics.testLexBreak(), group.basics.optWS()),
 						annotationElementValue())).label("defaultValue"),
+				ch(';'), group.basics.optWS(),
 				SET(actions.createAnnotationMethodDeclaration(VALUE("modifiers"), VALUE("resultType"), VALUE("methodName"), VALUE("defaultValue"))));
 	}
 	
