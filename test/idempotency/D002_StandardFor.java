@@ -8,8 +8,11 @@ class D002_StandardFor {
         }
         int a = 10;
         for (a = 10, "a".toString(), a++;;) {
+            break;
         }
         for (;;) {
+            break;
         }
+        for (int i = 0; i < 3; i++) System.out.println(x);
     }
 }
