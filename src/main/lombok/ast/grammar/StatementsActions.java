@@ -21,6 +21,7 @@
  */
 package lombok.ast.grammar;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -73,11 +74,15 @@ public class StatementsActions extends SourceActions {
 	
 	public Node createLabelledStatement(List<Node> labelNames, Node statement) {
 		Node current = statement;
-		if (labelNames != null) for (Node n : labelNames) {
-			if (n != null) {
-				Position pos = current == null ? null : new Position(n.getPosition().getStart(), current.getPosition().getEnd());
-				current = new LabelledStatement().setRawLabel(n).setRawStatement(current);
-				current.setPosition(pos);
+		if (labelNames != null) {
+			labelNames = new ArrayList<Node>(labelNames);
+			Collections.reverse(labelNames);
+			for (Node n : labelNames) {
+				if (n != null) {
+					Position pos = current == null ? null : new Position(n.getPosition().getStart(), current.getPosition().getEnd());
+					current = new LabelledStatement().setRawLabel(n).setRawStatement(current);
+					current.setPosition(pos);
+				}
 			}
 		}
 		return current;
