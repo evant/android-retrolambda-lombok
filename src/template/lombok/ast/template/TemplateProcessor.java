@@ -667,6 +667,10 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateFieldsForNode(Writer out, FieldData field) throws IOException {
 		out.write("\tprivate lombok.ast.AbstractNode ");
 		out.write(field.getName());
+		if (!field.getInitialValue().isEmpty()) {
+			out.write(" = ");
+			out.write(field.getInitialValue());
+		}
 		out.write(";\n");
 	}
 	
