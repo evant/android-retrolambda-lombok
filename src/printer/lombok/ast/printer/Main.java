@@ -52,7 +52,9 @@ public class Main {
 		source.parseCompilationUnit();
 		Node result = source.getNodes().get(0);
 		long taken = System.currentTimeMillis() - now;
-		SourceFormatter formatter = isText ? new TextFormatter() : new HtmlFormatter(source.getRawInput());
+		SourceFormatter formatter = isText ?
+				new TextFormatter(source.getRawInput()) :
+				new HtmlFormatter(source.getRawInput());
 		formatter.setTimeTaken(taken);
 		result.accept(new SourcePrinter(formatter));
 		

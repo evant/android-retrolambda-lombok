@@ -48,7 +48,7 @@ public class IdempotencyTest {
 		}
 		
 		Node node = source.getNodes().get(0);
-		TextFormatter formatter = new TextFormatter();
+		TextFormatter formatter = new TextFormatter(source.getRawInput());
 		node.accept(new SourcePrinter(formatter));
 		String actual = formatter.finish();
 		try {

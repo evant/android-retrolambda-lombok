@@ -4,16 +4,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import lombok.Getter;
 import lombok.ast.Node;
 
 import org.apache.commons.lang.StringUtils;
 
 public class TextFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
+	@Getter private final String rawSource;
 	private final StringBuilder sb = new StringBuilder();
 	private final List<String> errors = new ArrayList<String>();
 	private int indent;
 	private boolean suppress, newline;
+	
+	public TextFormatter(String rawSource) {
+		this.rawSource = rawSource;
+	}
 	
 	private TextFormatter a(String text) {
 		if (text.length() == 0) return this;

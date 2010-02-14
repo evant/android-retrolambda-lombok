@@ -52,7 +52,7 @@ public class AliasTest {
 		}
 		
 		Node node = actual.getNodes().get(0);
-		TextFormatter formatter = new TextFormatter();
+		TextFormatter formatter = new TextFormatter(actual.getRawInput());
 		node.accept(new SourcePrinter(formatter));
 		String actualString = formatter.finish();
 		assertEquals(expected, actualString);
