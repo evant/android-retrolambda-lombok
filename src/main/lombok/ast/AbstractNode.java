@@ -107,11 +107,13 @@ abstract class AbstractNode implements Node {
 	 * Adopts (accepts as direct child) the provided node.
 	 * 
 	 * @param child The node to adopt
+	 * @returns The {@code child} parameter for chaining.
 	 * @throws IllegalStateException If {@code child} already has a parent (clone or unparent it first).
 	 */
-	protected void adopt(AbstractNode child) throws IllegalStateException {
+	protected AbstractNode adopt(AbstractNode child) throws IllegalStateException {
 		child.ensureParentless();
 		child.parent = this;
+		return child;
 	}
 	
 	/**
