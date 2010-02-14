@@ -66,6 +66,7 @@ public abstract class ForwardingASTVisitor extends ASTVisitor {
 	@Override public boolean visitAnnotation(Annotation node) {return visitNode(node);}
 	@Override public boolean visitAnnotationElement(AnnotationElement node) {return visitNode(node);}
 	@Override public boolean visitTypeBody(TypeBody node) {return visitNode(node);}
+	@Override public boolean visitEnumTypeBody(EnumTypeBody node) {return visitNode(node);}
 	
 	//Class Bodies
 	@Override public boolean visitMethodDeclaration(MethodDeclaration node) {return visitNode(node);}

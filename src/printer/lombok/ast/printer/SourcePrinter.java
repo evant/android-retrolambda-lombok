@@ -52,6 +52,7 @@ import lombok.ast.DoWhile;
 import lombok.ast.EmptyStatement;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
+import lombok.ast.EnumTypeBody;
 import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.For;
@@ -900,17 +901,26 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		return true;
 	}
 	
+	public boolean visitEnumTypeBody(EnumTypeBody node) {
+		formatter.buildBlock(node);
+		formatter.append("{");
+		formatter.buildBlock(null);
+		visitAll("constant", node.constants(), ",\n", "", "");
+		if (!node.members().isEmpty()) {
+			formatter.append(";");
+			formatter.verticalSpace();
+		}
+		visitAll(node.members(), "\n", "", "");
+		formatter.closeBlock();
+		formatter.append("}");
+		formatter.closeBlock();
+		return true;
+	}
+	
 	public boolean visitTypeBody(TypeBody node) {
 		formatter.buildBlock(node);
 		formatter.append("{");
 		formatter.buildBlock(null);
-		if (node.getParent() instanceof EnumDeclaration) {
-			visitAll("constant", ((EnumDeclaration)node.getParent()).constants(), ",\n", "", "");
-			if (!node.members().isEmpty()) {
-				formatter.append(";");
-				formatter.verticalSpace();
-			}
-		}
 		visitAll(node.members(), "\n", "", "");
 		formatter.closeBlock();
 		formatter.append("}");
@@ -1110,7 +1120,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 			visitAll("implements", node.implementing(), ", ", " ", " ");
 		}
 		
-		//logic of printing enum constants is in visitTypeBody
 		formatter.startSuppressBlock();
 		visit(node.getRawBody());
 		formatter.endSuppressBlock();

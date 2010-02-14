@@ -12,6 +12,7 @@ import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
+import lombok.ast.EnumTypeBody;
 import lombok.ast.ImportDeclaration;
 import lombok.ast.InstanceInitializer;
 import lombok.ast.InterfaceDeclaration;
@@ -245,25 +246,19 @@ public class StructuresActions extends SourceActions {
 		return posify(result);
 	}
 	
-	public Node createEnumFromContents(Node head, List<Node> tail, Node body) {
-		EnumDeclaration decl = new EnumDeclaration();
-		if (head != null) decl.constants().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) decl.constants().addToEndRaw(n);
-		if (body == null) {
-			TypeBody emptyBody = new TypeBody();
-			int pos = rtrim(getContext().getCurrentLocation().index-1);
-			emptyBody.setPosition(new Position(pos, pos));
-			decl.setRawBody(emptyBody);
-		} else {
-			decl.setRawBody(body);
+	public Node createEnumBody(Node head, List<Node> tail, Node typeBody) {
+		EnumTypeBody body = new EnumTypeBody();
+		if (head != null) body.constants().addToEndRaw(head);
+		if (tail != null) for (Node n : tail) if (n != null) body.constants().addToEndRaw(n);
+		if (typeBody instanceof TypeBody) {
+			body.members().migrateAllFromRaw(((TypeBody)typeBody).members());
 		}
-		return posify(decl);
+		return posify(body);
 	}
 	
-	public Node createEnumDeclaration(Node modifiers, Node name, Node enumDeclaration, List<Node> addons) {
-		if (enumDeclaration != null && !(enumDeclaration instanceof EnumDeclaration)) return enumDeclaration;
-		EnumDeclaration decl = enumDeclaration == null ? new EnumDeclaration() : (EnumDeclaration)enumDeclaration;
-		decl.setRawName(name);
+	public Node createEnumDeclaration(Node modifiers, Node name, Node body, List<Node> addons) {
+		EnumDeclaration decl = new EnumDeclaration();
+		decl.setRawName(name).setRawBody(body);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		if (addons != null) for (Node n : addons) {
 			//if (n instanceof ExtendsClause) //TODO add error node: implements not allowed here.

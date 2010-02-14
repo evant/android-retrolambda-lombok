@@ -991,6 +991,12 @@ class TypeBodyTemplate {
 	List<TypeMember> members;
 }
 
+@GenerateAstNode
+class EnumTypeBodyTemplate {
+	List<TypeMember> members;
+	List<EnumConstant> constants;
+}
+
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class AnnotationDeclarationTemplate {
 	@InitialValue("new lombok.ast.Modifiers()")
@@ -1073,8 +1079,7 @@ class EnumDeclarationTemplate {
 	@NonNull Modifiers modifiers;
 	
 	@NonNull Identifier name;
-	@NonNull TypeBody body;
-	List<EnumConstant> constants;
+	@NonNull EnumTypeBody body;
 	List<TypeReference> implementing;
 	
 	@CopyMethod

@@ -83,6 +83,7 @@ public abstract class ASTVisitor {
 	public abstract boolean visitAnnotation(Annotation node);
 	public abstract boolean visitAnnotationElement(AnnotationElement node);
 	public abstract boolean visitTypeBody(TypeBody node);
+	public abstract boolean visitEnumTypeBody(EnumTypeBody enumTypeBody);
 	
 	//Class Bodies
 	public abstract boolean visitMethodDeclaration(MethodDeclaration node);

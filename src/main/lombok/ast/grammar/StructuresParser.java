@@ -17,8 +17,9 @@ public class StructuresParser extends BaseParser<Node> {
 	public Rule typeBody() {
 		return enforcedSequence(
 				ch('{'), group.basics.optWS(),
-				typeBodyDeclarations(),
-				ch('}'), group.basics.optWS());
+				typeBodyDeclarations(), SET(),
+				ch('}'), group.basics.optWS(),
+				SET(actions.posify(VALUE())));
 	}
 	
 	Rule typeBodyDeclarations() {
@@ -141,7 +142,7 @@ public class StructuresParser extends BaseParser<Node> {
 						ch(';'), group.basics.optWS(),
 						typeBodyDeclarations())).label("typeBodyDeclarations"),
 				ch('}'), group.basics.optWS(),
-				SET(actions.createEnumFromContents(VALUE("constants/sequence/head"), VALUES("constants/sequence/zeroOrMore/tail"), VALUE("typeBodyDeclarations"))));
+				SET(actions.createEnumBody(VALUE("constants/sequence/head"), VALUES("constants/sequence/zeroOrMore/tail"), VALUE("typeBodyDeclarations"))));
 	}
 	
 	Rule enumConstant() {
