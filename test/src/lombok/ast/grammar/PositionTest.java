@@ -21,43 +21,37 @@
  */
 package lombok.ast.grammar;
 
-import lombok.ast.Modifiers;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+import lombok.ast.AstException;
 import lombok.ast.Node;
-import lombok.ast.Position;
+import lombok.ast.printer.SourcePrinter;
 
-import org.parboiled.BaseActions;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-class SourceActions extends BaseActions<Node> {
-	protected final Source source;
-	
-	SourceActions(Source source) {
-		this.source = source;
+@RunWith(DirectoryRunner.class)
+public class PositionTest {
+	public static File getDirectory() {
+		return new File("test/idempotency");
 	}
 	
-	Node createNewModifiersIfNeeded(Node modifiers, int pos) {
-		if (modifiers != null) return modifiers;
-		return new Modifiers().setPosition(new Position(pos, pos));
-	}
-	
-	<T extends Node> T posify(T node) {
-		int start = source.mapPosition(getContext().getStartLocation().index);
-		int end = Math.max(start, getCurrentLocationRtrim());
-		node.setPosition(new Position(start, end));
-		return node;
-	}
-	
-	int getCurrentLocationRtrim() {
-		return rtrim(getContext().getCurrentLocation().index);
-	}
-	
-	int rtrim(int position) {
-		return source.mapPositionRtrim(position);
-	}
-	
-	void positionSpan(Node target, org.parboiled.Node<Node> start, org.parboiled.Node<Node> end) {
-		if (target == null || start == null || end == null) return;
-		target.setPosition(new Position(
-				source.mapPosition(start.getStartLocation().index),
-				source.mapPositionRtrim(end.getEndLocation().index)));
+	@Test
+	public void testPositions(Source source) throws IOException {
+		source.parseCompilationUnit();
+		
+		if (!source.getProblems().isEmpty()) {
+			fail(source.getProblems().get(0).toString());
+		}
+		
+		Node node = source.getNodes().get(0);
+		PositionCheckingFormatter formatter = new PositionCheckingFormatter(source.getRawInput());
+		node.accept(new SourcePrinter(formatter));
+		List<AstException> problems = formatter.getProblems();
+		if (!problems.isEmpty()) fail("position error: " + problems.get(0));
 	}
 }

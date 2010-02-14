@@ -144,10 +144,14 @@ public class StatementsActions extends SourceActions {
 		return posify(result);
 	}
 	
-	public Node createEnhancedFor(Node modifiers, Node type, Node varName, List<String> dims, Node iterable, Node statement) {
-		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables().addToEndRaw(
-				new VariableDefinitionEntry().setRawName(varName).setDimensions(dims == null ? 0 : dims.size()));
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+	public Node createEnhancedFor(
+			org.parboiled.Node<Node> modifiers, Node type,
+			org.parboiled.Node<Node> varDefEntry, Node iterable, Node statement) {
+		
+		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables()
+				.addToEndRaw(varDefEntry.getValue());
+		positionSpan(decl, modifiers, varDefEntry);
+		decl.setRawModifiers(createNewModifiersIfNeeded(modifiers.getValue(), decl.getPosition().getStart()));
 		return posify(new ForEach().setRawVariable(decl).setRawIterable(iterable).setRawStatement(statement));
 	}
 	

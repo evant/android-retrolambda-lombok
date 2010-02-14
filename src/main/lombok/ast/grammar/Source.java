@@ -90,14 +90,14 @@ public class Source {
 	int mapPositionRtrim(int pos) {
 		char c;
 		
-		pos = Math.min(pos +1, preprocessed.length());
+		pos = Math.min(pos, preprocessed.length());
 		
 		do {
 			if (pos == 0) return 0;
 			c = preprocessed.charAt(--pos);
 		} while (Character.isWhitespace(c));
 		
-		return mapPosition(pos);
+		return mapPosition(pos+1);
 	}
 	
 	private String preProcess() {

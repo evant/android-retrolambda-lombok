@@ -238,7 +238,7 @@ public class StructuresParser extends BaseParser<Node> {
 	public Rule fieldDeclaration() {
 		return sequence(
 				fieldDeclarationModifiers().label("modifiers"),
-				variableDefinition(), SET(),
+				variableDefinition(), SET(), SET(actions.posify(VALUE())),
 				ch(';'), group.basics.optWS(),
 				SET(actions.createFieldDeclaration(VALUE(), VALUE("modifiers"))));
 	}
@@ -254,6 +254,13 @@ public class StructuresParser extends BaseParser<Node> {
 						ch(','), group.basics.optWS(),
 						variableDefinitionPart()).label("tail")),
 				SET(actions.createVariableDefinition(VALUE("type"), VALUE("head"), VALUES("zeroOrMore/tail"))));
+	}
+	
+	Rule variableDefinitionPartNoAssign() {
+		return sequence(
+				group.basics.identifier().label("varName"),
+				zeroOrMore(enforcedSequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				SET(actions.createVariableDefinitionPart(VALUE("varName"), TEXTS("dims/dim"), null)));
 	}
 	
 	Rule variableDefinitionPart() {

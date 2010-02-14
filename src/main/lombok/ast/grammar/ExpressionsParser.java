@@ -153,12 +153,12 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 */
 	Rule level1ExpressionChaining() {
 		return sequence(
-				primaryExpression(), SET(),
+				primaryExpression().label("head"), SET(),
 				zeroOrMore(firstOf(
 						arrayAccessOperation().label("arrayAccess"),
 						methodInvocationWithTypeArgsOperation().label("methodInvocation"),
 						select().label("select"))),
-				SET(actions.createLevel1Expression(VALUE(), VALUES("zeroOrMore/firstOf"))));
+				SET(actions.createLevel1Expression(NODE("head"), NODES("zeroOrMore/firstOf"))));
 	}
 	
 	Rule arrayAccessOperation() {
@@ -193,7 +193,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 */
 	Rule dotNewExpressionChaining() {
 		return sequence(
-				level1ExpressionChaining(), SET(),
+				level1ExpressionChaining().label("head"), SET(),
 				zeroOrMore(enforcedSequence(
 						sequence(
 								ch('.'),
@@ -206,8 +206,8 @@ public class ExpressionsParser extends BaseParser<Node> {
 						group.types.typeArguments().label("classTypeArgs"),
 						group.structures.methodArguments().label("methodArguments"),
 						optional(group.structures.typeBody()).label("classBody"),
-						SET(actions.createQualifiedConstructorInvocation(VALUE("constructorTypeArgs"), VALUE("innerClassName"), VALUE("classTypeArgs"), VALUE("methodArguments"), VALUE("classBody"))))),
-				SET(actions.createChainOfQualifiedConstructorInvocations(VALUE(), VALUES("zeroOrMore/enforcedSequence"))));
+						SET(actions.createQualifiedConstructorInvocation(VALUE("constructorTypeArgs"), NODE("innerClassName"), NODE("classTypeArgs"), VALUE("methodArguments"), VALUE("classBody"))))),
+				SET(actions.createChainOfQualifiedConstructorInvocations(NODE("head"), NODES("zeroOrMore/enforcedSequence"))));
 	}
 	
 	/**
@@ -238,8 +238,8 @@ public class ExpressionsParser extends BaseParser<Node> {
 				oneOrMore(sequence(
 						firstOf(string("++"), string("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-						postfixIncrementExpressionChaining(), SET(),
-				SET(actions.createUnaryPrefixExpression(VALUE(), NODES("oneOrMore/operatorCt/operator"), TEXTS("oneOrMore/operatorCt/operator"))));
+						postfixIncrementExpressionChaining().label("operand"), SET(),
+				SET(actions.createUnaryPrefixExpression(NODE("operand"), NODES("oneOrMore/operatorCt/operator"), TEXTS("oneOrMore/operatorCt/operator"))));
 	}
 	
 	/**
@@ -258,8 +258,8 @@ public class ExpressionsParser extends BaseParser<Node> {
 										ch(')')).label("cast")
 								).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				postfixIncrementExpressionChaining(), SET(),
-				SET(actions.createUnaryPrefixExpression(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
+				postfixIncrementExpressionChaining().label("operand"), SET(),
+				SET(actions.createUnaryPrefixExpression(NODE("operand"), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
 	}
 	
 	/**
@@ -305,8 +305,8 @@ public class ExpressionsParser extends BaseParser<Node> {
 				SET(),
 				optional(enforcedSequence(
 						sequence(string("instanceof"), group.basics.testLexBreak(), group.basics.optWS()),
-						group.types.type(),
-						UP(UP(SET(actions.createInstanceOfExpression(VALUE(), LAST_VALUE())))))));
+						group.types.type().label("type")).label("typeCt")),
+				SET(actions.createInstanceOfExpression(VALUE(), VALUE("optional/typeCt/type"))));
 	}
 	
 	/**
@@ -380,7 +380,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 */
 	Rule inlineIfExpressionChaining() {
 		return sequence(
-				conditionalOrExpressionChaining(),
+				conditionalOrExpressionChaining().label("head"),
 				SET(),
 				zeroOrMore(
 						sequence(
@@ -391,9 +391,9 @@ public class ExpressionsParser extends BaseParser<Node> {
 								group.basics.optWS(),
 								conditionalOrExpressionChaining().label("tail2")
 								)),
-				SET(actions.createInlineIfExpression(VALUE(),
+				SET(actions.createInlineIfExpression(NODE("head"),
 						TEXTS("zeroOrMore/sequence/operator1"), TEXTS("zeroOrMore/sequence/operator2"),
-						VALUES("zeroOrMore/sequence/tail1"), VALUES("zeroOrMore/sequence/tail2"))),
+						NODES("zeroOrMore/sequence/tail1"), NODES("zeroOrMore/sequence/tail2"))),
 				group.basics.optWS());
 	}
 	
@@ -440,7 +440,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	@Cached
 	Rule forLeftAssociativeBinaryExpression(Rule operator, Rule nextHigher) {
 		return sequence(
-				nextHigher, new Action<Node>() {
+				nextHigher.label("head"), new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
 						setContext(context);
 						return SET();
@@ -455,7 +455,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 				new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
 						setContext(context);
-						return SET(actions.createLeftAssociativeBinaryExpression(VALUE(), TEXTS("zeroOrMore/sequence/operator"), VALUES("zeroOrMore/sequence/tail")));
+						return SET(actions.createLeftAssociativeBinaryExpression(NODE("head"), TEXTS("zeroOrMore/sequence/operator"), NODES("zeroOrMore/sequence/tail")));
 					}
 				},
 				group.basics.optWS());

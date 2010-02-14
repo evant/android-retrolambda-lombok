@@ -33,7 +33,7 @@ public class Position {
 	private int start, end;
 	private Node generatedBy;
 	
-	public static Position UNPLACED = new Position(0, 0);
+	public static Position UNPLACED = new Position(-1, -1);
 	
 	public Position(int start, int end) {
 		this.start = start;

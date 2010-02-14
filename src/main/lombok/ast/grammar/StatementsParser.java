@@ -42,7 +42,7 @@ public class StatementsParser extends BaseParser<Node> {
 	public Rule variableDefinition() {
 		return sequence(
 				group.structures.variableDefinitionModifiers().label("modifiers"),
-				group.structures.variableDefinition(), SET(),
+				group.structures.variableDefinition(), SET(), SET(actions.posify(VALUE())),
 				SET(actions.addLocalVariableModifiers(VALUE(), VALUE("modifiers"))));
 	}
 	
@@ -270,13 +270,12 @@ public class StatementsParser extends BaseParser<Node> {
 				ch('('), group.basics.optWS(),
 				group.structures.variableDefinitionModifiers().label("modifiers"),
 				group.types.type().label("type"),
-				group.basics.identifier().label("varName"),
-				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				group.structures.variableDefinitionPartNoAssign().label("varDeclPart"),
 				ch(':'), group.basics.optWS(),
 				group.expressions.anyExpression().label("iterable"),
 				ch(')'), group.basics.optWS(),
 				anyStatement().label("statement"),
-				SET(actions.createEnhancedFor(VALUE("modifiers"), VALUE("type"), VALUE("varName"), TEXTS("dims/dim"), VALUE("iterable"), VALUE("statement"))));
+				SET(actions.createEnhancedFor(NODE("modifiers"), VALUE("type"), NODE("varDeclPart"), VALUE("iterable"), VALUE("statement"))));
 	}
 	
 	/**

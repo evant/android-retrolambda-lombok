@@ -29,6 +29,15 @@ public class TextFormatter implements SourceFormatter {
 		return this;
 	}
 	
+	protected int getCurrentPosition(boolean accountForNewline) {
+		int len = sb.length();
+		if (accountForNewline && newline) {
+			if (len > 0) len++;	//actual \n character.
+			len += INDENT.length() * indent;
+		}
+		return len;
+	}
+	
 	private TextFormatter a(char text) {
 		return a(String.valueOf(text));
 	}
