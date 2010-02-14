@@ -40,6 +40,7 @@
 	<target name="templateProcessor" depends="ensureDeps" description="Compiles the Template Processor, which produces the AST API classes">
 		<mkdir dir="build/templateProcessor" />
 		<javac destdir="build/templateProcessor" debug="true" target="1.6" source="1.6">
+			<compilerarg value="-Xlint:unchecked" />
 			<classpath refid="libs.path" />
 			<src path="src/template" />
 		</javac>
@@ -52,6 +53,7 @@
 	<target name="generateSource" depends="ensureDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6">
+			<compilerarg value="-Xlint:unchecked" />
 			<classpath refid="libs.path" />
 			<classpath location="build/templateProcessor.jar" />
 			<src path="src/main" />
@@ -65,6 +67,7 @@
 		<mkdir dir="build/lombok.ast" />
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6">
+			<compilerarg value="-Xlint:unchecked" />
 			<classpath refid="libs.path" />
 			<classpath location="build/templateProcessor.jar" />
 			<src path="src/main" />
