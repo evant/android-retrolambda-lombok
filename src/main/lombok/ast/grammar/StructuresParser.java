@@ -55,7 +55,8 @@ public class StructuresParser extends BaseParser<Node> {
 		return firstOf(
 				classOrInterfaceDeclaration(),
 				enumDeclaration(),
-				annotationDeclaration());
+				annotationDeclaration(),
+				sequence(ch(';'), group.basics.optWS()));
 	}
 	
 	public Rule classOrInterfaceDeclaration() {
