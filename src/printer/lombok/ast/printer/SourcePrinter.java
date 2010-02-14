@@ -267,9 +267,9 @@ public class SourcePrinter extends ForwardingASTVisitor {
 
 	//Expressions
 	public boolean visitBinaryExpression(BinaryExpression node) {
-		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) formatter.append("(");
+		formatter.buildInline(node);
 		formatter.nameNextElement("left");
 		visit(node.getRawLeft());
 		formatter.space();
@@ -281,50 +281,51 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.space();
 		formatter.nameNextElement("right");
 		visit(node.getRawRight());
-		if (parens) formatter.append(")");
 		formatter.closeInline();
+		if (parens) formatter.append(")");
 		return true;
 	}
 	
 	public boolean visitUnaryExpression(UnaryExpression node) {
-		formatter.buildInline(node);
 		UnaryOperator op;
 		try {
 			op = node.getOperator();
 			if (op == null) throw new Exception();
 		} catch (Exception e) {
+			formatter.buildInline(node);
 			visit(node.getOperand());
 			formatter.closeInline();
 			return true;
 		}
 		boolean parens = node.needsParentheses();
 		if (parens) formatter.append("(");
+		formatter.buildInline(node);
 		if (!op.isPostfix()) formatter.operator(op.getSymbol());
 		visit(node.getOperand());
 		if (op.isPostfix()) formatter.operator(op.getSymbol());
-		if (parens) formatter.append(")");
 		formatter.closeInline();
+		if (parens) formatter.append(")");
 		return true;
 	}
 	
 	public boolean visitCast(Cast node) {
-		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) formatter.append("(");
+		formatter.buildInline(node);
 		formatter.append("(");
 		visit(node.getRawTypeReference());
 		formatter.append(")");
 		formatter.space();
 		visit(node.getRawOperand());
-		if (parens) formatter.append(")");
 		formatter.closeInline();
+		if (parens) formatter.append(")");
 		return true;
 	}
 	
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
-		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) formatter.append("(");
+		formatter.buildInline(node);
 		formatter.nameNextElement("condition");
 		visit(node.getRawCondition());
 		formatter.space();
@@ -337,15 +338,15 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.space();
 		formatter.nameNextElement("ifFalse");
 		visit(node.getRawIfFalse());
-		if (parens) formatter.append(")");
 		formatter.closeInline();
+		if (parens) formatter.append(")");
 		return true;
 	}
 	
 	public boolean visitInstanceOf(InstanceOf node) {
-		formatter.buildInline(node);
 		boolean parens = node.needsParentheses();
 		if (parens) formatter.append("(");
+		formatter.buildInline(node);
 		formatter.nameNextElement("operand");
 		visit(node.getRawObjectReference());
 		formatter.space();
@@ -353,8 +354,8 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.space();
 		formatter.nameNextElement("type");
 		visit(node.getRawTypeReference());
-		if (parens) formatter.append(")");
 		formatter.closeInline();
+		if (parens) formatter.append(")");
 		return true;
 	}
 	
