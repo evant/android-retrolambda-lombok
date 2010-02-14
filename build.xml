@@ -52,7 +52,7 @@
 	
 	<target name="generateSource" depends="ensureDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
 		<mkdir dir="build/lombok.ast_generatedSource" />
-		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6">
+		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6" encoding="UTF-8">
 			<compilerarg value="-Xlint:unchecked" />
 			<classpath refid="libs.path" />
 			<classpath location="build/templateProcessor.jar" />
@@ -66,11 +66,12 @@
 	<target name="compile" depends="ensureDeps, templateProcessor" description="Compiles all code for lombok.ast">
 		<mkdir dir="build/lombok.ast" />
 		<mkdir dir="build/lombok.ast_generatedSource" />
-		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6">
+		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6" encoding="UTF-8">
 			<compilerarg value="-Xlint:unchecked" />
 			<classpath refid="libs.path" />
 			<classpath location="build/templateProcessor.jar" />
 			<src path="src/main" />
+			<src path="src/printer" />
 			<compilerarg value="-s" />
 			<compilerarg path="build/lombok.ast_generatedSource" />
 		</javac>
@@ -82,6 +83,27 @@
 			<classpath location="build/lombok.ast" />
 			<classpath refid="libs.path" />
 		</java>
+	</target>
+	
+	<target name="test" depends="compile" description="Runs unit tests.">
+		<mkdir dir="build/tests" />
+		<javac destdir="build/tests" debug="true" target="1.6" source="1.6" encoding="UTF-8">
+			<classpath refid="libs.path" />
+			<classpath location="build/lombok.ast" />
+			<src path="test/src" />
+		</javac>
+		<junit haltonfailure="yes" fork="on">
+			<formatter type="plain" usefile="false" unless="tests.quiet" />
+			<classpath refid="libs.path" />
+			<classpath path="build/lombok.ast" />
+			<classpath path="build/tests" />
+			<batchtest>
+				<fileset dir="test/src">
+					<include name="**/*Test*.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+		<echo level="info">All tests successful.</echo>
 	</target>
 	
 	<target name="ensure-ivy">
