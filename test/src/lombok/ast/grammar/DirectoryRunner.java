@@ -155,7 +155,7 @@ public class DirectoryRunner extends Runner {
 		case 1:
 			if (mirrorDirectory != null) return false;
 			if (paramTypes[0] == String.class) params = new Object[] {rawSource};
-			else if (paramTypes[0] == Source.class) params = new Object[] {new Source(rawSource)};
+			else if (paramTypes[0] == Source.class) params = new Object[] {new Source(rawSource, fileName)};
 			else return false;
 			break;
 		case 2:
@@ -165,11 +165,11 @@ public class DirectoryRunner extends Runner {
 			String expectedContent = FileUtils.readFileToString(new File(directory, mainFileName), "UTF-8");
 			
 			if (paramTypes[0] == String.class) params[0] = expectedContent;
-			else if (paramTypes[0] == Source.class) params[0] = new Source(expectedContent);
+			else if (paramTypes[0] == Source.class) params[0] = new Source(expectedContent, mainFileName);
 			else return false;
 			
 			if (paramTypes[1] == String.class) params[1] = rawSource;
-			else if (paramTypes[1] == Source.class) params[1] = new Source(rawSource);
+			else if (paramTypes[1] == Source.class) params[1] = new Source(rawSource, fileName);
 			else return false;
 			
 			break;

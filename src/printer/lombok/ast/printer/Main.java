@@ -45,10 +45,10 @@ public class Main {
 		}
 		
 		String rawSource = FileUtils.readFileToString(new File(args[1]), "UTF-8");
-		Source source = new Source(rawSource);
+		Source source = new Source(rawSource, args[1]);
 		source.parseCompilationUnit();
 		long now = System.currentTimeMillis();
-		source = new Source(rawSource);
+		source = new Source(rawSource, args[1]);
 		source.parseCompilationUnit();
 		Node result = source.getNodes().get(0);
 		long taken = System.currentTimeMillis() - now;

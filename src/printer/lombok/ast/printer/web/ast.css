@@ -67,6 +67,10 @@
 	margin-left: 0;
 }
 
+#source div.indentSuppress {
+	margin-left: -2em;
+}
+
 .rawSource {
 	width: 80%;
 	height: 600px;

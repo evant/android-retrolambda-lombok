@@ -34,6 +34,7 @@ import org.parboiled.support.ParseError;
 import org.parboiled.support.ParsingResult;
 
 public class Source {
+	@Getter private final String name;
 	@Getter private final String rawInput;
 	private List<Node> nodes = new ArrayList<Node>();
 	private List<ParseProblem> problems = new ArrayList<ParseProblem>();
@@ -42,8 +43,9 @@ public class Source {
 	private TreeMap<Integer, Integer> positionDeltas = new TreeMap<Integer, Integer>();
 	private String preprocessed;
 	
-	public Source(String rawInput) {
+	public Source(String rawInput, String name) {
 		this.rawInput = rawInput;
+		this.name = name;
 	}
 	
 	public List<Node> getNodes() {
