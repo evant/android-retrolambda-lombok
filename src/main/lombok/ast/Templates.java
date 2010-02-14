@@ -226,7 +226,7 @@ class VariableDeclarationTemplate {
 
 @GenerateAstNode
 class VariableDefinitionTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	@NonNull TypeReference typeReference;
 	List<VariableDefinitionEntry> variables;
@@ -462,7 +462,7 @@ class TypeReferenceTemplate {
 @GenerateAstNode
 class TypeReferencePartTemplate {
 	@NonNull Identifier identifier;
-	@InitialValue("new TypeArguments()")
+	@InitialValue("adopt(new lombok.ast.TypeArguments())")
 	@NonNull TypeArguments typeArguments;
 	
 	@CopyMethod
@@ -925,7 +925,7 @@ class CommentTemplate {
 
 @GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
 class AnnotationMethodDeclarationTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
 	@NonNull TypeReference returnTypeReference;
@@ -944,7 +944,7 @@ class AnnotationMethodDeclarationTemplate {
 
 @GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
 class MethodDeclarationTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
@@ -966,7 +966,7 @@ class MethodDeclarationTemplate {
 
 @GenerateAstNode(implementing=TypeMember.class)
 class ConstructorDeclarationTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
@@ -999,7 +999,7 @@ class EnumTypeBodyTemplate {
 
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class AnnotationDeclarationTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
 	@NonNull Identifier name;
@@ -1017,7 +1017,7 @@ class AnnotationDeclarationTemplate {
 
 @GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class})
 class ClassDeclarationTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
 	@NonNull Identifier name;
@@ -1038,7 +1038,7 @@ class ClassDeclarationTemplate {
 
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class InterfaceDeclarationTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
 	@NonNull Identifier name;
@@ -1075,7 +1075,7 @@ class EnumConstantTemplate {
 
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class EnumDeclarationTemplate {
-	@InitialValue("new lombok.ast.Modifiers()")
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
 	@NonNull Identifier name;
