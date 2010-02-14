@@ -1197,7 +1197,8 @@ public class SourcePrinter extends ForwardingASTVisitor {
 			visit(node.getRawPackageDeclaration());
 			formatter.verticalSpace();
 		}
-		visitAll(node.importDeclarations(), "", "", "\n");
+		visitAll(node.importDeclarations(), "", "", "");
+		if (!node.typeDeclarations().isEmpty() && !node.importDeclarations().isEmpty()) formatter.verticalSpace();
 		visitAll(node.typeDeclarations(), "\n", "", "");
 		formatter.closeBlock();
 		return true;
