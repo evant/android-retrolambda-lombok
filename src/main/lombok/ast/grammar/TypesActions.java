@@ -38,7 +38,14 @@ public class TypesActions extends SourceActions {
 	}
 	
 	public Node createPrimitiveType(String text) {
-		return posify(new TypeReference().parts().addToStartRaw(posify(new TypeReferencePart().setRawIdentifier(posify(new Identifier().setName(text))))));
+		Identifier identifier = posify(new Identifier().setName(text));
+		int endPos = identifier.getPosition().getEnd();
+		TypeArguments emptyTypeArguments = new TypeArguments();
+		emptyTypeArguments.setPosition(new Position(endPos, endPos));
+		TypeReferencePart typeReferencePart = posify(new TypeReferencePart()
+				.setRawTypeArguments(emptyTypeArguments)
+				.setRawIdentifier(identifier));
+		return posify(new TypeReference().parts().addToStartRaw(typeReferencePart));
 	}
 	
 	public Node createTypeReferencePart(Node identifier, Node typeArguments) {

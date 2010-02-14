@@ -162,16 +162,21 @@ public class ExpressionsActions extends SourceActions {
 		
 		TypeReferencePart classTypeArgs0;
 		boolean classTypeArgsCorrect = false;
+		Node identifierNode = identifier == null ? null : identifier.getValue();
 		if (classTypeArgs != null && classTypeArgs.getValue() instanceof TypeReferencePart) {
 			classTypeArgs0 = (TypeReferencePart)classTypeArgs.getValue();
 			classTypeArgsCorrect = true;
 		} else {
 			classTypeArgs0 = new TypeReferencePart();
+			if (identifierNode != null) {
+				int pos = identifierNode.getPosition().getEnd();
+				classTypeArgs0.setPosition(new Position(pos, pos));
+			}
 		}
 		MethodInvocation methodArguments0 = (methodArguments instanceof MethodInvocation) ? (MethodInvocation)methodArguments : new MethodInvocation();
 		
 		TypeReference typeReference = new TypeReference().parts().addToEnd(
-				classTypeArgs0.setRawIdentifier(identifier == null ? null : identifier.getValue()));
+				classTypeArgs0.setRawIdentifier(identifierNode));
 		if (!classTypeArgsCorrect) {
 			if (identifier != null && identifier.getValue() != null) {
 				typeReference.setPosition(identifier.getValue().getPosition());
