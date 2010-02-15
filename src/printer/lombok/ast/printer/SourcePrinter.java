@@ -680,7 +680,6 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		formatter.nameNextElement("assertion");
 		visit(node.getRawAssertion());
 		if (node.getRawMessage() != null) {
-			formatter.space();
 			formatter.append(":");
 			formatter.space();
 			formatter.nameNextElement("message");
