@@ -324,7 +324,7 @@ public class StructuresParser extends BaseParser<Node> {
 	
 	Rule anyKeyword() {
 		return firstOf("final", "strictfp", "abstract", "transient", "volatile",
-				"public", "protected", "private", "static", "native");
+				"public", "protected", "private", "synchronized", "static", "native");
 
 	}
 	
