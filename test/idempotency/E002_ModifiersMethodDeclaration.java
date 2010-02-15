@@ -1,4 +1,4 @@
-class E001_MethodDeclatations {
+class E002_ModifiersMethodDeclatations {
     public int publicInt() {
         return 5;
     }
@@ -66,4 +66,20 @@ class E001_MethodDeclatations {
     public native int publicNativeInt();
     
     native int defaultNativeInt();
+    
+    public strictfp int publicStrictFpInt() {
+        return 5;
+    }
+    
+    strictfp int defaultStrictFpInt() {
+        return 5;
+    }
+    
+    public static final synchronized strictfp int publicLotsInt() {
+        return 5;
+    }
+    
+    static final synchronized strictfp int defaultLotsInt() {
+        return 5;
+    }
 }
