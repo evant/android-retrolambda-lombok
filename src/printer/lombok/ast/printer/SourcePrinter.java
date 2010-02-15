@@ -952,14 +952,14 @@ public class SourcePrinter extends ForwardingASTVisitor {
 			formatter.keyword("throws");
 			visitAll("throws", node.thrownTypeReferences(), ", ", " ", "");
 		}
-		formatter.startSuppressBlock();
 		if (node.getRawBody() == null) {
 			formatter.append(";");
 		} else {
 			formatter.space();
+			formatter.startSuppressBlock();
 			visit(node.getRawBody());
+			formatter.endSuppressBlock();
 		}
-		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		
 		return true;
