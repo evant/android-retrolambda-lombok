@@ -16,4 +16,13 @@ class E004_ParameterConstructorDeclarations {
     
     E004_ParameterConstructorDeclarations(Class<? super Number> clazz) {
     }
+    
+    E004_ParameterConstructorDeclarations(String... args) {
+    }
+    
+    E004_ParameterConstructorDeclarations(int one, String... args) {
+    }
+    
+    E004_ParameterConstructorDeclarations(String[]... args) {
+    }
 }
