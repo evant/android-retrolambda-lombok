@@ -365,7 +365,7 @@ public class TemplateProcessor extends AbstractProcessor {
 					out.write(field.titleCasedName());
 					out.write("(this.");
 					out.write(field.getName());
-					out.write(");\n");
+					out.write(".copy());\n");
 				}
 			}
 			out.write("\t\treturn result;\n\t}\n\t\n");
