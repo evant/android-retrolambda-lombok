@@ -1,4 +1,4 @@
-class E004_GenericsMethodDeclaration {
+class E005_TypeParametersMethodDeclaration {
     <T> T simpleGenericReturn() {
         return null;
     }
