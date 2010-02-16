@@ -817,6 +817,9 @@ public class SourcePrinter extends ForwardingASTVisitor {
 		}
 		formatter.nameNextElement("type");
 		visit(node.getRawTypeReference());
+		if (node.isVarargs()) {
+			formatter.append("...");
+		}
 		formatter.space();
 		visitAll(node.variables(), ", ", "", "");
 		formatter.closeInline();

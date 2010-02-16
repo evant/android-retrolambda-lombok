@@ -117,7 +117,7 @@ public class StructuresActions extends SourceActions {
 		if (name != null) e.setPosition(new Position(name.getPosition().getStart(), getCurrentLocationRtrim()));
 		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
-		if ("...".equals(varargs)) decl.setVarargs(true);
+		if (varargs != null && !varargs.trim().isEmpty()) decl.setVarargs(true);
 		decl.variables().addToEndRaw(e);
 		return posify(decl);
 	}

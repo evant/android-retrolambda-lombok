@@ -224,7 +224,7 @@ public class StructuresParser extends BaseParser<Node> {
 		return sequence(
 				variableDefinitionModifiers().label("modifiers"),
 				group.types.type().label("type"),
-				optional(string("...")).label("varargs"),
+				optional(sequence(string("..."), group.basics.optWS())).label("varargs"),
 				group.basics.identifier().label("name"),
 				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
 				SET(actions.createMethodParameter(VALUE("modifiers"), VALUE("type"), TEXT("varargs"), VALUE("name"), TEXTS("dims/dim"))));
