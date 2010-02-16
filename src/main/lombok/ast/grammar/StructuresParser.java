@@ -159,9 +159,7 @@ public class StructuresParser extends BaseParser<Node> {
 				methodDeclarationModifiers().label("modifiers"),
 				group.types.typeVariables().label("typeParameters"),
 				group.basics.identifier().label("typeName"),
-				ch('('), group.basics.optWS(),
-				zeroOrMore(methodParameter().label("param")).label("params"),
-				ch(')'), group.basics.optWS(),
+				methodParameters().label("params"),
 				optional(enforcedSequence(
 						sequence(string("throws"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type().label("throwsHead"),
@@ -170,7 +168,7 @@ public class StructuresParser extends BaseParser<Node> {
 				firstOf(
 						sequence(ch(';'), group.basics.optWS()),
 						group.statements.blockStatement()).label("body"),
-				SET(actions.createConstructorDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("typeName"), VALUES("params/param"), 
+				SET(actions.createConstructorDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("typeName"), VALUE("params"), 
 						VALUE("throwsClause/enforcedSequence/throwsHead"), VALUES("throwsClause/enforcedSequence/zeroOrMore/throwsTail"),
 						VALUE("body"))));
 	}
@@ -195,9 +193,7 @@ public class StructuresParser extends BaseParser<Node> {
 				group.types.typeVariables().label("typeParameters"),
 				group.types.type().label("resultType"),
 				group.basics.identifier().label("methodName"),
-				ch('('), group.basics.optWS(),
-				zeroOrMore(methodParameter().label("param")).label("params"),
-				ch(')'), group.basics.optWS(),
+				methodParameters().label("params"),
 				zeroOrMore(enforcedSequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
 				optional(enforcedSequence(
 						sequence(string("throws"), group.basics.testLexBreak(), group.basics.optWS()),
@@ -207,9 +203,21 @@ public class StructuresParser extends BaseParser<Node> {
 				firstOf(
 						sequence(ch(';'), group.basics.optWS()),
 						group.statements.blockStatement()).label("body"),
-				SET(actions.createMethodDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("resultType"), VALUE("methodName"), VALUES("params/param"), 
+				SET(actions.createMethodDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("resultType"), VALUE("methodName"), VALUE("params"), 
 						TEXTS("dims/dim"), VALUE("throwsClause/enforcedSequence/throwsHead"), VALUES("throwsClause/enforcedSequence/zeroOrMore/throwsTail"),
 						VALUE("body"))));
+	}
+	
+	Rule methodParameters() {
+		return sequence(
+				ch('('), group.basics.optWS(),
+				optional(sequence(
+						methodParameter().label("head"),
+						zeroOrMore(sequence(
+								ch(','), group.basics.optWS(),
+								methodParameter().label("tail"))))),
+				ch(')'), group.basics.optWS(),
+				SET(actions.createMethodParameters(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))));
 	}
 	
 	Rule methodParameter() {

@@ -47,9 +47,19 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createMethodDeclaration(Node modifiers, Node typeParameters, Node resultType, Node name,
-			List<Node> params, List<String> dims, Node throwsHead, List<Node> throwsTail, Node body) {
+			Node params, List<String> dims, Node throwsHead, List<Node> throwsTail, Node body) {
 		
-		MethodDeclaration decl = new MethodDeclaration().setRawMethodName(name).setRawBody(body);
+		MethodDeclaration decl;
+		
+		if (params instanceof MethodDeclaration) {
+			decl = (MethodDeclaration)params;
+		} else {
+			decl = new MethodDeclaration();
+			if (params != null) {
+				//TODO report dangling node
+			}
+		}
+		decl.setRawMethodName(name).setRawBody(body);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		int extraDims = dims == null ? 0 : dims.size();
 		Node returnType = resultType;
@@ -64,14 +74,13 @@ public class StructuresActions extends SourceActions {
 			}
 		}
 		
-		if (params != null) for (Node n : params) if (n != null) decl.parameters().addToEndRaw(n);
 		if (throwsHead != null) decl.thrownTypeReferences().addToEndRaw(throwsHead);
 		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.thrownTypeReferences().addToEndRaw(n);
 		return posify(decl);
 	}
 	
 	public Node createConstructorDeclaration(Node modifiers, Node typeParameters, Node name,
-			List<Node> params, Node throwsHead, List<Node> throwsTail, Node body) {
+			Node params, Node throwsHead, List<Node> throwsTail, Node body) {
 		
 		ConstructorDeclaration decl = new ConstructorDeclaration().setRawTypeName(name).setRawBody(body);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
@@ -81,7 +90,14 @@ public class StructuresActions extends SourceActions {
 			}
 		}
 		
-		if (params != null) for (Node n : params) if (n != null) decl.parameters().addToEndRaw(n);
+		if (params instanceof MethodDeclaration) {
+			decl.parameters().migrateAllFromRaw(((MethodDeclaration)params).parameters());
+		} else {
+			if (params != null) {
+				//TODO report dangling node
+			}
+		}
+		
 		if (throwsHead != null) decl.thrownTypeReferences().addToEndRaw(throwsHead);
 		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.thrownTypeReferences().addToEndRaw(n);
 		return posify(decl);
@@ -309,5 +325,13 @@ public class StructuresActions extends SourceActions {
 		if (importDeclarations != null) for (Node n : importDeclarations) if (n != null) unit.importDeclarations().addToEndRaw(n);
 		if (typeDeclarations != null) for (Node n : typeDeclarations) if (n != null) unit.typeDeclarations().addToEndRaw(n);
 		return posify(unit);
+	}
+	
+	public Node createMethodParameters(Node head, List<Node> tail) {
+		MethodDeclaration decl = new MethodDeclaration();
+		if (head != null) decl.parameters().addToEndRaw(head);
+		if (tail != null) for (Node n : tail) if (n != null) decl.parameters().addToEndRaw(n);
+		
+		return decl;
 	}
 }
