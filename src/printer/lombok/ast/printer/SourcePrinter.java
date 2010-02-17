@@ -881,11 +881,11 @@ public class SourcePrinter extends ForwardingASTVisitor {
 	}
 	
 	public boolean visitAnnotation(Annotation node) {
-		formatter.buildInline(node);
+		formatter.buildBlock(node);
 		formatter.append("@");
 		visit(node.getRawAnnotationTypeReference());
 		visitAll(node.elements(), ", ", "(", ")");
-		formatter.closeInline();
+		formatter.closeBlock();
 		return true;
 	}
 	
