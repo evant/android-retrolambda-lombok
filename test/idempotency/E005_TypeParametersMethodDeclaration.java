@@ -24,4 +24,12 @@ class E005_TypeParametersMethodDeclaration {
     
     <T extends Number, U extends java.util.RandomAccess> void genericExtendsMoreParameter(T arg0, U arg1) {
     }
+    
+    <T extends Number, U extends T> U genericExtendsMoreParameterAndReturns(T arg0) {
+        return null;
+    }
+    
+    <T extends Number, U extends T, E extends Exception> U genericFun(T arg0) throws E {
+        return null;
+    }
 }
