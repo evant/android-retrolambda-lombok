@@ -11,10 +11,10 @@ class E004_ParameterMethodDeclarations {
     public void publicMethod(int one, String two, java.util.List<String> three, boolean isPublic) {
     }
     
-    void E004_ParameterConstructorDeclarations(java.util.List<? extends Number> list) {
+    void typeArgumentExtends(java.util.List<? extends Number> list) {
     }
     
-    void E004_ParameterConstructorDeclarations(Class<? super Number> clazz) {
+    void typeArgumentSuper(Class<? super Number> clazz) {
     }
     
     void array(int[] one) {
