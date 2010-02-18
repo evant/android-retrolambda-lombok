@@ -14,5 +14,5 @@ class G002_ModifiersFieldDeclaration {
     static int staticI;
     
     @SuppressWarnings("all")
-    public static final transient int staticI;
+    public static final transient int lots = -1;
 }

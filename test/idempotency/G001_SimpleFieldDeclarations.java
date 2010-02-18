@@ -15,5 +15,5 @@ class G001_SimpleFieldDeclaration {
     
     long l;
     
-    String s;
+    String o;
 }

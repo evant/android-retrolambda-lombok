@@ -1,13 +1,12 @@
-class D002_StandardFor {
+class D002_Label {
     {
-        label1:
         int i = 5;
-        label2:
+        label1:
         i++;
-        label3:
+        label2:
         ;
+        label3:
         label4:
-        label5:
         {
         }
     }

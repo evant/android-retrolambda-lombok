@@ -1,4 +1,4 @@
-class E003_ThrowsMethodDeclaration {
+abstract class E003_ThrowsMethodDeclaration {
     public int publicThrowable() throws Throwable {
         return 5;
     }

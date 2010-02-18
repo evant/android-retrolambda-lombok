@@ -1,4 +1,4 @@
-import java.util.Collections;
+import java.util.*;
 
 class G002_InitializedFieldDeclaration {
     public int publicI = 1 * 4;
@@ -16,5 +16,5 @@ class G002_InitializedFieldDeclaration {
     Collection<String> emptyCollection = Collections.emptyList();
     
     @SuppressWarnings("all")
-    Collection<? extends Number> emptyCollection = Collections.emptyList();
+    Collection<? extends Number> otherCollection = Collections.emptyList();
 }

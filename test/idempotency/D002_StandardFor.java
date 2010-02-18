@@ -13,6 +13,6 @@ class D002_StandardFor {
         for (;;) {
             break;
         }
-        for (int i = 0; i < 3; i++) System.out.println(x);
+        for (int i = 0; i < 3; i++) System.out.println(i);
     }
 }

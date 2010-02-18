@@ -1,20 +1,20 @@
 class D002_ForEach {
     {
         String x;
-        for (String name : java.util.Collections.emptyList()) {
-            x = name;
+        for (Object o : java.util.Collections.emptyList()) {
         }
         String[][] allNames = {{"Reinier", "Roel"}};
         for (String[] names : allNames) {
             for (String name : names) {
-                x = name[0];
+                x = name;
             }
         }
         for (String names[] : allNames) {
             for (String name : names) {
-                x = name[0];
+                x = name;
             }
         }
-        for (String name : java.util.Collections.emptyList()) x = name;
+        Object object;
+        for (Object o : java.util.Collections.emptyList()) object = o;
     }
 }

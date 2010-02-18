@@ -1,4 +1,4 @@
-protected enum BasicStructure3Enum implements java.util.RandomAccess {
+public enum BasicStructure3Enum implements java.util.RandomAccess {
     A,
     B,
     C

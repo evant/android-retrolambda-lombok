@@ -2,7 +2,7 @@ class C001_NumberLiterals {
     {
         int x = 0;
         int y = 1000000;
-        long z = 100000000000000000000L;
+        long z = 100000000000L;
         int a = 0x1fa1;
         int b = 0100;
         double c = 100.0;

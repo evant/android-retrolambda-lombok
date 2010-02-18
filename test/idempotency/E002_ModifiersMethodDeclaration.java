@@ -11,7 +11,7 @@ class E002_ModifiersMethodDeclatations {
         return 5;
     }
     
-    private privateInt() {
+    private int privateInt() {
         return 5;
     }
     

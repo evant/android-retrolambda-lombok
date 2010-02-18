@@ -6,11 +6,11 @@ class D002_Synchronized {
         synchronized (this) {
             i++;
         }
-        synchronized (new int[]) {
+        synchronized (new int[0]) {
             i++;
         }
-        synchronized (new int[]) {
-            synchronized (new int[]) {
+        synchronized (new int[0]) {
+            synchronized (new int[0]) {
                 i++;
             }
         }
