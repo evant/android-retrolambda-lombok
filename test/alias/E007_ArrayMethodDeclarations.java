@@ -1,4 +1,4 @@
-class E004_ParameterMethodDeclarations {
+class E004_ArrayMethodDeclarations {
     String oneParameter(int one)[] {
         return null;
     }
