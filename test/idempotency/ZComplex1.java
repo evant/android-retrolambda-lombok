@@ -9,7 +9,7 @@ public class ZComplex1 {
         java.lang.String x = null;
         int z = 0x20;
         float a = 1.234F;
-        java.util<?>.List<String>[] q;
+        java.util.List<String>[] q;
     }
 }
 
@@ -27,23 +27,35 @@ class ZComplex1Extra {
         int a = 10 + (20 + 30);
         int b = 10 + 20 * 30;
         int c = (10 + 20) * 30;
-        boolean d = c + d instanceof Integer;
+        boolean d = "" + b instanceof CharSequence;
         boolean g = a < 0;
-        int e = a > 0 ? true : b < 0 ? true : false;
-        int f = (a > 0 ? true : b < 0) ? true : false;
+        boolean e = a > 0 ? true : b < 0 ? true : false;
+        boolean f = (a > 0 ? true : b < 0) ? true : false;
         y++;
-        for (int i = 0, j = 1; i < 10; i++, j++) for (String x : Collections.emptyList()) {
+        for (int i = 0, j = 1; i < 10; i++, j++) for (String name : Collections.<String>emptyList()) {
             System.out.println(i);
         }
         try {
             something();
-        } catch (Exception e) {
+        } catch (Exception ex) {
             somethingElse();
-        } catch (java.lang.Throwable e) {
+        } catch (java.lang.Throwable ex) {
             somethingElseEntirely();
         } finally {
             nothing();
         }
+    }
+    
+    void something() {
+    }
+    
+    void somethingElse() {
+    }
+    
+    void somethingElseEntirely() {
+    }
+    
+    void nothing() {
     }
     
     static {
