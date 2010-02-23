@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
@@ -42,32 +43,57 @@ import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
 import lombok.Data;
 
-@SupportedAnnotationTypes("lombok.ast.template.GenerateAstNode")
+@SupportedAnnotationTypes({"lombok.ast.template.GenerateAstNode", "lombok.ast.template.SyntaxCheck"})
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class TemplateProcessor extends AbstractProcessor {
+	private SyntaxValidityCheckerGenerator validityGenerator;
+	
 	@Data
-	private static class FieldData {
+	static class FieldData {
 		private final String name;
 		private final boolean mandatory;
 		private final String rawFormParser;
 		private final String rawFormGenerator;
 		private final String initialValue;
-		private final String type;
-		private final boolean isList;
+		private final VariableElement element;
 		private final boolean astNode;
 		
-		public FieldData(VariableElement field) {
+		public String getType() {
+			String result = element.asType().toString();
+			
+			if (element.asType() instanceof DeclaredType) {
+				DeclaredType t = (DeclaredType) element.asType();
+				if (t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<")) {
+					result = t.getTypeArguments().get(0).toString();
+				}
+			}
+			
+			if (result.startsWith("lombok.ast.")) {
+				String rest = result.substring("lombok.ast.".length());
+				return rest.indexOf('.') == -1 ? rest : result;
+			}
+			return result;
+		}
+		
+		public boolean isList() {
+			if (element.asType() instanceof DeclaredType) {
+				DeclaredType t = (DeclaredType) element.asType();
+				return t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<");
+			}
+			
+			return false;
+		}
+		
+		FieldData(VariableElement field) {
 			this.name = String.valueOf(field.getSimpleName());
 			boolean isMandatory = false; {
 				for (AnnotationMirror ann :field.getAnnotationMirrors()) {
@@ -77,8 +103,8 @@ public class TemplateProcessor extends AbstractProcessor {
 					}
 				}
 			}
+			this.element = field;
 			this.mandatory = isMandatory;
-			TypeMirror type = field.asType();
 			NotChildOfNode ncon = field.getAnnotation(NotChildOfNode.class);
 			this.astNode = ncon == null;
 			this.rawFormParser = astNode ? "" : ncon.rawFormParser();
@@ -87,17 +113,9 @@ public class TemplateProcessor extends AbstractProcessor {
 				InitialValue iv = field.getAnnotation(InitialValue.class);
 				this.initialValue = iv == null ? "" : iv.value();
 			}
-			
-			if (type instanceof DeclaredType) {
-				DeclaredType t = (DeclaredType) type;
-				this.isList = t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<");
-				if (this.isList) type = t.getTypeArguments().get(0);
-			} else this.isList = false;
-			
-			this.type = type.toString();
 		}
 		
-		public String titleCasedName() {
+		String titleCasedName() {
 			String n = name.replace("_", "");
 			return n.isEmpty() ? "" : Character.toTitleCase(n.charAt(0)) + n.substring(1);
 		}
@@ -108,7 +126,45 @@ public class TemplateProcessor extends AbstractProcessor {
 		return c.endsWith(".class") ? c.substring(0, c.length() - ".class".length()) : c;
 	}
 	
+	@Override public synchronized void init(ProcessingEnvironment processingEnv) {
+		super.init(processingEnv);
+		validityGenerator = new SyntaxValidityCheckerGenerator(processingEnv);
+	}
+	
 	@Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+		handleSyntaxCheck(roundEnv);
+		handleGenerateAstNode(roundEnv);
+		
+		return true;
+	}
+	
+	private void handleSyntaxCheck(RoundEnvironment roundEnv) {
+		int added = 0;
+		for (Element element : roundEnv.getElementsAnnotatedWith(SyntaxCheck.class)) {
+			if (element.getKind() == ElementKind.CLASS) {
+				for (Element member : ((TypeElement)element).getEnclosedElements()) {
+					if (member.getKind() == ElementKind.METHOD) {
+						added++;
+						validityGenerator.recordCheckMethod((ExecutableElement)member);
+					}
+				}
+			} else if (element.getKind() == ElementKind.METHOD) {
+				added++;
+				validityGenerator.recordCheckMethod((ExecutableElement)element);
+			} else {
+				processingEnv.getMessager().printMessage(Kind.ERROR, "@SyntaxCheck is only supported on methods and classes", element);
+			}
+		}
+		
+		if (added == 0) return;
+		if (validityGenerator.isFinished()) {
+			processingEnv.getMessager().printMessage(Kind.ERROR, "@SyntaxCheck is not legal in code generated by annotation processors");
+		} else {
+			validityGenerator.finish();
+		}
+	}
+	
+	private void handleGenerateAstNode(RoundEnvironment roundEnv) {
 		for (Element element : roundEnv.getElementsAnnotatedWith(GenerateAstNode.class)) {
 			if (element.getKind() != ElementKind.CLASS) {
 				processingEnv.getMessager().printMessage(Kind.ERROR, "@GenerateAstNode is only supported on plain classes", element);
@@ -130,7 +186,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (className.endsWith("Template")) className = className.substring(0, className.length() - "Template".length());
 				else {
 					processingEnv.getMessager().printMessage(Kind.ERROR, "@GenerateAstNode annotated classes must end in 'Template'. Example: IfTemplate");
-					return true;
+					return;
 				}
 			}
 			
@@ -172,6 +228,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 			
 			try {
+				validityGenerator.recordFieldDataForCheck(className, fields);
 				generateSourceFile(annotated, className, extending, implementing, fields, methodsToCopy, additionalChecks);
 			} catch (IOException e) {
 				processingEnv.getMessager().printMessage(Kind.ERROR, String.format(
@@ -179,8 +236,6 @@ public class TemplateProcessor extends AbstractProcessor {
 						className + "Template", e), annotated);
 			}
 		}
-		
-		return true;
 	}
 	
 	private void generateSourceFile(Element originatingElement, String className, String extending, List<String> implementing, List<FieldData> fields,
@@ -259,6 +314,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				}
 				if (!field.getRawFormParser().isEmpty()) {
 					generateRawGetter(out, field, true);
+					generateGetErrorReason(out, field);
 					generateRawSetterForBasic(out, className, field);
 				}
 				continue;
@@ -268,38 +324,6 @@ public class TemplateProcessor extends AbstractProcessor {
 			generateFairWeatherSetter(out, className, field);
 			generateRawGetter(out, field, false);
 			generateRawSetter(out, className, field);
-		}
-		
-		/* checkSyntacticValidity */ {
-			out.write("\t@java.lang.Override public void checkSyntacticValidity(java.util.List<lombok.ast.SyntaxProblem> problems) {\n");
-			for (FieldData field : fields) {
-				if (field.isList()) {
-					generateCheckForList(out, field);
-					continue;
-				}
-				
-				if (!field.isAstNode()) {
-					generateCheckForBasicField(out, field);
-					continue;
-				}
-				
-				generateCheckForNodeField(out, field);
-			}
-			
-			for (ExecutableElement additionalCheck : additionalChecks) {
-				if (!additionalCheck.getModifiers().contains(Modifier.STATIC))
-					throw new IllegalArgumentException("additional checks must be static");
-				if (additionalCheck.getParameters().size() != 2)
-					throw new IllegalArgumentException("additional checks must have 2 parameters (List<SyntaxProblem> problems, Self(NotTemplate))");
-				
-				out.write("\t\t");
-				out.write(className);
-				out.write("Template.");
-				out.write(additionalCheck.getSimpleName().toString());
-				out.write("(problems, this);\n");
-			}
-			
-			out.write("\t}\n\t\n");
 		}
 		
 		/* accept */ {
@@ -497,6 +521,15 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(";\n\t}\n\t\n");
 	}
 	
+	private void generateGetErrorReason(Writer out, FieldData field) throws IOException {
+		out.write("\tpublic java.lang.String getErrorReasonFor");
+		out.write(field.titleCasedName());
+		out.write("() {\n");
+		out.write("\t\treturn this.errorReasonFor");
+		out.write(field.titleCasedName());
+		out.write(";\n\t}\n\t\n");
+	}
+	
 	private void generateRawSetter(Writer out, String className, FieldData field) throws IOException {
 		Object[] params = {
 				className,
@@ -672,49 +705,5 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write(field.getInitialValue());
 		}
 		out.write(";\n");
-	}
-	
-	private void generateCheckForList(Writer out, FieldData field) throws IOException {
-		out.write("\t\tfor (int i = 0; i < this.");
-		out.write(field.getName());
-		out.write(".size(); i++) {\n");
-		out.write("\t\t\tcheckChildValidity(problems, this.");
-		out.write(field.getName());
-		out.write(".get(i), \"");
-		out.write(field.getName());
-		out.write("[\" + i + \"]\", true, ");
-		out.write(field.getType());
-		out.write(".class);\n");
-		out.write("\t\t}\n");
-	}
-	
-	private void generateCheckForBasicField(Writer out, FieldData field) throws IOException {
-		if (!field.getRawFormParser().isEmpty()) {
-			out.write("\t\tif (this.errorReasonFor");
-			out.write(field.titleCasedName());
-			out.write(" != null) problems.add(new lombok.ast.SyntaxProblem(this, this.errorReasonFor");
-			out.write(field.titleCasedName());
-			out.write("));\n");
-		} else {
-			if (field.isMandatory()) {
-				out.write("\t\tif (this.");
-				out.write(field.getName());
-				out.write(" == null) problems.add(new lombok.ast.SyntaxProblem(this, \"");
-				out.write(field.getName());
-				out.write(" is mandatory\"));\n");
-			}
-		}
-	}
-	
-	private void generateCheckForNodeField(Writer out, FieldData field) throws IOException {
-		out.write("\t\tcheckChildValidity(problems, this.");
-		out.write(field.getName());
-		out.write(", \"");
-		out.write(field.getName());
-		out.write("\", ");
-		out.write("" + field.isMandatory());
-		out.write(", ");
-		out.write(field.getType());
-		out.write(".class);\n");
 	}
 }

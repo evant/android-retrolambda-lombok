@@ -21,19 +21,21 @@
  */
 package lombok.ast;
 
-import java.util.List;
-
 import lombok.Getter;
 
 public class IntegralLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
 	private Long value;
 	private String rawValue;
-	private String errorReason = "Missing value";
+	private String errorReasonForValue = "Missing value";
 	@Getter private boolean markedAsLong;
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
 	
 	@Override public String getDescription() {
 		return value != null ? String.valueOf(value) : null;
+	}
+	
+	public String getErrorReasonForValue() {
+		return errorReasonForValue;
 	}
 	
 	public IntegralLiteral setLiteralType(LiteralType type) {
@@ -48,7 +50,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		IntegralLiteral result = new IntegralLiteral();
 		result.value = value;
 		result.rawValue = rawValue;
-		result.errorReason = errorReason;
+		result.errorReasonForValue = errorReasonForValue;
 		result.markedAsLong = markedAsLong;
 		result.literalType = literalType;
 		return result;
@@ -58,7 +60,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		if (value < 0) throw new AstException(this, "Integral literals cannot be negative; wrap a literal in a UnaryExpression to accomplish this");
 		this.value = Long.valueOf(value);
 		this.rawValue = "" + value;
-		this.errorReason = null;
+		this.errorReasonForValue = null;
 		this.markedAsLong = false;
 		updateRawValue();
 		return this;
@@ -68,14 +70,14 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		if (value < 0) throw new AstException(this, "Integral literals cannot be negative; wrap a literal in a UnaryExpression to accomplish this");
 		this.value = value;
 		this.rawValue = "" + value + "L";
-		this.errorReason = null;
+		this.errorReasonForValue = null;
 		this.markedAsLong = true;
 		updateRawValue();
 		return this;
 	}
 	
 	private void updateRawValue() {
-		if (errorReason != null) return;
+		if (errorReasonForValue != null) return;
 		String suffix = markedAsLong ? "L" : "";
 		
 		switch (literalType) {
@@ -97,7 +99,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		if (raw == null) {
 			this.rawValue = null;
 			this.value = null;
-			this.errorReason = "Missing value";
+			this.errorReasonForValue = "Missing value";
 			this.markedAsLong = false;
 		} else {
 			this.rawValue = raw;
@@ -120,14 +122,14 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 					newLT = LiteralType.DECIMAL;
 				}
 				if (!markedAsLong && (this.value.longValue() != this.value.intValue())) {
-					this.errorReason = "value too large to fit in 'int' type; add a suffix 'L' to fix this.";
+					this.errorReasonForValue = "value too large to fit in 'int' type; add a suffix 'L' to fix this.";
 				} else {
-					this.errorReason = null;
+					this.errorReasonForValue = null;
 				}
 				this.literalType = newLT;
 			} catch (NumberFormatException e) {
 				this.value = null;
-				this.errorReason = "Not a valid integral literal: " + raw.trim();
+				this.errorReasonForValue = "Not a valid integral literal: " + raw.trim();
 			}
 		}
 		
@@ -150,14 +152,10 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	}
 	
 	private void checkValueExists() throws AstException {
-		if (value == null) throw new AstException(this, String.format("misformed integral literal(%s): %s", errorReason, rawValue));
+		if (value == null) throw new AstException(this, String.format("misformed integral literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
 	@Override public void accept(ASTVisitor visitor) {
 		visitor.visitIntegralLiteral(this);
-	}
-	
-	@Override public void checkSyntacticValidity(List<SyntaxProblem> problems) {
-		if (errorReason != null) problems.add(new SyntaxProblem(this, errorReason));
 	}
 }

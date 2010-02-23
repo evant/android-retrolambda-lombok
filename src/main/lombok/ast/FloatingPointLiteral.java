@@ -21,19 +21,21 @@
  */
 package lombok.ast;
 
-import java.util.List;
-
 import lombok.Getter;
 
 public class FloatingPointLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
 	private Double value;
 	private String rawValue;
-	private String errorReason = "Missing value";
+	private String errorReasonForValue = "Missing value";
 	@Getter private boolean markedAsFloat;
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
 	
 	@Override public String getDescription() {
 		return value != null ? String.valueOf(value) : null;
+	}
+	
+	public String getErrorReasonForValue() {
+		return errorReasonForValue;
 	}
 	
 	public FloatingPointLiteral setLiteralType(LiteralType type) {
@@ -49,7 +51,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		FloatingPointLiteral result = new FloatingPointLiteral();
 		result.value = value;
 		result.rawValue = result.rawValue;
-		result.errorReason = result.errorReason;
+		result.errorReasonForValue = result.errorReasonForValue;
 		result.markedAsFloat = result.markedAsFloat;
 		result.literalType = literalType;
 		return result;
@@ -59,7 +61,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		checkSpecialValues(value);
 		this.markedAsFloat = false;
 		this.value = value;
-		this.errorReason = null;
+		this.errorReasonForValue = null;
 		updateRawValue();
 		return this;
 	}
@@ -67,7 +69,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 	public FloatingPointLiteral setFloatValue(float value) {
 		checkSpecialValues(value);
 		this.markedAsFloat = true;
-		this.errorReason = null;
+		this.errorReasonForValue = null;
 		this.value = Double.valueOf(value);
 		updateRawValue();
 		return this;
@@ -81,7 +83,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 	}
 	
 	private void updateRawValue() {
-		if (errorReason != null) return;
+		if (errorReasonForValue != null) return;
 		String suffix = markedAsFloat ? "F" : "";
 		
 		switch (literalType) {
@@ -100,7 +102,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		if (raw == null) {
 			this.rawValue = null;
 			this.value = null;
-			this.errorReason = "Missing value";
+			this.errorReasonForValue = "Missing value";
 			this.markedAsFloat = false;
 		} else {
 			this.rawValue = raw;
@@ -113,7 +115,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 				literalType = (v.startsWith("0x") || v.startsWith("0X")) ? LiteralType.HEXADECIMAL : LiteralType.DECIMAL;
 			} catch (NumberFormatException e) {
 				this.value = null;
-				this.errorReason = "Not a valid floating point literal: " + raw.trim();
+				this.errorReasonForValue = "Not a valid floating point literal: " + raw.trim();
 			}
 		}
 		
@@ -135,14 +137,10 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 	}
 	
 	private void checkValueExists() throws AstException {
-		if (value == null) throw new AstException(this, String.format("misformed floating point literal(%s): %s", errorReason, rawValue));
+		if (value == null) throw new AstException(this, String.format("misformed floating point literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
 	@Override public void accept(ASTVisitor visitor) {
 		visitor.visitFloatingPointLiteral(this);
-	}
-	
-	@Override public void checkSyntacticValidity(List<SyntaxProblem> problems) {
-		if (errorReason != null) problems.add(new SyntaxProblem(this, errorReason));
 	}
 }
