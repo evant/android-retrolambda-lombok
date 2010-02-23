@@ -6,29 +6,12 @@ import java.util.List;
 import lombok.ast.ASTVisitor;
 import lombok.ast.Node;
 import lombok.ast.Position;
-import lombok.ast.SyntaxProblem;
 
 abstract class TemporaryNode implements Node {
 	private Position position = Position.UNPLACED;
 
 	@Override public void accept(ASTVisitor visitor) {
 		visitor.visitParseArtefact(this);
-	}
-	
-	@Override public void checkSyntacticValidity(List<SyntaxProblem> problems) {
-		StringBuilder errorName = new StringBuilder();
-		boolean first = true;
-		for (char c : getClass().getSimpleName().toCharArray()) {
-			if (first) {
-				errorName.append(c);
-				first = false;
-				continue;
-			}
-			
-			if (Character.isUpperCase(c)) errorName.append(" ").append(Character.toLowerCase(c));
-			else errorName.append(c);
-		}
-		problems.add(new SyntaxProblem(this, errorName.toString()));
 	}
 	
 	static class OrphanedTypeVariables extends TemporaryNode {
@@ -80,10 +63,6 @@ abstract class TemporaryNode implements Node {
 	}
 	
 	@Override public boolean isGenerated() {
-		return false;
-	}
-	
-	@Override public boolean isSyntacticallyValid() {
 		return false;
 	}
 	

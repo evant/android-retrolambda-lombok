@@ -21,20 +21,16 @@
  */
 package lombok.ast;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Getter;
+import lombok.ast.printer.SourcePrinter;
+import lombok.ast.printer.TextFormatter;
+import lombok.ast.syntaxChecks.SyntacticValidityVisitorBase;
 
 abstract class AbstractNode implements Node {
 	@Getter private Position position = Position.UNPLACED;
 	@Getter private Node parent;
-	
-	@Override public boolean isSyntacticallyValid() {
-		List<SyntaxProblem> list = new ArrayList<SyntaxProblem>();
-		checkSyntacticValidity(list);
-		return list.isEmpty();
-	}
 	
 	/**
 	 * Checks if a given child is syntactically valid and throws an {@code AstException} otherwise.
@@ -48,47 +44,8 @@ abstract class AbstractNode implements Node {
 	 *    {@code child} is not of the appropriate type as specified.
 	 */
 	protected void assertChildType(Node child, String name, boolean mandatory, Class<?> typeAssertion) throws AstException {
-		SyntaxProblem p = checkChildValidity0(child, name, mandatory, typeAssertion);
+		SyntaxProblem p = SyntacticValidityVisitorBase.verifyNodeRelation(this, child, name, mandatory, typeAssertion);
 		if (p != null) p.throwAstException();
-	}
-	
-	/**
-	 * Checks if a given child is syntactically valid; you specify exactly what is required for this to hold in the parameters.
-	 * This method will recursively call {@link #checkSyntacticValidity(List)} on the child.
-	 * 
-	 * @param problems The problems list that any syntactic problems will be added to.
-	 * @param child The actual child node object that will be checked.
-	 * @param name The name of this node. For example, in a binary operation, {@code "left side"}.
-	 * @param mandatory If this node not being there (being {@code null}) is a problem or acceptable.
-	 * @param typeAssertion If the node exists, it must be an instance of this type.
-	 */
-	protected void checkChildValidity(List<SyntaxProblem> problems, Node child, String name, boolean mandatory, Class<?> typeAssertion) {
-		SyntaxProblem problem = checkChildValidity0(child, name, mandatory, typeAssertion);
-		if (problem != null) problems.add(problem);
-		if (child != null) child.checkSyntacticValidity(problems);
-	}
-	
-	private SyntaxProblem checkChildValidity0(Node child, String name, boolean mandatory, Class<?> typeAssertion) {
-		String typeAssertionName = typeAssertion.getSimpleName().toLowerCase();
-		boolean typeAssertionVowel = typeAssertionName.isEmpty();
-		String nameTC;
-		if (!typeAssertionVowel) {
-			char c = typeAssertionName.charAt(0);
-			typeAssertionVowel = (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
-		}
-		nameTC = name.isEmpty() ? "" :
-				("" + Character.toTitleCase(name.charAt(0)) + name.substring(1));
-		
-		if (child == null) {
-			if (mandatory) return new SyntaxProblem(this, String.format("Missing %s %s",
-					name, typeAssertion.getSimpleName().toLowerCase()));
-		} else {
-			if (!typeAssertion.isInstance(child)) return new SyntaxProblem(this, String.format(
-					"%s isn't a%s %s",
-					nameTC, typeAssertionVowel ? "n" : "", typeAssertionName));
-		}
-		
-		return null;
 	}
 	
 	@Override public boolean isGenerated() {
@@ -160,9 +117,9 @@ abstract class AbstractNode implements Node {
 	}
 	
 	@Override public String toString() {
-//		SourcePrinter printer = new SourcePrinter();
-//		this.accept(printer);
-//		return printer.toString();
-		return super.toString();
+		TextFormatter formatter = new TextFormatter(null);
+		SourcePrinter printer = new SourcePrinter(formatter);
+		accept(printer);
+		return formatter.finish();
 	}
 }

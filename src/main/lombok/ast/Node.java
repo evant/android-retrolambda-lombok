@@ -21,19 +21,7 @@
  */
 package lombok.ast;
 
-import java.util.List;
-
 public interface Node {
-	boolean isSyntacticallyValid();
-	
-	/**
-	 * Add a {@link SyntaxProblem} to the list for each syntactic problem with your node, then call this method on your child nodes.
-	 * Something like {@code a +} is not syntactically valid (It's missing second argument to binary operator), but something like
-	 * {@code a + b} would be, <i>even if</i> both {@code a} and {@code b} end up being objects, which do not support the + operator.
-	 * That is a semantic and not a syntactic problem.
-	 */
-	void checkSyntacticValidity(List<SyntaxProblem> problems);
-	
 	boolean isGenerated();
 	
 	Node getGeneratedBy();

@@ -21,29 +21,32 @@
  */
 package lombok.ast;
 
-import java.util.List;
 
 public class NullLiteral extends AbstractNode implements Literal, Expression {
 	private String rawValue;
-	private String errorReason = "Missing value";
+	private String errorReasonForValue = "Missing value";
 	
 	public NullLiteral setAsValid() {
 		this.rawValue = "null";
-		this.errorReason = null;
+		this.errorReasonForValue = null;
 		return this;
+	}
+	
+	public String getErrorReasonForValue() {
+		return errorReasonForValue;
 	}
 	
 	public NullLiteral setRawValue(String raw) {
 		if (raw == null) {
 			this.rawValue = null;
-			this.errorReason = "Missing value";
+			this.errorReasonForValue = "Missing value";
 		} else {
 			this.rawValue = raw;
 			String v = raw.trim();
 			if (!v.equals("null")) {
-				this.errorReason = "Only 'null' is a valid null literal, not: " + v;
+				this.errorReasonForValue = "Only 'null' is a valid null literal, not: " + v;
 			} else {
-				this.errorReason = null;
+				this.errorReasonForValue = null;
 			}
 		}
 		
@@ -55,21 +58,17 @@ public class NullLiteral extends AbstractNode implements Literal, Expression {
 	}
 	
 	public boolean isValid() {
-		return errorReason == null;
+		return errorReasonForValue == null;
 	}
 	
 	@Override public void accept(ASTVisitor visitor) {
 		visitor.visitNullLiteral(this);
 	}
 	
-	@Override public void checkSyntacticValidity(List<SyntaxProblem> problems) {
-		if (errorReason != null) problems.add(new SyntaxProblem(this, errorReason));
-	}
-	
 	@Override public NullLiteral copy() {
 		NullLiteral result = new NullLiteral();
 		result.rawValue = rawValue;
-		result.errorReason = errorReason;
+		result.errorReasonForValue = errorReasonForValue;
 		return result;
 	}
 }
