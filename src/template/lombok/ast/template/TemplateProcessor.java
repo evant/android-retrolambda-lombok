@@ -327,7 +327,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		/* accept */ {
-			out.write("\t@java.lang.Override public void accept(lombok.ast.ASTVisitor visitor) {\n");
+			out.write("\t@java.lang.Override public void accept(lombok.ast.AstVisitor visitor) {\n");
 			out.write("\t\tif (visitor.visit");
 			out.write(typeName);
 			out.write("(this)) return;\n");

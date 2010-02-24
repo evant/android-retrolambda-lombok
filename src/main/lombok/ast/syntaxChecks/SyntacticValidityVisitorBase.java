@@ -4,11 +4,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.ast.ForwardingASTVisitor;
+import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
 import lombok.ast.SyntaxProblem;
 
-public class SyntacticValidityVisitorBase extends ForwardingASTVisitor {
+public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 	final Map<Class<?>, Object> checkerObjectStore = new HashMap<Class<?>, Object>();
 	final boolean recursing;
 	final List<SyntaxProblem> problems;

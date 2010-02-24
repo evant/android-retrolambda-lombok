@@ -57,7 +57,7 @@ import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.For;
 import lombok.ast.ForEach;
-import lombok.ast.ForwardingASTVisitor;
+import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Identifier;
 import lombok.ast.If;
 import lombok.ast.ImportDeclaration;
@@ -99,7 +99,7 @@ import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
-public class SourcePrinter extends ForwardingASTVisitor {
+public class SourcePrinter extends ForwardingAstVisitor {
 	private final SourceFormatter formatter;
 	
 	public SourcePrinter(SourceFormatter formatter) {

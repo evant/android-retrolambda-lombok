@@ -155,7 +155,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		if (value == null) throw new AstException(this, String.format("misformed integral literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
-	@Override public void accept(ASTVisitor visitor) {
+	@Override public void accept(AstVisitor visitor) {
 		visitor.visitIntegralLiteral(this);
 	}
 }

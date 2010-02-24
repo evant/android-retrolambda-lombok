@@ -21,7 +21,7 @@
  */
 package lombok.ast;
 
-public abstract class ASTVisitor {
+public abstract class AstVisitor {
 	//Basics
 	public abstract boolean visitTypeReference(TypeReference node);
 	public abstract boolean visitTypeReferencePart(TypeReferencePart node);

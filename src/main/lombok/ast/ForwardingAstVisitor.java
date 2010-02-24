@@ -1,6 +1,6 @@
 package lombok.ast;
 
-public abstract class ForwardingASTVisitor extends ASTVisitor {
+public abstract class ForwardingAstVisitor extends AstVisitor {
 	public boolean visitNode(Node node) {
 		return false;
 	}

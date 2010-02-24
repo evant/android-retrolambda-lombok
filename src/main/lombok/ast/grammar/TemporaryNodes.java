@@ -3,14 +3,14 @@ package lombok.ast.grammar;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.ast.ASTVisitor;
+import lombok.ast.AstVisitor;
 import lombok.ast.Node;
 import lombok.ast.Position;
 
 abstract class TemporaryNode implements Node {
 	private Position position = Position.UNPLACED;
 
-	@Override public void accept(ASTVisitor visitor) {
+	@Override public void accept(AstVisitor visitor) {
 		visitor.visitParseArtefact(this);
 	}
 	

@@ -61,7 +61,7 @@ public class NullLiteral extends AbstractNode implements Literal, Expression {
 		return errorReasonForValue == null;
 	}
 	
-	@Override public void accept(ASTVisitor visitor) {
+	@Override public void accept(AstVisitor visitor) {
 		visitor.visitNullLiteral(this);
 	}
 	

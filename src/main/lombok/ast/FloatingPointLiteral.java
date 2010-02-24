@@ -140,7 +140,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		if (value == null) throw new AstException(this, String.format("misformed floating point literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
-	@Override public void accept(ASTVisitor visitor) {
+	@Override public void accept(AstVisitor visitor) {
 		visitor.visitFloatingPointLiteral(this);
 	}
 }

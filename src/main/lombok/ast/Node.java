@@ -30,7 +30,7 @@ public interface Node {
 	
 	Node setPosition(Position position);
 	
-	void accept(ASTVisitor visitor);
+	void accept(AstVisitor visitor);
 	
 	Node copy();
 	
