@@ -1,9 +1,11 @@
 <project name="lombok.ast-contrib">
 	<property name="junit-src-name" value="junit-4.8.1-src.jar" />
+	<property name="javac-src-name" value="javac-sources.zip" />
 	<available property="jls-available" file="contrib/jls/j3TOC.html" />
 	<available property="junit-src-available" file="contrib/${junit-src-name}" />
+	<available property="javac-src-available" file="contrib/${javac-src-name}" />
 	
-	<target name="contrib" depends="jls, junit-src" />
+	<target name="contrib" depends="jls, junit-src, javac-src" />
 	
 	<target name="jls" unless="jls-available">
 		<mkdir dir="contrib/jls" />
@@ -14,5 +16,9 @@
 	
 	<target name="junit-src" unless="junit-src-available">
 		<get src="http://cloud.github.com/downloads/KentBeck/junit/junit-4.8.1-src.jar" dest="contrib/${junit-src-name}" verbose="on" />
+	</target>
+	
+	<target name="javac-src" unless="javac-src-available">
+		<get src="http://projectlombok.org/ivyrepo/langtools/javac-sources.zip" dest="contrib/${javac-src-name}" verbose="on" />
 	</target>
 </project>
