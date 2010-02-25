@@ -22,8 +22,20 @@
 <project name="lombok.ast" default="compile" xmlns:ivy="antlib:org.apache.ivy.ant">
 	<property name="build.compiler" value="javac1.6" />
 	
-	<path id="libs.path">
+	<path id="build.path">
 		<fileset dir="lib/build">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	
+	<path id="runtime.path">
+		<fileset dir="lib/runtime">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	
+	<path id="test.path">
+		<fileset dir="lib/test">
 			<include name="*.jar" />
 		</fileset>
 	</path>
@@ -37,11 +49,11 @@
 		<delete dir="lib/build" quiet="true" />
 	</target>
 	
-	<target name="templateProcessor" depends="ensureDeps" description="Compiles the Template Processor, which produces the AST API classes">
+	<target name="templateProcessor" depends="ensureBuildDeps" description="Compiles the Template Processor, which produces the AST API classes">
 		<mkdir dir="build/templateProcessor" />
 		<javac destdir="build/templateProcessor" debug="true" target="1.6" source="1.6">
 			<compilerarg value="-Xlint:unchecked" />
-			<classpath refid="libs.path" />
+			<classpath refid="build.path" />
 			<src path="src/template" />
 		</javac>
 		<mkdir dir="build/templateProcessor/META-INF" />
@@ -50,11 +62,11 @@
 		<jar destfile="build/templateProcessor.jar" basedir="build/templateProcessor" />
 	</target>
 	
-	<target name="generateSource" depends="ensureDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
+	<target name="generateSource" depends="ensureBuildDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6" encoding="UTF-8">
 			<compilerarg value="-Xlint:unchecked" />
-			<classpath refid="libs.path" />
+			<classpath refid="build.path" />
 			<classpath location="build/templateProcessor.jar" />
 			<src path="src/main" />
 			<compilerarg value="-proc:only" />
@@ -63,12 +75,12 @@
 		</javac>
 	</target>
 	
-	<target name="compile" depends="ensureDeps, templateProcessor" description="Compiles all code for lombok.ast">
+	<target name="compile" depends="ensureBuildDeps, templateProcessor" description="Compiles all code for lombok.ast">
 		<mkdir dir="build/lombok.ast" />
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6" encoding="UTF-8">
 			<compilerarg value="-Xlint:unchecked" />
-			<classpath refid="libs.path" />
+			<classpath refid="build.path" />
 			<classpath location="build/templateProcessor.jar" />
 			<src path="src/main" />
 			<src path="src/printer" />
@@ -78,23 +90,24 @@
 		<echo>NOTE: If you see a wash of errors above this line, ignore them. Compilation succeeded; this is a javac bug.</echo>
 	</target>
 	
-	<target name="testParser" depends="compile" description="Runs the testRules parse target, and will parse standard input, line by line.">
+	<target name="testParser" depends="compile, ensureRuntimeDeps" description="Runs the testRules parse target, and will parse standard input, line by line.">
 		<java classname="lombok.ast.grammar.ParseSomething" fork="true">
 			<classpath location="build/lombok.ast" />
-			<classpath refid="libs.path" />
+			<classpath refid="runtime.path" />
 		</java>
 	</target>
 	
-	<target name="test" depends="compile" description="Runs unit tests.">
+	<target name="test" depends="compile, ensureTestDeps" description="Runs unit tests.">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
 		<mkdir dir="build/tests" />
 		<javac destdir="build/tests" debug="true" target="1.6" source="1.6" encoding="UTF-8">
-			<classpath refid="libs.path" />
+			<classpath refid="test.path" />
 			<classpath location="build/lombok.ast" />
 			<src path="test/src" />
 		</javac>
 		<junit haltonfailure="yes" fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
-			<classpath refid="libs.path" />
+			<classpath refid="test.path" />
 			<classpath path="build/lombok.ast" />
 			<classpath path="build/tests" />
 			<batchtest>
@@ -113,16 +126,27 @@
 	
 	<target name="config-ivy" depends="ensure-ivy">
 		<ivy:configure file="buildScripts/ivysettings.xml" />
-		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
 	</target>
 	
 	<target name="showDependencyReport" depends="config-ivy" description="Generates dependency report as HTML file.">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
 		<ant antfile="buildScripts/ivy.ant.xml" target="showDependencyReport" dir=".">
 			<property name="build.report" value="build/report" />
 		</ant>
 	</target>
 	
-	<target name="ensureDeps" depends="config-ivy" description="Download / Update lombok's dependencies via ivy, which will be downloaded automatically if you don't have it.">
+	<target name="ensureBuildDeps" depends="config-ivy">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
+		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+	</target>
+	
+	<target name="ensureRuntimeDeps" depends="config-ivy">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
+		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+	</target>
+	
+	<target name="ensureTestDeps" depends="config-ivy">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
 		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
 	</target>
 	
