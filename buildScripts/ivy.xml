@@ -11,5 +11,6 @@
 		<dependency org="commons-lang" name="commons-lang" rev="2.4" conf="runtime->master; build->master" />
 		<dependency org="commons-io" name="commons-io" rev="1.4" conf="runtime->master; build->master" />
 		<dependency org="projectlombok.org" name="junit" rev="4.8.1" conf="test" />
+		<dependency org="projectlombok.org" name="javac" rev="1.6.0.18" conf="build->runtime; runtime" />
 	</dependencies>
 </ivy-module>
