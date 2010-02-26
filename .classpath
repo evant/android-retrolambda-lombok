@@ -13,7 +13,7 @@
 	<classpathentry kind="lib" path="lib/build/lombok.jar"/>
 	<classpathentry kind="lib" path="lib/build/commons-lang.jar"/>
 	<classpathentry kind="lib" path="lib/build/commons-io.jar"/>
-	<classpathentry kind="lib" path="lib/build/junit.jar" sourcepath="contrib/junit-4.8.1-src.jar"/>
 	<classpathentry kind="lib" path="lib/build/parboiled.jar"/>
+	<classpathentry kind="lib" path="lib/test/junit.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
