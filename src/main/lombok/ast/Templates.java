@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 
 import lombok.NonNull;
-import lombok.ast.template.AdditionalCheck;
 import lombok.ast.template.CopyMethod;
 import lombok.ast.template.GenerateAstNode;
 import lombok.ast.template.InitialValue;
@@ -105,13 +104,6 @@ class TryTemplate {
 	@NonNull Block body;
 	List<Catch> catches;
 	Block finally_;
-	
-	@AdditionalCheck
-	static void checkNotLoneTry(List<SyntaxProblem> problems, Try node) {
-		if (node.catches().size() == 0 && node.getRawFinally() == null) {
-			problems.add(new SyntaxProblem(node, "try statement with no catches and no finally"));
-		}
-	}
 }
 
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class})

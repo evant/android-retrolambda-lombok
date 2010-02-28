@@ -173,7 +173,6 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			List<FieldData> fields = new ArrayList<FieldData>();
 			List<ExecutableElement> methodsToCopy = new ArrayList<ExecutableElement>();
-			List<ExecutableElement> additionalChecks = new ArrayList<ExecutableElement>();
 			
 			String className;
 			String extending = null;
@@ -221,15 +220,13 @@ public class TemplateProcessor extends AbstractProcessor {
 					if (enclosed.getKind() != ElementKind.METHOD) continue;
 					ExecutableElement method = (ExecutableElement) enclosed;
 					boolean copyMethod = method.getAnnotation(CopyMethod.class) != null;
-					boolean additionalCheck = method.getAnnotation(AdditionalCheck.class) != null;
 					if (copyMethod) methodsToCopy.add(method);
-					if ( additionalCheck) additionalChecks.add(method);
 				}
 			}
 			
 			try {
 				validityGenerator.recordFieldDataForCheck(className, fields);
-				generateSourceFile(annotated, className, extending, implementing, fields, methodsToCopy, additionalChecks);
+				generateSourceFile(annotated, className, extending, implementing, fields, methodsToCopy);
 			} catch (IOException e) {
 				processingEnv.getMessager().printMessage(Kind.ERROR, String.format(
 						"Can't generate sourcefile %s: %s",
@@ -239,7 +236,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateSourceFile(Element originatingElement, String className, String extending, List<String> implementing, List<FieldData> fields,
-			List<ExecutableElement> methodsToCopy, List<ExecutableElement> additionalChecks) throws IOException {
+			List<ExecutableElement> methodsToCopy) throws IOException {
 		
 		JavaFileObject file = processingEnv.getFiler().createSourceFile(className, originatingElement);
 		Writer out = file.openWriter();
@@ -399,8 +396,11 @@ public class TemplateProcessor extends AbstractProcessor {
 			for (ExecutableElement delegate : methodsToCopy) {
 				boolean isVoid = delegate.getReturnType().getKind() == TypeKind.VOID;
 				out.write("\t");
-				out.write(delegate.getAnnotation(CopyMethod.class).accessModifier());
-				out.write(" ");
+				CopyMethod cma = delegate.getAnnotation(CopyMethod.class);
+				String accessModifier = cma.accessModifier();
+				out.write(accessModifier);
+				if (!accessModifier.isEmpty()) out.write(" ");
+				if (cma.isStatic()) out.write("static ");
 				
 				if (!delegate.getTypeParameters().isEmpty()) {
 					throw new IllegalArgumentException("We don't support generics parameters on extra methods in templates.");
@@ -409,12 +409,14 @@ public class TemplateProcessor extends AbstractProcessor {
 				out.write(" ");
 				out.write(delegate.getSimpleName().toString());
 				out.write("(");
-				/* Add parameters, but skip the first one which is used to transport 'this' reference */ {
+				/* Add parameters, but skip the first one which is used to transport 'this' reference, if not static. */ {
 					int idx = 0;
+					boolean first = true;
 					for (VariableElement p : delegate.getParameters()) {
 						idx++;
-						if (idx == 1) continue;
-						if (idx > 2) out.write(", ");
+						if (idx == 1 && !cma.isStatic()) continue;
+						if (!first) out.write(", ");
+						first = false;
 						out.write(p.asType().toString());
 						out.write(" ");
 						out.write(p.getSimpleName().toString());
@@ -425,12 +427,14 @@ public class TemplateProcessor extends AbstractProcessor {
 				out.write(className);
 				out.write("Template.");
 				out.write(delegate.getSimpleName().toString());
-				out.write("(this");
-				/* Generate parameters, but skip first */ {
+				out.write("(");
+				if (!cma.isStatic()) out.write("this");
+				/* Generate parameters, but skip first if non-static */ {
 					boolean first = true;
 					for (VariableElement p : delegate.getParameters()) {
 						if (first) {
 							first = false;
+							if (cma.isStatic()) out.write(p.getSimpleName().toString());
 							continue;
 						}
 						out.write(", ");
