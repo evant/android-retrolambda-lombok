@@ -4,6 +4,7 @@
 	<classpathentry kind="src" path="src/template"/>
 	<classpathentry kind="src" path="src/printer"/>
 	<classpathentry kind="src" path="test/src"/>
+	<classpathentry kind="src" path="src/javacTransformer"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="src" path=".apt_generated">
 		<attributes>
@@ -15,5 +16,6 @@
 	<classpathentry kind="lib" path="lib/build/commons-io.jar"/>
 	<classpathentry kind="lib" path="lib/build/parboiled.jar"/>
 	<classpathentry kind="lib" path="lib/test/junit.jar"/>
+	<classpathentry kind="lib" path="lib/build/javac.jar" sourcepath="contrib/javac-sources.zip"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
