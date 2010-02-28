@@ -49,6 +49,10 @@ public class ListAccessor<T extends Node, P extends Node> {
 		return new ListAccessor<T, Q>(list, parent, tClass, listName, returnThisAsParent);
 	}
 	
+	public P up() {
+		return returnAsParent;
+	}
+	
 	public void clear() {
 		list.clear();
 	}
@@ -73,66 +77,82 @@ public class ListAccessor<T extends Node, P extends Node> {
 		return returnAsParent;
 	}
 	
-	public P addToStart(T node) {
-		if (node == null) throw new NullPointerException("node");
+	public P addToStart(T... node) {
 		return addToStartRaw(node);
 	}
 	
-	public P addToStartRaw(Node node) {
-		if (node == null) throw new NullPointerException("node");
-		parent.adopt((AbstractNode)node);
-		list.add(0, (AbstractNode)node);
+	public P addToStartRaw(Node... node) {
+		for (Node n : node) {
+			AbstractNode child = (AbstractNode)n;
+			if (child != null) {
+				parent.adopt(child);
+				list.add(0, child);
+			}
+		}
 		return returnAsParent;
 	}
 	
-	public P addToEnd(T node) {
-		if (node == null) throw new NullPointerException("node");
+	public P addToEnd(T... node) {
 		return addToEndRaw(node);
 	}
 	
-	public P addToEndRaw(Node node) {
-		if (node != null) {
-			parent.adopt((AbstractNode)node);
-			list.add((AbstractNode)node);
+	public P addToEndRaw(Node... node) {
+		for (Node n : node) {
+			AbstractNode child = (AbstractNode)n;
+			if (node != null) {
+				parent.adopt(child);
+				list.add(child);
+			}
 		}
 		return returnAsParent;
 	}
 	
-	public P addBefore(T node, Node ref) {
+	public P addBefore(Node ref, T... node) {
 		if (node == null) throw new NullPointerException("node");
-		return addBeforeRaw(node, ref);
+		return addBeforeRaw(ref, node);
 	}
 	
-	public P addBeforeRaw(Node node, Node ref) {
-		if (node == null) return returnAsParent;
+	public P addBeforeRaw(Node ref, Node... node) {
 		if (ref == null) throw new NullPointerException("ref");
-		((AbstractNode)node).ensureParentless();
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == ref) {
-				parent.adopt((AbstractNode)node);
-				list.add(i, (AbstractNode)node);
+				int j = 0;
+				for (Node n : node) {
+					AbstractNode child = (AbstractNode)n;
+					if (child != null) {
+						child.ensureParentless();
+						parent.adopt(child);
+						list.add(i + j, child);
+						j++;
+					}
+				}
 				return returnAsParent;
 			}
 		}
-		
 		throw new IllegalStateException(listName + " does not contain: " + ref);
 	}
 	
-	public P addAfter(T node, Node ref) {
+	public P addAfter(Node ref, T... node) {
 		if (node == null) throw new NullPointerException("node");
-		return addAfterRaw(node, ref);
+		return addAfterRaw(ref, node);
 	}
 	
-	public P addAfterRaw(Node node, Node ref) {
-		if (node == null) return returnAsParent;
+	public P addAfterRaw(Node ref, Node... node) {
 		if (ref == null) throw new NullPointerException("ref");
-		((AbstractNode)node).ensureParentless();
 		
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i) == ref) {
-				parent.adopt((AbstractNode)node);
-				list.add(i+1, (AbstractNode)node);
+				int j = 0;
+				for (Node n : node) {
+					AbstractNode child = (AbstractNode)n;
+					if (child != null) {
+						child.ensureParentless();
+						parent.adopt(child);
+						list.add(i + j + 1, child);
+						j++;
+					}
+				}
 				return returnAsParent;
 			}
 		}
