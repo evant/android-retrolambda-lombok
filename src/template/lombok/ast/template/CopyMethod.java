@@ -21,6 +21,20 @@
  */
 package lombok.ast.template;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Tells the template framework to generate a method in the class to be generated that simply wraps around the annotated method.
+ * 
+ * Normally the generated method is not static, and the node instance is passed as first parameter to your annotated static method.<br />
+ * However, you may also set {@code isStatic} to true, in which case the generated method will also be static and the instance is not
+ * passed along as first parameter.
+ */
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
 public @interface CopyMethod {
 	String accessModifier() default "public";
 }

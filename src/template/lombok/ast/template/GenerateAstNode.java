@@ -26,6 +26,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Tells the templating system to take the annotated type and use it to generate a {@link lombok.ast.AbstractNode} subclass.
+ * <p>
+ *     See the other annotations in this package for the various ways you can configure the way the class is generated.
+ * </p>
+ */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface GenerateAstNode {

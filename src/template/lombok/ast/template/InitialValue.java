@@ -21,6 +21,17 @@
  */
 package lombok.ast.template;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Allows you to configure a default value for any field in a template marked with {@link GenerateAstNode}. The {@code value} of this annotation should contain
+ * a string literal that would be parsed as a legal java expression in a java source file. For example: {@code "new Modifiers()"}.
+ */
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.FIELD)
 public @interface InitialValue {
-	String value() default "";
+	String value();
 }
