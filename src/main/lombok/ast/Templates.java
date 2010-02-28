@@ -1096,6 +1096,18 @@ class EnumDeclarationTemplate {
 class PackageDeclarationTemplate {
 	List<Annotation> annotations;
 	List<Identifier> parts;
+	
+	@CopyMethod
+	static String getPackageName(PackageDeclaration node) {
+		StringBuilder result = new StringBuilder();
+		for (Identifier part : node.parts().getContents()) {
+			if (result.length() != 0) {
+				result.append(".");
+			}
+			result.append(part.getName());
+		}
+		return result.toString();
+	}
 }
 
 @GenerateAstNode
