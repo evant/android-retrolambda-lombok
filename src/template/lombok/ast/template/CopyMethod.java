@@ -37,4 +37,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface CopyMethod {
 	String accessModifier() default "public";
+	boolean isStatic() default false;
 }
