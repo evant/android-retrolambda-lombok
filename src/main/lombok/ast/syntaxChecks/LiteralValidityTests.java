@@ -17,6 +17,7 @@ public class LiteralValidityTests {
 		
 	}
 	
+	//IntegralLiteral does its own 'literal too large' checking.
 	public void checkIntegralLiteralValidity(IntegralLiteral node) {
 		if (node.getErrorReasonForValue() != null) {
 			problems.add(new SyntaxProblem(node, node.getErrorReasonForValue()));

@@ -428,6 +428,19 @@ class TypeReferenceTemplate {
 	}
 	
 	@CopyMethod
+	static boolean isPrimitive(TypeReference t) {
+		final String PRIMITIVE_NAMES = " int long float double char short byte boolean ";
+		
+		if (t.getArrayDimensions() > 0 || t.parts().size() != 1) return false;
+		Node part = t.parts().getRawContents().iterator().next();
+		if (part instanceof TypeReferencePart) {
+			String name = ((TypeReferencePart)part).getIdentifier().getName();
+			return name.indexOf(' ') == -1 && PRIMITIVE_NAMES.contains(" " + name + " ");
+		}
+		return false;
+	}
+	
+	@CopyMethod
 	static String getTypeName(TypeReference t) {
 		StringBuilder out = new StringBuilder();
 		for (TypeReferencePart p : t.parts().getContents()) {
