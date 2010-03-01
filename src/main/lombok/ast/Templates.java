@@ -206,7 +206,7 @@ class ModifiersTemplate {
 	}
 	
 	private static boolean contains(Modifiers m, String keyword) {
-		for (Node k : m.keywords().getRawContents()) if (k instanceof KeywordModifier && "public".equals(((KeywordModifier)k).getName())) return true;
+		for (Node k : m.keywords().getRawContents()) if (k instanceof KeywordModifier && keyword.equals(((KeywordModifier)k).getName())) return true;
 		return false;
 	}
 }
