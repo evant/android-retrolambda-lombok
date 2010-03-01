@@ -3,17 +3,22 @@ package lombok.ast.javac;
 import java.util.Arrays;
 
 import lombok.ast.Annotation;
+import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Identifier;
 import lombok.ast.ImportDeclaration;
+import lombok.ast.KeywordModifier;
+import lombok.ast.Modifiers;
 import lombok.ast.PackageDeclaration;
+import lombok.ast.TypeDeclaration;
 
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
-import com.sun.tools.javac.tree.JCTree.JCImport;
+import com.sun.tools.javac.tree.JCTree.JCModifiers;
+import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
@@ -62,7 +67,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			importDecl.accept(impVisitor);
 			defs = defs.append(impVisitor.get());
 		}
-		
+		for (TypeDeclaration typeDecl : node.typeDeclarations().getContents()) {
+			JcTreeBuilder typeVisitor = create();
+			typeDecl.accept(typeVisitor);
+			defs = defs.append(typeVisitor.get());
+		}		
 		set(treeMaker.TopLevel(List.<JCAnnotation>nil(), (JCExpression)pkgVisitor.get(), defs));
 		return true;
 	}
@@ -87,6 +96,40 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			name = treeMaker.Select(name, table.fromString("*"));
 		}
 		set(treeMaker.Import(name, node.isStaticImport()));
+		return true;
+	}
+	
+	
+	@Override
+	public boolean visitClassDeclaration(ClassDeclaration node) {
+		JcTreeBuilder modVisitor = create();
+		node.getModifiers().accept(modVisitor);
+		
+		JCModifiers modifiers = (JCModifiers) modVisitor.get();
+		set(treeMaker.ClassDef(modifiers, table.fromString(node.getName().getName()), List.<JCTypeParameter>nil(), null, List.<JCExpression>nil(), List.<JCTree>nil()));
+		return true;
+	}
+	
+	@Override
+	public boolean visitModifiers(Modifiers node) {
+		List<JCAnnotation> annotations = List.nil();
+		for (Annotation annotation : node.annotations().getContents()) {
+			JcTreeBuilder annVisitor = create();
+			annotation.accept(annVisitor);
+			annotations = annotations.append((JCAnnotation) annVisitor.get());
+		}
+		
+		set(treeMaker.Modifiers(node.asReflectModifiers(), annotations));
+		return true;
+	}
+	
+	private long getModifier(KeywordModifier keyword) {
+		return keyword.asReflectModifiers();
+	}
+
+	@Override
+	public boolean visitKeywordModifier(KeywordModifier node) {
+		set(treeMaker.Modifiers(getModifier(node)));
 		return true;
 	}
 	

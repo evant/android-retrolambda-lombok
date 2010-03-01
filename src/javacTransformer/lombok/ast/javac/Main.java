@@ -1,32 +1,79 @@
 package lombok.ast.javac;
 
+import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
-import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
-import javax.tools.ToolProvider;
+import javax.tools.SimpleJavaFileObject;
+import javax.tools.JavaCompiler.CompilationTask;
+import javax.tools.JavaFileObject.Kind;
 
-import com.sun.tools.javac.util.Context;
-import com.sun.tools.javac.util.JavacFileManager;
-
+import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
 import lombok.ast.Identifier;
 import lombok.ast.ImportDeclaration;
+import lombok.ast.KeywordModifier;
 import lombok.ast.PackageDeclaration;
+import lombok.ast.TypeDeclaration;
+
+import com.sun.tools.javac.main.JavaCompiler;
+import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.util.Context;
+import com.sun.tools.javac.util.JavacFileManager;
+import com.sun.tools.javac.util.Options;
 
 public class Main {
-	public static void main(String[] args) {
-		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+	public static void main(String[] args) throws Exception {
+		JCTree cu = parseWithJavac("X.java", "package thePackage.subPackage;\nimport java.util.*;\nimport static java.util.Collections;public abstract class X {}");
+		JcTreePrinter printer = new JcTreePrinter();
+		cu.accept(printer);
+		String string = printer.toString();
 		
-		CompilationUnit cu = new CompilationUnit().setPackageDeclaration(new PackageDeclaration().parts().addToEnd(new Identifier().setName("thePackage"), new Identifier().setName("subPackage")));
-		cu.importDeclarations().addToEnd(new ImportDeclaration().parts().addToEnd(new Identifier().setName("java"), new Identifier().setName("util")).setStarImport(true));
-		cu.importDeclarations().addToEnd(new ImportDeclaration().parts().addToEnd(new Identifier().setName("java"), new Identifier().setName("util"), new Identifier().setName("Collections")).setStaticImport(true));
+		CompilationUnit cu2 = new CompilationUnit().setPackageDeclaration(new PackageDeclaration().parts().addToEnd(new Identifier().setName("thePackage"), new Identifier().setName("subPackage")));
+		cu2.importDeclarations().addToEnd(new ImportDeclaration().parts().addToEnd(new Identifier().setName("java"), new Identifier().setName("util")).setStarImport(true));
+		cu2.importDeclarations().addToEnd(new ImportDeclaration().parts().addToEnd(new Identifier().setName("java"), new Identifier().setName("util"), new Identifier().setName("Collections")).setStaticImport(true));
+		cu2.typeDeclarations().addToEndRaw(new ClassDeclaration().setName(new Identifier().setName("X")).getModifiers().keywords().addToEnd(new KeywordModifier().setName("public"), new KeywordModifier().setName("abstract")).getParent());
 		Context context = new Context();
 		
 		context.put(JavaFileManager.class, new JavacFileManager(context, true, Charset.forName("UTF-8")));
 		
 		JcTreeBuilder builder = new JcTreeBuilder(context);
-		cu.accept(builder);
-		System.out.println(builder.get().toString());
+		cu2.accept(builder);
+
+		JcTreePrinter printer2 = new JcTreePrinter();
+		builder.get().accept(printer2);
+		String string2 = printer2.toString();
+		
+		System.out.println(string.equals(string2));
+		System.out.println(string);
+		System.out.println("========================");
+		System.out.println(string2);
+		
+	}
+	
+	@SuppressWarnings("deprecation")
+	public static JCTree parseWithJavac(String name, String content) throws Exception {
+		Context context = new Context();
+		JavaCompiler compiler = new JavaCompiler(context);
+		return compiler.parse(new TestJavaFileObject(name, content));
+	}
+	
+	
+	private static class TestJavaFileObject extends SimpleJavaFileObject {
+		private final String content;
+
+		protected TestJavaFileObject(String name, String content) {
+			super(URI.create(name), Kind.SOURCE);
+			this.content = content;
+		}
+		
+		@Override
+		public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
+			return content;
+		}
 	}
 }
