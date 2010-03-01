@@ -21,9 +21,12 @@
  */
 package lombok.ast;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import lombok.NonNull;
 import lombok.ast.template.CopyMethod;
@@ -171,43 +174,52 @@ class ModifiersTemplate {
 	List<Annotation> annotations;
 	
 	@CopyMethod
+	static int asReflectModifiers(Modifiers m) {
+		int out = 0;
+		for (Node n : m.keywords().getRawContents()) {
+			if (n instanceof KeywordModifier) {
+				out |= ((KeywordModifier)n).asReflectModifiers();
+			}
+		}
+		
+		return out;
+	}
+	
+	@CopyMethod
 	static boolean isPublic(Modifiers m) {
-		return contains(m, "public");
+		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.PUBLIC);
 	}
 	
 	@CopyMethod
 	static boolean isProtected(Modifiers m) {
-		return contains(m, "protected");
+		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.PROTECTED);
 	}
 	
 	@CopyMethod
 	static boolean isPrivate(Modifiers m) {
-		return contains(m, "private");
+		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.PRIVATE);
 	}
 	
 	@CopyMethod
 	static boolean isPackagePrivate(Modifiers m) {
-		return !contains(m, "public") && !contains(m, "protected") && !contains(m, "private");
+		return 0 == (asReflectModifiers(m) & (
+				Modifier.PUBLIC | Modifier.PRIVATE | Modifier.PROTECTED
+				));
 	}
 	
 	@CopyMethod
 	static boolean isStatic(Modifiers m) {
-		return contains(m, "static");
+		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.STATIC);
 	}
 	
 	@CopyMethod
 	static boolean isFinal(Modifiers m) {
-		return contains(m, "final");
+		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.FINAL);
 	}
 	
 	@CopyMethod
 	static boolean isAbstract(Modifiers m) {
-		return contains(m, "abstract");
-	}
-	
-	private static boolean contains(Modifiers m, String keyword) {
-		for (Node k : m.keywords().getRawContents()) if (k instanceof KeywordModifier && "public".equals(((KeywordModifier)k).getName())) return true;
-		return false;
+		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.ABSTRACT);
 	}
 }
 
@@ -645,12 +657,36 @@ class ClassLiteralTemplate {
 
 @GenerateAstNode(implementing=DescribedNode.class)
 class KeywordModifierTemplate {
+	private static final Map<String, Integer> REFLECT_MODIFIERS;
+	static {
+		Map<String, Integer> reflectModifiers = new HashMap<String, Integer>();
+		reflectModifiers.put("public", Modifier.PUBLIC);
+		reflectModifiers.put("private", Modifier.PRIVATE);
+		reflectModifiers.put("protected", Modifier.PROTECTED);
+		reflectModifiers.put("static", Modifier.STATIC);
+		reflectModifiers.put("final", Modifier.FINAL);
+		reflectModifiers.put("synchronized", Modifier.SYNCHRONIZED);
+		reflectModifiers.put("volatile", Modifier.VOLATILE);
+		reflectModifiers.put("transient", Modifier.TRANSIENT);
+		reflectModifiers.put("native", Modifier.NATIVE);
+		reflectModifiers.put("interface", Modifier.INTERFACE);
+		reflectModifiers.put("abstract", Modifier.ABSTRACT);
+		reflectModifiers.put("strict", Modifier.STRICT);
+		REFLECT_MODIFIERS = reflectModifiers;
+	}
+	
 	@NotChildOfNode
 	@NonNull String name;
 	
 	@CopyMethod
 	static String getDescription(KeywordModifier self) {
 		return self.getName();
+	}
+	
+	@CopyMethod
+	static int asReflectModifiers(KeywordModifier self) {
+		Integer value = REFLECT_MODIFIERS.get(self.getName());
+		return value == null ? 0 : value;
 	}
 }
 
@@ -1101,6 +1137,18 @@ class EnumDeclarationTemplate {
 class PackageDeclarationTemplate {
 	List<Annotation> annotations;
 	List<Identifier> parts;
+	
+	@CopyMethod
+	static String getPackageName(PackageDeclaration node) {
+		StringBuilder result = new StringBuilder();
+		for (Identifier part : node.parts().getContents()) {
+			if (result.length() != 0) {
+				result.append(".");
+			}
+			result.append(part.getName());
+		}
+		return result.toString();
+	}
 }
 
 @GenerateAstNode
