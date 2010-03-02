@@ -2,6 +2,8 @@ package lombok.ast.syntaxChecks;
 
 import java.util.List;
 
+import lombok.ast.ClassLiteral;
+import lombok.ast.MethodDeclaration;
 import lombok.ast.Node;
 import lombok.ast.SyntaxProblem;
 import lombok.ast.TypeArguments;
@@ -35,5 +37,22 @@ public class TypeChecks {
 				}
 			}
 		}
+	}
+	
+	public void checkVoidNotLegalJustAboutEverywhere(TypeReference node) {
+		if (!node.isVoid()) return;
+		if (node.getArrayDimensions() > 0) {
+			problems.add(new SyntaxProblem(node, "array of void type is not legal"));
+			return;
+		}
+		if (node.getParent() instanceof MethodDeclaration) {
+			if (node == ((MethodDeclaration)node.getParent()).getRawReturnTypeReference()) return;
+		}
+		
+		if (node.getParent() instanceof ClassLiteral) {
+			if (node == ((ClassLiteral)node.getParent()).getRawTypeReference()) return;
+		}
+		
+		problems.add(new SyntaxProblem(node, "The void type is not legal here"));
 	}
 }

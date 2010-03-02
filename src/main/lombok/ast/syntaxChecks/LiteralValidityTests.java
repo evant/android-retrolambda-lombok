@@ -14,7 +14,6 @@ public class LiteralValidityTests {
 	
 	public LiteralValidityTests(List<SyntaxProblem> problems) {
 		this.problems = problems;
-		
 	}
 	
 	//IntegralLiteral does its own 'literal too large' checking.
