@@ -211,18 +211,6 @@ class ModifiersTemplate {
 	}
 	
 	@CopyMethod
-	static int asReflectModifiers(Modifiers m) {
-		int out = 0;
-		for (Node n : m.keywords().getRawContents()) {
-			if (n instanceof KeywordModifier) {
-				out |= ((KeywordModifier)n).asReflectModifiers();
-			}
-		}
-		
-		return out;
-	}
-	
-	@CopyMethod
 	static boolean isPublic(Modifiers m) {
 		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.PUBLIC);
 	}
