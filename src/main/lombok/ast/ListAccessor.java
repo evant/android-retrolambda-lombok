@@ -202,6 +202,15 @@ public class ListAccessor<T extends Node, P extends Node> {
 		throw new NoSuchElementException(listName + " does not contain: " + source);
 	}
 	
+	public boolean contains(Node source) {
+		if (source == null) return false;
+		if (source.getParent() != parent) return false;
+		for (int i = 0; i < list.size(); i++) {
+			if (list.get(i) == source) return true;
+		}
+		return false;
+	}
+	
 	@SuppressWarnings("unchecked")
 	public Iterable<T> getContents() {
 		List<T> out = new ArrayList<T>((List<T>)list);
