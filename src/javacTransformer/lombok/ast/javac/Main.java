@@ -24,14 +24,9 @@ package lombok.ast.javac;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 import javax.tools.JavaFileManager;
 import javax.tools.SimpleJavaFileObject;
-import javax.tools.JavaCompiler.CompilationTask;
-import javax.tools.JavaFileObject.Kind;
 
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
@@ -39,13 +34,11 @@ import lombok.ast.Identifier;
 import lombok.ast.ImportDeclaration;
 import lombok.ast.KeywordModifier;
 import lombok.ast.PackageDeclaration;
-import lombok.ast.TypeDeclaration;
 
 import com.sun.tools.javac.main.JavaCompiler;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.JavacFileManager;
-import com.sun.tools.javac.util.Options;
 
 public class Main {
 	public static void main(String[] args) throws Exception {
@@ -76,7 +69,6 @@ public class Main {
 		
 	}
 	
-	@SuppressWarnings("deprecation")
 	public static JCTree parseWithJavac(String name, String content) throws Exception {
 		Context context = new Context();
 		JavaCompiler compiler = new JavaCompiler(context);
