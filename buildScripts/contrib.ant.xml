@@ -31,7 +31,7 @@
 	
 	<target name="google-collections-src" unless="google-collections-src-available">
 		<mkdir dir="build/contrib/google-collections/javadoc" />
-<!--		<get src="http://google-collections.googlecode.com/files/google-collect-1.0.zip" dest="build/contrib/google-collections-all.zip" verbose="on" /> -->
+		<get src="http://google-collections.googlecode.com/files/google-collect-1.0.zip" dest="build/contrib/google-collections-all.zip" verbose="on" />
 		<unzip src="build/contrib/google-collections-all.zip" dest="build/contrib/google-collections" />
 		<copy todir="contrib" overwrite="true">
 			<fileset dir="build/contrib/google-collections">
