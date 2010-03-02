@@ -478,6 +478,17 @@ class TypeReferenceTemplate {
 	}
 	
 	@CopyMethod
+	static boolean isVoid(TypeReference t) {
+		if (t.getArrayDimensions() > 0 || t.parts().size() != 1) return false;
+		Node part = t.parts().getRawContents().iterator().next();
+		if (part instanceof TypeReferencePart) {
+			String name = ((TypeReferencePart)part).getIdentifier().getName();
+			return "void".equals(name);
+		}
+		return false;
+	}
+	
+	@CopyMethod
 	static String getTypeName(TypeReference t) {
 		StringBuilder out = new StringBuilder();
 		for (TypeReferencePart p : t.parts().getContents()) {
