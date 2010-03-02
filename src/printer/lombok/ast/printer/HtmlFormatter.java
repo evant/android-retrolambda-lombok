@@ -21,8 +21,6 @@
  */
 package lombok.ast.printer;
 
-import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayDeque;
@@ -39,13 +37,18 @@ import lombok.ast.DescribedNode;
 import lombok.ast.Node;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+
+import com.google.common.base.Joiner;
 
 public class HtmlFormatter implements SourceFormatter {
 	private final StringBuilder sb = new StringBuilder();
 	private final String rawSource;
 	private final List<String> errors = new ArrayList<String>();
 	private String nextElementName;
+	
+	private static String escapeHtml(String in) {
+		return in.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+	}
 	
 	public HtmlFormatter(String rawSource) {
 		this.rawSource = rawSource;
@@ -137,7 +140,9 @@ public class HtmlFormatter implements SourceFormatter {
 		
 		sb.append("<").append(tagName);
 		if (!classes.isEmpty()) {
-			sb.append(" class=\"").append(StringUtils.join(classes, " ")).append("\"");
+			sb.append(" class=\"");
+			Joiner.on(' ').appendTo(sb, classes);
+			sb.append("\"");
 		}
 		if (nextElementName != null) {
 			sb.append(" relation=\"").append(escapeHtml(nextElementName)).append("\"");
