@@ -9,14 +9,14 @@ import lombok.ast.SyntaxProblem;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
-public class ExplicitNodeChecks {
+public class LiteralValidityTests {
 	private final List<SyntaxProblem> problems;
 	
-	public ExplicitNodeChecks(List<SyntaxProblem> problems) {
+	public LiteralValidityTests(List<SyntaxProblem> problems) {
 		this.problems = problems;
-		
 	}
 	
+	//IntegralLiteral does its own 'literal too large' checking.
 	public void checkIntegralLiteralValidity(IntegralLiteral node) {
 		if (node.getErrorReasonForValue() != null) {
 			problems.add(new SyntaxProblem(node, node.getErrorReasonForValue()));

@@ -173,6 +173,43 @@ class ModifiersTemplate {
 	List<KeywordModifier> keywords;
 	List<Annotation> annotations;
 	
+	/**
+	 * Returns the keyword-based modifiers the way {@link java.lang.reflect.Modifiers} works. Also sets flags that are implicitly true due to the nature
+	 * of the node that the modifiers are attached to (for example, inner interfaces are implicitly static and thus if the Modifiers object is a child of
+	 * such a declaration, its static bit will be set. Similarly, method declarations in interfaces are abstract and public whether or not those keywords
+	 * have been applied to the node).
+	 */
+	@CopyMethod
+	static int asReflectModifiers(Modifiers m) {
+		int out = 0;
+		for (Node n : m.keywords().getRawContents()) {
+			if (n instanceof KeywordModifier) {
+				out |= ((KeywordModifier)n).asReflectModifiers();
+			}
+		}
+		
+		if (m.getParent() instanceof TypeDeclaration && !(m.getParent() instanceof ClassDeclaration)) {
+			if (m.getParent().getParent() instanceof TypeDeclaration) out |= Modifier.STATIC;
+		}
+		
+		if (m.getParent() instanceof TypeDeclaration && m.getParent().getParent() instanceof CompilationUnit) {
+			out |= Modifier.STATIC;
+		}
+		
+		if (m.getParent() instanceof MethodDeclaration &&
+				(m.getParent().getParent() instanceof InterfaceDeclaration || m.getParent().getParent() instanceof AnnotationDeclaration) &&
+				(out & Modifier.STATIC) == 0) {
+			out |= Modifier.PUBLIC | Modifier.ABSTRACT;
+		}
+		
+		if (m.getParent() instanceof VariableDeclaration &&
+				(m.getParent().getParent() instanceof InterfaceDeclaration || m.getParent().getParent() instanceof AnnotationDeclaration)) {
+			out |= Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC;
+		}
+		
+		return out;
+	}
+	
 	@CopyMethod
 	static int asReflectModifiers(Modifiers m) {
 		int out = 0;
@@ -437,6 +474,31 @@ class TypeReferenceTemplate {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+	
+	private static final String PRIMITIVE_NAMES = " int long float double char short byte boolean ";
+	
+	@CopyMethod
+	static boolean isPrimitive(TypeReference t) {
+		
+		if (t.getArrayDimensions() > 0 || t.parts().size() != 1) return false;
+		Node part = t.parts().rawFirst();
+		if (part instanceof TypeReferencePart) {
+			String name = ((TypeReferencePart)part).getIdentifier().getName();
+			return name.indexOf(' ') == -1 && PRIMITIVE_NAMES.contains(" " + name + " ");
+		}
+		return false;
+	}
+	
+	@CopyMethod
+	static boolean isVoid(TypeReference t) {
+		if (t.parts().size() != 1) return false;
+		Node part = t.parts().rawFirst();
+		if (part instanceof TypeReferencePart) {
+			String name = ((TypeReferencePart)part).getIdentifier().getName();
+			return "void".equals(name);
+		}
+		return false;
 	}
 	
 	@CopyMethod

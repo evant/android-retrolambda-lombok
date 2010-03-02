@@ -145,8 +145,11 @@ public class TemplateProcessor extends AbstractProcessor {
 			if (element.getKind() == ElementKind.CLASS) {
 				for (Element member : ((TypeElement)element).getEnclosedElements()) {
 					if (member.getKind() == ElementKind.METHOD) {
-						added++;
-						validityGenerator.recordCheckMethod((ExecutableElement)member);
+						ExecutableElement method = (ExecutableElement)member;
+						if (!method.getModifiers().contains(Modifier.PRIVATE)) {
+							added++;
+							validityGenerator.recordCheckMethod((ExecutableElement)member);
+						}
 					}
 				}
 			} else if (element.getKind() == ElementKind.METHOD) {
