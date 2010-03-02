@@ -235,7 +235,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 	public T first() {
 		Node r = rawFirst();
 		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
-				"first element of %w isn't of the appropriate type(%s): %s",
+				"first element of %s isn't of the appropriate type(%s): %s",
 				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
 		return tClass.cast(r);
 	}
@@ -251,7 +251,7 @@ public class ListAccessor<T extends Node, P extends Node> {
 	public T last() {
 		Node r = rawLast();
 		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
-				"last element of %w isn't of the appropriate type(%s): %s",
+				"last element of %s isn't of the appropriate type(%s): %s",
 				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
 		return tClass.cast(r);
 	}
