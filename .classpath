@@ -12,10 +12,14 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="lib/build/lombok.jar"/>
-	<classpathentry kind="lib" path="lib/build/commons-lang.jar"/>
 	<classpathentry kind="lib" path="lib/build/commons-io.jar"/>
 	<classpathentry kind="lib" path="lib/build/parboiled.jar"/>
 	<classpathentry kind="lib" path="lib/test/junit.jar"/>
 	<classpathentry kind="lib" path="lib/build/javac.jar" sourcepath="contrib/javac-sources.zip"/>
+	<classpathentry kind="lib" path="lib/build/google-collections.jar" sourcepath="contrib/google-collections-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/lombok.ast/contrib/google-collections-javadoc.zip!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

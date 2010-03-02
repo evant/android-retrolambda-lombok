@@ -7,7 +7,7 @@ import java.util.Stack;
 import lombok.Getter;
 import lombok.ast.Node;
 
-import org.apache.commons.lang.StringUtils;
+import com.google.common.base.Joiner;
 
 public class TextFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
@@ -120,7 +120,7 @@ public class TextFormatter implements SourceFormatter {
 	@Override public String finish() {
 		if (!errors.isEmpty()) {
 			a("\n\n\nERRORS: \n");
-			a(StringUtils.join(errors, '\n'));
+			a(Joiner.on('\n').join(errors));
 			errors.clear();
 		}
 		return sb.toString();

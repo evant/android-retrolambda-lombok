@@ -5,7 +5,14 @@
 	<available property="junit-src-available" file="contrib/${junit-src-name}" />
 	<available property="javac-src-available" file="contrib/${javac-src-name}" />
 	
-	<target name="contrib" depends="jls, junit-src, javac-src" />
+	<condition property="google-collections-src-available">
+		<and>
+			<available file="contrib/google-collections-src.zip" />
+			<available file="contrib/google-collections-javadoc.zip" />
+		</and>
+	</condition>
+	
+	<target name="contrib" depends="jls, junit-src, javac-src, google-collections-src" />
 	
 	<target name="jls" unless="jls-available">
 		<mkdir dir="contrib/jls" />
@@ -20,5 +27,25 @@
 	
 	<target name="javac-src" unless="javac-src-available">
 		<get src="http://projectlombok.org/ivyrepo/langtools/javac-sources.zip" dest="contrib/${javac-src-name}" verbose="on" />
+	</target>
+	
+	<target name="google-collections-src" unless="google-collections-src-available">
+		<mkdir dir="build/contrib/google-collections/javadoc" />
+<!--		<get src="http://google-collections.googlecode.com/files/google-collect-1.0.zip" dest="build/contrib/google-collections-all.zip" verbose="on" /> -->
+		<unzip src="build/contrib/google-collections-all.zip" dest="build/contrib/google-collections" />
+		<copy todir="contrib" overwrite="true">
+			<fileset dir="build/contrib/google-collections">
+				<include name="google-collect-*/src-*.zip" />
+			</fileset>
+			<mapper type="merge" to="google-collections-src.zip" />
+		</copy>
+		<delete quiet="true" file="contrib/google-collections-javadoc.zip" />
+		<move todir="build/contrib/google-collections/javadoc">
+			<fileset dir="build/contrib/google-collections">
+				<include name="google-collect-*/javadoc/**/*" />
+			</fileset>
+			<mapper type="regexp" from="^.*[\\/]javadoc[\\/](.*)$$" to="\1" />
+		</move>
+		<zip destfile="contrib/google-collections-javadoc.zip" basedir="build/contrib/google-collections/javadoc" />
 	</target>
 </project>
