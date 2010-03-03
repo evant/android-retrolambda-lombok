@@ -204,6 +204,10 @@ class ModifiersTemplate {
 			if (m.getParent().getParent() instanceof TypeDeclaration) out |= Modifier.STATIC;
 		}
 		
+		if (m.getParent() instanceof InterfaceDeclaration || m.getParent() instanceof AnnotationDeclaration) {
+			out |= Modifier.ABSTRACT;
+		}
+		
 		if (m.getParent() instanceof TypeDeclaration && m.getParent().getParent() instanceof CompilationUnit) {
 			out |= Modifier.STATIC;
 		}
