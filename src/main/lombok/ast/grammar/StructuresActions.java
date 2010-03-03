@@ -134,7 +134,7 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createMethodParameter(Node modifiers, Node type, String varargs, Node name, List<String> dims) {
-		VariableDefinitionEntry e = new VariableDefinitionEntry().setRawName(name).setDimensions(dims == null ? 0 : dims.size());
+		VariableDefinitionEntry e = new VariableDefinitionEntry().setRawName(name).setArrayDimensions(dims == null ? 0 : dims.size());
 		if (name != null) e.setPosition(new Position(name.getPosition().getStart(), getCurrentLocationRtrim()));
 		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
@@ -160,7 +160,7 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createVariableDefinitionPart(Node varName, List<String> dims, Node initializer) {
-		return posify(new VariableDefinitionEntry().setRawName(varName).setRawInitializer(initializer).setDimensions(dims == null ? 0 : dims.size()));
+		return posify(new VariableDefinitionEntry().setRawName(varName).setRawInitializer(initializer).setArrayDimensions(dims == null ? 0 : dims.size()));
 	}
 	
 	public Node createVariableDefinition(Node type, Node head, List<Node> tail) {

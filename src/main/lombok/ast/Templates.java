@@ -279,11 +279,11 @@ class VariableDefinitionTemplate {
 @GenerateAstNode
 class VariableDefinitionEntryTemplate {
 	@NonNull Identifier name;
-	@NotChildOfNode int dimensions;
+	@NotChildOfNode int arrayDimensions;
 	Expression initializer;
 	
 	@CopyMethod
-	static TypeReference getTypeReference(VariableDefinitionEntry self) {
+	static TypeReference getEffectiveTypeReference(VariableDefinitionEntry self) {
 		if (!(self.getParent() instanceof VariableDefinition)) throw new AstException(
 				self, "Cannot calculate type reference of a VariableDefinitionEntry without a VariableDefinition as parent");
 		
@@ -291,7 +291,7 @@ class VariableDefinitionEntryTemplate {
 		VariableDefinition parent = (VariableDefinition) self.getParent();
 		
 		TypeReference typeRef = parent.getTypeReference().copy();
-		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getDimensions() + (parent.isVarargs() ? 1 : 0));
+		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getArrayDimensions() + (parent.isVarargs() ? 1 : 0));
 	}
 }
 

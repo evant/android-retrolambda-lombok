@@ -831,7 +831,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildInline(node);
 		formatter.nameNextElement("varName");
 		visit(node.getRawName());
-		for (int i = 0; i < node.getDimensions(); i++)
+		for (int i = 0; i < node.getArrayDimensions(); i++)
 			formatter.append("[]");
 		if (node.getRawInitializer() != null) {
 			formatter.space();
