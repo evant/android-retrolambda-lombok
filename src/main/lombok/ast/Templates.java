@@ -940,31 +940,31 @@ class StringLiteralTemplate {
 					char third = (i < cs.length -2) ? cs[i+2] : 'a';
 					
 					boolean secondFits = second >= '0' && second <= '7';
-					boolean thirdFits = second >= '0' && second <= '7';
+					boolean thirdFits = third >= '0' && third <= '7';
 					
 					if (first > '3') {
 						if (secondFits) {
 							i++;
-							value.append((first - '0') * 010 + (second - '0'));
+							value.append((char)((first - '0') * 010 + (second - '0')));
 							continue;
 						}
-						value.append(first - '0');
+						value.append((char)(first - '0'));
 						continue;
 					}
 					
 					if (secondFits && thirdFits) {
 						i += 2;
-						value.append((first - '0') * 0100 + (second - '0') * 010 + (third - '0'));
+						value.append((char)((first - '0') * 0100 + (second - '0') * 010 + (third - '0')));
 						continue;
 					}
 					
 					if (secondFits) {
 						i++;
-						value.append((first - '0') * 010 + (second - '0'));
+						value.append((char)((first - '0') * 010 + (second - '0')));
 						continue;
 					}
 					
-					value.append(first - '0');
+					value.append((char)(first - '0'));
 					continue;
 				}
 				
