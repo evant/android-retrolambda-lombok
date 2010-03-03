@@ -60,7 +60,9 @@ public class LiteralsActions extends SourceActions {
 			return posify(new IntegralLiteral().setRawValue(raw));
 		}
 		
-		if (v.contains(".") || v.endsWith("d") || v.endsWith("f")) return posify(new FloatingPointLiteral().setRawValue(raw));
+		if (v.contains(".") || v.endsWith("d") || v.endsWith("f") || v.contains("e")) {
+			return posify(new FloatingPointLiteral().setRawValue(raw));
+		}
 		else return posify(new IntegralLiteral().setRawValue(raw));
 	}
 }
