@@ -42,7 +42,6 @@ import org.junit.runner.RunWith;
 import com.sun.tools.javac.main.JavaCompiler;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
-import com.sun.tools.javac.util.JavacFileManager;
 
 @RunWith(DirectoryRunner.class)
 public class JcTreeBuilderTest {
@@ -59,8 +58,7 @@ public class JcTreeBuilderTest {
 		String lombokString;
 		try {
 			lombokString = convertToString(parseWithLombok(source));
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			System.out.printf("==== Processing %s ====\n", source.getName());
 			System.out.println(source.getRawInput());
 			System.out.println("=========== Expected ============");
@@ -82,35 +80,60 @@ public class JcTreeBuilderTest {
 		assertEquals(javacString, lombokString);
 		return true;
 	}
-
+	
 	private String convertToString(JCTree tree) {
 		JcTreePrinter printer = new JcTreePrinter();
 		tree.accept(printer);
 		String string = printer.toString();
 		return string;
 	}
-
+	
 	private static JCTree parseWithLombok(Source source) {
 		source.parseCompilationUnit();
 		List<Node> nodes = source.getNodes();
 		assertEquals(1, nodes.size());
 		Context context = new Context();
-		context.put(JavaFileManager.class, new JavacFileManager(context, true, Charset.forName("UTF-8")));
+		boolean success = false;
+		Throwable failTrace = null;
+		try {
+			Class<?> dfm = Class.forName("com.sun.tools.javac.util.DefaultFileManager");
+			JavaFileManager instance = (JavaFileManager) dfm.getConstructor(Context.class, boolean.class, Charset.class).newInstance(context, true, Charset.forName("UTF-8"));
+			context.put(JavaFileManager.class, instance);
+			success = true;
+		} catch (Throwable t) {
+			//Either DFM, or its replacement JFM, exists (or possibly both in odd classpath configurations). If something is wrong, NoMethodDefErrors and the like occur.
+			failTrace = t;
+		}
+		
+		try {
+			Class<?> jfm = Class.forName("com.sun.tools.javac.util.JavacFileManager");
+			JavaFileManager instance = (JavaFileManager) jfm.getConstructor(Context.class, boolean.class, Charset.class).newInstance(context, true, Charset.forName("UTF-8"));
+			context.put(JavaFileManager.class, instance);
+			success = true;
+		} catch (Throwable t) {
+			//Either DFM, or its replacement JFM, exists (or possibly both in odd classpath configurations). If something is wrong, NoMethodDefErrors and the like occur.
+			failTrace = t;
+		}
+		
+		if (!success) {
+			if (failTrace instanceof Error) throw (Error)failTrace;
+			throw new RuntimeException("Neither com.sun.tools.javac.util.JavacFileManager nor com.sun.tools.javac.util.DefaultFileManager could be configured", failTrace);
+		}
+		
 		JcTreeBuilder builder = new JcTreeBuilder(context);
 		nodes.get(0).accept(builder);
 		return builder.get();
 	}
-	
 	
 	public static JCTree parseWithJavac(Source source) throws Exception {
 		Context context = new Context();
 		JavaCompiler compiler = new JavaCompiler(context);
 		return compiler.parse(new TestJavaFileObject(source.getName(), source.getRawInput()));
 	}
-
+	
 	private static class TestJavaFileObject extends SimpleJavaFileObject {
 		private final String content;
-
+		
 		protected TestJavaFileObject(String name, String content) {
 			super(URI.create(name), Kind.SOURCE);
 			this.content = content;
