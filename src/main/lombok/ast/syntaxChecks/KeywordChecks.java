@@ -116,6 +116,7 @@ public class KeywordChecks {
 		K_PRIVATE | K_PROTECTED,
 		K_PRIVATE | K_PUBLIC,
 		K_PROTECTED | K_PUBLIC,
+		K_VOLATILE | K_FINAL,
 	};
 	
 	private static final int FIELD_MODIFIERS_LEGAL =
