@@ -1046,7 +1046,7 @@ class MethodDeclarationTemplate {
 	@NonNull Identifier methodName;
 	List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
-	@NonNull Block body;
+	Block body;
 	
 	@CopyMethod
 	static String getDescription(MethodDeclaration self) {
