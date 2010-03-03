@@ -228,12 +228,13 @@ public class ListAccessor<T extends Node, P extends Node> {
 		try {
 			return list.get(0);
 		} catch (IndexOutOfBoundsException e) {
-			throw new NoSuchElementException();
+			return null;
 		}
 	}
 	
 	public T first() {
 		Node r = rawFirst();
+		if (r == null) throw new NoSuchElementException();
 		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
 				"first element of %s isn't of the appropriate type(%s): %s",
 				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
@@ -244,12 +245,13 @@ public class ListAccessor<T extends Node, P extends Node> {
 		try {
 			return list.get(list.size()-1);
 		} catch (IndexOutOfBoundsException e) {
-			throw new NoSuchElementException();
+			return null;
 		}
 	}
 	
 	public T last() {
 		Node r = rawLast();
+		if (r == null) throw new NoSuchElementException();
 		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
 				"last element of %s isn't of the appropriate type(%s): %s",
 				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
