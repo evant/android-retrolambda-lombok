@@ -5,7 +5,6 @@
 	<classpathentry kind="src" path="src/printer"/>
 	<classpathentry kind="src" path="test/src"/>
 	<classpathentry kind="src" path="src/javacTransformer"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="src" path=".apt_generated">
 		<attributes>
 			<attribute name="optional" value="true"/>
@@ -21,5 +20,6 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/lombok.ast/contrib/google-collections-javadoc.zip!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
