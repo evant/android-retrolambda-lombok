@@ -136,4 +136,18 @@ public class StructuralChecks {
 			problems.add(new SyntaxProblem(node, "Empty variable declaration."));
 		}
 	}
+	
+	public void varargsOnlyLegalOnMethods(VariableDefinition node) {
+		if (!node.isVarargs()) return;
+		Node p = node.getParent();
+		if (p == null) return;
+		Node last = null;
+		if (p instanceof ConstructorDeclaration) {
+			last = ((ConstructorDeclaration)p).parameters().rawLast();
+		} else if (p instanceof MethodDeclaration) {
+			last = ((MethodDeclaration)p).parameters().rawLast();
+		}
+		
+		if (last != node) problems.add(new SyntaxProblem(node, "VarArgs are only legal on the last parameter of a method or constructor declaration."));
+	}
 }
