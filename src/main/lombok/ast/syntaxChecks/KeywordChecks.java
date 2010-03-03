@@ -39,6 +39,7 @@ import lombok.ast.KeywordModifier;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.StaticInitializer;
 import lombok.ast.SyntaxProblem;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.VariableDeclaration;
@@ -142,7 +143,8 @@ public class KeywordChecks {
 		if (rawDefinition instanceof VariableDefinition) {
 			Node rawModifiers = ((VariableDefinition)rawDefinition).getRawModifiers();
 			modifiersCheck(rawModifiers, FIELD_MODIFIERS_EXCLUSIVITY, FIELD_MODIFIERS_LEGAL, "field declarations");
-			checkStaticChain(rawModifiers);
+			//Skipping static chain check - compile time constants *ARE* legal even without a static chain,
+			//but to figure out if some field is a compile time constant, we need resolution.
 		}
 	}
 	
@@ -195,6 +197,16 @@ public class KeywordChecks {
 		if (!staticWarningEmitted) checkStaticChain(td.getRawModifiers());
 		
 		return flags;
+	}
+	
+	public void checkStaticInitializerInNonStaticType(StaticInitializer node) {
+		if (node.getParent() instanceof TypeDeclaration) {
+			Node pMods = ((TypeDeclaration)node.getParent()).getRawModifiers();
+			if (pMods instanceof Modifiers && !((Modifiers)pMods).isStatic()) {
+				problems.add(new SyntaxProblem(node,
+						"static initializers are only allowed in top-level or static types declarations."));
+			}
+		}
 	}
 	
 	private void checkStaticChain(Node rawModifiers) {
