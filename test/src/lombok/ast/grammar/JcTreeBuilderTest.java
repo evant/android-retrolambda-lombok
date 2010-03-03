@@ -52,7 +52,7 @@ public class JcTreeBuilderTest {
 	
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
-		if (source.getName().compareTo("B003") > 0) {
+		if (source.getName().compareTo("B006") > 0) {
 			return false;
 		}
 		String javacString = convertToString(parseWithJavac(source));

@@ -21,7 +21,6 @@
  */
 package lombok.ast.javac;
 
-import java.util.Arrays;
 import java.util.Map;
 
 import lombok.ast.Annotation;
@@ -38,13 +37,17 @@ import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.StaticInitializer;
+import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
+import lombok.ast.TypeVariable;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
+import lombok.ast.WildcardKind;
 
 import com.google.common.collect.ImmutableMap;
+import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.tree.JCTree;
@@ -55,6 +58,7 @@ import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
 import com.sun.tools.javac.tree.JCTree.JCStatement;
+import com.sun.tools.javac.tree.JCTree.JCTypeApply;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
@@ -66,7 +70,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	private final TreeMaker treeMaker;
 	private final Table table;
 	
-	java.util.List<? extends JCTree> result = null;
+	List<? extends JCTree> result = null;
 	
 	public JcTreeBuilder(Context context) {
 		this(TreeMaker.instance(context), Name.Table.instance(context));
@@ -104,25 +108,36 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private List<JCTree> toList(ListAccessor<? extends Node, ?> accessor) {
-		List<JCTree> result = List.nil();
-		for (Node node : accessor.getContents()) {
-			JcTreeBuilder visitor = create();
-			node.accept(visitor);
-			result = result.append(visitor.get());
-		}
-		return result;
+		return toList(JCTree.class, accessor);
+	}
+	
+	private List<JCTree> toList(Node node) {
+		return toList(JCTree.class, node);
+	}
+
+	private <T extends JCTree> List<T> toList(Class<T> type, Node node) {
+		if (node == null) return List.nil();
+		JcTreeBuilder visitor = create();
+		node.accept(visitor);
+		@SuppressWarnings("unchecked")
+		List<T> all = (List<T>)visitor.getAll();
+		return List.<T>nil().appendList(all);
 	}
 	
 	public JCTree get() {
-		return result.get(0);
+		return result.head;
 	}
 	
-	java.util.List<? extends JCTree> getAll() {
+	public List<? extends JCTree> getAll() {
 		return result;
 	}
 	
 	private void set(JCTree... value) {
-		result = Arrays.asList(value);
+		result = List.from(value);
+	}
+	
+	private void set(List<? extends JCTree> values) {
+		result = values;
 	}
 	
 	private JcTreeBuilder create() {
@@ -218,53 +233,106 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitVariableDefinition(VariableDefinition node) {
 		JCModifiers mods = (JCModifiers) toTree(node.getModifiers());
 		JCExpression vartype = (JCExpression) toTree(node.getTypeReference());
-		Name name = null;
 		JCExpression init = null;
 		for (VariableDefinitionEntry e : node.variables().getContents()){
-			name = toName(e.getName());
-			break;
+			set(treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), init));
+			return true;
+			// TODO add multiple entries
 		}
-		set(treeMaker.VarDef(mods, name, vartype, init));
-		return true;
+		throw new RuntimeException("expected some definitions...");
 	}
 	
 	@Override
 	public boolean visitTypeReference(TypeReference node) {
-		List<JCExpression> list = toList(JCExpression.class, node.parts());
-		
-		JCExpression previous = null;
-		
-		if (list.size() == 1) {
-			set(list.get(0));
+		WildcardKind wildcard = node.getWildcard();
+		if (wildcard == WildcardKind.UNBOUND) {
+			set(treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.UNBOUND), null));
 			return true;
 		}
 		
+		JCExpression result = plainTypeReference(node);
+		
+		result = addWildcards(result, wildcard);
+		result = addDimensions(result, node.getArrayDimensions());
+		
+		set(result);
+		return true;
+	}
+	
+	private JCExpression addDimensions(JCExpression type, int dimensions) {
+		for (int i = 0; i < dimensions; i++) {
+			type = treeMaker.TypeArray(type);
+		}
+		return type;
+	}
+	
+	private JCExpression plainTypeReference(TypeReference node) {
+		if (node.isPrimitive() || node.parts().size() == 1) {
+			Identifier identifier = node.parts().first().getIdentifier();
+			int typeTag = primitiveTypeTag(identifier.getName());
+			if (typeTag > 0) return treeMaker.TypeIdent(typeTag);
+		}
+		
+		List<JCExpression> list = toList(JCExpression.class, node.parts());
+		if (list.size() == 1) {
+			return list.head;
+		}
+		
+		JCExpression previous = null;
 		for (JCExpression part : list) {
-			Name next;;
-			if (part instanceof JCIdent) next = ((JCIdent)part).name;
-			else throw new IllegalStateException("Didn't expect a " + part.getClass().getName() + " in " + node);
-			
 			if (previous == null) {
 				previous = part;
 			} else {
+				if (part instanceof JCIdent) {
+					previous = treeMaker.Select(previous, ((JCIdent)part).name);
+				} else if (part instanceof JCTypeApply) {
+					JCTypeApply apply = (JCTypeApply)part;
+					apply.clazz = treeMaker.Select(previous, ((JCIdent)apply.clazz).name);
+					previous = apply;
+				} else {
+					throw new IllegalStateException("Didn't expect a " + part.getClass().getName() + " in " + node);
+				}
 				// TODO Handle type parameters somewhere in the middle
-				previous = treeMaker.Select(previous, next);
 			}
 		}
-		set(previous);
-		return true;
+		return previous;	
+	}
+
+	private JCExpression addWildcards(JCExpression type, WildcardKind wildcardKind) {
+		if (wildcardKind == WildcardKind.NONE) {
+			return type;
+		}
+		if (wildcardKind == WildcardKind.EXTENDS) {
+			return treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.EXTENDS), type);
+		}
+		if (wildcardKind == WildcardKind.SUPER) {
+			return treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.SUPER), type);
+		}
+		throw new IllegalStateException("Unexpected unbound wildcard");
 	}
 	
 	@Override
 	public boolean visitTypeReferencePart(TypeReferencePart node) {
-		Identifier identifier = node.getIdentifier();
-		int primitiveTypeTag = primitiveTypeTag(identifier.getName());
-		if (primitiveTypeTag != 0) {
-			set(treeMaker.TypeIdent(primitiveTypeTag));
-			return true;
+		JCIdent ident = treeMaker.Ident(toName(node.getIdentifier()));
+		
+		List<JCExpression> typeArguments = toList(JCExpression.class, node.getTypeArguments());
+		if (typeArguments.isEmpty()) {
+			set(ident);
+		} else {
+			set(treeMaker.TypeApply(ident, typeArguments));
 		}
-		set(treeMaker.Ident(toName(identifier)));
-		// TODO type arguments
+		return true;
+	}
+	
+	@Override
+	public boolean visitTypeArguments(TypeArguments node) {
+		set(toList(JCExpression.class, node.generics()));
+		return true;
+	}
+	
+	@Override
+	public boolean visitTypeVariable(TypeVariable node) {
+		set(treeMaker.TypeParameter(toName(node.getName()), toList(JCExpression.class, node.extending())));
 		return true;
 	}
 	
