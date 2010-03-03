@@ -46,6 +46,10 @@ public enum BinaryOperator {
 		return symbol;
 	}
 	
+	public boolean isAssignment() {
+		return pLevel == ASSIGN.pLevel;
+	}
+	
 	public static BinaryOperator fromSymbol(String symbol) {
 		for (BinaryOperator op : values()) {
 			if (op.symbol.equals(symbol)) return op;
