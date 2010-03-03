@@ -22,7 +22,6 @@
 package lombok.ast.javac;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 
 import lombok.ast.Annotation;
@@ -45,6 +44,7 @@ import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
 
+import com.google.common.collect.ImmutableMap;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.tree.JCTree;
@@ -268,17 +268,16 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return true;
 	}
 	
-	private static final Map<String, Integer> PRIMITIVES = new HashMap<String, Integer>();
-	static {
-		PRIMITIVES.put("byte", TypeTags.BYTE);
-		PRIMITIVES.put("char", TypeTags.CHAR);
-		PRIMITIVES.put("short", TypeTags.SHORT);
-		PRIMITIVES.put("int", TypeTags.INT);
-		PRIMITIVES.put("long", TypeTags.LONG);
-		PRIMITIVES.put("float", TypeTags.FLOAT);
-		PRIMITIVES.put("double", TypeTags.DOUBLE);
-		PRIMITIVES.put("boolean", TypeTags.BOOLEAN);
-	}
+	private static final Map<String, Integer> PRIMITIVES = ImmutableMap.<String, Integer>builder()
+		.put("byte", TypeTags.BYTE)
+		.put("char", TypeTags.CHAR)
+		.put("short", TypeTags.SHORT)
+		.put("int", TypeTags.INT)
+		.put("long", TypeTags.LONG)
+		.put("float", TypeTags.FLOAT)
+		.put("double", TypeTags.DOUBLE)
+		.put("boolean", TypeTags.BOOLEAN)
+		.build();
 	
 	static int primitiveTypeTag(String typeName) {
 		Integer primitive = PRIMITIVES.get(typeName);

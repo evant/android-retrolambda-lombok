@@ -22,9 +22,10 @@
 package lombok.ast.syntaxChecks;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.google.common.collect.ImmutableMap;
 
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.Block;
@@ -80,20 +81,18 @@ public class KeywordChecks {
 	private static final int K_STATIC       = 0x0100;
 	private static final int K_TRANSIENT    = 0x0200;
 	private static final int K_VOLATILE     = 0x0400;
-	private static final Map<String, Integer> TO_FLAG_MAP;
-	static {
-		TO_FLAG_MAP = new HashMap<String, Integer>();
-		TO_FLAG_MAP.put("private", K_PRIVATE);
-		TO_FLAG_MAP.put("protected", K_PROTECTED);
-		TO_FLAG_MAP.put("public", K_PUBLIC);
-		TO_FLAG_MAP.put("final", K_FINAL);
-		TO_FLAG_MAP.put("native", K_NATIVE);
-		TO_FLAG_MAP.put("strictfp", K_STRICTFP);
-		TO_FLAG_MAP.put("synchronized", K_SYNCHRONIZED);
-		TO_FLAG_MAP.put("abstract", K_ABSTRACT);
-		TO_FLAG_MAP.put("transient", K_TRANSIENT);
-		TO_FLAG_MAP.put("volatile", K_VOLATILE);
-	}
+	private static final Map<String, Integer> TO_FLAG_MAP = ImmutableMap.<String, Integer>builder()
+		.put("private", K_PRIVATE)
+		.put("protected", K_PROTECTED)
+		.put("public", K_PUBLIC)
+		.put("final", K_FINAL)
+		.put("native", K_NATIVE)
+		.put("strictfp", K_STRICTFP)
+		.put("synchronized", K_SYNCHRONIZED)
+		.put("abstract", K_ABSTRACT)
+		.put("transient", K_TRANSIENT)
+		.put("volatile", K_VOLATILE)
+		.build();
 	
 	private static final int[] METHOD_MODIFIERS_EXCLUSIVITY = {
 		K_PRIVATE   | K_PROTECTED,
