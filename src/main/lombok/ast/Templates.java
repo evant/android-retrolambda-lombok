@@ -174,13 +174,13 @@ class ModifiersTemplate {
 	List<Annotation> annotations;
 	
 	/**
-	 * Returns the keyword-based modifiers the way {@link java.lang.reflect.Modifiers} works. Also sets flags that are implicitly true due to the nature
-	 * of the node that the modifiers are attached to (for example, inner interfaces are implicitly static and thus if the Modifiers object is a child of
-	 * such a declaration, its static bit will be set. Similarly, method declarations in interfaces are abstract and public whether or not those keywords
-	 * have been applied to the node).
+	 * Returns the keyword-based modifiers the way {@link java.lang.reflect.Modifiers} works.
+	 * Only those keywords that are explicitly in the AST are reported; to also include implicit flags, such
+	 * as for example the idea that methods in interfaces are always public and abstract even if not marked as such,
+	 * use {@link #getEffectiveModifierFlags(Modifiers)}.
 	 */
 	@CopyMethod
-	static int asReflectModifiers(Modifiers m) {
+	static int getExplicitModifierFlags(Modifiers m) {
 		int out = 0;
 		for (Node n : m.keywords().getRawContents()) {
 			if (n instanceof KeywordModifier) {
@@ -188,6 +188,18 @@ class ModifiersTemplate {
 			}
 		}
 		
+		return out;
+	}
+	
+	/**
+	 * Returns the keyword-based modifiers the way {@link java.lang.reflect.Modifiers} works. Also sets flags that are implicitly true due to the nature
+	 * of the node that the modifiers are attached to (for example, inner interfaces are implicitly static and thus if the Modifiers object is a child of
+	 * such a declaration, its static bit will be set. Similarly, method declarations in interfaces are abstract and public whether or not those keywords
+	 * have been applied to the node).
+	 */
+	@CopyMethod
+	static int getEffectiveModifierFlags(Modifiers m) {
+		int out = getExplicitModifierFlags(m);
 		if (m.getParent() instanceof TypeDeclaration && !(m.getParent() instanceof ClassDeclaration)) {
 			if (m.getParent().getParent() instanceof TypeDeclaration) out |= Modifier.STATIC;
 		}
@@ -212,39 +224,39 @@ class ModifiersTemplate {
 	
 	@CopyMethod
 	static boolean isPublic(Modifiers m) {
-		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.PUBLIC);
+		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.PUBLIC);
 	}
 	
 	@CopyMethod
 	static boolean isProtected(Modifiers m) {
-		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.PROTECTED);
+		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.PROTECTED);
 	}
 	
 	@CopyMethod
 	static boolean isPrivate(Modifiers m) {
-		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.PRIVATE);
+		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.PRIVATE);
 	}
 	
 	@CopyMethod
 	static boolean isPackagePrivate(Modifiers m) {
-		return 0 == (asReflectModifiers(m) & (
+		return 0 == (getEffectiveModifierFlags(m) & (
 				Modifier.PUBLIC | Modifier.PRIVATE | Modifier.PROTECTED
 				));
 	}
 	
 	@CopyMethod
 	static boolean isStatic(Modifiers m) {
-		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.STATIC);
+		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.STATIC);
 	}
 	
 	@CopyMethod
 	static boolean isFinal(Modifiers m) {
-		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.FINAL);
+		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.FINAL);
 	}
 	
 	@CopyMethod
 	static boolean isAbstract(Modifiers m) {
-		return 0 != (asReflectModifiers(m) & java.lang.reflect.Modifier.ABSTRACT);
+		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.ABSTRACT);
 	}
 }
 

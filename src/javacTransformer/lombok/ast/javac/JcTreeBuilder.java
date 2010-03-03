@@ -178,7 +178,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitModifiers(Modifiers node) {
-		set(treeMaker.Modifiers(node.asReflectModifiers(), toList(JCAnnotation.class, node.annotations())));
+		set(treeMaker.Modifiers(node.getExplicitModifierFlags(), toList(JCAnnotation.class, node.annotations())));
 		return true;
 	}
 	
