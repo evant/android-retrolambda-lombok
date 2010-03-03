@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -400,16 +401,29 @@ public class TemplateProcessor extends AbstractProcessor {
 		/* extra methods */ {
 			for (ExecutableElement delegate : methodsToCopy) {
 				boolean isVoid = delegate.getReturnType().getKind() == TypeKind.VOID;
-				out.write("\t");
 				CopyMethod cma = delegate.getAnnotation(CopyMethod.class);
 				String accessModifier = cma.accessModifier();
+				if (!delegate.getTypeParameters().isEmpty()) {
+					throw new IllegalArgumentException("We don't support generics parameters on extra methods in templates.");
+				}
+				String docComment = processingEnv.getElementUtils().getDocComment(delegate);
+				
+				if (docComment != null) {
+					out.write("\t/**\n");
+					for (String s : docComment.split(Pattern.quote("\n"))) {
+						out.write("\t *");
+						out.write(s);
+						out.write("\n");
+					}
+					out.write("\t */\n");
+				}
+				
+				out.write("\t");
+				
 				out.write(accessModifier);
 				if (!accessModifier.isEmpty()) out.write(" ");
 				if (cma.isStatic()) out.write("static ");
 				
-				if (!delegate.getTypeParameters().isEmpty()) {
-					throw new IllegalArgumentException("We don't support generics parameters on extra methods in templates.");
-				}
 				out.write(isVoid ? "void" : delegate.getReturnType().toString());
 				out.write(" ");
 				out.write(delegate.getSimpleName().toString());
