@@ -26,7 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-public class ListAccessor<T extends Node, P extends Node> {
+class ListAccessor<T extends Node, P extends Node> {
 	private final List<AbstractNode> list;
 	private final AbstractNode parent;
 	private final Class<T> tClass;
@@ -41,6 +41,319 @@ public class ListAccessor<T extends Node, P extends Node> {
 		this.returnAsParent = returnAsParent;
 	}
 	
+	private RawListAccessor<T, P> raw = new RawListAccessor<T, P>() {
+		@Override
+		public P up() {
+			return returnAsParent;
+		}
+		
+		@Override
+		public Node owner() {
+			return parent;
+		}
+		
+		@Override
+		public void clear() {
+			list.clear();
+		}
+		
+		@Override
+		public boolean isEmpty() {
+			return list.isEmpty();
+		}
+		
+		@Override
+		public int size() {
+			return list.size();
+		}
+		
+		@Override
+		public Node first() {
+			try {
+				return list.get(0);
+			} catch (IndexOutOfBoundsException e) {
+				return null;
+			}
+		}
+		
+		@Override
+		public Node last() {
+			try {
+				return list.get(list.size()-1);
+			} catch (IndexOutOfBoundsException e) {
+				return null;
+			}
+		}
+		
+		@Override
+		public Node get(int idx) {
+			try {
+				return list.get(idx);
+			} catch (IndexOutOfBoundsException e) {
+				return null;
+			}
+		}
+		
+		@Override
+		public boolean contains(Node source) {
+			if (source == null) return false;
+			if (source.getParent() != parent) return false;
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i) == source) return true;
+			}
+			return false;
+		}
+		
+		@Override
+		public P migrateAllFrom(RawListAccessor<?, ?> otherList) {
+			Iterator<Node> it = otherList.iterator();
+			while (it.hasNext()) {
+				AbstractNode n = (AbstractNode)it.next();
+				((AbstractNode)otherList.owner()).disown(n);
+				it.remove();
+				addToEnd(n);
+			}
+			
+			return returnAsParent;
+		}
+		
+		@Override
+		public P addToStart(Node... node) {
+			for (Node n : node) {
+				AbstractNode child = (AbstractNode)n;
+				if (child != null) {
+					parent.adopt(child);
+					list.add(0, child);
+				}
+			}
+			return returnAsParent;
+		}
+		
+		@Override
+		public P addToEnd(Node... node) {
+			for (Node n : node) {
+				AbstractNode child = (AbstractNode)n;
+				if (node != null) {
+					parent.adopt(child);
+					list.add(child);
+				}
+			}
+			return returnAsParent;
+		}
+		
+		@Override
+		public P addBefore(Node ref, Node... node) {
+			if (ref == null) throw new NullPointerException("ref");
+			parent.ensureParentage((AbstractNode)ref);
+			
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i) == ref) {
+					int j = 0;
+					for (Node n : node) {
+						AbstractNode child = (AbstractNode)n;
+						if (child != null) {
+							child.ensureParentless();
+							parent.adopt(child);
+							list.add(i + j, child);
+							j++;
+						}
+					}
+					return returnAsParent;
+				}
+			}
+			throw new IllegalStateException(listName + " does not contain: " + ref);
+		}
+		
+		@Override
+		public P addAfter(Node ref, Node... node) {
+			if (ref == null) throw new NullPointerException("ref");
+			parent.ensureParentage((AbstractNode)ref);
+			
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i) == ref) {
+					int j = 0;
+					for (Node n : node) {
+						AbstractNode child = (AbstractNode)n;
+						if (child != null) {
+							child.ensureParentless();
+							parent.adopt(child);
+							list.add(i + j + 1, child);
+							j++;
+						}
+					}
+					return returnAsParent;
+				}
+			}
+			
+			throw new IllegalStateException(listName + " does not contain: " + ref);
+		}
+		
+		@Override
+		public P replace(Node source, Node replacement) {
+			if (replacement != null) ((AbstractNode)replacement).ensureParentless();
+			parent.ensureParentage((AbstractNode)source);
+			
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i) == source) {
+					parent.disown((AbstractNode)source);
+					try {
+						if (replacement != null) parent.adopt((AbstractNode)replacement);
+					} catch (IllegalStateException e) {
+						parent.adopt((AbstractNode)source);
+						throw e;
+					}
+					if (replacement == null) list.remove(i);	//screws up for counter, but we return right after anyway, so it doesn't matter.
+					else list.set(i, (AbstractNode)replacement);
+					return returnAsParent;
+				}
+			}
+			
+			throw new IllegalStateException(listName + " does not contain: " + source);
+		}
+		
+		@Override
+		public P remove(Node source) {
+			if (source == null) return returnAsParent;
+			if (source.getParent() != parent) return returnAsParent;
+			
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i) == source) {
+					parent.disown((AbstractNode)source);
+					list.remove(i);
+					return returnAsParent;
+				}
+			}
+			
+			return returnAsParent;
+		}
+		
+		@Override
+		public StrictListAccessor<T, P> asStrictAccessor() {
+			return strict;
+		}
+		
+		@Override public Iterator<Node> iterator() {
+			return new ArrayList<Node>(list).iterator();
+		}
+	};
+	
+	private StrictListAccessor<T, P> strict = new StrictListAccessor<T, P>() {
+		@Override public P up() {
+			return returnAsParent;
+		}
+		
+		@Override public Node owner() {
+			return parent;
+		}
+		
+		@Override public void clear() {
+			list.clear();
+		}
+		
+		@Override public boolean isEmpty() {
+			return list.isEmpty();
+		}
+		
+		@Override public int size() {
+			return list.size();
+		}
+		
+		@Override public T first() {
+			Node r = raw.first();
+			if (r == null) throw new NoSuchElementException();
+			if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
+					"first element of %s isn't of the appropriate type(%s): %s",
+					listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
+			return tClass.cast(r);
+		}
+		
+		@Override public T last() {
+			Node r = raw.last();
+			if (r == null) throw new NoSuchElementException();
+			if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
+					"last element of %s isn't of the appropriate type(%s): %s",
+					listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
+			return tClass.cast(r);
+		}
+		
+		@Override public T get(int idx) {
+			Node r = raw.first();
+			if (r == null) throw new IndexOutOfBoundsException();
+			if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
+					"element #%d of %s isn't of the appropriate type(%s): %s",
+					idx, listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
+			return tClass.cast(r);
+		}
+		
+		@Override public boolean contains(Node source) {
+			return raw.contains(source);
+		}
+		
+		@Override public P migrateAllFrom(StrictListAccessor<? extends T, ?> otherList) {
+			Iterator<? extends T> it = otherList.iterator();
+			while (it.hasNext()) {
+				AbstractNode n = (AbstractNode)it.next();
+				((AbstractNode)otherList.owner()).disown(n);
+				it.remove();
+				raw.addToEnd(n);
+			}
+			
+			return returnAsParent;
+		}
+		
+		@Override public P addToStart(T... node) {
+			return raw.addToStart(node);
+		}
+		
+		@Override public P addToEnd(T... node) {
+			return raw.addToEnd(node);
+		}
+		
+		@Override public P addBefore(Node ref, T... node) {
+			return raw.addBefore(ref, node);
+		}
+		
+		@Override public P addAfter(Node ref, T... node) {
+			return raw.addAfter(ref, node);
+		}
+		
+		@Override public P replace(Node source, T replacement) {
+			return raw.replace(source, replacement);
+		}
+		
+		@Override public P remove(Node source) throws NoSuchElementException {
+			if (source == null) throw new NullPointerException();
+			if (source.getParent() != parent) throw new NoSuchElementException(listName + " is not the parent of: " + source);
+			
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i) == source) {
+					parent.disown((AbstractNode)source);
+					list.remove(i);
+					return returnAsParent;
+				}
+			}
+			
+			throw new NoSuchElementException(listName + " does not contain: " + source);
+		}
+		
+		@Override public RawListAccessor<T, P> asRawAccessor() {
+			return raw;
+		}
+		
+		@Override public Iterator<T> iterator() {
+			List<T> out = new ArrayList<T>(list.size());
+			
+			for (Object o : list) {
+				if (!tClass.isInstance(o)) throw new AstException(parent, String.format(
+						"%s contains an element that isn't of the appropriate type(%s): %s",
+						listName, tClass.getSimpleName(), o.getClass().getSimpleName()));
+				out.add(tClass.cast(o));
+			}
+			
+			return out.iterator();
+		}
+	};
+	
 	static <T extends Node, P extends AbstractNode> ListAccessor<T, P> of(List<AbstractNode> list, P parent, Class<T> tClass, String listName) {
 		return new ListAccessor<T, P>(list, parent, tClass, listName, parent);
 	}
@@ -49,224 +362,11 @@ public class ListAccessor<T extends Node, P extends Node> {
 		return new ListAccessor<T, Q>(list, parent, tClass, listName, returnThisAsParent);
 	}
 	
-	public P up() {
-		return returnAsParent;
+	StrictListAccessor<T, P> asStrict() {
+		return strict;
 	}
 	
-	public void clear() {
-		list.clear();
-	}
-	
-	public P migrateAllFrom(ListAccessor<? extends T, ?> otherList) {
-		for (Node n : otherList.list) {
-			if (!tClass.isInstance(n)) throw new AstException(otherList.parent, String.format("List %s contains node that aren't of type %s", otherList.listName, tClass));
-		}
-		
-		return migrateAllFromRaw(otherList);
-	}
-	
-	public P migrateAllFromRaw(ListAccessor<? extends Node, ?> otherList) {
-		Iterator<AbstractNode> it = otherList.list.iterator();
-		while (it.hasNext()) {
-			AbstractNode n = it.next();
-			otherList.parent.disown(n);
-			it.remove();
-			this.addToEndRaw(n);
-		}
-		
-		return returnAsParent;
-	}
-	
-	public P addToStart(T... node) {
-		return addToStartRaw(node);
-	}
-	
-	public P addToStartRaw(Node... node) {
-		for (Node n : node) {
-			AbstractNode child = (AbstractNode)n;
-			if (child != null) {
-				parent.adopt(child);
-				list.add(0, child);
-			}
-		}
-		return returnAsParent;
-	}
-	
-	public P addToEnd(T... node) {
-		return addToEndRaw(node);
-	}
-	
-	public P addToEndRaw(Node... node) {
-		for (Node n : node) {
-			AbstractNode child = (AbstractNode)n;
-			if (node != null) {
-				parent.adopt(child);
-				list.add(child);
-			}
-		}
-		return returnAsParent;
-	}
-	
-	public P addBefore(Node ref, T... node) {
-		if (node == null) throw new NullPointerException("node");
-		return addBeforeRaw(ref, node);
-	}
-	
-	public P addBeforeRaw(Node ref, Node... node) {
-		if (ref == null) throw new NullPointerException("ref");
-		
-		for (int i = 0; i < list.size(); i++) {
-			if (list.get(i) == ref) {
-				int j = 0;
-				for (Node n : node) {
-					AbstractNode child = (AbstractNode)n;
-					if (child != null) {
-						child.ensureParentless();
-						parent.adopt(child);
-						list.add(i + j, child);
-						j++;
-					}
-				}
-				return returnAsParent;
-			}
-		}
-		throw new IllegalStateException(listName + " does not contain: " + ref);
-	}
-	
-	public P addAfter(Node ref, T... node) {
-		if (node == null) throw new NullPointerException("node");
-		return addAfterRaw(ref, node);
-	}
-	
-	public P addAfterRaw(Node ref, Node... node) {
-		if (ref == null) throw new NullPointerException("ref");
-		
-		for (int i = 0; i < list.size(); i++) {
-			if (list.get(i) == ref) {
-				int j = 0;
-				for (Node n : node) {
-					AbstractNode child = (AbstractNode)n;
-					if (child != null) {
-						child.ensureParentless();
-						parent.adopt(child);
-						list.add(i + j + 1, child);
-						j++;
-					}
-				}
-				return returnAsParent;
-			}
-		}
-		
-		throw new IllegalStateException(listName + " does not contain: " + ref);
-	}
-	
-	public P replace(Node source, T replacement) {
-		if (replacement == null) throw new NullPointerException("replacement");
-		return replaceRaw(source, replacement);
-	}
-	
-	public P replaceRaw(Node source, Node replacement) {
-		if (replacement != null) ((AbstractNode)replacement).ensureParentless();
-		parent.ensureParentage((AbstractNode)source);
-		
-		for (int i = 0; i < list.size(); i++) {
-			if (list.get(i) == source) {
-				parent.disown((AbstractNode)source);
-				try {
-					if (replacement != null) parent.adopt((AbstractNode)replacement);
-				} catch (IllegalStateException e) {
-					parent.adopt((AbstractNode)source);
-					throw e;
-				}
-				if (replacement == null) list.remove(i);	//screws up for counter, but we return right after anyway, so it doesn't matter.
-				else list.set(i, (AbstractNode)replacement);
-				return returnAsParent;
-			}
-		}
-		
-		throw new IllegalStateException(listName + " does not contain: " + source);
-	}
-	
-	public P remove(Node source) throws NoSuchElementException {
-		if (source == null) return returnAsParent;
-		parent.ensureParentage((AbstractNode)source);
-		
-		for (int i = 0; i < list.size(); i++) {
-			if (list.get(i) == source) {
-				parent.disown((AbstractNode)source);
-				list.remove(i);
-				return returnAsParent;
-			}
-		}
-		
-		throw new NoSuchElementException(listName + " does not contain: " + source);
-	}
-	
-	public boolean contains(Node source) {
-		if (source == null) return false;
-		if (source.getParent() != parent) return false;
-		for (int i = 0; i < list.size(); i++) {
-			if (list.get(i) == source) return true;
-		}
-		return false;
-	}
-	
-	@SuppressWarnings("unchecked")
-	public Iterable<T> getContents() {
-		List<T> out = new ArrayList<T>((List<T>)list);
-		
-		for (Object o : out) {
-			if (!tClass.isInstance(o)) throw new AstException(parent, String.format(
-					"%s contains an element that isn't of the appropriate type(%s): %s",
-					listName, tClass.getSimpleName(), o.getClass().getSimpleName()));
-		}
-		
-		return out;
-	}
-	
-	public Node rawFirst() {
-		try {
-			return list.get(0);
-		} catch (IndexOutOfBoundsException e) {
-			return null;
-		}
-	}
-	
-	public T first() {
-		Node r = rawFirst();
-		if (r == null) throw new NoSuchElementException();
-		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
-				"first element of %s isn't of the appropriate type(%s): %s",
-				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
-		return tClass.cast(r);
-	}
-	
-	public Node rawLast() {
-		try {
-			return list.get(list.size()-1);
-		} catch (IndexOutOfBoundsException e) {
-			return null;
-		}
-	}
-	
-	public T last() {
-		Node r = rawLast();
-		if (r == null) throw new NoSuchElementException();
-		if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
-				"last element of %s isn't of the appropriate type(%s): %s",
-				listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
-		return tClass.cast(r);
-	}
-	
-	public boolean isEmpty() {
-		return list.isEmpty();
-	}
-	
-	public Iterable<Node> getRawContents() {
-		return new ArrayList<Node>(list);
-	}
-	
-	public int size() {
-		return list.size();
+	RawListAccessor<T, P> asRaw() {
+		return raw;
 	}
 }

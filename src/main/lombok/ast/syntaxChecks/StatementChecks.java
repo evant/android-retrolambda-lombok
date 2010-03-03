@@ -47,7 +47,7 @@ public class StatementChecks {
 	}
 	
 	public void checkNotLoneTry(Try node) {
-		if (node.catches().size() == 0 && node.getRawFinally() == null) {
+		if (node.rawCatches().size() == 0 && node.getRawFinally() == null) {
 			problems.add(new SyntaxProblem(node, "try statement with no catches and no finally"));
 		}
 	}
@@ -93,7 +93,7 @@ public class StatementChecks {
 	
 	private void checkVarDefIsSimple(Node node, Node rawVarDef, String desc, String desc2) {
 		if (!(rawVarDef instanceof VariableDefinition)) return;
-		switch (((VariableDefinition)rawVarDef).variables().size()) {
+		switch (((VariableDefinition)rawVarDef).rawVariables().size()) {
 		case 0: return;
 		case 1: break;
 		default:
@@ -101,7 +101,7 @@ public class StatementChecks {
 			return;
 		}
 		
-		Node varDefEntry = ((VariableDefinition)rawVarDef).variables().rawFirst();
+		Node varDefEntry = ((VariableDefinition)rawVarDef).rawVariables().first();
 		if (varDefEntry instanceof VariableDefinitionEntry) {
 			if (((VariableDefinitionEntry)varDefEntry).getRawInitializer() != null) {
 				problems.add(new SyntaxProblem(node, desc + " can not declare a value for their variable declaration."));

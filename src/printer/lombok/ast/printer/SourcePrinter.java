@@ -68,13 +68,13 @@ import lombok.ast.IntegralLiteral;
 import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
 import lombok.ast.LabelledStatement;
-import lombok.ast.ListAccessor;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
+import lombok.ast.RawListAccessor;
 import lombok.ast.Return;
 import lombok.ast.Select;
 import lombok.ast.StaticInitializer;
@@ -134,11 +134,11 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		if (sb.length() > 0) formatter.append(sb.toString());
 	}
 	
-	private void visitAll(String relation, ListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
+	private void visitAll(String relation, RawListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
 		if (nodes.isEmpty()) return;
 		append(prefix);
 		boolean first = true;
-		for (Node n : nodes.getRawContents()) {
+		for (Node n : nodes) {
 			if (!first) {
 				append(separator);
 			}
@@ -149,7 +149,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		append(suffix);
 	}
 	
-	private void visitAll(ListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
+	private void visitAll(RawListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
 		visitAll(null, nodes, separator, prefix, suffix);
 	}
 	
@@ -185,7 +185,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			formatter.space();
 		}
 		
-		visitAll(node.parts(), ".", "", "");
+		visitAll(node.rawParts(), ".", "", "");
 		
 		for (int i = 0 ; i < node.getArrayDimensions(); i++)
 			formatter.append("[]");
@@ -373,7 +373,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.nameNextElement("type");
 		visit(node.getRawTypeReference());
 		formatter.append("(");
-		visitAll(node.arguments(), ", ", "", "");
+		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
 		formatter.closeInline();
 		return true;
@@ -390,7 +390,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.nameNextElement("methodName");
 		visit(node.getRawName());
 		formatter.append("(");
-		visitAll(node.arguments(), ", ", "", "");
+		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
 		formatter.closeInline();
 		return true;
@@ -424,7 +424,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.keyword("new");
 		formatter.space();
 		visit(node.getRawComponentTypeReference());
-		visitAll(node.dimensions(), "", "", "");
+		visitAll(node.rawDimensions(), "", "", "");
 		if (node.getRawInitializer() != null) {
 			formatter.space();
 			visit(node.getRawInitializer());
@@ -436,7 +436,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitArrayInitializer(ArrayInitializer node) {
 		formatter.buildInline(node);
 		formatter.append("{");
-		visitAll(node.expressions(), ", ", "", "");
+		visitAll(node.rawExpressions(), ", ", "", "");
 		formatter.append("}");
 		formatter.closeInline();
 		return true;
@@ -534,7 +534,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.keyword("for");
 		formatter.space();
 		formatter.append("(");
-		visitAll("init", node.inits(), ", ", "", "");
+		visitAll("init", node.rawInits(), ", ", "", "");
 		formatter.append(";");
 		if (node.getRawCondition() != null) {
 			formatter.space();
@@ -542,9 +542,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			visit(node.getRawCondition());
 		}
 		formatter.append(";");
-		if (!node.updates().isEmpty()) {
+		if (!node.rawUpdates().isEmpty()) {
 			formatter.space();
-			visitAll(node.updates(), ", ", "", "");
+			visitAll(node.rawUpdates(), ", ", "", "");
 		}
 		formatter.append(")");
 		formatter.space();
@@ -583,7 +583,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.startSuppressBlock();
 		visit(node.getRawBody());
 		formatter.endSuppressBlock();
-		visitAll(node.catches(), " ", " ", "");
+		visitAll(node.rawCatches(), " ", " ", "");
 		if (node.getRawFinally() != null) {
 			formatter.space();
 			formatter.keyword("finally");
@@ -666,7 +666,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		formatter.append("{");
 		formatter.buildBlock(null);
-		visitAll(node.contents(), "", "", "");
+		visitAll(node.rawContents(), "", "", "");
 		formatter.closeBlock();
 		formatter.append("}");
 		formatter.closeBlock();
@@ -717,7 +717,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.append("{");
 		formatter.buildBlock(null);
 		
-		for (Node child : ((Block)body).contents().getRawContents()) {
+		for (Node child : ((Block)body).rawContents()) {
 			if (child instanceof Case || child instanceof Default) {
 				formatter.startSuppressIndent();
 				visit(child);
@@ -811,7 +811,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildInline(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
@@ -821,7 +821,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			formatter.append("...");
 		}
 		formatter.space();
-		visitAll(node.variables(), ", ", "", "");
+		visitAll(node.rawVariables(), ", ", "", "");
 		formatter.closeInline();
 		
 		return true;
@@ -846,7 +846,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitTypeArguments(TypeArguments node) {
 		formatter.buildInline(node);
-		visitAll(node.generics(), ", ", "<", ">");
+		visitAll(node.rawGenerics(), ", ", "<", ">");
 		formatter.closeInline();
 		return true;
 	}
@@ -854,10 +854,10 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitTypeVariable(TypeVariable node) {
 		formatter.buildInline(node);
 		visit(node.getRawName());
-		if (!node.extending().isEmpty()) {
+		if (!node.rawExtending().isEmpty()) {
 			formatter.space();
 			formatter.keyword("extends");
-			visitAll(node.extending(), " & ", " ", "");
+			visitAll(node.rawExtending(), " & ", " ", "");
 		}
 		formatter.closeInline();
 		return true;
@@ -874,8 +874,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitModifiers(Modifiers node) {
 		formatter.buildInline(node);
-		visitAll(node.annotations(), "", "", "");
-		visitAll(node.keywords(), " ", "", "");
+		visitAll(node.rawAnnotations(), "", "", "");
+		visitAll(node.rawKeywords(), " ", "", "");
 		formatter.closeInline();
 		return true;
 	}
@@ -884,7 +884,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		formatter.append("@");
 		visit(node.getRawAnnotationTypeReference());
-		visitAll(node.elements(), ", ", "(", ")");
+		visitAll(node.rawElements(), ", ", "(", ")");
 		formatter.closeBlock();
 		return true;
 	}
@@ -907,12 +907,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		formatter.append("{");
 		formatter.buildBlock(null);
-		visitAll("constant", node.constants(), ",\n", "", "");
-		if (!node.members().isEmpty()) {
+		visitAll("constant", node.rawConstants(), ",\n", "", "");
+		if (!node.rawMembers().isEmpty()) {
 			formatter.append(";");
 			formatter.verticalSpace();
 		}
-		visitAll(node.members(), "\n", "", "");
+		visitAll(node.rawMembers(), "\n", "", "");
 		formatter.closeBlock();
 		formatter.append("}");
 		formatter.closeBlock();
@@ -923,7 +923,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		formatter.append("{");
 		formatter.buildBlock(null);
-		visitAll(node.members(), "\n", "", "");
+		visitAll(node.rawMembers(), "\n", "", "");
 		formatter.closeBlock();
 		formatter.append("}");
 		formatter.closeBlock();
@@ -935,24 +935,24 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
-		visitAll(node.typeVariables(), ", ", "<", ">");
-		if (!node.typeVariables().isEmpty()) formatter.space();
+		visitAll(node.rawTypeVariables(), ", ", "<", ">");
+		if (!node.rawTypeVariables().isEmpty()) formatter.space();
 		formatter.nameNextElement("returnType");
 		visit(node.getRawReturnTypeReference());
 		formatter.space();
 		formatter.nameNextElement("methodName");
 		visit(node.getRawMethodName());
 		formatter.append("(");
-		visitAll("parameter", node.parameters(), ", ", "", "");
+		visitAll("parameter", node.rawParameters(), ", ", "", "");
 		formatter.append(")");
-		if (!node.thrownTypeReferences().isEmpty()) {
+		if (!node.rawThrownTypeReferences().isEmpty()) {
 			formatter.space();
 			formatter.keyword("throws");
-			visitAll("throws", node.thrownTypeReferences(), ", ", " ", "");
+			visitAll("throws", node.rawThrownTypeReferences(), ", ", " ", "");
 		}
 		if (node.getRawBody() == null) {
 			formatter.append(";");
@@ -971,21 +971,21 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
-		visitAll(node.typeVariables(), ", ", "<", ">");
-		if (!node.typeVariables().isEmpty()) formatter.space();
+		visitAll(node.rawTypeVariables(), ", ", "<", ">");
+		if (!node.rawTypeVariables().isEmpty()) formatter.space();
 		formatter.nameNextElement("typeName");
 		visit(node.getRawTypeName());
 		formatter.append("(");
-		visitAll("parameter", node.parameters(), ", ", "", "");
+		visitAll("parameter", node.rawParameters(), ", ", "", "");
 		formatter.append(")");
 		formatter.space();
-		if (!node.thrownTypeReferences().isEmpty()) {
+		if (!node.rawThrownTypeReferences().isEmpty()) {
 			formatter.keyword("throws");
-			visitAll("throws", node.thrownTypeReferences(), ", ", " ", " ");
+			visitAll("throws", node.rawThrownTypeReferences(), ", ", " ", " ");
 		}
 		formatter.startSuppressBlock();
 		visit(node.getRawBody());
@@ -1008,7 +1008,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		visit(node.getRawConstructorTypeArguments());
 		formatter.keyword("super");
 		formatter.append("(");
-		visitAll(node.arguments(), ", ", "", "");
+		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
 		formatter.append(";");
 		formatter.closeBlock();
@@ -1020,7 +1020,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		visit(node.getRawConstructorTypeArguments());
 		formatter.keyword("this");
 		formatter.append("(");
-		visitAll(node.arguments(), ", ", "", "");
+		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
 		formatter.append(";");
 		formatter.closeBlock();
@@ -1051,7 +1051,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
@@ -1059,7 +1059,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.space();
 		formatter.nameNextElement("typeName");
 		visit(node.getRawName());
-		visitAll(node.typeVariables(), ", ", "<", ">");
+		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		formatter.space();
 		if (node.getRawExtending() != null) {
 			formatter.keyword("extends");
@@ -1068,9 +1068,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			visit(node.getRawExtending());
 			formatter.space();
 		}
-		if (!node.implementing().isEmpty()) {
+		if (!node.rawImplementing().isEmpty()) {
 			formatter.keyword("implements");
-			visitAll("implements", node.implementing(), ", ", " ", " ");
+			visitAll("implements", node.rawImplementing(), ", ", " ", " ");
 		}
 		formatter.startSuppressBlock();
 		visit(node.getRawBody());
@@ -1083,7 +1083,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
@@ -1091,11 +1091,11 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.space();
 		formatter.nameNextElement("typeName");
 		visit(node.getRawName());
-		visitAll(node.typeVariables(), ", ", "<", ">");
+		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		formatter.space();
-		if (!node.extending().isEmpty()) {
+		if (!node.rawExtending().isEmpty()) {
 			formatter.keyword("extends");
-			visitAll("extends", node.extending(), ", ", " ", " ");
+			visitAll("extends", node.rawExtending(), ", ", " ", " ");
 		}
 		formatter.startSuppressBlock();
 		visit(node.getRawBody());
@@ -1108,7 +1108,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
@@ -1117,9 +1117,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.nameNextElement("typeName");
 		visit(node.getRawName());
 		formatter.space();
-		if (!node.implementing().isEmpty()) {
+		if (!node.rawImplementing().isEmpty()) {
 			formatter.keyword("implements");
-			visitAll("implements", node.implementing(), ", ", " ", " ");
+			visitAll("implements", node.rawImplementing(), ", ", " ", " ");
 		}
 		
 		formatter.startSuppressBlock();
@@ -1131,10 +1131,10 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitEnumConstant(EnumConstant node) {
 		formatter.buildInline(node);
-		visitAll(node.annotations(), "", "", "");
+		visitAll(node.rawAnnotations(), "", "", "");
 		formatter.nameNextElement("name");
 		visit(node.getRawName());
-		visitAll(node.arguments(), ", ", "(", ")");
+		visitAll(node.rawArguments(), ", ", "(", ")");
 		if (node.getRawBody() != null) {
 			formatter.space();
 			formatter.startSuppressBlock();
@@ -1149,7 +1149,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
@@ -1170,7 +1170,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).keywords().isEmpty()) {
+			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
 				formatter.space();
 			}
 		}
@@ -1199,19 +1199,19 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			visit(node.getRawPackageDeclaration());
 			formatter.verticalSpace();
 		}
-		visitAll(node.importDeclarations(), "", "", "");
-		if (!node.typeDeclarations().isEmpty() && !node.importDeclarations().isEmpty()) formatter.verticalSpace();
-		visitAll(node.typeDeclarations(), "\n", "", "");
+		visitAll(node.rawImportDeclarations(), "", "", "");
+		if (!node.rawTypeDeclarations().isEmpty() && !node.rawImportDeclarations().isEmpty()) formatter.verticalSpace();
+		visitAll(node.rawTypeDeclarations(), "\n", "", "");
 		formatter.closeBlock();
 		return true;
 	}
 	
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
 		formatter.buildBlock(node);
-		visitAll(node.annotations(), "", "", "");
+		visitAll(node.rawAnnotations(), "", "", "");
 		formatter.keyword("package");
 		formatter.space();
-		visitAll(node.parts(), ".", "", "");
+		visitAll(node.rawParts(), ".", "", "");
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
@@ -1225,7 +1225,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			formatter.keyword("static");
 			formatter.space();
 		}
-		visitAll(node.parts(), ".", "", "");
+		visitAll(node.rawParts(), ".", "", "");
 		if (node.isStarImport()) {
 			formatter.append(".*");
 		}

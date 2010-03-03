@@ -60,7 +60,7 @@ public class StructuralChecks {
 	
 	private void initializersMustNotContainThrowsDirectly(Node rawBlock) {
 		if (!(rawBlock instanceof Block)) return;
-		for (Node s : ((Block)rawBlock).contents().getRawContents()) {
+		for (Node s : ((Block)rawBlock).rawContents()) {
 			if (s instanceof Throw) {
 				problems.add(new SyntaxProblem(s, "Initializers must complete normally."));
 			}
@@ -120,7 +120,7 @@ public class StructuralChecks {
 			if (parent instanceof ConstructorDeclaration) {
 				Node rawBlock = ((ConstructorDeclaration)parent).getRawBody();
 				if (rawBlock instanceof Block) {
-					Node n = ((Block)rawBlock).contents().rawFirst();
+					Node n = ((Block)rawBlock).rawContents().first();
 					if (n != node) {
 						problems.add(new SyntaxProblem(node,
 								"Calling super must be the first statement in a constructor."));
@@ -143,9 +143,9 @@ public class StructuralChecks {
 		if (p == null) return;
 		Node last = null;
 		if (p instanceof ConstructorDeclaration) {
-			last = ((ConstructorDeclaration)p).parameters().rawLast();
+			last = ((ConstructorDeclaration)p).rawParameters().last();
 		} else if (p instanceof MethodDeclaration) {
-			last = ((MethodDeclaration)p).parameters().rawLast();
+			last = ((MethodDeclaration)p).rawParameters().last();
 		}
 		
 		if (last != node) problems.add(new SyntaxProblem(node, "VarArgs are only legal on the last parameter of a method or constructor declaration."));

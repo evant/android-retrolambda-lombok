@@ -58,8 +58,8 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createMethodArguments(Node head, List<Node> tail) {
 		MethodInvocation mi = new MethodInvocation();
-		if (head != null) mi.arguments().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) mi.arguments().addToEndRaw(n);
+		if (head != null) mi.rawArguments().addToEnd(head);
+		if (tail != null) for (Node n : tail) mi.rawArguments().addToEnd(n);
 		return posify(mi);
 	}
 	
@@ -91,12 +91,12 @@ public class StructuresActions extends SourceActions {
 		if (typeParameters instanceof TemporaryNode.OrphanedTypeVariables) {
 			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)typeParameters;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
-				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
+				if (typeParameter != null) decl.rawTypeVariables().addToEnd(typeParameter);
 			}
 		}
 		
-		if (throwsHead != null) decl.thrownTypeReferences().addToEndRaw(throwsHead);
-		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.thrownTypeReferences().addToEndRaw(n);
+		if (throwsHead != null) decl.rawThrownTypeReferences().addToEnd(throwsHead);
+		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.rawThrownTypeReferences().addToEnd(n);
 		return posify(decl);
 	}
 	
@@ -107,28 +107,28 @@ public class StructuresActions extends SourceActions {
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		if (typeParameters instanceof TemporaryNode.OrphanedTypeVariables) {
 			for (Node typeParameter : ((TemporaryNode.OrphanedTypeVariables)typeParameters).variables) {
-				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
+				if (typeParameter != null) decl.rawTypeVariables().addToEnd(typeParameter);
 			}
 		}
 		
 		if (params instanceof MethodDeclaration) {
-			decl.parameters().migrateAllFromRaw(((MethodDeclaration)params).parameters());
+			decl.rawParameters().migrateAllFrom(((MethodDeclaration)params).rawParameters());
 		} else {
 			if (params != null) {
 				//TODO report dangling node
 			}
 		}
 		
-		if (throwsHead != null) decl.thrownTypeReferences().addToEndRaw(throwsHead);
-		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.thrownTypeReferences().addToEndRaw(n);
+		if (throwsHead != null) decl.rawThrownTypeReferences().addToEnd(throwsHead);
+		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.rawThrownTypeReferences().addToEnd(n);
 		return posify(decl);
 	}
 	
 	public Node createModifiers(List<Node> values) {
 		Modifiers result = new Modifiers();
 		if (values != null) for (Node n : values) {
-			if (n instanceof Annotation) result.annotations().addToEndRaw(n);
-			if (n instanceof KeywordModifier) result.keywords().addToEndRaw(n);
+			if (n instanceof Annotation) result.rawAnnotations().addToEnd(n);
+			if (n instanceof KeywordModifier) result.rawKeywords().addToEnd(n);
 		}
 		return posify(result);
 	}
@@ -139,7 +139,7 @@ public class StructuresActions extends SourceActions {
 		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		if (varargs != null && !varargs.trim().isEmpty()) decl.setVarargs(true);
-		decl.variables().addToEndRaw(e);
+		decl.rawVariables().addToEnd(e);
 		return posify(decl);
 	}
 	
@@ -165,15 +165,15 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createVariableDefinition(Node type, Node head, List<Node> tail) {
 		VariableDefinition result = new VariableDefinition().setRawTypeReference(type);
-		if (head != null) result.variables().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) result.variables().addToEndRaw(n);
+		if (head != null) result.rawVariables().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) result.rawVariables().addToEnd(n);
 		return posify(result);
 	}
 	
 	public Node createAnnotationElementValueArrayInitializer(Node head, List<Node> tail) {
 		ArrayInitializer result = new ArrayInitializer();
-		if (head != null) result.expressions().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) result.expressions().addToEndRaw(n);
+		if (head != null) result.rawExpressions().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) result.rawExpressions().addToEnd(n);
 		return posify(result);
 	}
 	
@@ -183,14 +183,14 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createAnnotationFromElements(Node head, List<Node> tail) {
 		Annotation result = new Annotation();
-		if (head != null) result.elements().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) result.elements().addToEndRaw(n);
+		if (head != null) result.rawElements().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) result.rawElements().addToEnd(n);
 		return posify(result);
 	}
 	
 	public Node createAnnotationFromElement(Node value) {
 		Annotation result = new Annotation();
-		if (value != null) result.elements().addToEndRaw(value);
+		if (value != null) result.rawElements().addToEnd(value);
 		return posify(result);
 	}
 	
@@ -221,7 +221,7 @@ public class StructuresActions extends SourceActions {
 		if (params instanceof TemporaryNode.OrphanedTypeVariables) {
 			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)params;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
-				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
+				if (typeParameter != null) decl.rawTypeVariables().addToEnd(typeParameter);
 			}
 		}
 		
@@ -229,7 +229,7 @@ public class StructuresActions extends SourceActions {
 			if (n instanceof TemporaryNode.ExtendsClause) {
 				//if (!decl.extending().isEmpty()) //TODO add error node: multiple extends clauses.
 				List<Node> superClasses = ((TemporaryNode.ExtendsClause)n).superTypes;
-				if (superClasses != null) for (Node superClass : superClasses) if (superClass != null) decl.extending().addToEndRaw(superClass);
+				if (superClasses != null) for (Node superClass : superClasses) if (superClass != null) decl.rawExtending().addToEnd(superClass);
 			}
 			
 			//if (n instanceof TemporaryNode.ImplementsClause) //TODO add error node: implements not allowed here.
@@ -246,7 +246,7 @@ public class StructuresActions extends SourceActions {
 		if (params instanceof TemporaryNode.OrphanedTypeVariables) {
 			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)params;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
-				if (typeParameter != null) decl.typeVariables().addToEndRaw(typeParameter);
+				if (typeParameter != null) decl.rawTypeVariables().addToEnd(typeParameter);
 			}
 		}
 		
@@ -264,7 +264,7 @@ public class StructuresActions extends SourceActions {
 			if (n instanceof TemporaryNode.ImplementsClause) {
 				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
 				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
-				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.implementing().addToEndRaw(i);
+				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.rawImplementing().addToEnd(i);
 			}
 		}
 		return posify(decl);
@@ -272,23 +272,23 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createTypeBody(List<Node> values) {
 		TypeBody body = new TypeBody();
-		if (values != null) for (Node n : values) if (n != null) body.members().addToEndRaw(n);
+		if (values != null) for (Node n : values) if (n != null) body.rawMembers().addToEnd(n);
 		return posify(body);
 	}
 	
 	public Node createEnumConstant(List<Node> annotations, Node name, Node arguments, Node body) {
 		EnumConstant result = new EnumConstant().setRawName(name).setRawBody(body);
-		if (annotations != null) for (Node n : annotations) if (n != null) result.annotations().addToEndRaw(n);
-		if (arguments instanceof MethodInvocation) result.arguments().migrateAllFromRaw(((MethodInvocation)arguments).arguments());
+		if (annotations != null) for (Node n : annotations) if (n != null) result.rawAnnotations().addToEnd(n);
+		if (arguments instanceof MethodInvocation) result.rawArguments().migrateAllFrom(((MethodInvocation)arguments).rawArguments());
 		return posify(result);
 	}
 	
 	public Node createEnumBody(Node head, List<Node> tail, Node typeBody) {
 		EnumTypeBody body = new EnumTypeBody();
-		if (head != null) body.constants().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) body.constants().addToEndRaw(n);
+		if (head != null) body.rawConstants().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) body.rawConstants().addToEnd(n);
 		if (typeBody instanceof TypeBody) {
-			body.members().migrateAllFromRaw(((TypeBody)typeBody).members());
+			body.rawMembers().migrateAllFrom(((TypeBody)typeBody).rawMembers());
 		}
 		return posify(body);
 	}
@@ -302,7 +302,7 @@ public class StructuresActions extends SourceActions {
 			if (n instanceof TemporaryNode.ImplementsClause) {
 				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
 				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
-				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.implementing().addToEndRaw(i);
+				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.rawImplementing().addToEnd(i);
 			}
 		}
 		return posify(decl);
@@ -326,16 +326,16 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createPackageDeclaration(List<Node> annotations, Node head, List<Node> tail) {
 		PackageDeclaration decl = new PackageDeclaration();
-		if (annotations != null) for (Node n : annotations) if (n != null) decl.annotations().addToEndRaw(n);
-		if (head != null) decl.parts().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) decl.parts().addToEndRaw(n);
+		if (annotations != null) for (Node n : annotations) if (n != null) decl.rawAnnotations().addToEnd(n);
+		if (head != null) decl.rawParts().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) decl.rawParts().addToEnd(n);
 		return posify(decl);
 	}
 	
 	public Node createImportDeclaration(String staticKeyword, Node head, List<Node> tail, String dotStar) {
 		ImportDeclaration decl = new ImportDeclaration();
-		if (head != null) decl.parts().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) decl.parts().addToEndRaw(n);
+		if (head != null) decl.rawParts().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) decl.rawParts().addToEnd(n);
 		if (staticKeyword != null && staticKeyword.length() > 0) decl.setStaticImport(true);
 		if (dotStar != null && dotStar.length() > 0) decl.setStarImport(true);
 		return posify(decl);
@@ -343,15 +343,15 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createCompilationUnit(Node packageDeclaration, List<Node> importDeclarations, List<Node> typeDeclarations) {
 		CompilationUnit unit = new CompilationUnit().setRawPackageDeclaration(packageDeclaration);
-		if (importDeclarations != null) for (Node n : importDeclarations) if (n != null) unit.importDeclarations().addToEndRaw(n);
-		if (typeDeclarations != null) for (Node n : typeDeclarations) if (n != null) unit.typeDeclarations().addToEndRaw(n);
+		if (importDeclarations != null) for (Node n : importDeclarations) if (n != null) unit.rawImportDeclarations().addToEnd(n);
+		if (typeDeclarations != null) for (Node n : typeDeclarations) if (n != null) unit.rawTypeDeclarations().addToEnd(n);
 		return posify(unit);
 	}
 	
 	public Node createMethodParameters(Node head, List<Node> tail) {
 		MethodDeclaration decl = new MethodDeclaration();
-		if (head != null) decl.parameters().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) decl.parameters().addToEndRaw(n);
+		if (head != null) decl.rawParameters().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) decl.rawParameters().addToEnd(n);
 		
 		return decl;
 	}

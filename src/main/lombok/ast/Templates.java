@@ -129,7 +129,7 @@ class AnnotationTemplate {
 	
 	@CopyMethod
 	static List<Node> getValues(Annotation self, String key) {
-		for (AnnotationElement elem : self.elements().getContents()) {
+		for (AnnotationElement elem : self.elements()) {
 			if (key == null && elem.getRawName() == null) return elem.getValues();
 			if (elem.getRawName() instanceof Identifier) {
 				if (key != null && key.equals(elem.getName().getName())) return elem.getValues();
@@ -159,7 +159,7 @@ class AnnotationElementTemplate {
 		if (self.getRawValue() == null) return Collections.emptyList();
 		if (self.getRawValue() instanceof ArrayInitializer) {
 			List<Node> result = new ArrayList<Node>();
-			for (Node n : ((ArrayInitializer)self.getRawValue()).expressions().getRawContents()) if (n != null) result.add(n);
+			for (Node n : ((ArrayInitializer)self.getRawValue()).rawExpressions()) if (n != null) result.add(n);
 			return result;
 		}
 		return Collections.singletonList(self.getRawValue());
@@ -180,7 +180,7 @@ class ModifiersTemplate {
 	@CopyMethod
 	static int getExplicitModifierFlags(Modifiers m) {
 		int out = 0;
-		for (Node n : m.keywords().getRawContents()) {
+		for (Node n : m.rawKeywords()) {
 			if (n instanceof KeywordModifier) {
 				out |= ((KeywordModifier)n).asReflectModifiers();
 			}
@@ -483,8 +483,8 @@ class TypeReferenceTemplate {
 	@CopyMethod
 	static boolean isPrimitive(TypeReference t) {
 		
-		if (t.getArrayDimensions() > 0 || t.parts().size() != 1) return false;
-		Node part = t.parts().rawFirst();
+		if (t.getArrayDimensions() > 0 || t.rawParts().size() != 1) return false;
+		Node part = t.rawParts().first();
 		if (part instanceof TypeReferencePart) {
 			String name = ((TypeReferencePart)part).getIdentifier().getName();
 			return name.indexOf(' ') == -1 && PRIMITIVE_NAMES.contains(" " + name + " ");
@@ -494,8 +494,8 @@ class TypeReferenceTemplate {
 	
 	@CopyMethod
 	static boolean isVoid(TypeReference t) {
-		if (t.parts().size() != 1) return false;
-		Node part = t.parts().rawFirst();
+		if (t.rawParts().size() != 1) return false;
+		Node part = t.rawParts().first();
 		if (part instanceof TypeReferencePart) {
 			String name = ((TypeReferencePart)part).getIdentifier().getName();
 			return "void".equals(name);
@@ -506,7 +506,7 @@ class TypeReferenceTemplate {
 	@CopyMethod
 	static String getTypeName(TypeReference t) {
 		StringBuilder out = new StringBuilder();
-		for (TypeReferencePart p : t.parts().getContents()) {
+		for (TypeReferencePart p : t.parts()) {
 			if (out.length() > 0) out.append(".");
 			out.append(p.getTypeName());
 		}
@@ -518,12 +518,12 @@ class TypeReferenceTemplate {
 	
 	@CopyMethod
 	static boolean hasGenerics(TypeReference t) {
-		return getGenerics(t).isEmpty();
+		return generics(t).isEmpty();
 	}
 	
 	@CopyMethod
-	static ListAccessor<TypeReference, TypeReference> getGenerics(TypeReference t) {
-		return t.parts().last().generics().wrap(t);
+	static StrictListAccessor<TypeReference, TypeReference> generics(TypeReference t) {
+		return t.parts().last().getTypeArguments().genericsAccessor.wrap(t).asStrict();
 	}
 }
 
@@ -534,8 +534,8 @@ class TypeReferencePartTemplate {
 	@NonNull TypeArguments typeArguments;
 	
 	@CopyMethod
-	static ListAccessor<TypeReference, TypeReferencePart> generics(TypeReferencePart self) {
-		return self.getTypeArguments().generics().wrap(self);
+	static StrictListAccessor<TypeReference, TypeReferencePart> generics(TypeReferencePart self) {
+		return self.getTypeArguments().genericsAccessor.wrap(self).asStrict();
 	}
 	
 	@CopyMethod
@@ -545,7 +545,7 @@ class TypeReferencePartTemplate {
 		StringBuilder out = new StringBuilder();
 		out.append(p.getIdentifier().getName()).append("<");
 		boolean first = true;
-		for (TypeReference t : p.generics().getContents()) {
+		for (TypeReference t : p.generics()) {
 			if (!first) out.append(", ");
 			first = false;
 			switch (t.getWildcard()) {
@@ -1192,7 +1192,7 @@ class PackageDeclarationTemplate {
 	@CopyMethod
 	static String getPackageName(PackageDeclaration node) {
 		StringBuilder result = new StringBuilder();
-		for (Identifier part : node.parts().getContents()) {
+		for (Identifier part : node.parts()) {
 			if (result.length() != 0) {
 				result.append(".");
 			}

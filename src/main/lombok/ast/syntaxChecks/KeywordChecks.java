@@ -57,7 +57,7 @@ public class KeywordChecks {
 	public void duplicateKeywordModifierCheck(Modifiers modifiers) {
 		List<String> keywords = new ArrayList<String>();
 		
-		for (Node n : modifiers.keywords().getRawContents()) {
+		for (Node n : modifiers.rawKeywords()) {
 			if (n instanceof KeywordModifier) {
 				String k = ((KeywordModifier)n).getName();
 				if (k != null && !k.isEmpty() ) {
@@ -152,7 +152,7 @@ public class KeywordChecks {
 	public void localVariableModifiersCheck(VariableDefinition vd) {
 		boolean applies = vd.getParent() instanceof VariableDeclaration && vd.getParent().getParent() instanceof Block;
 		if (!applies) applies = vd.getParent() instanceof ForEach && ((ForEach)vd.getParent()).getRawVariable() == vd;
-		if (!applies) applies = vd.getParent() instanceof For && ((For)vd.getParent()).inits().contains(vd);
+		if (!applies) applies = vd.getParent() instanceof For && ((For)vd.getParent()).rawInits().contains(vd);
 		if (!applies) return;
 		
 		modifiersCheck(vd.getRawModifiers(), new int[0], K_FINAL, "local variable declarations");
@@ -231,7 +231,7 @@ public class KeywordChecks {
 	private int modifiersCheck(Node rawModifiers, int[] exclusivity, int legality, String desc) {
 		if (!(rawModifiers instanceof Modifiers)) return 0;
 		int flags = 0;
-		for (Node n : ((Modifiers)rawModifiers).keywords().getRawContents()) {
+		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 			if (n instanceof KeywordModifier) {
 				String k = ((KeywordModifier)n).getName();
 				if (k == null || k.isEmpty()) continue;
@@ -264,7 +264,7 @@ public class KeywordChecks {
 		
 		if (!(rawModifiers instanceof Modifiers)) return false;
 		
-		for (Node n : ((Modifiers)rawModifiers).keywords().getRawContents()) {
+		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 			if (n instanceof KeywordModifier) {
 				if (keyword.equals(((KeywordModifier)n).getName())) {
 					problems.add(new SyntaxProblem(n, error));
@@ -281,7 +281,7 @@ public class KeywordChecks {
 		
 		String hit = null;
 		
-		for (Node n : ((Modifiers)rawModifiers).keywords().getRawContents()) {
+		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 			if (n instanceof KeywordModifier) {
 				String k = ((KeywordModifier)n).getName();
 				if (!TO_FLAG_MAP.containsKey(k)) continue;

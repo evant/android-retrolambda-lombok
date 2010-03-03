@@ -45,7 +45,7 @@ public class TypesActions extends SourceActions {
 		TypeReferencePart typeReferencePart = posify(new TypeReferencePart()
 				.setRawTypeArguments(emptyTypeArguments)
 				.setRawIdentifier(identifier));
-		return posify(new TypeReference().parts().addToStartRaw(typeReferencePart));
+		return posify(new TypeReference().rawParts().addToStart(typeReferencePart));
 	}
 	
 	public Node createTypeReferencePart(Node identifier, Node typeArguments) {
@@ -72,9 +72,9 @@ public class TypesActions extends SourceActions {
 	
 	public Node createTypeArguments(Node head, List<Node> tail) {
 		TypeArguments ta = new TypeArguments();
-		if (head != null) ta.generics().addToEndRaw(head);
+		if (head != null) ta.rawGenerics().addToEnd(head);
 		if (tail != null) for (Node n : tail) {
-			if (n != null) ta.generics().addToEndRaw(n);
+			if (n != null) ta.rawGenerics().addToEnd(n);
 		}
 		
 		return posify(ta);
@@ -82,9 +82,9 @@ public class TypesActions extends SourceActions {
 	
 	public Node createReferenceType(Node head, List<Node> tail) {
 		TypeReference t = new TypeReference();
-		if (head != null) t.parts().addToEndRaw(head);
+		if (head != null) t.rawParts().addToEnd(head);
 		if (tail != null) for (Node n : tail) {
-			if (n != null) t.parts().addToEndRaw(n);
+			if (n != null) t.rawParts().addToEnd(n);
 		}
 		
 		return posify(t);
@@ -102,8 +102,8 @@ public class TypesActions extends SourceActions {
 	public Node createTypeVariable(Node name, Node head, List<Node> tail) {
 		TypeVariable tv = new TypeVariable().setRawName(name);
 		
-		if (head != null) tv.extending().addToEndRaw(head);
-		if (tail != null) for (Node t : tail) if (t != null) tv.extending().addToEndRaw(t);
+		if (head != null) tv.rawExtending().addToEnd(head);
+		if (tail != null) for (Node t : tail) if (t != null) tv.rawExtending().addToEnd(t);
 		return posify(tv);
 	}
 	

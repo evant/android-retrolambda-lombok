@@ -41,7 +41,7 @@ public class TypeChecks {
 	}
 	
 	public void checkNoPrimitivesInGenerics(TypeArguments node) {
-		for (Node n : node.generics().getRawContents()) {
+		for (Node n : node.rawGenerics()) {
 			if (n instanceof TypeReference) {
 				if (((TypeReference)n).isPrimitive()) {
 					problems.add(new SyntaxProblem(node, "Primitive types aren't allowed in type arguments."));
@@ -51,7 +51,7 @@ public class TypeChecks {
 	}
 	
 	public void checkNoPrimitivesInGenerics(TypeVariable node) {
-		for (Node n : node.extending().getRawContents()) {
+		for (Node n : node.rawExtending()) {
 			if (n instanceof TypeReference) {
 				if (((TypeReference)n).isPrimitive()) {
 					problems.add(new SyntaxProblem(node, "Primitive types aren't allowed in type variable bounds."));

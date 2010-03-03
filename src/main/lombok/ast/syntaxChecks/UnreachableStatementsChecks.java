@@ -55,7 +55,7 @@ public class UnreachableStatementsChecks {
 		Node p = n.getParent();
 		if (p instanceof Block) {
 			boolean found = false;
-			for (Node s : ((Block)p).contents().getRawContents()) {
+			for (Node s : ((Block)p).rawContents()) {
 				if (found) {
 					problems.add(new SyntaxProblem(s, "Unreachable code"));
 				}

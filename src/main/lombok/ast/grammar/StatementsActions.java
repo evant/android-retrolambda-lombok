@@ -62,7 +62,7 @@ public class StatementsActions extends SourceActions {
 	public Node createBlock(List<Node> statements) {
 		Block block = new Block();
 		if (statements != null) for (Node s : statements) {
-			if (s != null) block.contents().addToEndRaw(s);
+			if (s != null) block.rawContents().addToEnd(s);
 		}
 		
 		return posify(block);
@@ -139,8 +139,8 @@ public class StatementsActions extends SourceActions {
 			updates = Collections.singletonList(update);
 		}
 		
-		for (Node n : inits) if (n != null) result.inits().addToEndRaw(n);
-		for (Node n : updates) if (n != null) result.updates().addToEndRaw(n);
+		for (Node n : inits) if (n != null) result.rawInits().addToEnd(n);
+		for (Node n : updates) if (n != null) result.rawUpdates().addToEnd(n);
 		return posify(result);
 	}
 	
@@ -148,8 +148,8 @@ public class StatementsActions extends SourceActions {
 			org.parboiled.Node<Node> modifiers, Node type,
 			org.parboiled.Node<Node> varDefEntry, Node iterable, Node statement) {
 		
-		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables()
-				.addToEndRaw(varDefEntry.getValue());
+		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).rawVariables()
+				.addToEnd(varDefEntry.getValue());
 		positionSpan(decl, modifiers, varDefEntry);
 		decl.setRawModifiers(createNewModifiersIfNeeded(modifiers.getValue(), decl.getPosition().getStart()));
 		return posify(new ForEach().setRawVariable(decl).setRawIterable(iterable).setRawStatement(statement));
@@ -178,7 +178,7 @@ public class StatementsActions extends SourceActions {
 	public Node createCatch(Node modifiers, Node type, Node varName, Node body) {
 		VariableDefinitionEntry varNameEntry = new VariableDefinitionEntry().setRawName(varName);
 		if (varName != null) varNameEntry.setPosition(varName.getPosition());
-		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).variables().addToEndRaw(
+		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).rawVariables().addToEnd(
 				varNameEntry);
 		if (type != null && varName != null) decl.setPosition(new Position(type.getPosition().getStart(), varName.getPosition().getEnd()));
 		if (modifiers != null) decl.setRawModifiers(modifiers);
@@ -187,7 +187,7 @@ public class StatementsActions extends SourceActions {
 	
 	public Node createTryStatement(Node body, List<Node> catches, Node finallyBody) {
 		Try result = new Try().setRawBody(body).setRawFinally(finallyBody);
-		if (catches != null) for (Node c : catches) if (c != null) result.catches().addToEndRaw(c);
+		if (catches != null) for (Node c : catches) if (c != null) result.rawCatches().addToEnd(c);
 		return posify(result);
 	}
 	
@@ -201,12 +201,12 @@ public class StatementsActions extends SourceActions {
 	
 	public Node createAlternateConstructorInvocation(Node typeArguments, Node arguments) {
 		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
-		return posify(new AlternateConstructorInvocation().setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments()));
+		return posify(new AlternateConstructorInvocation().setRawConstructorTypeArguments(typeArguments).rawArguments().migrateAllFrom(args.rawArguments()));
 	}
 	
 	public Node createSuperConstructorInvocation(Node qualifier, Node typeArguments, Node arguments) {
 		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
-		return posify(new SuperConstructorInvocation().setRawQualifier(qualifier).setRawConstructorTypeArguments(typeArguments).arguments().migrateAllFromRaw(args.arguments()));
+		return posify(new SuperConstructorInvocation().setRawQualifier(qualifier).setRawConstructorTypeArguments(typeArguments).rawArguments().migrateAllFrom(args.rawArguments()));
 	}
 	
 	public Node createExpressionStatement(Node expression) {

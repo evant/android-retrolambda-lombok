@@ -187,7 +187,7 @@ public class ExpressionsActions extends SourceActions {
 		return posify(new ConstructorInvocation()
 				.setRawConstructorTypeArguments(constructorTypeArgs)
 				.setRawTypeReference(typeReference)
-				.arguments().migrateAllFromRaw(methodArguments0.arguments())
+				.rawArguments().migrateAllFrom(methodArguments0.rawArguments())
 				.setRawAnonymousClassBody(classBody));
 	}
 	
@@ -259,14 +259,14 @@ public class ExpressionsActions extends SourceActions {
 		return posify(new ConstructorInvocation()
 				.setRawConstructorTypeArguments(constructorTypeArgs)
 				.setRawTypeReference(type)
-				.arguments().migrateAllFromRaw(args0.arguments())
+				.rawArguments().migrateAllFrom(args0.rawArguments())
 				.setRawAnonymousClassBody(anonymousClassBody));
 	}
 	
 	public Node createArrayInitializerExpression(Node head, List<Node> tail) {
 		ArrayInitializer ai = new ArrayInitializer();
-		if (head != null) ai.expressions().addToEndRaw(head);
-		if (tail != null) for (Node n : tail) if (n != null) ai.expressions().addToEndRaw(n);
+		if (head != null) ai.rawExpressions().addToEnd(head);
+		if (tail != null) for (Node n : tail) if (n != null) ai.rawExpressions().addToEnd(n);
 		return posify(ai);
 	}
 	
@@ -279,7 +279,7 @@ public class ExpressionsActions extends SourceActions {
 	public Node createArrayCreationExpression(Node type, List<Node> dimensions, Node initializer) {
 		ArrayCreation ac = new ArrayCreation().setRawComponentTypeReference(type).setRawInitializer(initializer);
 		if (dimensions != null) for (Node d : dimensions) {
-			if (d != null) ac.dimensions().addToEndRaw(d);
+			if (d != null) ac.rawDimensions().addToEnd(d);
 		}
 		
 		return posify(ac);

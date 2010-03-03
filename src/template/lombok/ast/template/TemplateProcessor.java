@@ -303,7 +303,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write("\t\n");
 		for (FieldData field : fields) {
 			if (field.isList()) {
-				generateListAccessor(out, field.getName(), className, field);
+				generateListAccessor(out, className, field);
 				
 				continue;
 			}
@@ -473,8 +473,8 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.getName());
 		out.write(" = new java.util.ArrayList<lombok.ast.AbstractNode>();\n");
 		
-		// private lombok.ast.ListAccessor<CatchBlock, Try> catchesAccessor = ListAccessor.of(catches, this, CatchBlock.class, "Try.catches");
-		out.write("\tprivate lombok.ast.ListAccessor<");
+		// lombok.ast.ListAccessor<CatchBlock, Try> catchesAccessor = ListAccessor.of(catches, this, CatchBlock.class, "Try.catches");
+		out.write("\tlombok.ast.ListAccessor<");
 		out.write(field.getType());
 		out.write(", ");
 		out.write(className);
@@ -708,16 +708,26 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(";\n");
 	}
 	
-	private void generateListAccessor(Writer out, String methodName, String className, FieldData field) throws IOException {
-		out.write("\tpublic lombok.ast.ListAccessor<");
+	private void generateListAccessor(Writer out, String className, FieldData field) throws IOException {
+		out.write("\tpublic lombok.ast.RawListAccessor<");
+		out.write(field.getType());
+		out.write(", ");
+		out.write(className);
+		out.write("> raw");
+		out.write(field.titleCasedName());
+		out.write("() {\n\t\treturn this.");
+		out.write(field.getName());
+		out.write("Accessor.asRaw();\n\t}\n\t\n");
+		
+		out.write("\tpublic lombok.ast.StrictListAccessor<");
 		out.write(field.getType());
 		out.write(", ");
 		out.write(className);
 		out.write("> ");
-		out.write(methodName);
+		out.write(field.getName());
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
-		out.write("Accessor;\n\t}\n");
+		out.write("Accessor.asStrict();\n\t}\n\t\n");
 	}
 	
 	private void generateFieldsForNode(Writer out, FieldData field) throws IOException {
