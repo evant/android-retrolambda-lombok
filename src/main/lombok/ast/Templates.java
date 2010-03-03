@@ -53,8 +53,6 @@ class CatchTemplate {
 			return null;
 		}
 	}
-	
-	/* check: exDecl must have exactly 1 VDEntry */
 }
 
 @GenerateAstNode(implementing=Statement.class)

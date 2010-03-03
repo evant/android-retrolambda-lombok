@@ -23,6 +23,7 @@ package lombok.ast.syntaxChecks;
 
 import java.util.List;
 
+import lombok.ast.Catch;
 import lombok.ast.DoWhile;
 import lombok.ast.For;
 import lombok.ast.ForEach;
@@ -32,6 +33,8 @@ import lombok.ast.SyntaxProblem;
 import lombok.ast.Try;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.VariableDeclaration;
+import lombok.ast.VariableDefinition;
+import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.While;
 import lombok.ast.template.SyntaxCheck;
 
@@ -77,6 +80,32 @@ public class StatementChecks {
 		
 		if (c instanceof TypeDeclaration) {
 			problems.add(new SyntaxProblem(c, "Type declarations only make sense in the context of a block or other type."));
+		}
+	}
+	
+	public void checkVarDefOfCatch(Catch node) {
+		checkVarDefIsSimple(node, node.getRawExceptionDeclaration(), "catch blocks", "exception");
+	}
+	
+	public void checkVarDefOfForEach(ForEach node) {
+		checkVarDefIsSimple(node, node.getRawVariable(), "for-each statements", "loop");
+	}
+	
+	private void checkVarDefIsSimple(Node node, Node rawVarDef, String desc, String desc2) {
+		if (!(rawVarDef instanceof VariableDefinition)) return;
+		switch (((VariableDefinition)rawVarDef).variables().size()) {
+		case 0: return;
+		case 1: break;
+		default:
+			problems.add(new SyntaxProblem(node, desc + " can only declare one " + desc2 + " variable."));
+			return;
+		}
+		
+		Node varDefEntry = ((VariableDefinition)rawVarDef).variables().rawFirst();
+		if (varDefEntry instanceof VariableDefinitionEntry) {
+			if (((VariableDefinitionEntry)varDefEntry).getRawInitializer() != null) {
+				problems.add(new SyntaxProblem(node, desc + " can not declare a value for their variable declaration."));
+			}
 		}
 	}
 }

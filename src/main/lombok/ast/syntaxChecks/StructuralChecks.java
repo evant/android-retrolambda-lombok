@@ -16,6 +16,7 @@ import lombok.ast.SyntaxProblem;
 import lombok.ast.Throw;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.TypeReference;
+import lombok.ast.VariableDefinition;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
@@ -127,6 +128,12 @@ public class StructuralChecks {
 				}
 				return;
 			}
+		}
+	}
+	
+	public void varDefOfZero(VariableDefinition node) {
+		if (node.variables().isEmpty()) {
+			problems.add(new SyntaxProblem(node, "Empty variable declaration."));
 		}
 	}
 }
