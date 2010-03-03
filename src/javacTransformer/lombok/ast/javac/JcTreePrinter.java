@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
@@ -589,7 +590,12 @@ public class JcTreePrinter extends JCTree.Visitor {
 	
 	public void visitWildcard(JCWildcard tree) {
 		printNode(tree);
-		child("kind", tree.kind);
+		Object o = tree.kind;
+		if (o instanceof JCTree) {
+			child("kind", (JCTree)o);
+		} else if (o instanceof BoundKind) {
+			property("kind", String.valueOf(o));
+		}
 		child("inner", tree.inner);
 		indent--;
 	}
