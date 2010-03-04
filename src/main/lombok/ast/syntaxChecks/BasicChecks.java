@@ -24,7 +24,10 @@ package lombok.ast.syntaxChecks;
 import java.util.List;
 
 import lombok.ast.Identifier;
+import lombok.ast.Node;
 import lombok.ast.SyntaxProblem;
+import lombok.ast.VariableDefinition;
+import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
@@ -53,6 +56,24 @@ public class BasicChecks {
 				problems.add(new SyntaxProblem(identifier,
 						"Not a legal character in a java identifier: " + n.charAt(i)));
 				return;
+			}
+		}
+	}
+	
+	static void checkVarDefIsSimple(List<SyntaxProblem> problems, Node node, Node rawVarDef, String desc, String desc2) {
+		if (!(rawVarDef instanceof VariableDefinition)) return;
+		switch (((VariableDefinition)rawVarDef).rawVariables().size()) {
+		case 0: return;
+		case 1: break;
+		default:
+			problems.add(new SyntaxProblem(node, desc + " can only declare one " + desc2 + " variable."));
+			return;
+		}
+		
+		Node varDefEntry = ((VariableDefinition)rawVarDef).rawVariables().first();
+		if (varDefEntry instanceof VariableDefinitionEntry) {
+			if (((VariableDefinitionEntry)varDefEntry).getRawInitializer() != null) {
+				problems.add(new SyntaxProblem(node, desc + " can not declare a value for their " + desc2 + " declaration."));
 			}
 		}
 	}

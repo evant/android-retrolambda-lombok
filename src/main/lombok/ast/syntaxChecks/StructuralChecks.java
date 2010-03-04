@@ -17,6 +17,7 @@ import lombok.ast.Throw;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.TypeReference;
 import lombok.ast.VariableDefinition;
+import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
@@ -149,5 +150,21 @@ public class StructuralChecks {
 		}
 		
 		if (last != node) problems.add(new SyntaxProblem(node, "VarArgs are only legal on the last parameter of a method or constructor declaration."));
+	}
+	
+	public void varargsAndExtendedDimsDontMix(VariableDefinitionEntry node) {
+		if (node.getArrayDimensions() > 0) {
+			if (node.getParent() instanceof VariableDefinition) {
+				if (((VariableDefinition)node.getParent()).isVarargs()) {
+					problems.add(new SyntaxProblem(node, "Extended dimensions are not legal on a varargs declaration."));
+				}
+			}
+		}
+	}
+	
+	public void checkMethodParamsAreSimple(MethodDeclaration md) {
+		for (Node param : md.rawParameters()) {
+			BasicChecks.checkVarDefIsSimple(problems, param, param, "method parameters", "parameter");
+		}
 	}
 }

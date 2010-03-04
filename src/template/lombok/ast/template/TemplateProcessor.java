@@ -148,7 +148,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				for (Element member : ((TypeElement)element).getEnclosedElements()) {
 					if (member.getKind() == ElementKind.METHOD) {
 						ExecutableElement method = (ExecutableElement)member;
-						if (!method.getModifiers().contains(Modifier.PRIVATE)) {
+						if (method.getModifiers().contains(Modifier.PUBLIC)) {
 							added++;
 							validityGenerator.recordCheckMethod((ExecutableElement)member);
 						}

@@ -33,8 +33,6 @@ import lombok.ast.SyntaxProblem;
 import lombok.ast.Try;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.VariableDeclaration;
-import lombok.ast.VariableDefinition;
-import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.While;
 import lombok.ast.template.SyntaxCheck;
 
@@ -84,28 +82,10 @@ public class StatementChecks {
 	}
 	
 	public void checkVarDefOfCatch(Catch node) {
-		checkVarDefIsSimple(node, node.getRawExceptionDeclaration(), "catch blocks", "exception");
+		BasicChecks.checkVarDefIsSimple(problems, node, node.getRawExceptionDeclaration(), "catch blocks", "exception");
 	}
 	
 	public void checkVarDefOfForEach(ForEach node) {
-		checkVarDefIsSimple(node, node.getRawVariable(), "for-each statements", "loop");
-	}
-	
-	private void checkVarDefIsSimple(Node node, Node rawVarDef, String desc, String desc2) {
-		if (!(rawVarDef instanceof VariableDefinition)) return;
-		switch (((VariableDefinition)rawVarDef).rawVariables().size()) {
-		case 0: return;
-		case 1: break;
-		default:
-			problems.add(new SyntaxProblem(node, desc + " can only declare one " + desc2 + " variable."));
-			return;
-		}
-		
-		Node varDefEntry = ((VariableDefinition)rawVarDef).rawVariables().first();
-		if (varDefEntry instanceof VariableDefinitionEntry) {
-			if (((VariableDefinitionEntry)varDefEntry).getRawInitializer() != null) {
-				problems.add(new SyntaxProblem(node, desc + " can not declare a value for their variable declaration."));
-			}
-		}
+		BasicChecks.checkVarDefIsSimple(problems, node, node.getRawVariable(), "for-each statements", "loop");
 	}
 }
