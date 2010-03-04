@@ -56,7 +56,8 @@ public class ExpressionsParser extends BaseParser<Node> {
 		return sequence(
 				ch('('), group.basics.optWS(),
 				anyExpression(), SET(),
-				ch(')'));
+				ch(')'),
+				SET(actions.addParens(VALUE())));
 	}
 	
 	Rule unqualifiedThisOrSuperLiteral() {

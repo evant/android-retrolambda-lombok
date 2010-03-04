@@ -22,5 +22,8 @@
 package lombok.ast;
 
 public interface Expression extends Node {
-	
+	int getParens();
+	int getIntendedParens();
+	Expression setParens(int parens);
+	boolean needsParentheses();
 }

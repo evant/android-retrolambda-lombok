@@ -32,6 +32,7 @@ import lombok.ast.BinaryExpression;
 import lombok.ast.Cast;
 import lombok.ast.ClassLiteral;
 import lombok.ast.ConstructorInvocation;
+import lombok.ast.Expression;
 import lombok.ast.Identifier;
 import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceOf;
@@ -283,6 +284,13 @@ public class ExpressionsActions extends SourceActions {
 		}
 		
 		return posify(ac);
+	}
+	
+	public Node addParens(Node v) {
+		if (v instanceof Expression) {
+			((Expression)v).setParens(Math.max(0, ((Expression)v).getParens()) + 1);
+		}
+		return v;
 	}
 	
 	public Node createThisOrSuperOrClass(String text, Node qualifier) {

@@ -29,6 +29,24 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	private String errorReasonForValue = "Missing value";
 	@Getter private boolean markedAsLong;
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
+	private int parens;
+	
+	public IntegralLiteral setParens(int parens) {
+		this.parens = parens;
+		return this;
+	}
+	
+	public int getParens() {
+		return this.parens;
+	}
+	
+	public int getIntendedParens() {
+		return this.parens;
+	}
+	
+	public boolean needsParentheses() {
+		return false;
+	}
 	
 	@Override public String getDescription() {
 		return value != null ? String.valueOf(value) : null;

@@ -37,4 +37,5 @@ import java.lang.annotation.Target;
 public @interface GenerateAstNode {
 	Class<?> extending() default Object.class;
 	Class<?>[] implementing() default {};
+	Class<?>[] mixin() default {};
 }

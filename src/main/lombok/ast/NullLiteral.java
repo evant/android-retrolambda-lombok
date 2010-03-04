@@ -25,6 +25,24 @@ package lombok.ast;
 public class NullLiteral extends AbstractNode implements Literal, Expression {
 	private String rawValue;
 	private String errorReasonForValue = "Missing value";
+	private int parens;
+	
+	public NullLiteral setParens(int parens) {
+		this.parens = parens;
+		return this;
+	}
+	
+	public boolean needsParentheses() {
+		return false;
+	}
+	
+	public int getParens() {
+		return this.parens;
+	}
+	
+	public int getIntendedParens() {
+		return this.parens;
+	}
 	
 	public NullLiteral setAsValid() {
 		this.rawValue = "null";

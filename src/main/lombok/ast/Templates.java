@@ -34,6 +34,20 @@ import lombok.ast.template.GenerateAstNode;
 import lombok.ast.template.InitialValue;
 import lombok.ast.template.NotChildOfNode;
 
+class ExpressionMixin {
+	@NotChildOfNode int parens;
+	
+	@CopyMethod
+	static int getIntendedParens(Expression self) {
+		return Math.max(needsParentheses(self) ? 1 : 0, self.getParens());
+	}
+	
+	@CopyMethod
+	static boolean needsParentheses(Expression self) {
+		return false;
+	}
+}
+
 @GenerateAstNode(implementing=Statement.class)
 class AssertTemplate {
 	@NonNull Expression assertion;
@@ -107,7 +121,7 @@ class TryTemplate {
 	Block finally_;
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing=DescribedNode.class)
 class AnnotationTemplate {
 	@NonNull TypeReference annotationTypeReference;
 	List<AnnotationElement> elements;
@@ -297,14 +311,14 @@ class VariableDefinitionEntryTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class InlineIfExpressionTemplate {
 	@NonNull Expression condition;
 	@NonNull Expression ifTrue;
 	@NonNull Expression ifFalse;
 	
 	@CopyMethod
-	static boolean needsParentheses(InlineIfExpression self) {
+	static boolean needsParentheses(Expression self) {
 		try {
 			return BinaryExpressionTemplate.needsParentheses(self, BinaryOperator.ASSIGN.pLevel()-1);
 		} catch (Throwable ignore) {
@@ -313,7 +327,7 @@ class InlineIfExpressionTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class IdentifierTemplate {
 	@NotChildOfNode
 	@NonNull String name;
@@ -324,7 +338,7 @@ class IdentifierTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class BinaryExpressionTemplate {
 	@NonNull Expression left;
 	@NonNull Expression right;
@@ -352,9 +366,9 @@ class BinaryExpressionTemplate {
 	}
 	
 	@CopyMethod
-	static boolean needsParentheses(BinaryExpression self) {
+	static boolean needsParentheses(Expression self) {
 		try {
-			return needsParentheses(self, self.getOperator().pLevel());
+			return needsParentheses(self, ((BinaryExpression)self).getOperator().pLevel());
 		} catch (Throwable ignore) {
 			return true;
 		}
@@ -418,7 +432,7 @@ class BinaryExpressionTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class UnaryExpressionTemplate {
 	@NonNull Expression operand;
 	@NotChildOfNode
@@ -434,7 +448,7 @@ class UnaryExpressionTemplate {
 	}
 	
 	@CopyMethod
-	static boolean needsParentheses(UnaryExpression self) {
+	static boolean needsParentheses(Expression self) {
 		try {
 			return BinaryExpressionTemplate.needsParentheses(self, 1);
 		} catch (Throwable ignore) {
@@ -575,13 +589,13 @@ class TypeArgumentsTemplate {
 	List<TypeReference> generics;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class CastTemplate {
 	@NonNull TypeReference typeReference;
 	@NonNull Expression operand;
 	
 	@CopyMethod
-	static boolean needsParentheses(Cast self) {
+	static boolean needsParentheses(Expression self) {
 		try {
 			return BinaryExpressionTemplate.needsParentheses(self, 1);
 		} catch (Throwable ignore) {
@@ -590,13 +604,13 @@ class CastTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class InstanceOfTemplate {
 	@NonNull Expression objectReference;
 	@NonNull TypeReference typeReference;
 	
 	@CopyMethod
-	static boolean needsParentheses(InstanceOf self) {
+	static boolean needsParentheses(Expression self) {
 		try {
 			return BinaryExpressionTemplate.needsParentheses(self, BinaryOperator.LESS.pLevel());
 		} catch (Throwable ignore) {
@@ -605,7 +619,7 @@ class InstanceOfTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class ConstructorInvocationTemplate {
 	Expression qualifier;
 	TypeArguments constructorTypeArguments;
@@ -636,7 +650,7 @@ class SuperConstructorInvocationTemplate {
 	List<Expression> arguments;
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class MethodInvocationTemplate {
 	Expression operand;
 	TypeArguments methodTypeArguments;
@@ -653,19 +667,19 @@ class MethodInvocationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class SelectTemplate {
 	@NonNull Expression operand;
 	@NonNull Identifier identifier;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class ArrayAccessTemplate {
 	@NonNull Expression operand;
 	@NonNull Expression indexExpression;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class ArrayCreationTemplate {
 	@NonNull TypeReference componentTypeReference;
 	List<ArrayDimension> dimensions;
@@ -677,22 +691,22 @@ class ArrayDimensionTemplate {
 	Expression dimension;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class ArrayInitializerTemplate {
 	List<Expression> expressions;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class ThisTemplate {
 	TypeReference qualifier;
 }
 
-@GenerateAstNode(implementing=Expression.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class SuperTemplate {
 	TypeReference qualifier;
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class ClassLiteralTemplate {
 	@NonNull TypeReference typeReference;
 	
@@ -774,7 +788,7 @@ class CaseTemplate {
 class DefaultTemplate {
 }
 
-@GenerateAstNode(implementing={Literal.class, Expression.class})
+@GenerateAstNode(implementing={Literal.class, Expression.class}, mixin=ExpressionMixin.class)
 class BooleanLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseBoolean", rawFormGenerator="generateBoolean")
 	@NonNull Boolean value;
@@ -792,7 +806,7 @@ class BooleanLiteralTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Expression.class, Literal.class, DescribedNode.class})
+@GenerateAstNode(implementing={Expression.class, Literal.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class CharLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseChar", rawFormGenerator="generateChar")
 	@NonNull Character value;
@@ -877,7 +891,7 @@ class CharLiteralTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Literal.class, Expression.class, DescribedNode.class})
+@GenerateAstNode(implementing={Literal.class, Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class StringLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseString", rawFormGenerator="generateString")
 	@NonNull String value;

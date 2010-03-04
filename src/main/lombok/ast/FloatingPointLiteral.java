@@ -29,6 +29,24 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 	private String errorReasonForValue = "Missing value";
 	@Getter private boolean markedAsFloat;
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
+	private int parens;
+	
+	public FloatingPointLiteral setParens(int parens) {
+		this.parens = parens;
+		return this;
+	}
+	
+	public boolean needsParentheses() {
+		return false;
+	}
+	
+	public int getParens() {
+		return this.parens;
+	}
+	
+	public int getIntendedParens() {
+		return this.parens;
+	}
 	
 	@Override public String getDescription() {
 		return value != null ? String.valueOf(value) : null;

@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -182,10 +183,12 @@ public class TemplateProcessor extends AbstractProcessor {
 			String className;
 			String extending = null;
 			List<String> implementing = new ArrayList<String>();
+			List<TypeElement> bases = new ArrayList<TypeElement>();
 			
 			TypeElement annotated;
 			/* Calculate file and class name of the source file we need to generate */ {
 				annotated = (TypeElement)element;
+				bases.add(annotated);
 				className = annotated.getQualifiedName().toString();
 				if (className.endsWith("Template")) className = className.substring(0, className.length() - "Template".length());
 				else {
@@ -207,26 +210,52 @@ public class TemplateProcessor extends AbstractProcessor {
 							Collection<?> list = (Collection<?>)value.getValue().getValue();
 							for (Object type : list) implementing.add(getClassName(type));
 						}
+						
+						if (value.getKey().getSimpleName().contentEquals("mixin")) {
+							Collection<?> list = (Collection<?>)value.getValue().getValue();
+							for (Object type : list) bases.add(
+									processingEnv.getElementUtils().getTypeElement(getClassName(type)));
+						}
 					}
 					
 					if (extending == null) extending = "lombok.ast.AbstractNode";
 				}
 			}
 			
-			/* Analyze all fields of template class */ {
-				for (Element enclosed : annotated.getEnclosedElements()) {
-					if (enclosed.getKind() != ElementKind.FIELD) continue;
-					if (((VariableElement)enclosed).getModifiers().contains(Modifier.STATIC)) continue;
-					fields.add(new FieldData((VariableElement) enclosed));
+			/* Analyze all fields of template class and mixins */ {
+				Set<String> covered = new HashSet<String>();
+				for (TypeElement base : bases) {
+					for (Element enclosed : base.getEnclosedElements()) {
+						if (enclosed.getKind() != ElementKind.FIELD) continue;
+						if (((VariableElement)enclosed).getModifiers().contains(Modifier.STATIC)) continue;
+						FieldData fieldData = new FieldData((VariableElement) enclosed);
+						if (!covered.add(fieldData.getName())) continue;
+						fields.add(fieldData);
+					}
 				}
 			}
 			
-			/* Analyze all methods of template class */ {
-				for (Element enclosed : annotated.getEnclosedElements()) {
-					if (enclosed.getKind() != ElementKind.METHOD) continue;
-					ExecutableElement method = (ExecutableElement) enclosed;
-					boolean copyMethod = method.getAnnotation(CopyMethod.class) != null;
-					if (copyMethod) methodsToCopy.add(method);
+			/* Analyze all methods of template class and mixins */ {
+				Set<String> covered = new HashSet<String>();
+				for (TypeElement base : bases) {
+					for (Element enclosed : base.getEnclosedElements()) {
+						if (enclosed.getKind() != ElementKind.METHOD) continue;
+						ExecutableElement method = (ExecutableElement) enclosed;
+						boolean copyMethod = method.getAnnotation(CopyMethod.class) != null;
+						if (!copyMethod) continue;
+						StringBuilder sig = new StringBuilder();
+						sig.append(method.getReturnType().toString());
+						sig.append(" ");
+						sig.append(method.getSimpleName().toString());
+						sig.append("(");
+						for (VariableElement param : method.getParameters()) {
+							sig.append(param.asType().toString());
+							sig.append(", ");
+						}
+						sig.append(")");
+						if (!covered.add(sig.toString())) continue;
+						methodsToCopy.add(method);
+					}
 				}
 			}
 			
@@ -402,7 +431,8 @@ public class TemplateProcessor extends AbstractProcessor {
 			for (ExecutableElement delegate : methodsToCopy) {
 				boolean isVoid = delegate.getReturnType().getKind() == TypeKind.VOID;
 				CopyMethod cma = delegate.getAnnotation(CopyMethod.class);
-				String accessModifier = cma.accessModifier();
+				String accessModifier = cma == null ? "public" : cma.accessModifier();
+				boolean isStatic = cma == null ? false : cma.isStatic();
 				if (!delegate.getTypeParameters().isEmpty()) {
 					throw new IllegalArgumentException("We don't support generics parameters on extra methods in templates.");
 				}
@@ -422,7 +452,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				
 				out.write(accessModifier);
 				if (!accessModifier.isEmpty()) out.write(" ");
-				if (cma.isStatic()) out.write("static ");
+				if (isStatic) out.write("static ");
 				
 				out.write(isVoid ? "void" : delegate.getReturnType().toString());
 				out.write(" ");
@@ -433,7 +463,7 @@ public class TemplateProcessor extends AbstractProcessor {
 					boolean first = true;
 					for (VariableElement p : delegate.getParameters()) {
 						idx++;
-						if (idx == 1 && !cma.isStatic()) continue;
+						if (idx == 1 && !isStatic) continue;
 						if (!first) out.write(", ");
 						first = false;
 						out.write(p.asType().toString());
@@ -443,17 +473,18 @@ public class TemplateProcessor extends AbstractProcessor {
 				}
 				out.write(") {\n\t\t");
 				out.write(isVoid ? "" : "return ");
-				out.write(className);
-				out.write("Template.");
+				TypeElement container = (TypeElement)delegate.getEnclosingElement();
+				out.write(container.toString());
+				out.write(".");
 				out.write(delegate.getSimpleName().toString());
 				out.write("(");
-				if (!cma.isStatic()) out.write("this");
+				if (!isStatic) out.write("this");
 				/* Generate parameters, but skip first if non-static */ {
 					boolean first = true;
 					for (VariableElement p : delegate.getParameters()) {
 						if (first) {
 							first = false;
-							if (cma.isStatic()) out.write(p.getSimpleName().toString());
+							if (isStatic) out.write(p.getSimpleName().toString());
 							continue;
 						}
 						out.write(", ");
