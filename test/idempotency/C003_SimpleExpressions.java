@@ -20,6 +20,8 @@ class C003_SimpleExpressions {
         int p4a = 5 + 2;
         int p4b = 5 - 2;
         String p4c = "a" + "b";
+        String p4d = "a" + 10;
+        String p4e = 10 + "b";
         int p5a = 5 << 2;
         int p5b = 5 >> 2;
         int p5c = 5 >>> 2;

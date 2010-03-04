@@ -9,7 +9,7 @@ class C002_TextLiterals {
         char g = '\'';
         String z = "";
         String y = "Simple string";
-        String w = "With escapes \\ \" \n \t \0 \10 \f \r ";
+        String w = "With escapes \\ \" \n \t \0 \7 \10 \11 \f \r ";
         String v = ";";
     }
 }

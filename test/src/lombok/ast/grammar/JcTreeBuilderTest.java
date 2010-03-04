@@ -51,30 +51,42 @@ public class JcTreeBuilderTest {
 	
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
-		if (source.getName().compareTo("B006") > 0) {
+		String name = source.getName();
+		if (name.compareTo("C004") > 0) {
 			return false;
 		}
+		if (name.startsWith("BasicStructure3") || name.startsWith("BasicStructure4")) {
+			return false;
+		}
+		
 		String javacString = convertToString(parseWithJavac(source));
 		String lombokString;
 		try {
 			lombokString = convertToString(parseWithLombok(source));
 		} catch (Exception e) {
-			System.out.printf("==== Processing %s ====\n", source.getName());
+			System.out.printf("==== Processing %s ====\n", name);
 			System.out.println(source.getRawInput());
 			System.out.println("=========== Expected ============");
 			System.out.println(javacString);
-			System.out.printf("======= End of %s =======\n", source.getName());
+			System.out.printf("======= End of %s =======\n", name);
+			throw e;
+		} catch (Error e) {
+			System.out.printf("==== Processing %s ====\n", name);
+			System.out.println(source.getRawInput());
+			System.out.println("=========== Expected ============");
+			System.out.println(javacString);
+			System.out.printf("======= End of %s =======\n", name);
 			throw e;
 		}
 		
 		if (!javacString.equals(lombokString)) {
-			System.out.printf("==== Processing %s ====\n", source.getName());
+			System.out.printf("==== Processing %s ====\n", name);
 			System.out.println(source.getRawInput());
 			System.out.println("=========== Expected ============");
 			System.out.println(javacString);
 			System.out.println("============ Actual =============");
 			System.out.println(lombokString);
-			System.out.printf("======= End of %s =======\n", source.getName());
+			System.out.printf("======= End of %s =======\n", name);
 		}
 		
 		assertEquals(javacString, lombokString);
