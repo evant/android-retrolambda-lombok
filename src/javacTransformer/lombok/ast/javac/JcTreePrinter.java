@@ -25,6 +25,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import lombok.ast.StringLiteral;
+
 import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.tree.JCTree;
@@ -153,7 +155,13 @@ public class JcTreePrinter extends JCTree.Visitor {
 		if (val == null) {
 			output.append("[NULL]\n");
 		} else {
-			output.append("[").append(val.getClass().getSimpleName()).append(" ").append(val.toString()).append("]\n");
+			String content;
+			if (val instanceof String) {
+				content = new StringLiteral().setValue(val.toString()).getRawValue();
+			} else {
+				content = String.valueOf(val);
+			}
+			output.append("[").append(val.getClass().getSimpleName()).append(" ").append(content).append("]\n");
 		}
 	}
 	
@@ -466,8 +474,32 @@ public class JcTreePrinter extends JCTree.Visitor {
 			return "/";
 		case JCTree.MOD:
 			return "%";
+		case JCTree.PLUS_ASG:
+			return "+=";
+		case JCTree.MINUS_ASG:
+			return "-=";
+		case JCTree.MUL_ASG:
+			return "*=";
+		case JCTree.DIV_ASG:
+			return "/=";
+		case JCTree.MOD_ASG:
+			return "%=";
+		case JCTree.BITAND_ASG:
+			return "&=";
+		case JCTree.BITXOR_ASG:
+			return "^=";
+		case JCTree.BITOR_ASG:
+			return "|=";
+		case JCTree.SL_ASG:
+			return "<<=";
+		case JCTree.SR_ASG:
+			return ">>=";
+		case JCTree.USR_ASG:
+			return ">>>=";
+		case JCTree.TYPETEST:
+			return "instanceof";
 		default:
-			throw new Error();
+			throw new Error("Unexpected operator: " + tag);
 		}
 	}
 	
@@ -528,7 +560,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 		indent--;
 	}
 	
-	public String literalName(int typeTag, boolean stringOkay) {
+	public String literalName(int typeTag) {
 		switch (typeTag) {
 		case TypeTags.BYTE:
 			return "BYTE";
@@ -548,23 +580,25 @@ public class JcTreePrinter extends JCTree.Visitor {
 			return "BOOLEAN";
 		case TypeTags.VOID:
 			return "VOID";
+		case TypeTags.CLASS:
+			return "CLASS/STRING";
 		case TypeTags.BOT:
 			return "BOT";
 		default:
-			return stringOkay ? ("STRING(" + typeTag + ")") : ("ERROR(" + typeTag + ")");
+			return "ERROR(" + typeTag + ")";
 		}
 	}
 	
 	public void visitLiteral(JCLiteral tree) {
 		printNode(tree);
-		property("typetag", literalName(tree.typetag, true));
+		property("typetag", literalName(tree.typetag));
 		property("value", tree.value);
 		indent--;
 	}
 	
 	public void visitTypeIdent(JCPrimitiveTypeTree tree) {
 		printNode(tree);
-		property("typetag", literalName(tree.typetag, false));
+		property("typetag", literalName(tree.typetag));
 		indent--;
 	}
 	

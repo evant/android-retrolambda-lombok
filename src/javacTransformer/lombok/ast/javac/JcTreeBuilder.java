@@ -21,32 +21,54 @@
  */
 package lombok.ast.javac;
 
+import java.util.EnumMap;
 import java.util.Map;
 
 import lombok.ast.Annotation;
+import lombok.ast.BinaryExpression;
+import lombok.ast.BinaryOperator;
 import lombok.ast.Block;
+import lombok.ast.BooleanLiteral;
+import lombok.ast.Cast;
+import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
+import lombok.ast.ConstructorInvocation;
+import lombok.ast.EnumDeclaration;
+import lombok.ast.Expression;
+import lombok.ast.FloatingPointLiteral;
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Identifier;
 import lombok.ast.ImportDeclaration;
+import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceInitializer;
+import lombok.ast.InstanceOf;
+import lombok.ast.IntegralLiteral;
+import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
-import lombok.ast.ListAccessor;
+import lombok.ast.Literal;
+import lombok.ast.MethodDeclaration;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
+import lombok.ast.Select;
 import lombok.ast.StaticInitializer;
+import lombok.ast.StrictListAccessor;
+import lombok.ast.StringLiteral;
 import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
+import lombok.ast.UnaryExpression;
+import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.WildcardKind;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.TypeTags;
@@ -54,12 +76,15 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
+import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
+import com.sun.tools.javac.tree.JCTree.JCLiteral;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
 import com.sun.tools.javac.tree.JCTree.JCStatement;
 import com.sun.tools.javac.tree.JCTree.JCTypeApply;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
+import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
@@ -90,15 +115,34 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (node == null) return null;
 		JcTreeBuilder visitor = create();
 		node.accept(visitor);
-		return visitor.get();
+		try {
+			return visitor.get();
+		}
+		catch (RuntimeException e) {
+			System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
+			throw e;
+		}
 	}
 	
-	private <T extends JCTree> List<T> toList(Class<T> type, ListAccessor<? extends Node, ?> accessor) {
+	private JCExpression toExpression(Node node) {
+		return (JCExpression)toTree(node);
+	}
+	
+	private <T extends JCTree> List<T> toList(Class<T> type, StrictListAccessor<?, ?> accessor) {
 		List<T> result = List.nil();
-		for (Node node : accessor.getContents()) {
+		for (Node node : accessor) {
 			JcTreeBuilder visitor = create();
 			node.accept(visitor);
-			JCTree value = visitor.get();
+			
+			JCTree value;
+			try {
+				value = visitor.get();
+			}
+			catch (RuntimeException e) {
+				System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
+				throw e;
+			}
+				
 			if (value != null && !type.isInstance(value)) {
 				throw new ClassCastException(value.getClass().getName() + " cannot be cast to " + type.getName());
 			}
@@ -107,14 +151,10 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return result;
 	}
 	
-	private List<JCTree> toList(ListAccessor<? extends Node, ?> accessor) {
+	private List<JCTree> toList(StrictListAccessor<?, ?> accessor) {
 		return toList(JCTree.class, accessor);
 	}
 	
-	private List<JCTree> toList(Node node) {
-		return toList(JCTree.class, node);
-	}
-
 	private <T extends JCTree> List<T> toList(Class<T> type, Node node) {
 		if (node == null) return List.nil();
 		JcTreeBuilder visitor = create();
@@ -145,8 +185,13 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	@Override
+	public boolean visitNode(Node node) {
+		throw new UnsupportedOperationException(String.format("Unhandled node '%s' (%s)", node, node.getClass().getSimpleName()));
+	}
+	
+	@Override
 	public boolean visitCompilationUnit(CompilationUnit node) {
-		JCExpression pkg = (JCExpression) toTree(node.getPackageDeclaration());
+		JCExpression pkg = toExpression(node.getPackageDeclaration());
 		
 		List<JCTree> imports = toList(node.importDeclarations());
 		List<JCTree> types = toList(node.typeDeclarations());
@@ -157,9 +202,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
-		JCExpression pkg = chain(node.parts().getContents());
+		JCExpression pkg = chain(node.parts());
 		
-		for (Annotation annotation : node.annotations().getContents()){
+		for (Annotation annotation : node.annotations()){
 			// TODO Add implementation
 		}
 		
@@ -169,7 +214,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitImportDeclaration(ImportDeclaration node) {
-		JCExpression name = chain(node.parts().getContents());
+		JCExpression name = chain(node.parts());
 		if (node.isStarImport()) {
 			name = treeMaker.Select(name, table.fromString("*"));
 		}
@@ -189,6 +234,186 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				node.getBody() == null ? List.<JCTree>nil() : toList(node.getBody().members())
 		));
 		return true;
+	}
+	
+	@Override
+	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
+		JCModifiers modifiers = (JCModifiers) toTree(node.getModifiers());
+		modifiers.flags |= Flags.INTERFACE;
+		set(treeMaker.ClassDef(
+				modifiers,
+				toName(node.getName()),
+				toList(JCTypeParameter.class, node.typeVariables()),
+				null,
+				toList(JCExpression.class, node.extending()),
+				node.getBody() == null ? List.<JCTree>nil() : toList(node.getBody().members())
+		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitEnumDeclaration(EnumDeclaration node) {
+		JCModifiers modifiers = (JCModifiers) toTree(node.getModifiers());
+		modifiers.flags |= Flags.ENUM;
+		set(treeMaker.ClassDef(
+				modifiers,
+				toName(node.getName()),
+				List.<JCTypeParameter>nil(),
+				null,
+				toList(JCExpression.class, node.implementing()),
+				node.getBody() == null ? List.<JCTree>nil() : toList(node.getBody().members())
+		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitIntegralLiteral(IntegralLiteral node) {
+		if (node.isMarkedAsLong()) {
+			set(treeMaker.Literal(TypeTags.LONG, node.longValue()));
+		}
+		else {
+			set(treeMaker.Literal(TypeTags.INT, node.intValue()));
+		}
+		return true;
+	}
+	
+	@Override
+	public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {
+		if (node.isMarkedAsFloat()) {
+			set(treeMaker.Literal(TypeTags.FLOAT, node.floatValue()));
+		}
+		else {
+			set(treeMaker.Literal(TypeTags.DOUBLE, node.doubleValue()));
+		}
+		return true;
+	}
+	
+	@Override
+	public boolean visitBooleanLiteral(BooleanLiteral node) {
+		set(treeMaker.Literal(TypeTags.BOOLEAN, node.getValue() ? 1 : 0));
+		return true;
+	}
+	
+	@Override
+	public boolean visitCharLiteral(CharLiteral node) {
+		set(treeMaker.Literal(TypeTags.CHAR, (int)node.getValue()));
+		return true;
+	}
+	
+	@Override
+	public boolean visitNullLiteral(NullLiteral node) {
+		set(treeMaker.Literal(TypeTags.BOT, null));
+		return true;
+	}
+	
+	@Override
+	public boolean visitStringLiteral(StringLiteral node) {
+		set(treeMaker.Literal(TypeTags.CLASS, node.getValue()));
+		return true;
+	}
+	
+	@Override
+	public boolean visitIdentifier(Identifier node) {
+		set(treeMaker.Ident(toName(node)));
+		return true;
+	}
+	
+	@Override
+	public boolean visitCast(Cast node) {
+		set(treeMaker.TypeCast(toTree(node.getRawTypeReference()), toExpression(node.getOperand())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitConstructorInvocation(ConstructorInvocation node) {
+		set(treeMaker.NewClass(
+				toExpression(node.getQualifier()), 
+				toList(JCExpression.class, node.getConstructorTypeArguments()), 
+				toExpression(node.getTypeReference()), 
+				toList(JCExpression.class, node.arguments()), 
+				(JCClassDecl)toTree(node.getAnonymousClassBody())
+		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitSelect(Select node) {
+		set(treeMaker.Select(toExpression(node.getOperand()), toName(node.getIdentifier())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitUnaryExpression(UnaryExpression node) {
+		Expression operand = node.getOperand();
+		UnaryOperator operator = node.getOperator();
+		if (operator == UnaryOperator.UNARY_MINUS && operand instanceof Literal) {
+			// TODO test -'a'
+			JCLiteral result = (JCLiteral) toTree(operand);
+			result.value = negative(result.value);
+			set(result);
+			return true;
+		}
+		
+		set(treeMaker.Unary(UNARY_OPERATORS.get(operator), toExpression(operand)));
+		return true;
+	}
+	
+	@Override
+	public boolean visitBinaryExpression(BinaryExpression node) {
+		BinaryOperator operator = node.getOperator();
+		JCExpression lhs = toExpression(node.getLeft());
+		JCExpression rhs = toExpression(node.getRight());
+		if (operator == BinaryOperator.ASSIGN) {
+			set(treeMaker.Assign(lhs, rhs));
+			return true;
+		}
+		
+		if (operator.isAssignment()) {
+			set(treeMaker.Assignop(BINARY_OPERATORS.get(operator), lhs, rhs));
+			return true;
+		}
+		if (operator == BinaryOperator.PLUS && lhs instanceof JCLiteral && rhs instanceof JCLiteral) {
+			JCLiteral left = (JCLiteral)lhs;
+			JCLiteral right = (JCLiteral)rhs;
+			if (left.typetag == TypeTags.CLASS && right.typetag == TypeTags.CLASS) {
+				set(treeMaker.Literal(TypeTags.CLASS, String.valueOf(left.value) + String.valueOf(right.value)));
+				return true;
+			}
+		}
+		set(treeMaker.Binary(BINARY_OPERATORS.get(operator), lhs, rhs));
+		return true;
+	}
+	
+	@Override
+	public boolean visitInstanceOf(InstanceOf node) {
+		set(treeMaker.TypeTest(toExpression(node.getObjectReference()), toExpression(node.getTypeReference())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitInlineIfExpression(InlineIfExpression node) {
+		set(treeMaker.Conditional(
+				toExpression(node.getCondition()), 
+				toExpression(node.getIfTrue()), 
+				toExpression(node.getIfFalse())));
+		return true;
+	}
+	
+	private static Object negative(Object value) {
+		Number num = (Number)value;
+		if (num instanceof Integer) {
+			return -num.intValue();
+		}
+		if (num instanceof Long) {
+			return -num.longValue();
+		}
+		if (num instanceof Float) {
+			return -num.floatValue();
+		}
+		if (num instanceof Double) {
+			return -num.doubleValue();
+		}
+		throw new IllegalArgumentException("value should be an Integer, Long, Float or Double, not a " + value.getClass().getSimpleName());
 	}
 	
 	@Override
@@ -232,10 +457,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitVariableDefinition(VariableDefinition node) {
 		JCModifiers mods = (JCModifiers) toTree(node.getModifiers());
-		JCExpression vartype = (JCExpression) toTree(node.getTypeReference());
-		JCExpression init = null;
-		for (VariableDefinitionEntry e : node.variables().getContents()){
-			set(treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), init));
+		JCExpression vartype = toExpression(node.getTypeReference());
+		for (VariableDefinitionEntry e : node.variables()){
+			set(treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer())));
 			return true;
 			// TODO add multiple entries
 		}
@@ -334,6 +558,67 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitTypeVariable(TypeVariable node) {
 		set(treeMaker.TypeParameter(toName(node.getName()), toList(JCExpression.class, node.extending())));
 		return true;
+	}
+	
+	@Override
+	public boolean visitMethodDeclaration(MethodDeclaration node) {
+		set(treeMaker.MethodDef(
+				(JCModifiers)toTree(node.getModifiers()), 
+				toName(node.getMethodName()), 
+				toExpression(node.getReturnTypeReference()), 
+				toList(JCTypeParameter.class, node.typeVariables()), 
+				toList(JCVariableDecl.class, node.parameters()), 
+				toList(JCExpression.class, node.thrownTypeReferences()), 
+				(JCBlock)toTree(node.getBody()), 
+				null
+		));
+		return true;
+	}
+	
+	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);
+	static {
+		UNARY_OPERATORS.put(UnaryOperator.BINARY_NOT, JCTree.COMPL);
+		UNARY_OPERATORS.put(UnaryOperator.LOGICAL_NOT, JCTree.NOT); 
+		UNARY_OPERATORS.put(UnaryOperator.UNARY_PLUS, JCTree.POS);
+		UNARY_OPERATORS.put(UnaryOperator.PREFIX_INCREMENT, JCTree.PREINC); 
+		UNARY_OPERATORS.put(UnaryOperator.UNARY_MINUS, JCTree.NEG);
+		UNARY_OPERATORS.put(UnaryOperator.PREFIX_DECREMENT, JCTree.PREDEC); 
+		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_INCREMENT, JCTree.POSTINC); 
+		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_DECREMENT, JCTree.POSTDEC);
+	}
+	
+	private static final EnumMap<BinaryOperator, Integer> BINARY_OPERATORS = Maps.newEnumMap(BinaryOperator.class);
+	static {
+		BINARY_OPERATORS.put(BinaryOperator.PLUS_ASSIGN, JCTree.PLUS_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.MINUS_ASSIGN, JCTree.MINUS_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY_ASSIGN, JCTree.MUL_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.DIVIDE_ASSIGN, JCTree.DIV_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.REMAINDER_ASSIGN, JCTree.MOD_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.AND_ASSIGN, JCTree.BITAND_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.XOR_ASSIGN, JCTree.BITXOR_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.OR_ASSIGN, JCTree.BITOR_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT_ASSIGN, JCTree.SL_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT_ASSIGN, JCTree.SR_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT_ASSIGN, JCTree.USR_ASG);
+		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_OR, JCTree.OR);
+		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_AND, JCTree.AND);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_OR, JCTree.BITOR);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_XOR, JCTree.BITXOR);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_AND, JCTree.BITAND);
+		BINARY_OPERATORS.put(BinaryOperator.EQUALS, JCTree.EQ);
+		BINARY_OPERATORS.put(BinaryOperator.NOT_EQUALS, JCTree.NE);
+		BINARY_OPERATORS.put(BinaryOperator.GREATER, JCTree.GT);
+		BINARY_OPERATORS.put(BinaryOperator.GREATER_OR_EQUAL, JCTree.GE);
+		BINARY_OPERATORS.put(BinaryOperator.LESS, JCTree.LT);
+		BINARY_OPERATORS.put(BinaryOperator.LESS_OR_EQUAL, JCTree.LE);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT, JCTree.SL);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT, JCTree.SR);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT, JCTree.USR);
+		BINARY_OPERATORS.put(BinaryOperator.PLUS, JCTree.PLUS);
+		BINARY_OPERATORS.put(BinaryOperator.MINUS, JCTree.MINUS);
+		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY, JCTree.MUL);
+		BINARY_OPERATORS.put(BinaryOperator.DIVIDE, JCTree.DIV);
+		BINARY_OPERATORS.put(BinaryOperator.REMAINDER, JCTree.MOD);
 	}
 	
 	private static final Map<String, Integer> PRIMITIVES = ImmutableMap.<String, Integer>builder()
