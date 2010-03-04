@@ -23,12 +23,17 @@ package lombok.ast.syntaxChecks;
 
 import java.util.List;
 
+import lombok.ast.Block;
+import lombok.ast.Case;
 import lombok.ast.Catch;
+import lombok.ast.Default;
 import lombok.ast.DoWhile;
 import lombok.ast.For;
 import lombok.ast.ForEach;
 import lombok.ast.If;
 import lombok.ast.Node;
+import lombok.ast.Statement;
+import lombok.ast.Switch;
 import lombok.ast.SyntaxProblem;
 import lombok.ast.Try;
 import lombok.ast.TypeDeclaration;
@@ -87,5 +92,36 @@ public class StatementChecks {
 	
 	public void checkVarDefOfForEach(ForEach node) {
 		BasicChecks.checkVarDefIsSimple(problems, node, node.getRawVariable(), "for-each statements", "loop");
+	}
+	
+	public void checkCaseChildOfSwitch(Case node) {
+		checkChildOfSwitch(node, "case");
+	}
+	
+	public void checkDefaultChildOfSwitch(Default node) {
+		checkChildOfSwitch(node, "default");
+	}
+	
+	private void checkChildOfSwitch(Node node, String desc) {
+		Node p = node.getParent();
+		Node gp = p == null ? null : p.getParent();
+		boolean genError = false;
+		
+		if (!(p instanceof Statement)) return;
+		
+		genError = !(p instanceof Block);
+		genError |= gp != null && !(gp instanceof Switch);
+		
+		problems.add(new SyntaxProblem(node, desc + " statements are only legal directly inside switch statements."));
+	}
+	
+	public void checkSwitchStartsWithDefaultOrCase(Switch node) {
+		Node rawBody = node.getRawBody();
+		if (rawBody instanceof Block) {
+			Node first = ((Block)rawBody).rawContents().first();
+			if (first != null && !(first instanceof Case) && !(first instanceof Default)) {
+				problems.add(new SyntaxProblem(node, "switch statements should start with a default or case statement."));
+			}
+		}
 	}
 }
