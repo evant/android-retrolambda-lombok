@@ -4,8 +4,10 @@ class C005_ArrayInitialization {
         int[] sized = new int[0];
         int[][] sizedTwoDimensions = new int[0][0];
         int[][] sizedTwoDimensions2 = new int[0][];
+        int[][][] sizedThreeDimensions = new int[0][][];
         int[][] empty = {{}};
         int[][] ints = new int[][] {{}};
+        int[] singleInts = new int[] {};
         int more[] = {};
         int[] more2[] = {{}};
     }

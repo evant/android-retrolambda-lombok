@@ -55,8 +55,8 @@ public class TypesActions extends SourceActions {
 	}
 	
 	public Node createWildcardedType(String extendsOrSuper, Node type) {
-		WildcardKind wildcard = WildcardKind.UNBOUND;
 		if (extendsOrSuper != null) extendsOrSuper = extendsOrSuper.trim();
+		WildcardKind wildcard = WildcardKind.UNBOUND;
 		if ("extends".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.EXTENDS;
 		if ("super".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.SUPER;
 		

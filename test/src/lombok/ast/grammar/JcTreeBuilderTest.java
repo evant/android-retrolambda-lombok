@@ -52,7 +52,7 @@ public class JcTreeBuilderTest {
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
 		String name = source.getName();
-		if (name.compareTo("C004") > 0) {
+		if (name.compareTo("D") > 0) {
 			return false;
 		}
 		if (name.startsWith("BasicStructure3") || name.startsWith("BasicStructure4")) {
