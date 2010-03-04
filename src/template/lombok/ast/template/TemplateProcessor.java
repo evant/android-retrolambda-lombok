@@ -382,9 +382,9 @@ public class TemplateProcessor extends AbstractProcessor {
 				} else if (field.isList()) {
 					out.write("\t\tfor (Node n : this.");
 					out.write(field.getName());
-					out.write(") {\n\t\t\tresult.");
-					out.write(field.getName());
-					out.write("Accessor.addToEndRaw(n == null ? null : n.copy());\n\t\t}\n");
+					out.write(") {\n\t\t\tresult.raw");
+					out.write(field.titleCasedName());
+					out.write("().addToEnd(n == null ? null : n.copy());\n\t\t}\n");
 				} else {
 					out.write("\t\tif (this.");
 					out.write(field.getName());
