@@ -3,8 +3,8 @@
 	<classpathentry kind="src" path="src/main"/>
 	<classpathentry kind="src" path="src/template"/>
 	<classpathentry kind="src" path="src/printer"/>
-	<classpathentry kind="src" path="test/src"/>
 	<classpathentry kind="src" path="src/javacTransformer"/>
+	<classpathentry kind="src" path="test/src"/>
 	<classpathentry kind="src" path=".apt_generated">
 		<attributes>
 			<attribute name="optional" value="true"/>
