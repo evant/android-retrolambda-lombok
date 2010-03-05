@@ -47,9 +47,28 @@ public class JavaCompilerTest {
 	@Test
 	public void testJavaCompiler(Source source) throws IOException {
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-		List<String> options = Arrays.asList("-proc:none", "-d", getDirectory().toString());
+		File tempDir = getTempDir();
+		tempDir.mkdirs();
+		List<String> options = Arrays.asList("-proc:none", "-d", tempDir.getAbsolutePath());
 		CompilationTask task = compiler.getTask(null, null, null, options, null, Collections.singleton(new TestJavaFileObject(source.getName(), source.getRawInput())));
 		assertTrue(task.call());
+	}
+	
+	private static File getTempDir() {
+		String[] rawDirs = {
+				System.getProperty("java.io.tmpdir"),
+				"/tmp",
+				"C:\\Windows\\Temp"
+		};
+		
+		for (String dir : rawDirs) {
+			if (dir == null) continue;
+			File f = new File(dir);
+			if (!f.isDirectory()) continue;
+			return new File(f, "lombok.ast-test");
+		}
+		
+		return new File(getDirectory(), "tmp");
 	}
 	
 	private static class TestJavaFileObject extends SimpleJavaFileObject {
