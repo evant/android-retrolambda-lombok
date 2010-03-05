@@ -1,1 +1,3 @@
-class A002_BasicEmptyClass{}
+class A002_BasicEmptyClass{
+	;
+}

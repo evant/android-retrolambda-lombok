@@ -22,12 +22,12 @@ class ZComplex1Extra {
 		if (x >>> 2 < 10) {
 			System.out.println("Whoa!");
 		}
-		int y = (10 + 20) + 30;
-		int z = ((10 + 20) + 30);
+		int y = 10 + 20 + 30;
+		int z =( 10+ 20 ) + 30;
 		int a = 10 + (20 + 30);
 		int b = 10 + 20 * 30;
 		int c = (10 + 20) * 30;
-		boolean d = ("" + b) instanceof CharSequence;
+		boolean d = "" + b instanceof CharSequence;
 		boolean g = a < 0;
 		boolean e = a > 0 ? true : b < 0 ? true : false;
 		boolean f = (a > 0 ? true : b < 0) ? true : false;

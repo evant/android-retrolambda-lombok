@@ -23,7 +23,7 @@ class ZComplex1Extra {
             System.out.println("Whoa!");
         }
         int y = 10 + 20 + 30;
-        int z = 10 + 20 + 30;
+        int z = (10 + 20) + 30;
         int a = 10 + (20 + 30);
         int b = 10 + 20 * 30;
         int c = (10 + 20) * 30;

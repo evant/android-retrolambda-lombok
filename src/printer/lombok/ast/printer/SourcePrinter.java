@@ -53,6 +53,7 @@ import lombok.ast.EmptyStatement;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
 import lombok.ast.EnumTypeBody;
+import lombok.ast.Expression;
 import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.For;
@@ -203,6 +204,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitIdentifier(Identifier node) {
+		parensOpen(node);
 		String name = node.getName();
 		if (name == null) name = FAIL + "NULL_IDENTIFIER" + FAIL;
 		else if (name.isEmpty()) name = FAIL + "EMPTY_IDENTIFIER" + FAIL;
@@ -211,65 +213,85 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildInline(node);
 		formatter.append(name);
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitIntegralLiteral(IntegralLiteral node) {
+		parensOpen(node);
 		String raw = node.getRawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {
+		parensOpen(node);
 		String raw = node.getRawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitBooleanLiteral(BooleanLiteral node) {
+		parensOpen(node);
 		String raw = node.getRawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitCharLiteral(CharLiteral node) {
+		parensOpen(node);
 		String raw = node.getRawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitStringLiteral(StringLiteral node) {
+		parensOpen(node);
 		String raw = node.getRawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitNullLiteral(NullLiteral node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.keyword("null");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
-
+	
+	private void parensOpen(Expression node) {
+		for (int i = 0; i < node.getIntendedParens(); i++) formatter.append("(");
+	}
+	
+	private void parensClose(Expression node) {
+		for (int i = 0; i < node.getIntendedParens(); i++) formatter.append(")");
+	}
+	
 	//Expressions
 	public boolean visitBinaryExpression(BinaryExpression node) {
-		boolean parens = node.needsParentheses();
-		if (parens) formatter.append("(");
+		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.nameNextElement("left");
 		visit(node.getRawLeft());
@@ -283,12 +305,14 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.nameNextElement("right");
 		visit(node.getRawRight());
 		formatter.closeInline();
-		if (parens) formatter.append(")");
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitUnaryExpression(UnaryExpression node) {
 		UnaryOperator op;
+		parensOpen(node);
+		
 		try {
 			op = node.getOperator();
 			if (op == null) throw new Exception();
@@ -296,22 +320,20 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			formatter.buildInline(node);
 			visit(node.getOperand());
 			formatter.closeInline();
+			parensClose(node);
 			return true;
 		}
-		boolean parens = node.needsParentheses();
-		if (parens) formatter.append("(");
 		formatter.buildInline(node);
 		if (!op.isPostfix()) formatter.operator(op.getSymbol());
 		visit(node.getOperand());
 		if (op.isPostfix()) formatter.operator(op.getSymbol());
 		formatter.closeInline();
-		if (parens) formatter.append(")");
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitCast(Cast node) {
-		boolean parens = node.needsParentheses();
-		if (parens) formatter.append("(");
+		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.append("(");
 		visit(node.getRawTypeReference());
@@ -319,13 +341,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.space();
 		visit(node.getRawOperand());
 		formatter.closeInline();
-		if (parens) formatter.append(")");
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
-		boolean parens = node.needsParentheses();
-		if (parens) formatter.append("(");
+		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.nameNextElement("condition");
 		visit(node.getRawCondition());
@@ -340,13 +361,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.nameNextElement("ifFalse");
 		visit(node.getRawIfFalse());
 		formatter.closeInline();
-		if (parens) formatter.append(")");
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitInstanceOf(InstanceOf node) {
-		boolean parens = node.needsParentheses();
-		if (parens) formatter.append("(");
+		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.nameNextElement("operand");
 		visit(node.getRawObjectReference());
@@ -356,11 +376,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.nameNextElement("type");
 		visit(node.getRawTypeReference());
 		formatter.closeInline();
-		if (parens) formatter.append(")");
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitConstructorInvocation(ConstructorInvocation node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		if (node.getRawQualifier() != null) {
 			formatter.nameNextElement("qualifier");
@@ -376,10 +397,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitMethodInvocation(MethodInvocation node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		if (node.getRawOperand() != null) {
 			formatter.nameNextElement("operand");
@@ -393,10 +416,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitSelect(Select node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		if (node.getRawOperand() != null) {
 			formatter.nameNextElement("operand");
@@ -406,20 +431,24 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.nameNextElement("selected");
 		visit(node.getRawIdentifier());
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitArrayAccess(ArrayAccess node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		visit(node.getRawOperand());
 		formatter.append("[");
 		visit(node.getRawIndexExpression());
 		formatter.append("]");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitArrayCreation(ArrayCreation node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.keyword("new");
 		formatter.space();
@@ -430,15 +459,18 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			visit(node.getRawInitializer());
 		}
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitArrayInitializer(ArrayInitializer node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.append("{");
 		visitAll(node.rawExpressions(), ", ", "", "");
 		formatter.append("}");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
@@ -452,15 +484,18 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitClassLiteral(ClassLiteral node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		visit(node.getRawTypeReference());
 		formatter.append(".");
 		formatter.keyword("class");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitSuper(Super node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		if (node.getRawQualifier() != null) {
 			visit(node.getRawQualifier());
@@ -468,10 +503,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		}
 		formatter.keyword("super");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	
 	public boolean visitThis(This node) {
+		parensOpen(node);
 		formatter.buildInline(node);
 		if (node.getRawQualifier() != null) {
 			visit(node.getRawQualifier());
@@ -479,6 +516,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		}
 		formatter.keyword("this");
 		formatter.closeInline();
+		parensClose(node);
 		return true;
 	}
 	

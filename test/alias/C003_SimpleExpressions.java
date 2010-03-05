@@ -3,12 +3,12 @@ class C003_SimpleExpressions {
         int primitive0=0;
         int primitive1 = primitive0;
         int unary1 =  - 1;
-        int unary2 = (~unary1);
+        int unary2 = ~ unary1  ;
         int unary3 = ++unary2;
         int unary4 = --unary3;
         int unary5 = unary2 ++;
         int unary6 = unary3--;
-        int unary7 = +(5);
+        int unary7 = + 5;
         int unary8 = + unary1;
         boolean unary9=!true;
         int unary10 =( int )1.1;
@@ -18,8 +18,8 @@ class C003_SimpleExpressions {
         int p3b =5 / 2;
         int p3c = 5 % 2;
         int p4a = 5 + 2;
-        int p4b = (5 - 2);
-        String p4c = ("a") + "b";
+        int p4b = 5 - 2;
+        String p4c = "a" + "b";
         String p4d = "a" + 10;
         String p4e = 10 + "b";
         int p5a = 5<<2;
