@@ -624,7 +624,14 @@ public class JcTreePrinter extends JCTree.Visitor {
 	
 	public void visitWildcard(JCWildcard tree) {
 		printNode(tree);
-		Object o = tree.kind;
+		Object o;
+		
+		try {
+			o = tree.getClass().getField("kind").get(tree);
+		} catch (Exception e) {
+			throw new RuntimeException("There's no field at all named 'kind' in JCWildcard? This is not a javac I understand.", e);
+		}
+		
 		if (o instanceof JCTree) {
 			child("kind", (JCTree)o);
 		} else if (o instanceof BoundKind) {
