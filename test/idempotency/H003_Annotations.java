@@ -1,4 +1,4 @@
-public @interface BasicStructure4Annotation {
+public @interface H003_Annotations {
     int value() default 10;
 }
 
@@ -9,5 +9,7 @@ public @interface BasicStructure4Annotation {
     
     Class<?> clazz() default Object.class;
     
-    BasicStructure4Annotation ann();
+    H003_Annotations ann();
+    
+    String[] v2() default {"a", "b", "c"};
 }

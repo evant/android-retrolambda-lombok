@@ -9,10 +9,12 @@ interface H001_Interfaces2 {
 
 interface H001_Interfaces3 {
     interface InnerInterface {
-        static interface innerInnerInterface {
+        static interface InnerInnerInterface {
         }
     }
     
     class InnerClass {
+        interface InnerClassInnerInterface {
+        }
     }
 }

@@ -55,9 +55,6 @@ public class JcTreeBuilderTest {
 		if (name.compareTo("D") > 0) {
 			return false;
 		}
-		if (name.startsWith("BasicStructure3") || name.startsWith("BasicStructure4")) {
-			return false;
-		}
 		
 		String javacString = convertToString(parseWithJavac(source));
 		String lombokString;

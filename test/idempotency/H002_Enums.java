@@ -1,4 +1,4 @@
-public enum BasicStructure3Enum implements java.util.RandomAccess {
+public enum H002_Enums implements java.util.RandomAccess {
     A,
     B,
     C
