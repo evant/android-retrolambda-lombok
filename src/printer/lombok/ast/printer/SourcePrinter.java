@@ -572,7 +572,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.keyword("for");
 		formatter.space();
 		formatter.append("(");
-		visitAll("init", node.rawInits(), ", ", "", "");
+		if (node.isVariableDeclarationBased()) {
+			formatter.nameNextElement("init");
+			visit(node.getRawVariableDeclaration());
+		} else {
+			visitAll("init", node.rawExpressionInits(), ", ", "", "");
+		}
 		formatter.append(";");
 		if (node.getRawCondition() != null) {
 			formatter.space();

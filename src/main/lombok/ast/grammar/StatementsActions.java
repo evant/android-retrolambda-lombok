@@ -125,13 +125,7 @@ public class StatementsActions extends SourceActions {
 	
 	public Node createBasicFor(Node init, Node condition, Node update, Node statement) {
 		For result = new For().setRawCondition(condition).setRawStatement(statement);
-		List<Node> inits, updates;
-		
-		if (init instanceof TemporaryNode.StatementExpressionList) {
-			inits = ((TemporaryNode.StatementExpressionList)init).expressions;
-		} else {
-			inits = Collections.singletonList(init);
-		}
+		List<Node> updates;
 		
 		if (update instanceof TemporaryNode.StatementExpressionList) {
 			updates = ((TemporaryNode.StatementExpressionList)update).expressions;
@@ -139,7 +133,12 @@ public class StatementsActions extends SourceActions {
 			updates = Collections.singletonList(update);
 		}
 		
-		for (Node n : inits) if (n != null) result.rawInits().addToEnd(n);
+		if (init instanceof TemporaryNode.StatementExpressionList) {
+			for (Node n : ((TemporaryNode.StatementExpressionList)init).expressions) result.rawExpressionInits().addToEnd(n);
+		} else {
+			result.setRawVariableDeclaration(init);
+		}
+		
 		for (Node n : updates) if (n != null) result.rawUpdates().addToEnd(n);
 		return posify(result);
 	}

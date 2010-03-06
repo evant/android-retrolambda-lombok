@@ -152,7 +152,7 @@ public class KeywordChecks {
 	public void localVariableModifiersCheck(VariableDefinition vd) {
 		boolean applies = vd.getParent() instanceof VariableDeclaration && vd.getParent().getParent() instanceof Block;
 		if (!applies) applies = vd.getParent() instanceof ForEach && ((ForEach)vd.getParent()).getRawVariable() == vd;
-		if (!applies) applies = vd.getParent() instanceof For && ((For)vd.getParent()).rawInits().contains(vd);
+		if (!applies) applies = vd.getParent() instanceof For && ((For)vd.getParent()).getRawVariableDeclaration() == vd;
 		if (!applies) return;
 		
 		modifiersCheck(vd.getRawModifiers(), new int[0], K_FINAL, "local variable declarations");

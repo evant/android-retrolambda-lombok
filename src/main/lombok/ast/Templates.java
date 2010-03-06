@@ -119,10 +119,21 @@ class WhileTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class ForTemplate {
-	List<Statement> inits;
+	List<Expression> expressionInits;
+	VariableDefinition variableDeclaration;
 	Expression condition;
-	List<Statement> updates;
+	List<Expression> updates;
 	@NonNull Statement statement;
+	
+	@CopyMethod
+	static boolean isVariableDeclarationBased(For self) {
+		return self.getRawVariableDeclaration() != null && self.rawExpressionInits().isEmpty();
+	}
+	
+	@CopyMethod
+	static boolean isStatementExpressionsBased(For self) {
+		return self.getRawVariableDeclaration() == null;
+	}
 }
 
 @GenerateAstNode(implementing=Statement.class)
