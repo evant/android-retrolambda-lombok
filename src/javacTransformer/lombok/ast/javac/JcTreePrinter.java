@@ -225,6 +225,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 		children("typarams", tree.typarams);
 		children("params", tree.params);
 		children("thrown", tree.thrown);
+		child("default", tree.defaultValue);
 		child("body", tree.body);
 		indent--;
 	}

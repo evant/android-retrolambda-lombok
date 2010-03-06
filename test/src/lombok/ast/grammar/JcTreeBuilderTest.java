@@ -52,9 +52,6 @@ public class JcTreeBuilderTest {
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
 		String name = source.getName();
-		if (name.compareTo("D004") > 0) {
-			return false;
-		}
 		
 		String javacString = convertToString(parseWithJavac(source));
 		String lombokString;

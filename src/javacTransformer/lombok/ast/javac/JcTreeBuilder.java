@@ -25,6 +25,9 @@ import java.util.EnumMap;
 import java.util.Map;
 
 import lombok.ast.Annotation;
+import lombok.ast.AnnotationDeclaration;
+import lombok.ast.AnnotationElement;
+import lombok.ast.AnnotationMethodDeclaration;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
 import lombok.ast.ArrayInitializer;
@@ -39,6 +42,7 @@ import lombok.ast.Cast;
 import lombok.ast.Catch;
 import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
+import lombok.ast.ClassLiteral;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.ConstructorInvocation;
@@ -84,6 +88,7 @@ import lombok.ast.This;
 import lombok.ast.Throw;
 import lombok.ast.Try;
 import lombok.ast.TypeArguments;
+import lombok.ast.TypeBody;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
@@ -111,9 +116,9 @@ import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCLiteral;
+import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
 import com.sun.tools.javac.tree.JCTree.JCStatement;
-import com.sun.tools.javac.tree.JCTree.JCSynchronized;
 import com.sun.tools.javac.tree.JCTree.JCTypeApply;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
@@ -236,24 +241,41 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitCompilationUnit(CompilationUnit node) {
-		JCExpression pkg = toExpression(node.getPackageDeclaration());
-		
+		List<JCTree> preamble = toList(JCTree.class, node.getPackageDeclaration());
 		List<JCTree> imports = toList(JCTree.class, node.importDeclarations());
 		List<JCTree> types = toList(JCTree.class, node.typeDeclarations());
 		
-		set(node, treeMaker.TopLevel(List.<JCAnnotation>nil(), pkg, imports.appendList(types)));
+		List<JCAnnotation> annotations = List.nil();
+		JCExpression pid = null;
+		
+		for (JCTree elem : preamble) {
+			if (elem instanceof JCAnnotation) {
+				annotations = annotations.append((JCAnnotation)elem);
+			} else if (elem instanceof JCExpression && pid == null) {
+				pid = (JCExpression) elem;
+			} else {
+				throw new RuntimeException("Unexpected element in preamble: " + elem);
+			}
+		}
+		
+		//TODO Test package annotations.
+		
+		set(node, treeMaker.TopLevel(annotations, pid, imports.appendList(types)));
 		return true;
 	}
 	
 	@Override
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
-		JCExpression pkg = chain(node.parts());
+		List<JCTree> defs = List.nil();
 		
-		for (Annotation annotation : node.annotations()){
-			// TODO Add implementation
+		for (Annotation annotation : node.annotations()) {
+			defs = defs.append(toTree(annotation));
 		}
 		
-		set(node, pkg);
+		//Actual package declaration
+		defs = defs.append(chain(node.parts()));
+		
+		set(defs);
 		return true;
 	}
 	
@@ -329,6 +351,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitEnumConstant(EnumConstant node) {
 		JCIdent parentType = treeMaker.Ident(toName(((EnumDeclaration)node.getParent().getParent()).getName()));
+		JCClassDecl body = (JCClassDecl) toTree(node.getBody());
+		if (body != null) body.mods.flags |= Flags.STATIC | Flags.ENUM;
 		set(node, treeMaker.VarDef(
 				treeMaker.Modifiers(ENUM_CONSTANT_FLAGS, toList(JCAnnotation.class, node.annotations())),
 				toName(node.getName()), 
@@ -338,9 +362,17 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 						List.<JCExpression>nil(),
 						parentType, 
 						toList(JCExpression.class, node.arguments()),
-						null
+						body
 				)
 		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitTypeBody(TypeBody node) {
+		//TODO Write a test with AICLs.
+		set(node, treeMaker.ClassDef(treeMaker.Modifiers(0), table.empty,
+				List.<JCTypeParameter>nil(), null, List.<JCExpression>nil(), toList(JCTree.class, node.members())));
 		return true;
 	}
 	
@@ -487,12 +519,18 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitMethodInvocation(MethodInvocation node) {
+		JCExpression methodId;
+		if (node.getOperand() == null) {
+			methodId = treeMaker.Ident(toName(node.getName()));
+		} else {
+			methodId = treeMaker.Select(
+					toExpression(node.getOperand()),
+					toName(node.getName()));
+		}
+		
 		set(node, treeMaker.Apply(
 				toList(JCExpression.class, node.getMethodTypeArguments()), 
-				treeMaker.Select(
-						toExpression(node.getOperand()),
-						toName(node.getName())
-				), 
+				methodId, 
 				toList(JCExpression.class, node.arguments())
 		));
 		return true;
@@ -660,6 +698,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		JCModifiers mods = (JCModifiers) toTree(node.getModifiers());
 		JCExpression vartype = toExpression(node.getTypeReference());
 		
+		if (node.isVarargs()) {
+			mods.flags |= Flags.VARARGS;
+			vartype = addDimensions(vartype, 1);
+		}
+		
 		List<JCVariableDecl> defs = List.nil();
 		for (VariableDefinitionEntry e : node.variables()) {
 			defs = defs.append(treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer())));
@@ -667,6 +710,58 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		if (defs.isEmpty()) throw new RuntimeException("Empty VariableDefinition node");
 		set(defs);
+		return true;
+	}
+	
+	@Override
+	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
+		JCModifiers modifiers = (JCModifiers) toTree(node.getModifiers());
+		modifiers.flags |= Flags.INTERFACE | Flags.ANNOTATION;
+		set(node, treeMaker.ClassDef(
+				modifiers,
+				toName(node.getName()),
+				List.<JCTypeParameter>nil(),
+				null,
+				List.<JCExpression>nil(),
+				node.getBody() == null ? List.<JCTree>nil() : toList(JCTree.class, node.getBody().members())
+		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
+		JCMethodDecl methodDef = treeMaker.MethodDef(
+				(JCModifiers)toTree(node.getModifiers()), 
+				toName(node.getMethodName()), 
+				toExpression(node.getReturnTypeReference()), 
+				List.<JCTypeParameter>nil(),
+				List.<JCVariableDecl>nil(),
+				List.<JCExpression>nil(),
+				null,
+				toExpression(node.getDefaultValue())
+		);
+		set(node, methodDef);
+		return true;
+	}
+	
+	@Override
+	public boolean visitClassLiteral(ClassLiteral node) {
+		set(node, treeMaker.Select((JCExpression) toTree(node.getTypeReference()), table._class));
+		return true;
+	}
+	
+	@Override public boolean visitAnnotation(Annotation node) {
+		List<JCExpression> args = List.nil();
+		for (AnnotationElement x : node.elements()) {
+			JCExpression arg;
+			
+			arg = toExpression(x.getValue());
+			if (x.getName() != null) {
+				arg = treeMaker.Assign((JCIdent) toTree(x.getName()), arg);
+			}
+			args = args.append(arg);
+		}
+		set(node, treeMaker.Annotation(toTree(node.getAnnotationTypeReference()), args));
 		return true;
 	}
 	
@@ -765,7 +860,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
-		set(node, treeMaker.MethodDef(
+		JCMethodDecl methodDef = treeMaker.MethodDef(
 				(JCModifiers)toTree(node.getModifiers()), 
 				toName(node.getMethodName()), 
 				toExpression(node.getReturnTypeReference()), 
@@ -774,13 +869,29 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				toList(JCExpression.class, node.thrownTypeReferences()), 
 				(JCBlock)toTree(node.getBody()), 
 				null
-		));
+		);
+		for (JCVariableDecl decl : methodDef.params) {
+			decl.mods.flags |= Flags.PARAMETER;
+		}
+		set(node, methodDef);
 		return true;
 	}
 	
 	@Override
 	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
-		set(node, dummy());
+		JCMethodDecl constrDef = treeMaker.MethodDef(
+				(JCModifiers)toTree(node.getModifiers()), 
+				table.init, null,
+				toList(JCTypeParameter.class, node.typeVariables()), 
+				toList(JCVariableDecl.class, node.parameters()), 
+				toList(JCExpression.class, node.thrownTypeReferences()), 
+				(JCBlock)toTree(node.getBody()), 
+				null
+		);
+		for (JCVariableDecl decl : constrDef.params) {
+			decl.mods.flags |= Flags.PARAMETER;
+		}
+		set(node, constrDef);
 		return true;
 	}
 	
