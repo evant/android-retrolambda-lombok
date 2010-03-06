@@ -190,7 +190,9 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createAnnotationFromElement(Node value) {
 		Annotation result = new Annotation();
-		if (value != null) result.rawElements().addToEnd(value);
+		if (value != null) {
+			result.rawElements().addToEnd(posify(new AnnotationElement().setRawValue(value)));
+		}
 		return posify(result);
 	}
 	
