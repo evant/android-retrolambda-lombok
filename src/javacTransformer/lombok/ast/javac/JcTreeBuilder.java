@@ -258,8 +258,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			}
 		}
 		
-		//TODO Test package annotations.
-		
 		set(node, treeMaker.TopLevel(annotations, pid, imports.appendList(types)));
 		return true;
 	}
@@ -370,7 +368,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitTypeBody(TypeBody node) {
-		//TODO Write a test with AICLs.
 		set(node, treeMaker.ClassDef(treeMaker.Modifiers(0), table.empty,
 				List.<JCTypeParameter>nil(), null, List.<JCExpression>nil(), toList(JCTree.class, node.members())));
 		return true;
@@ -462,8 +459,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitUnaryExpression(UnaryExpression node) {
 		Expression operand = node.getOperand();
 		UnaryOperator operator = node.getOperator();
-		if (operator == UnaryOperator.UNARY_MINUS && operand instanceof Literal) {
-			// TODO test -'a'
+		if (operator == UnaryOperator.UNARY_MINUS && operand instanceof Literal && !(operand instanceof CharLiteral)) {
 			JCLiteral result = (JCLiteral) toTree(operand);
 			result.value = negative(result.value);
 			set(node, result);
@@ -814,7 +810,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				} else {
 					throw new IllegalStateException("Didn't expect a " + part.getClass().getName() + " in " + node);
 				}
-				// TODO Handle type parameters somewhere in the middle
 			}
 		}
 		return previous;
