@@ -24,6 +24,7 @@ package lombok.ast.javac;
 import java.util.EnumMap;
 import java.util.Map;
 
+import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
@@ -82,6 +83,7 @@ import lombok.ast.Statement;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.StringLiteral;
+import lombok.ast.SuperConstructorInvocation;
 import lombok.ast.Switch;
 import lombok.ast.Synchronized;
 import lombok.ast.This;
@@ -467,6 +469,35 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		}
 		
 		set(node, treeMaker.Unary(UNARY_OPERATORS.get(operator), toExpression(operand)));
+		return true;
+	}
+	
+	@Override
+	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
+		set(node, treeMaker.Exec(treeMaker.Apply(
+				toList(JCExpression.class, node.getConstructorTypeArguments()), 
+				treeMaker.Ident(table._this),
+				toList(JCExpression.class, node.arguments()))
+		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitSuperConstructorInvocation(SuperConstructorInvocation node) {
+		JCExpression methodId;
+		if (node.getQualifier() == null) {
+			methodId = treeMaker.Ident(table._super);
+		} else {
+			methodId = treeMaker.Select(
+					toExpression(node.getQualifier()),
+					table._super);
+		}
+		
+		set(node, treeMaker.Exec(treeMaker.Apply(
+				toList(JCExpression.class, node.getConstructorTypeArguments()), 
+				methodId, 
+				toList(JCExpression.class, node.arguments()))
+		));
 		return true;
 	}
 	
