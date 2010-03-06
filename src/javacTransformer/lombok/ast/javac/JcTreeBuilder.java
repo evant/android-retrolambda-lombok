@@ -28,23 +28,32 @@ import lombok.ast.Annotation;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
 import lombok.ast.ArrayInitializer;
+import lombok.ast.Assert;
 import lombok.ast.BinaryExpression;
 import lombok.ast.BinaryOperator;
 import lombok.ast.Block;
 import lombok.ast.BooleanLiteral;
+import lombok.ast.Break;
 import lombok.ast.Cast;
 import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.ConstructorInvocation;
+import lombok.ast.Continue;
+import lombok.ast.DoWhile;
+import lombok.ast.EmptyStatement;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
 import lombok.ast.EnumTypeBody;
 import lombok.ast.Expression;
+import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
+import lombok.ast.For;
+import lombok.ast.ForEach;
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Identifier;
+import lombok.ast.If;
 import lombok.ast.ImportDeclaration;
 import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceInitializer;
@@ -52,6 +61,7 @@ import lombok.ast.InstanceOf;
 import lombok.ast.IntegralLiteral;
 import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
+import lombok.ast.LabelledStatement;
 import lombok.ast.Literal;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
@@ -86,6 +96,7 @@ import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
+import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCLiteral;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
@@ -134,6 +145,10 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private JCExpression toExpression(Node node) {
 		return (JCExpression)toTree(node);
+	}
+	
+	private JCStatement toStatement(Node node) {
+		return (JCStatement)toTree(node);
 	}
 	
 	private <T extends JCTree> List<T> toList(Class<T> type, StrictListAccessor<?, ?> accessor) {
@@ -267,6 +282,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	public boolean visitEmptyStatement(EmptyStatement node) {
+		set(node, treeMaker.Skip());
+		return true;
+	}
+	
 	@Override
 	public boolean visitEnumDeclaration(EnumDeclaration node) {
 		JCModifiers modifiers = (JCModifiers) toTree(node.getModifiers());
@@ -308,6 +328,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 						null
 				)
 		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitExpressionStatement(ExpressionStatement node) {
+		set(node, treeMaker.Exec(toExpression(node.getExpression())));
 		return true;
 	}
 	
@@ -517,6 +543,71 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			return -num.doubleValue();
 		}
 		throw new IllegalArgumentException("value should be an Integer, Long, Float or Double, not a " + value.getClass().getSimpleName());
+	}
+	
+	@Override
+	public boolean visitAssert(Assert node) {
+		set(node, treeMaker.Assert(toExpression(node.getAssertion()), toExpression(node.getMessage())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitBreak(Break node) {
+		set(node, treeMaker.Break(toName(node.getLabel())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitContinue(Continue node) {
+		set(node, treeMaker.Continue(toName(node.getLabel())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitDoWhile(DoWhile node) {
+		set(node, treeMaker.DoLoop(toStatement(node.getStatement()), toExpression(node.getCondition())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitFor(For node) {
+		List<JCStatement> inits;
+		List<JCExpressionStatement> updates;
+		
+		if (node.isVariableDeclarationBased()) {
+			inits = toList(JCStatement.class, node.getVariableDeclaration());
+		} else {
+			inits = List.nil();
+			for (JCExpression expr : toList(JCExpression.class, node.expressionInits())) {
+				inits = inits.append(treeMaker.Exec(expr));
+			}
+		}
+		
+		updates = List.nil();
+		for (JCExpression expr : toList(JCExpression.class, node.updates())) {
+			updates = updates.append(treeMaker.Exec(expr));
+		}
+		
+		set(node, treeMaker.ForLoop(inits, toExpression(node.getCondition()), updates, toStatement(node.getStatement())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitForEach(ForEach node) {
+		set(node, treeMaker.ForeachLoop((JCVariableDecl) toTree(node.getVariable()), toExpression(node.getIterable()), toStatement(node.getStatement())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitIf(If node) {
+		set(node, treeMaker.If(toExpression(node.getCondition()), toStatement(node.getStatement()), toStatement(node.getElseStatement())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitLabelledStatement(LabelledStatement node) {
+		set(node, treeMaker.Labelled(toName(node.getLabel()), toStatement(node.getStatement())));
+		return true;
 	}
 	
 	@Override
