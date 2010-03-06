@@ -83,6 +83,7 @@ import lombok.ast.Statement;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.StringLiteral;
+import lombok.ast.Super;
 import lombok.ast.SuperConstructorInvocation;
 import lombok.ast.Switch;
 import lombok.ast.Synchronized;
@@ -498,6 +499,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				methodId, 
 				toList(JCExpression.class, node.arguments()))
 		));
+		return true;
+	}
+	
+	@Override
+	public boolean visitSuper(Super node) {
+		set(node, treeMaker.Ident(table._super));
 		return true;
 	}
 	
