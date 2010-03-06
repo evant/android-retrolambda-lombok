@@ -91,6 +91,7 @@ public class KeywordChecks {
 		.put("strictfp", K_STRICTFP)
 		.put("synchronized", K_SYNCHRONIZED)
 		.put("abstract", K_ABSTRACT)
+		.put("static", K_STATIC)
 		.put("transient", K_TRANSIENT)
 		.put("volatile", K_VOLATILE)
 		.build();
@@ -184,10 +185,6 @@ public class KeywordChecks {
 		if (td.getParent() instanceof CompilationUnit) {
 			generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_PRIVATE, "private", "Top-level types cannot be private.");
 			staticWarningEmitted |= generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_STATIC, "static", "Top-level types cannot be static.");
-			
-			if ((flags & (K_PRIVATE | K_PROTECTED | K_PUBLIC)) == 0) {
-				problems.add(new SyntaxProblem(td, "Top-level types cannot be package private."));
-			}
 		} else if (td.getParent() instanceof Block) {
 			generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_PRIVATE, "private", "Method-local types cannot be private.");
 			generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_PROTECTED, "protected", "Method-local types cannot be protected.");
