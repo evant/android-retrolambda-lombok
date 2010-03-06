@@ -119,12 +119,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public JcTreeBuilder(Context context) {
 		this(TreeMaker.instance(context), Name.Table.instance(context));
 	}
-
+	
 	private JcTreeBuilder(TreeMaker treeMaker, Table table) {
 		this.treeMaker = treeMaker;
 		this.table = table;
 	}
-
+	
 	private Name toName(Identifier identifier) {
 		if (identifier == null) return null;
 		return table.fromString(identifier.getName());
@@ -136,8 +136,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		node.accept(visitor);
 		try {
 			return visitor.get();
-		}
-		catch (RuntimeException e) {
+		} catch (RuntimeException e) {
 			System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
 			throw e;
 		}
@@ -160,8 +159,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			JCTree value;
 			try {
 				value = visitor.get();
-			}
-			catch (RuntimeException e) {
+			} catch (RuntimeException e) {
 				System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
 				throw e;
 			}
@@ -195,7 +193,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (result != null) {
 			throw new IllegalStateException("result is already set");
 		}
-		 JCTree actualValue = value;
+		
+		JCTree actualValue = value;
 		if (node instanceof Expression) {
 			for (int i = 0; i < ((Expression)node).getIntendedParens(); i++) {
 				actualValue = treeMaker.Parens((JCExpression)actualValue);
@@ -205,9 +204,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private void set(List<? extends JCTree> values) {
-		if (result != null) {
-			throw new IllegalStateException("result is already set");
-		}
+		if (result != null) throw new IllegalStateException("result is already set");
 		result = values;
 	}
 	
@@ -226,7 +223,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		List<JCTree> imports = toList(JCTree.class, node.importDeclarations());
 		List<JCTree> types = toList(JCTree.class, node.typeDeclarations());
-
+		
 		set(node, treeMaker.TopLevel(List.<JCAnnotation>nil(), pkg, imports.appendList(types)));
 		return true;
 	}
@@ -252,7 +249,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		set(node, treeMaker.Import(name, node.isStaticImport()));
 		return true;
 	}
-	
 	
 	@Override
 	public boolean visitClassDeclaration(ClassDeclaration node) {
@@ -434,6 +430,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		BinaryOperator operator = node.getOperator();
 		JCExpression lhs = toExpression(node.getLeft());
 		JCExpression rhs = toExpression(node.getRight());
+		
 		if (operator == BinaryOperator.ASSIGN) {
 			set(node, treeMaker.Assign(lhs, rhs));
 			return true;
@@ -443,6 +440,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			set(node, treeMaker.Assignop(BINARY_OPERATORS.get(operator), lhs, rhs));
 			return true;
 		}
+		
 		if (operator == BinaryOperator.PLUS && lhs instanceof JCLiteral && rhs instanceof JCLiteral) {
 			JCLiteral left = (JCLiteral)lhs;
 			JCLiteral right = (JCLiteral)rhs;
@@ -500,8 +498,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		for (JCExpression e : toList(JCExpression.class, node.dimensions())) {
 			if (e == null) {
 				typeTrees++;
-			}
-			else {
+			} else {
 				dims = dims.append(e);
 			}
 		}
@@ -530,18 +527,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private static Object negative(Object value) {
 		Number num = (Number)value;
-		if (num instanceof Integer) {
-			return -num.intValue();
-		}
-		if (num instanceof Long) {
-			return -num.longValue();
-		}
-		if (num instanceof Float) {
-			return -num.floatValue();
-		}
-		if (num instanceof Double) {
-			return -num.doubleValue();
-		}
+		if (num instanceof Integer) return -num.intValue();
+		if (num instanceof Long) return -num.longValue();
+		if (num instanceof Float) return -num.floatValue();
+		if (num instanceof Double) return -num.doubleValue();
+		
 		throw new IllegalArgumentException("value should be an Integer, Long, Float or Double, not a " + value.getClass().getSimpleName());
 	}
 	
@@ -693,9 +683,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		}
 		
 		List<JCExpression> list = toList(JCExpression.class, node.parts());
-		if (list.size() == 1) {
-			return list.head;
-		}
+		if (list.size() == 1) return list.head;
 		
 		JCExpression previous = null;
 		for (JCExpression part : list) {
@@ -714,20 +702,20 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				// TODO Handle type parameters somewhere in the middle
 			}
 		}
-		return previous;	
+		return previous;
 	}
-
+	
 	private JCExpression addWildcards(JCExpression type, WildcardKind wildcardKind) {
-		if (wildcardKind == WildcardKind.NONE) {
+		switch (wildcardKind) {
+		case NONE:
 			return type;
-		}
-		if (wildcardKind == WildcardKind.EXTENDS) {
+		case EXTENDS:
 			return treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.EXTENDS), type);
-		}
-		if (wildcardKind == WildcardKind.SUPER) {
+		case SUPER:
 			return treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.SUPER), type);
+		default:
+			throw new IllegalStateException("Unexpected unbound wildcard: " + wildcardKind);
 		}
-		throw new IllegalStateException("Unexpected unbound wildcard");
 	}
 	
 	@Override
@@ -844,7 +832,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return primitive == null ? 0 : primitive;
 	}
 	
-	
 	private long getModifier(KeywordModifier keyword) {
 		return keyword.asReflectModifiers();
 	}
@@ -861,8 +848,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		}
 		return previous;
 	}
-
-	@SuppressWarnings("unused")
+	
+	@SuppressWarnings("all")
 	private JCTree dummy() {
 		return treeMaker.Ident(table.fromString("<dummy>"));
 	}
