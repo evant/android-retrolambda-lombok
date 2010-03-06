@@ -21,6 +21,16 @@
  */
 package lombok.ast;
 
+/**
+ * Implement this class and hand yourself to the {@link lombok.ast.Node#accept(AstVisitor)} method to get
+ * a specific method called for each type of {@code Node}.
+ * 
+ * For each method, return {@code true} to indicate you've handled the type, and {@code false} to
+ * indicate you haven't. The difference is: If you return {@code false} the children of the node
+ * you didn't handle get passed to the implementation of this class instead.
+ * 
+ * @see ForwardingAstVisitor
+ */
 public abstract class AstVisitor {
 	//Basics
 	public abstract boolean visitTypeReference(TypeReference node);

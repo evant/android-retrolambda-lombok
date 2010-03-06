@@ -21,6 +21,9 @@
  */
 package lombok.ast;
 
+/**
+ * Common interface shared by all type declaration nodes.
+ */
 public interface TypeDeclaration extends Node, DescribedNode {
 	Node getRawModifiers();
 	Modifiers getModifiers();

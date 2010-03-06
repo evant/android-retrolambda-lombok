@@ -22,8 +22,29 @@
 package lombok.ast;
 
 public interface Expression extends Node {
+	/**
+	 * Returns the actual amount of parentheses physically around this expression.
+	 * 
+	 * @see #getIntendedParens()
+	 */
 	int getParens();
+	
+	/**
+	 * Returns the same value as {@link #getParens()}, <i>unless</i> that method returns {@code 0},
+	 * and {@link #needsParentheses()} is {@code true}, then this method returns {@code 1}.
+	 */
 	int getIntendedParens();
+	
+	/**
+	 * @see #getParens()
+	 */
 	Expression setParens(int parens);
+	
+	/**
+	 * Returns {@code true} if the expression would need parentheses because without them the interpretation
+	 * of this node would be different, due to operator precedence rules.
+	 * 
+	 * @see #getIntendedParens()
+	 */
 	boolean needsParentheses();
 }

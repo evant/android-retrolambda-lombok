@@ -35,7 +35,20 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
 public @interface GenerateAstNode {
+	/**
+	 * By default AST nodes extend {@link lombok.ast.AbstractNode}, but you can pick a more specific subclass if you'd like.
+	 */
 	Class<?> extending() default Object.class;
+	
+	/**
+	 * List any interfaces this node is to implement.
+	 */
 	Class<?>[] implementing() default {};
+	
+	/**
+	 * A nifty feature that treats members in any listed type as virtually part of this node as well. You can include fields as well as
+	 * methods annotated with {@code @CopyMethod} in the mixed in types. Types in the original class (the one annotated with this {@code @GenerateAstNode}
+	 * annotation) win out over duplicates - like overriding.
+	 */
 	Class<?>[] mixin() default {};
 }

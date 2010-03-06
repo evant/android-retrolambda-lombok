@@ -81,6 +81,10 @@ import com.sun.tools.javac.tree.JCTree.LetExpr;
 import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.List;
 
+/**
+ * Diagnostic class that turns a {@code JCTree} (javac) based tree into a hierarchical dump that should make
+ * it easy to analyse the exact structure of the AST.
+ */
 public class JcTreePrinter extends JCTree.Visitor {
 	private final StringBuilder output = new StringBuilder();
 	private int indent;

@@ -30,10 +30,10 @@ import lombok.ast.SyntaxProblem;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
-public class LiteralValidityTests {
+public class LiteralValidityChecks {
 	private final List<SyntaxProblem> problems;
 	
-	public LiteralValidityTests(List<SyntaxProblem> problems) {
+	public LiteralValidityChecks(List<SyntaxProblem> problems) {
 		this.problems = problems;
 	}
 	

@@ -21,6 +21,10 @@
  */
 package lombok.ast;
 
+/**
+ * Like {@link AstVisitor} which this class extends; the difference is that in this class all methods are non-abstract and forward
+ * themselves to the {@link #visitNode(lombok.ast.Node)} which by default returns {@code false}, causing automatic traversal.
+ */
 public abstract class ForwardingAstVisitor extends AstVisitor {
 	public boolean visitNode(Node node) {
 		return false;

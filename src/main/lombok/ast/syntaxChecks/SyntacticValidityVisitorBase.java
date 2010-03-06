@@ -29,6 +29,10 @@ import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
 import lombok.ast.SyntaxProblem;
 
+/**
+ * The base class of {@code SyntacticValidityVisitor}, which is generated. Don't use this class, use
+ * the generated {@code SyntacticValidityVisitor}.
+ */
 public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 	final Map<Class<?>, Object> checkerObjectStore = new HashMap<Class<?>, Object>();
 	final boolean recursing;
