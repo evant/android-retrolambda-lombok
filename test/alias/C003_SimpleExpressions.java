@@ -10,6 +10,9 @@ class C003_SimpleExpressions {
         int unary6 = unary3--;
         int unary7 = + 5;
         int unary8 = + unary1;
+        char	
+        	theLetterA = 'b'-1;
+        int weird =- 'a';
         boolean unary9=!true;
         int unary10 =( int )1.1;
         Object constructor = new Object ( ) ;
