@@ -247,20 +247,22 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * P2
 	 */
 	Rule level2ExpressionChaining() {
-		return sequence(
-				zeroOrMore(sequence(
-						firstOf(
-								string("++"), string("--"),
-								ch('!'), ch('~'),
-								solitarySymbol('+'), solitarySymbol('-'),
-								sequence(
-										ch('('), group.basics.optWS(),
-										group.types.type(),
-										ch(')')).label("cast")
-								).label("operator"),
-						group.basics.optWS()).label("operatorCt")),
-				postfixIncrementExpressionChaining().label("operand"), SET(),
-				SET(actions.createUnaryPrefixExpression(NODE("operand"), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
+		return firstOf(
+				sequence(
+						zeroOrMore(sequence(
+								firstOf(
+										string("++"), string("--"),
+										ch('!'), ch('~'),
+										solitarySymbol('+'), solitarySymbol('-'),
+										sequence(
+												ch('('), group.basics.optWS(),
+												group.types.type(),
+												ch(')')).label("cast")
+										).label("operator"),
+								group.basics.optWS()).label("operatorCt")),
+						postfixIncrementExpressionChaining().label("operand"), SET(),
+						SET(actions.createUnaryPrefixExpression(NODE("operand"), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator")))),
+				sequence(postfixIncrementExpressionChaining(), SET()));
 	}
 	
 	/**
