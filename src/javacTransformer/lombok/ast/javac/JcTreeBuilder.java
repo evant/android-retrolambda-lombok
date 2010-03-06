@@ -156,18 +156,22 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			JcTreeBuilder visitor = create();
 			node.accept(visitor);
 			
-			JCTree value;
+			List<? extends JCTree> values;
+			
 			try {
-				value = visitor.get();
+				values = visitor.getAll();
+				if (values.size() == 0) throw new RuntimeException();
 			} catch (RuntimeException e) {
 				System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
 				throw e;
 			}
-				
-			if (value != null && !type.isInstance(value)) {
-				throw new ClassCastException(value.getClass().getName() + " cannot be cast to " + type.getName());
+			
+			for (JCTree value : values) {
+				if (value != null && !type.isInstance(value)) {
+					throw new ClassCastException(value.getClass().getName() + " cannot be cast to " + type.getName());
+				}
+				result = result.append(type.cast(value));
 			}
-			result = result.append(type.cast(value));
 		}
 		return result;
 	}
@@ -634,7 +638,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
-		set(node, toTree(node.getDefinition()));
+		set(toList(JCVariableDecl.class, node.getDefinition()));
 		return true;
 	}
 	
@@ -642,12 +646,15 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitVariableDefinition(VariableDefinition node) {
 		JCModifiers mods = (JCModifiers) toTree(node.getModifiers());
 		JCExpression vartype = toExpression(node.getTypeReference());
-		for (VariableDefinitionEntry e : node.variables()){
-			set(node, treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer())));
-			return true;
-			// TODO add multiple entries
+		
+		List<JCVariableDecl> defs = List.nil();
+		for (VariableDefinitionEntry e : node.variables()) {
+			defs = defs.append(treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer())));
 		}
-		throw new RuntimeException("expected some definitions...");
+		
+		if (defs.isEmpty()) throw new RuntimeException("Empty VariableDefinition node");
+		set(defs);
+		return true;
 	}
 	
 	@Override
