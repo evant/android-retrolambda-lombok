@@ -778,7 +778,7 @@ class KeywordModifierTemplate {
 		reflectModifiers.put("native", Modifier.NATIVE);
 		reflectModifiers.put("interface", Modifier.INTERFACE);
 		reflectModifiers.put("abstract", Modifier.ABSTRACT);
-		reflectModifiers.put("strict", Modifier.STRICT);
+		reflectModifiers.put("strictfp", Modifier.STRICT);
 		REFLECT_MODIFIERS = reflectModifiers;
 	}
 	
