@@ -196,9 +196,9 @@ public class SyntaxValidityCheckerGenerator {
 		if (!counterGenerated) out.write("int ");
 		out.write("counter = 0;\n");
 		
-		out.write("\t\tfor (Node child : node.");
-		out.write(field.getName());
-		out.write("().getRawContents()) {\n");
+		out.write("\t\tfor (Node child : node.raw");
+		out.write(field.titleCasedName());
+		out.write("()) {\n");
 		out.write("\t\t\tthis.checkChildValidity(node, child, \"");
 		out.write(field.getName());
 		out.write("[\" + counter++ + \"]\", true, ");
