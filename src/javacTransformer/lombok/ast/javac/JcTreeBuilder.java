@@ -784,18 +784,18 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return true;
 	}
 	
-	@Override public boolean visitAnnotation(Annotation node) {
-		List<JCExpression> args = List.nil();
-		for (AnnotationElement x : node.elements()) {
-			JCExpression arg;
-			
-			arg = toExpression(x.getValue());
-			if (x.getName() != null) {
-				arg = treeMaker.Assign((JCIdent) toTree(x.getName()), arg);
-			}
-			args = args.append(arg);
+	@Override
+	public boolean visitAnnotationElement(AnnotationElement node) {
+		JCExpression arg = toExpression(node.getValue());
+		if (node.getName() != null) {
+			arg = treeMaker.Assign((JCIdent) toTree(node.getName()), arg);
 		}
-		set(node, treeMaker.Annotation(toTree(node.getAnnotationTypeReference()), args));
+		set(node, arg);
+		return true;
+	}
+	
+	@Override public boolean visitAnnotation(Annotation node) {
+		set(node, treeMaker.Annotation(toTree(node.getAnnotationTypeReference()), toList(JCExpression.class, node.elements())));
 		return true;
 	}
 	
