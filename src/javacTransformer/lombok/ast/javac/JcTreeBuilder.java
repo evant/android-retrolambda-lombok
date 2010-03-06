@@ -34,13 +34,16 @@ import lombok.ast.BinaryOperator;
 import lombok.ast.Block;
 import lombok.ast.BooleanLiteral;
 import lombok.ast.Break;
+import lombok.ast.Case;
 import lombok.ast.Cast;
+import lombok.ast.Catch;
 import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.ConstructorInvocation;
 import lombok.ast.Continue;
+import lombok.ast.Default;
 import lombok.ast.DoWhile;
 import lombok.ast.EmptyStatement;
 import lombok.ast.EnumConstant;
@@ -71,9 +74,15 @@ import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.Return;
 import lombok.ast.Select;
+import lombok.ast.Statement;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.StringLiteral;
+import lombok.ast.Switch;
+import lombok.ast.Synchronized;
+import lombok.ast.This;
+import lombok.ast.Throw;
+import lombok.ast.Try;
 import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
@@ -83,6 +92,7 @@ import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
+import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
 import com.google.common.collect.ImmutableMap;
@@ -94,6 +104,8 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
+import com.sun.tools.javac.tree.JCTree.JCCase;
+import com.sun.tools.javac.tree.JCTree.JCCatch;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
@@ -101,6 +113,7 @@ import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCLiteral;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
 import com.sun.tools.javac.tree.JCTree.JCStatement;
+import com.sun.tools.javac.tree.JCTree.JCSynchronized;
 import com.sun.tools.javac.tree.JCTree.JCTypeApply;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
@@ -774,6 +787,87 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitReturn(Return node) {
 		set(node, treeMaker.Return(toExpression(node.getValue())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitSwitch(Switch node) {
+		List<JCCase> cases = List.nil();
+		
+		JCExpression currentPat = null;
+		List<JCStatement> stats = null;
+		boolean preamble = true;
+		
+		for (Statement s : node.getBody().contents()) {
+			if (s instanceof Case || s instanceof Default) {
+				JCExpression newPat = (s instanceof Default) ? null : toExpression(((Case)s).getCondition());
+				if (preamble) {
+					preamble = false;
+				} else {
+					cases = cases.append(treeMaker.Case(currentPat, stats));
+				}
+				stats = List.nil();
+				currentPat = newPat;
+			} else {
+				if (preamble) {
+					throw new RuntimeException("switch body does not start with default/case.");
+				}
+				stats = stats.append(toStatement(s));
+			}
+		}
+		
+		if (!preamble) cases = cases.append(treeMaker.Case(currentPat, stats));
+		
+		set(node, treeMaker.Switch(toExpression(node.getCondition()), cases));
+		return true;
+	}
+	
+	@Override
+	public boolean visitSynchronized(Synchronized node) {
+		set(node, treeMaker.Synchronized(toExpression(node.getLock()), (JCBlock)toTree(node.getBody()))); 
+		
+		return true;
+	}
+	
+	@Override
+	public boolean visitThis(This node) {
+		JCTree tree;
+		if (node.getQualifier() != null) {
+			tree = treeMaker.Select((JCExpression) toTree(node.getQualifier()), table._this);
+		} else {
+			tree = treeMaker.Ident(table._this);
+		}
+		set(node, tree);
+		return true;
+	}
+	
+	@Override
+	public boolean visitTry(Try node) {
+		JCBlock finalizer = null;
+		if (node.getFinally() != null) finalizer = (JCBlock) toTree(node.getFinally());
+		List<JCCatch> catches = toList(JCCatch.class, node.catches());
+		
+		set(node, treeMaker.Try((JCBlock) toTree(node.getBody()), catches, finalizer));
+		return true;
+	}
+	
+	@Override
+	public boolean visitCatch(Catch node) {
+		JCVariableDecl exceptionDeclaration = (JCVariableDecl) toTree(node.getExceptionDeclaration());
+		exceptionDeclaration.getModifiers().flags |= Flags.PARAMETER;
+		set(node, treeMaker.Catch(exceptionDeclaration, (JCBlock) toTree(node.getBody())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitThrow(Throw node) {
+		set(node, treeMaker.Throw(toExpression(node.getThrowable())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitWhile(While node) {
+		set(node, treeMaker.WhileLoop(toExpression(node.getCondition()), toStatement(node.getStatement())));
 		return true;
 	}
 	
