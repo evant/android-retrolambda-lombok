@@ -29,6 +29,7 @@ import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
 import lombok.ast.AnnotationMethodDeclaration;
+import lombok.ast.ArrayAccess;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
 import lombok.ast.ArrayInitializer;
@@ -813,6 +814,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		result = addDimensions(result, node.getArrayDimensions());
 		
 		set(node, result);
+		return true;
+	}
+	
+	@Override
+	public boolean visitArrayAccess(ArrayAccess node) {
+		set(node, treeMaker.Indexed(toExpression(node.getOperand()), toExpression(node.getIndexExpression())));
 		return true;
 	}
 	
