@@ -396,6 +396,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.append("(");
 		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
+		if (node.getRawAnonymousClassBody() != null) {
+			formatter.space();
+			formatter.startSuppressBlock();
+			visit(node.getRawAnonymousClassBody());
+			formatter.endSuppressBlock();
+		}
 		formatter.closeInline();
 		parensClose(node);
 		return true;
