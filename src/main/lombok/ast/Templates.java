@@ -46,6 +46,37 @@ class ExpressionMixin {
 	static boolean needsParentheses(Expression self) {
 		return false;
 	}
+	
+	@CopyMethod
+	static boolean isStatementExpression(Expression self) {
+		if (self instanceof MethodInvocation) return true;
+		if (self instanceof ConstructorInvocation) return true;
+		if (self instanceof BinaryExpression) {
+			try {
+				return ((BinaryExpression)self).getOperator().isAssignment();
+			} catch (Exception e) {
+				return false;
+			}
+		}
+		if (self instanceof UnaryExpression) {
+			try {
+				switch (((UnaryExpression)self).getOperator()) {
+				case POSTFIX_DECREMENT:
+				case POSTFIX_INCREMENT:
+				case PREFIX_DECREMENT:
+				case PREFIX_INCREMENT:
+					return true;
+				default:
+					return false;
+				}
+			} catch (Exception e) {
+				return false;
+			}
+		}
+		
+		return false;
+	}
+	
 }
 
 @GenerateAstNode(implementing=Statement.class)
