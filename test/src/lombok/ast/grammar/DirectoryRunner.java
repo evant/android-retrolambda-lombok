@@ -27,6 +27,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Map.Entry;
@@ -39,6 +40,8 @@ import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
+
+import com.google.common.collect.Lists;
 
 public class DirectoryRunner extends Runner {
 	private static final Comparator<Method> methodComparator = new Comparator<Method>() {
@@ -88,7 +91,8 @@ public class DirectoryRunner extends Runner {
 			//then we'll go on without one!
 		}
 		
-		File[] files = mirrorDirectory == null ? directory.listFiles() : mirrorDirectory.listFiles();
+		File root = mirrorDirectory == null ? directory : mirrorDirectory;
+		List<File> files = listFilesRecursively(root);
 		
 		Map<Method, Description> noFileNeededMap = new TreeMap<Method, Description>(methodComparator);
 		
@@ -96,7 +100,8 @@ public class DirectoryRunner extends Runner {
 			if (!file.getName().endsWith(".java")) continue;
 			Map<Method, Description> methodToDescMap = new TreeMap<Method, Description>(methodComparator);
 			
-			tests.put(file.getName(), methodToDescMap);
+			String fileName = root.toURI().relativize(file.toURI()).toString();
+			tests.put(fileName, methodToDescMap);
 			
 			for (Method m : testClass.getMethods()) {
 				if (m.getAnnotation(Test.class) != null) {
@@ -107,11 +112,27 @@ public class DirectoryRunner extends Runner {
 							noFileNeededMap.put(m, testDescription);
 						}
 					} else {
-						Description testDescription = Description.createTestDescription(testClass, m.getName() + ": " + file.getName());
+						Description testDescription = Description.createTestDescription(testClass, m.getName() + ": " + fileName);
 						description.addChild(testDescription);
 						methodToDescMap.put(m, testDescription);
 					}
 				}
+			}
+		}
+	}
+	
+	private List<File> listFilesRecursively(File directory) {
+		List<File> all = Lists.newArrayList();
+		listFilesRecursively(all, directory);
+		return all;
+	}
+	
+	private void listFilesRecursively(List<File> collector, File directory) {
+		for (File f : directory.listFiles()) {
+			if (f.isDirectory()) {
+				listFilesRecursively(collector, f);
+			} else {
+				collector.add(f);
 			}
 		}
 	}
