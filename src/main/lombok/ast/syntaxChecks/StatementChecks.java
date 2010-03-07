@@ -112,7 +112,9 @@ public class StatementChecks {
 		genError = !(p instanceof Block);
 		genError |= gp != null && !(gp instanceof Switch);
 		
-		problems.add(new SyntaxProblem(node, desc + " statements are only legal directly inside switch statements."));
+		if (genError) {
+			problems.add(new SyntaxProblem(node, desc + " statements are only legal directly inside switch statements."));
+		}
 	}
 	
 	public void checkSwitchStartsWithDefaultOrCase(Switch node) {
