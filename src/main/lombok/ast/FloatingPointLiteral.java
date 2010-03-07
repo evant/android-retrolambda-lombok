@@ -124,6 +124,7 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 			this.markedAsFloat = false;
 		} else {
 			this.rawValue = raw;
+			this.errorReasonForValue = null;
 			String v = raw.trim();
 			this.markedAsFloat = v.endsWith("F") || v.endsWith("f");
 			v = (markedAsFloat || v.endsWith("D") || v.endsWith("d")) ? raw.substring(0, raw.length()-1) : raw;

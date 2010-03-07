@@ -121,6 +121,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 			this.markedAsLong = false;
 		} else {
 			this.rawValue = raw;
+			this.errorReasonForValue = null;
 			String v = raw.trim();
 			this.markedAsLong = v.endsWith("L") || v.endsWith("l");
 			v = markedAsLong ? raw.substring(0, raw.length()-1) : raw;
@@ -141,8 +142,6 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 				}
 				if (!markedAsLong && (this.value.longValue() != this.value.intValue())) {
 					this.errorReasonForValue = "value too large to fit in 'int' type; add a suffix 'L' to fix this.";
-				} else {
-					this.errorReasonForValue = null;
 				}
 				this.literalType = newLT;
 			} catch (NumberFormatException e) {
