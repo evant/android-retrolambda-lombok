@@ -253,27 +253,43 @@ class ModifiersTemplate {
 	 */
 	@CopyMethod
 	static int getEffectiveModifierFlags(Modifiers m) {
-		int out = getExplicitModifierFlags(m);
-		if (m.getParent() instanceof TypeDeclaration && !(m.getParent() instanceof ClassDeclaration)) {
-			if (m.getParent().getParent() instanceof TypeDeclaration) out |= Modifier.STATIC;
-		}
+		int explicit = getExplicitModifierFlags(m);
+		int out = explicit;
+		Node container = m.getParent();
+		Node parent = container == null ? null : container.getParent();
 		
-		if (m.getParent() instanceof InterfaceDeclaration || m.getParent() instanceof AnnotationDeclaration) {
-			out |= Modifier.ABSTRACT;
-		}
-		
-		if (m.getParent() instanceof TypeDeclaration && m.getParent().getParent() instanceof CompilationUnit) {
+		// Interfaces and Enums can only be static by their very nature.
+		if (container instanceof TypeDeclaration && !(container instanceof ClassDeclaration)) {
 			out |= Modifier.STATIC;
 		}
 		
-		if (m.getParent() instanceof MethodDeclaration &&
-				(m.getParent().getParent() instanceof InterfaceDeclaration || m.getParent().getParent() instanceof AnnotationDeclaration) &&
-				(out & Modifier.STATIC) == 0) {
+		// We consider top-level types as static, because semantically that makes sense.
+		if (container instanceof ClassDeclaration && parent instanceof CompilationUnit) {
+			out |= Modifier.STATIC;
+		}
+		
+		boolean containerIsInterface = container instanceof InterfaceDeclaration ||
+				container instanceof AnnotationDeclaration;
+		boolean parentIsInterface = parent instanceof InterfaceDeclaration ||
+				parent instanceof AnnotationDeclaration;
+		
+		// We consider interfaces as abstract, because semantically that makes sense.
+		if (containerIsInterface) {
+			out |= Modifier.ABSTRACT;
+		}
+		
+		// Types in interfaces are always static.
+		if (container instanceof ClassDeclaration && parentIsInterface) {
+			out |= Modifier.STATIC;
+		}
+		
+		if (container instanceof MethodDeclaration &&
+				parentIsInterface && (explicit & Modifier.STATIC) == 0) {
+			
 			out |= Modifier.PUBLIC | Modifier.ABSTRACT;
 		}
 		
-		if (m.getParent() instanceof VariableDeclaration &&
-				(m.getParent().getParent() instanceof InterfaceDeclaration || m.getParent().getParent() instanceof AnnotationDeclaration)) {
+		if (container instanceof VariableDeclaration && parentIsInterface) {
 			out |= Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC;
 		}
 		
