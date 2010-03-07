@@ -93,6 +93,8 @@ public class StructuralChecks {
 				}
 				return;
 			}
+			
+			parent = parent.getParent();
 		}
 	}
 	
@@ -112,6 +114,8 @@ public class StructuralChecks {
 				problems.add(new SyntaxProblem(node, "Calling another constructor directly is only allowed inside other constructors."));
 				return;
 			}
+			
+			parent = parent.getParent();
 		}
 	}
 	
@@ -129,6 +133,8 @@ public class StructuralChecks {
 				}
 				return;
 			}
+			
+			parent = parent.getParent();
 		}
 	}
 	
