@@ -27,21 +27,30 @@ public class NullLiteral extends AbstractNode implements Literal, Expression {
 	private String errorReasonForValue = "Missing value";
 	private int parens;
 	
+	@Override
 	public NullLiteral setParens(int parens) {
 		this.parens = parens;
 		return this;
 	}
 	
+	@Override
 	public boolean needsParentheses() {
 		return false;
 	}
 	
+	@Override
 	public int getParens() {
 		return this.parens;
 	}
 	
+	@Override
 	public int getIntendedParens() {
 		return this.parens;
+	}
+	
+	@Override
+	public boolean isStatementExpression() {
+		return false;
 	}
 	
 	public NullLiteral setAsValid() {
@@ -79,11 +88,13 @@ public class NullLiteral extends AbstractNode implements Literal, Expression {
 		return errorReasonForValue == null;
 	}
 	
-	@Override public void accept(AstVisitor visitor) {
+	@Override
+	public void accept(AstVisitor visitor) {
 		visitor.visitNullLiteral(this);
 	}
 	
-	@Override public NullLiteral copy() {
+	@Override
+	public NullLiteral copy() {
 		NullLiteral result = new NullLiteral();
 		result.rawValue = rawValue;
 		result.errorReasonForValue = errorReasonForValue;

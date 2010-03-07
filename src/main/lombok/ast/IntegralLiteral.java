@@ -31,24 +31,34 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
 	private int parens;
 	
+	@Override
 	public IntegralLiteral setParens(int parens) {
 		this.parens = parens;
 		return this;
 	}
 	
+	@Override
 	public int getParens() {
 		return this.parens;
 	}
 	
+	@Override
 	public int getIntendedParens() {
 		return this.parens;
 	}
 	
+	@Override
 	public boolean needsParentheses() {
 		return false;
 	}
 	
-	@Override public String getDescription() {
+	@Override
+	public boolean isStatementExpression() {
+		return false;
+	}
+	
+	@Override
+	public String getDescription() {
 		return value != null ? String.valueOf(value) : null;
 	}
 	
@@ -64,7 +74,8 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		return this;
 	}
 	
-	@Override public IntegralLiteral copy() {
+	@Override
+	public IntegralLiteral copy() {
 		IntegralLiteral result = new IntegralLiteral();
 		result.value = value;
 		result.rawValue = rawValue;
@@ -164,7 +175,8 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		return value.intValue();
 	}
 	
-	@Override public String getRawValue() {
+	@Override
+	public String getRawValue() {
 		return rawValue;
 	}
 	
@@ -172,7 +184,8 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		if (value == null) throw new AstException(this, String.format("misformed integral literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
-	@Override public void accept(AstVisitor visitor) {
+	@Override
+	public void accept(AstVisitor visitor) {
 		visitor.visitIntegralLiteral(this);
 	}
 }

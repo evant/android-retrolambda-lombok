@@ -31,24 +31,34 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
 	private int parens;
 	
+	@Override
 	public FloatingPointLiteral setParens(int parens) {
 		this.parens = parens;
 		return this;
 	}
 	
+	@Override
 	public boolean needsParentheses() {
 		return false;
 	}
 	
+	@Override
 	public int getParens() {
 		return this.parens;
 	}
 	
+	@Override
 	public int getIntendedParens() {
 		return this.parens;
 	}
 	
-	@Override public String getDescription() {
+	@Override
+	public boolean isStatementExpression() {
+		return false;
+	}
+	
+	@Override
+	public String getDescription() {
 		return value != null ? String.valueOf(value) : null;
 	}
 	
@@ -65,7 +75,8 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		return this;
 	}
 	
-	@Override public FloatingPointLiteral copy() {
+	@Override
+	public FloatingPointLiteral copy() {
 		FloatingPointLiteral result = new FloatingPointLiteral();
 		result.value = value;
 		result.rawValue = result.rawValue;
@@ -151,7 +162,8 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		return value.floatValue();
 	}
 	
-	@Override public String getRawValue() {
+	@Override
+	public String getRawValue() {
 		return rawValue;
 	}
 	
@@ -159,7 +171,8 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 		if (value == null) throw new AstException(this, String.format("misformed floating point literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
-	@Override public void accept(AstVisitor visitor) {
+	@Override
+	public void accept(AstVisitor visitor) {
 		visitor.visitFloatingPointLiteral(this);
 	}
 }

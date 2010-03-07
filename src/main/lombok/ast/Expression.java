@@ -47,4 +47,10 @@ public interface Expression extends Node {
 	 * @see #getIntendedParens()
 	 */
 	boolean needsParentheses();
+	
+	/**
+	 * Returns true if the given expression is a valid statement expression.
+	 * Statement expressions can be executed as statements simply by appending a semicolon to them.
+	 */
+	boolean isStatementExpression();
 }
