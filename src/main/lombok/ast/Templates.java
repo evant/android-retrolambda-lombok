@@ -332,6 +332,11 @@ class ModifiersTemplate {
 	static boolean isAbstract(Modifiers m) {
 		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.ABSTRACT);
 	}
+	
+	@CopyMethod
+	static boolean isEmpty(Modifiers m) {
+		return m.rawKeywords().isEmpty() && m.rawAnnotations().isEmpty();
+	}
 }
 
 @GenerateAstNode(implementing={Statement.class, TypeMember.class})
