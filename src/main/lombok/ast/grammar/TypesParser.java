@@ -91,6 +91,23 @@ public class TypesParser extends BaseParser<Node> {
 				group.basics.optWS());
 	}
 	
+	public Rule plainReferenceType() {
+		return sequence(
+				plainReferenceTypePart().label("head"),
+				zeroOrMore(sequence(
+						ch('.'),
+						group.basics.optWS(),
+						referenceTypePart().label("tail"))),
+				SET(actions.createReferenceType(VALUE("head"), VALUES("zeroOrMore/sequence/tail"))));
+	}
+	
+	Rule plainReferenceTypePart() {
+		return sequence(
+				group.basics.identifier().label("partName"),
+				SET(actions.createTypeReferencePart(VALUE("partName"), null)),
+				group.basics.optWS());
+	}
+	
 	public Rule typeVariables() {
 		return optional(enforcedSequence(
 				ch('<'),

@@ -1,5 +1,6 @@
 class I001_Deprecated {
-    @Deprecated int x;
+    @Deprecated
+    int x;
     
     /**
      * @deprecated

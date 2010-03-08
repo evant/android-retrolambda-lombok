@@ -311,7 +311,7 @@ public class StructuresParser extends BaseParser<Node> {
 	public Rule annotation() {
 		return sequence(
 				ch('@'), group.basics.optWS(),
-				group.types.type().label("annotationType"),
+				group.types.plainReferenceType().label("annotationType"),
 				optional(enforcedSequence(
 						ch('('), group.basics.optWS(),
 						optional(firstOf(
