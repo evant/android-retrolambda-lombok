@@ -509,7 +509,13 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitSuper(Super node) {
-		set(node, treeMaker.Ident(table._super));
+		JCTree tree;
+		if (node.getQualifier() != null) {
+			tree = treeMaker.Select((JCExpression) toTree(node.getQualifier()), table._super);
+		} else {
+			tree = treeMaker.Ident(table._super);
+		}
+		set(node, tree);
 		return true;
 	}
 	
