@@ -73,11 +73,7 @@ public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 	
 	public static SyntaxProblem verifyNodeRelation(Node parent, Node child, String name, boolean mandatory, Class<?> typeAssertion) {
 		String typeAssertionName = typeAssertion.getSimpleName().toLowerCase();
-		boolean typeAssertionVowel = typeAssertionName.isEmpty();
-		if (!typeAssertionVowel) {
-			char c = typeAssertionName.charAt(0);
-			typeAssertionVowel = (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
-		}
+		boolean typeAssertionVowel = startsWithVowel(typeAssertionName);
 		
 		if (child == null) {
 			if (mandatory) {
@@ -86,13 +82,25 @@ public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 			}
 		} else {
 			if (!typeAssertion.isInstance(child)) {
+				String actualName = child.getClass().getSimpleName();
 				return new SyntaxProblem(parent, String.format(
-						"%s isn't a%s %s",
-						name, typeAssertionVowel ? "n" : "", typeAssertionName));
+						"%s isn't a%s %s but a%s %s",
+						name,
+						typeAssertionVowel ? "n" : "", typeAssertionName,
+						startsWithVowel(actualName) ? "n" : "", actualName));
 			}
 		}
 		
 		return null;
+	}
+	
+	private static boolean startsWithVowel(String typeAssertionName) {
+		boolean typeAssertionVowel = typeAssertionName.isEmpty();
+		if (!typeAssertionVowel) {
+			char c = typeAssertionName.charAt(0);
+			typeAssertionVowel = (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
+		}
+		return typeAssertionVowel;
 	}
 	
 	@Override public boolean visitParseArtefact(Node node) {
