@@ -28,9 +28,11 @@ import java.util.Map;
 import com.google.common.collect.ImmutableMap;
 
 import lombok.ast.AnnotationDeclaration;
+import lombok.ast.AnnotationMethodDeclaration;
 import lombok.ast.Block;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
+import lombok.ast.EmptyDeclaration;
 import lombok.ast.EnumDeclaration;
 import lombok.ast.For;
 import lombok.ast.ForEach;
@@ -71,17 +73,17 @@ public class KeywordChecks {
 		}
 	}
 	
-	private static final int K_PRIVATE      = 0x0001;
-	private static final int K_PROTECTED    = 0x0002;
-	private static final int K_PUBLIC       = 0x0004;
-	private static final int K_FINAL        = 0x0008;
-	private static final int K_NATIVE       = 0x0010;
-	private static final int K_STRICTFP     = 0x0020;
-	private static final int K_SYNCHRONIZED = 0x0040;
-	private static final int K_ABSTRACT     = 0x0080;
-	private static final int K_STATIC       = 0x0100;
-	private static final int K_TRANSIENT    = 0x0200;
-	private static final int K_VOLATILE     = 0x0400;
+	private static final int K_PUBLIC       = 0x0001;
+	private static final int K_PRIVATE      = 0x0002;
+	private static final int K_PROTECTED    = 0x0004;
+	private static final int K_STATIC       = 0x0008;
+	private static final int K_FINAL        = 0x0010;
+	private static final int K_SYNCHRONIZED = 0x0020;
+	private static final int K_VOLATILE     = 0x0040;
+	private static final int K_TRANSIENT    = 0x0080;
+	private static final int K_NATIVE       = 0x0100;
+	private static final int K_ABSTRACT     = 0x0400;
+	private static final int K_STRICTFP     = 0x0800;
 	private static final Map<String, Integer> TO_FLAG_MAP = ImmutableMap.<String, Integer>builder()
 		.put("private", K_PRIVATE)
 		.put("protected", K_PROTECTED)
@@ -136,6 +138,13 @@ public class KeywordChecks {
 	public void methodModifiersCheck(MethodDeclaration md) {
 		modifiersCheck(md.getRawModifiers(),
 				METHOD_MODIFIERS_EXCLUSIVITY, METHOD_MODIFIERS_LEGAL, "method declarations");
+		checkStaticChain(md.getRawModifiers());
+	}
+	
+	public void annotationMethodModifiersCheck(AnnotationMethodDeclaration md) {
+		modifiersCheck(md.getRawModifiers(),
+				METHOD_MODIFIERS_EXCLUSIVITY, METHOD_MODIFIERS_LEGAL & ~K_STRICTFP,
+				"annotation method declarations");
 		checkStaticChain(md.getRawModifiers());
 	}
 	
@@ -227,11 +236,17 @@ public class KeywordChecks {
 	
 	private int modifiersCheck(Node rawModifiers, int[] exclusivity, int legality, String desc) {
 		if (!(rawModifiers instanceof Modifiers)) return 0;
-		int flags = 0;
+		Modifiers modifiers = (Modifiers) rawModifiers;
+		int flags = modifiers.getEffectiveModifierFlags();
+		int implicits = flags & ~modifiers.getExplicitModifierFlags();
+		
 		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 			if (n instanceof KeywordModifier) {
 				String k = ((KeywordModifier)n).getName();
-				if (k == null || k.isEmpty()) continue;
+				if (k == null || k.isEmpty()) {
+					problems.add(new SyntaxProblem(n, "Empty/null modifier."));
+				}
+				
 				if (!TO_FLAG_MAP.containsKey(k)) {
 					problems.add(new SyntaxProblem(n, "Unknown modifier: " + k));
 					continue;
@@ -249,7 +264,7 @@ public class KeywordChecks {
 		
 		for (int exclusive : exclusivity) {
 			if ((flags & exclusive) == exclusive) {
-				generateExclusivityError(exclusive, rawModifiers);
+				generateExclusivityError(implicits, exclusive, rawModifiers);
 			}
 		}
 		
@@ -273,25 +288,56 @@ public class KeywordChecks {
 		return false;
 	}
 	
-	private void generateExclusivityError(int exclusive, Node rawModifiers) {
+	public void emptyDeclarationMustHaveNoModifiers(EmptyDeclaration node) {
+		Node rawModifiers = node.getRawModifiers();
+		if (!(rawModifiers instanceof Modifiers)) return;
+		Modifiers modifiers = (Modifiers)rawModifiers;
+		
+		if (!modifiers.keywords().isEmpty() || !modifiers.annotations().isEmpty()) {
+			problems.add(new SyntaxProblem(node, "Empty Declarations cannot have modifiers."));
+		}
+	}
+	
+	private void generateExclusivityError(int implicit, int exclusive, Node rawModifiers) {
 		if (!(rawModifiers instanceof Modifiers)) return;
 		
 		String hit = null;
 		
-		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
-			if (n instanceof KeywordModifier) {
-				String k = ((KeywordModifier)n).getName();
-				if (!TO_FLAG_MAP.containsKey(k)) continue;
-				int f = TO_FLAG_MAP.get(k);
-				if ((f & exclusive) == 0) continue;
-				
-				if (hit == null) {
-					hit = k;
-					continue;
+		int responsibleImplicit = implicit & exclusive;
+		
+		if (responsibleImplicit != 0) {
+			String nameOfResponsibleImplicit = "(unknown)";
+			for (Map.Entry<String, Integer> x : TO_FLAG_MAP.entrySet()) {
+				if (x.getValue() == responsibleImplicit) nameOfResponsibleImplicit = x.getKey();
+			}
+			
+			for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
+				if (n instanceof KeywordModifier) {
+					String k = ((KeywordModifier)n).getName();
+					if (!TO_FLAG_MAP.containsKey(k)) continue;
+					int f = TO_FLAG_MAP.get(k);
+					if ((f & exclusive) == 0) continue;
+					
+					problems.add(new SyntaxProblem(n, String.format(
+							"Modifier %s cannot be used together with %s here", k, nameOfResponsibleImplicit)));
 				}
-				
-				problems.add(new SyntaxProblem(n, String.format(
-						"Modifier %s cannot be used together with %s here", k, hit)));
+			}
+		} else {
+			for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
+				if (n instanceof KeywordModifier) {
+					String k = ((KeywordModifier)n).getName();
+					if (!TO_FLAG_MAP.containsKey(k)) continue;
+					int f = TO_FLAG_MAP.get(k);
+					if ((f & exclusive) == 0) continue;
+					
+					if (hit == null) {
+						hit = k;
+						continue;
+					}
+					
+					problems.add(new SyntaxProblem(n, String.format(
+							"Modifier %s cannot be used together with %s here", k, hit)));
+				}
 			}
 		}
 	}
