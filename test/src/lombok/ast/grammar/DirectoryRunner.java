@@ -127,8 +127,23 @@ public class DirectoryRunner extends Runner {
 		return all;
 	}
 	
+	private static final Comparator<File> FILE_SORTER = new Comparator<File>() {
+		@Override
+		public int compare(File o1, File o2) {
+			boolean dir1 = o1.isDirectory();
+			boolean dir2 = o2.isDirectory();
+			
+			if (dir1 == dir2) {
+				return o1.getName().compareTo(o2.getName());
+			}
+			return dir1 ? 1 : -1;
+		}
+	};
+	
 	private void listFilesRecursively(List<File> collector, File directory) {
-		for (File f : directory.listFiles()) {
+		File[] listFiles = directory.listFiles();
+		Arrays.sort(listFiles, FILE_SORTER);
+		for (File f : listFiles) {
 			if (f.isDirectory()) {
 				listFilesRecursively(collector, f);
 			} else {
