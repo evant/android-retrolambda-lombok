@@ -2,6 +2,8 @@ class D002_Switch {
     {
         int i = 0;
         switch (i) {
+        }
+        switch (i) {
         default:
             ;
         }
