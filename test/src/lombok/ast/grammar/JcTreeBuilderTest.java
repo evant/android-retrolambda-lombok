@@ -21,7 +21,7 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,40 +51,49 @@ public class JcTreeBuilderTest {
 	
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
-		String name = source.getName();
-		
 		String javacString = convertToString(parseWithJavac(source));
+
+		source.parseCompilationUnit();
+		if (!source.getProblems().isEmpty()) {
+			StringBuilder message = new StringBuilder();
+			for (ParseProblem p : source.getProblems()) {
+				message.append(p.toString());
+				message.append("\n");
+			}
+			printDebugInformation(source, javacString, null);
+			fail(message.toString());
+		}
+		
 		String lombokString;
 		try {
 			lombokString = convertToString(parseWithLombok(source));
 		} catch (Exception e) {
-			System.out.printf("==== Processing %s ====\n", name);
-			System.out.println(source.getRawInput());
-			System.out.println("=========== Expected ============");
-			System.out.println(javacString);
-			System.out.printf("======= End of %s =======\n", name);
+			printDebugInformation(source, javacString, null);
 			throw e;
 		} catch (Error e) {
-			System.out.printf("==== Processing %s ====\n", name);
-			System.out.println(source.getRawInput());
-			System.out.println("=========== Expected ============");
-			System.out.println(javacString);
-			System.out.printf("======= End of %s =======\n", name);
+			printDebugInformation(source, javacString, null);
 			throw e;
 		}
 		
 		if (!javacString.equals(lombokString)) {
-			System.out.printf("==== Processing %s ====\n", name);
-			System.out.println(source.getRawInput());
-			System.out.println("=========== Expected ============");
-			System.out.println(javacString);
-			System.out.println("============ Actual =============");
-			System.out.println(lombokString);
-			System.out.printf("======= End of %s =======\n", name);
+			printDebugInformation(source, javacString, lombokString);
 		}
 		
 		assertEquals(javacString, lombokString);
 		return true;
+	}
+
+	private void printDebugInformation(Source source, String javacString, String lombokString) {
+		String name = source.getName();
+		System.out.printf("==== Processing %s ====\n", name);
+		System.out.println(source.getRawInput());
+		System.out.println("=========== Expected ============");
+		System.out.println(javacString);
+		if (lombokString != null) {
+			System.out.println("============ Actual =============");
+			System.out.println(lombokString);
+		}
+		System.out.printf("======= End of %s =======\n", name);
 	}
 	
 	private String convertToString(JCTree tree) {
@@ -95,7 +104,6 @@ public class JcTreeBuilderTest {
 	}
 	
 	private static JCTree parseWithLombok(Source source) {
-		source.parseCompilationUnit();
 		List<Node> nodes = source.getNodes();
 		assertEquals(1, nodes.size());
 		Context context = new Context();
