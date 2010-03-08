@@ -21,6 +21,8 @@
  */
 package lombok.ast;
 
+import java.math.BigInteger;
+
 import lombok.Getter;
 
 public class IntegralLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
@@ -124,6 +126,9 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		}
 	}
 	
+	private static final BigInteger MAX_LONG = new BigInteger("FFFFFFFFFFFFFFFF", 0x10);
+	private static final BigInteger MAX_INT = new BigInteger("FFFFFFFF", 0x10);
+	
 	public IntegralLiteral setRawValue(String raw) {
 		if (raw == null) {
 			this.rawValue = null;
@@ -134,22 +139,41 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 			this.rawValue = raw;
 			this.errorReasonForValue = null;
 			String v = raw.trim();
+			if (v.startsWith("-")) {
+				this.errorReasonForValue = "Integral literals can't start with -; wrap them in a UnaryExpression: " + v;
+				this.value = null;
+				return this;
+			}
 			this.markedAsLong = v.endsWith("L") || v.endsWith("l");
 			v = markedAsLong ? raw.substring(0, raw.length()-1) : raw;
 			LiteralType newLT;
 			try {
+				int radix;
+				boolean noNegatives = false;
 				if (v.startsWith("0x")) {
-					this.value = Long.parseLong(v.substring(2), 0x10);
 					newLT = LiteralType.HEXADECIMAL;
-				} else if (v.equals("0")) {
-					this.value = 0L;
-					newLT = LiteralType.DECIMAL;
-				} else if (v.startsWith("0")) {
-					this.value = Long.parseLong(v, 010);	//010 = octal 8.
+					radix = 0x10;
+					noNegatives = true;
+				} else if (v.startsWith("0") && v.length() > 1) {
 					newLT = LiteralType.OCTAL;
+					radix = 010;
+					noNegatives = true;
 				} else {
-					this.value = Long.parseLong(v, 10);
 					newLT = LiteralType.DECIMAL;
+					radix = 10;
+				}
+				
+				if (this.markedAsLong && noNegatives) {
+					BigInteger parsed = new BigInteger(v.substring(2), radix);
+					if (parsed.compareTo(markedAsLong ? MAX_LONG : MAX_INT) > 0) {
+						this.errorReasonForValue = (markedAsLong ? "Long" : "Int") + " Literal too large: " + v;
+						this.value = null;
+						return this;
+					} else {
+						this.value = parsed.longValue();
+					}
+				} else {
+					this.value = Long.parseLong(v, radix);
 				}
 				if (!markedAsLong && (this.value.longValue() != this.value.intValue())) {
 					this.errorReasonForValue = "value too large to fit in 'int' type; add a suffix 'L' to fix this.";
@@ -157,7 +181,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 				this.literalType = newLT;
 			} catch (NumberFormatException e) {
 				this.value = null;
-				this.errorReasonForValue = "Not a valid integral literal: " + raw.trim();
+				this.errorReasonForValue = "Not a valid integral literal: " + v;
 			}
 		}
 		
