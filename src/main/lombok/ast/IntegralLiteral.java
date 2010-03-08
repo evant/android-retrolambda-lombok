@@ -127,7 +127,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	}
 	
 	private static final BigInteger MAX_LONG = new BigInteger("FFFFFFFFFFFFFFFF", 0x10);
-	private static final BigInteger MAX_INT = new BigInteger("FFFFFFFF", 0x10);
+	private static final long MAX_INT = 0xFFFFFFFFL;
 	
 	public IntegralLiteral setRawValue(String raw) {
 		if (raw == null) {
@@ -169,8 +169,8 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 				
 				if (this.markedAsLong && noNegatives) {
 					BigInteger parsed = new BigInteger(v.substring(prefix), radix);
-					if (parsed.compareTo(markedAsLong ? MAX_LONG : MAX_INT) > 0) {
-						this.errorReasonForValue = (markedAsLong ? "Long" : "Int") + " Literal too large: " + v;
+					if (parsed.compareTo(MAX_LONG) > 0) {
+						this.errorReasonForValue = "Long Literal too large: " + v;
 						this.value = null;
 						return this;
 					} else {
@@ -178,9 +178,19 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 					}
 				} else {
 					this.value = Long.parseLong(v.substring(prefix), radix);
-				}
-				if (!markedAsLong && (this.value.longValue() != this.value.intValue())) {
-					this.errorReasonForValue = "value too large to fit in 'int' type; add a suffix 'L' to fix this.";
+					if (noNegatives) { //not marked as long
+						if (this.value > MAX_INT) {
+							this.errorReasonForValue = "Int Literal too large: " + v;
+							this.value = null;
+							return this;
+						}
+					} else if (!this.markedAsLong) {
+						if (this.value > Integer.MAX_VALUE) {
+							this.errorReasonForValue = "Int Literal too large: " + v;
+							this.value = null;
+							return this;
+						}
+					}
 				}
 				this.literalType = newLT;
 			} catch (NumberFormatException e) {
@@ -199,7 +209,6 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	
 	public int intValue() throws AstException {
 		checkValueExists();
-		if (value.longValue() != value.intValue()) throw new AstException(this, String.format("integral literal doesn't fit in 'int' type: %s", rawValue));
 		return value.intValue();
 	}
 	

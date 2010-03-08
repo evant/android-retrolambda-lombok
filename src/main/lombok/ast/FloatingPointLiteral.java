@@ -139,13 +139,18 @@ public class FloatingPointLiteral extends AbstractNode implements Literal, Expre
 			String v = raw.trim();
 			this.markedAsFloat = v.endsWith("F") || v.endsWith("f");
 			v = (markedAsFloat || v.endsWith("D") || v.endsWith("d")) ? raw.substring(0, raw.length()-1) : raw;
+			if (v.startsWith("-")) {
+				this.errorReasonForValue = "Floating Point literals can't start with -; wrap them in a UnaryExpression: " + v;
+				this.value = null;
+				return this;
+			}
 			try {
 				//We double-checked the code - Double.parseDouble will parse exactly everything that is legal according to the JLS!
 				value = Double.parseDouble(v);
 				literalType = (v.startsWith("0x") || v.startsWith("0X")) ? LiteralType.HEXADECIMAL : LiteralType.DECIMAL;
 			} catch (NumberFormatException e) {
 				this.value = null;
-				this.errorReasonForValue = "Not a valid floating point literal: " + raw.trim();
+				this.errorReasonForValue = "Not a valid floating point literal: " + v;
 			}
 		}
 		
