@@ -150,21 +150,25 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 			try {
 				int radix;
 				boolean noNegatives = false;
+				int prefix;
 				if (v.startsWith("0x")) {
 					newLT = LiteralType.HEXADECIMAL;
 					radix = 0x10;
 					noNegatives = true;
+					prefix = 2;
 				} else if (v.startsWith("0") && v.length() > 1) {
 					newLT = LiteralType.OCTAL;
 					radix = 010;
 					noNegatives = true;
+					prefix = 1;
 				} else {
 					newLT = LiteralType.DECIMAL;
 					radix = 10;
+					prefix = 0;
 				}
 				
 				if (this.markedAsLong && noNegatives) {
-					BigInteger parsed = new BigInteger(v.substring(2), radix);
+					BigInteger parsed = new BigInteger(v.substring(prefix), radix);
 					if (parsed.compareTo(markedAsLong ? MAX_LONG : MAX_INT) > 0) {
 						this.errorReasonForValue = (markedAsLong ? "Long" : "Int") + " Literal too large: " + v;
 						this.value = null;
@@ -173,7 +177,7 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 						this.value = parsed.longValue();
 					}
 				} else {
-					this.value = Long.parseLong(v, radix);
+					this.value = Long.parseLong(v.substring(prefix), radix);
 				}
 				if (!markedAsLong && (this.value.longValue() != this.value.intValue())) {
 					this.errorReasonForValue = "value too large to fit in 'int' type; add a suffix 'L' to fix this.";
