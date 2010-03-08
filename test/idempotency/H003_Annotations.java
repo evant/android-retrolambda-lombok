@@ -9,7 +9,7 @@ public @interface H003_Annotations {
     
     Class<?> clazz() default Object.class;
     
-    H003_Annotations ann();
+    public abstract H003_Annotations ann();
     
     String[] v2() default {"a", "b", "c"};
 }
