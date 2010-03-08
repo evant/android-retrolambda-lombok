@@ -997,11 +997,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitTry(Try node) {
-		JCBlock finalizer = null;
-		if (node.getFinally() != null) finalizer = (JCBlock) toTree(node.getFinally());
 		List<JCCatch> catches = toList(JCCatch.class, node.catches());
 		
-		set(node, treeMaker.Try((JCBlock) toTree(node.getBody()), catches, finalizer));
+		set(node, treeMaker.Try((JCBlock) toTree(node.getBody()), catches, (JCBlock) toTree(node.getFinally())));
 		return true;
 	}
 	
