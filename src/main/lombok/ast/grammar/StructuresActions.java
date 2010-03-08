@@ -31,6 +31,7 @@ import lombok.ast.ArrayInitializer;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
+import lombok.ast.EmptyDeclaration;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
 import lombok.ast.EnumTypeBody;
@@ -356,5 +357,9 @@ public class StructuresActions extends SourceActions {
 		if (tail != null) for (Node n : tail) if (n != null) decl.rawParameters().addToEnd(n);
 		
 		return decl;
+	}
+
+	public Node createEmptyDeclaration() {
+		return posify(new EmptyDeclaration());
 	}
 }

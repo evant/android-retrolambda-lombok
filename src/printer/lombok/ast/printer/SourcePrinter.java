@@ -49,6 +49,7 @@ import lombok.ast.ConstructorInvocation;
 import lombok.ast.Continue;
 import lombok.ast.Default;
 import lombok.ast.DoWhile;
+import lombok.ast.EmptyDeclaration;
 import lombok.ast.EmptyStatement;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
@@ -1298,6 +1299,14 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		else
 			formatter.append(node.getContent());
 		if (node.isBlockComment()) formatter.append("*/");
+		formatter.closeBlock();
+		return true;
+	}
+
+	@Override
+	public boolean visitEmptyDeclaration(EmptyDeclaration node) {
+		formatter.buildBlock(node);
+		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}

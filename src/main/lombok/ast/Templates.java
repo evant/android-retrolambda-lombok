@@ -1179,6 +1179,21 @@ class AnnotationDeclarationTemplate {
 	}
 }
 
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+class EmptyDeclarationTemplate {
+	@InitialValue("adopt(new lombok.ast.Modifiers())")
+	@NonNull Modifiers modifiers;
+
+	@CopyMethod
+	static String getDescription(EmptyDeclaration self) {
+		try {
+			return ";";
+		} catch (Exception e) {
+			return null;
+		}
+	}
+}
+
 @GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class})
 class ClassDeclarationTemplate {
 	@InitialValue("adopt(new lombok.ast.Modifiers())")

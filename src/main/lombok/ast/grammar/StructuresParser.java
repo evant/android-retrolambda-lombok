@@ -52,9 +52,13 @@ public class StructuresParser extends BaseParser<Node> {
 						constructorDeclaration(),
 						staticInitializer(),
 						instanceInitializer(),
-						sequence(ch(';'), group.basics.optWS())
+						emptyDeclaration()
 						).label("member")).label("members"),
 				SET(actions.createTypeBody(VALUES("members/member"))));
+	}
+	
+	Rule emptyDeclaration() {
+		return sequence(ch(';'), group.basics.optWS(), SET(actions.createEmptyDeclaration()));
 	}
 	
 	public Rule methodArguments() {
@@ -78,7 +82,7 @@ public class StructuresParser extends BaseParser<Node> {
 				classOrInterfaceDeclaration(),
 				enumDeclaration(),
 				annotationDeclaration(),
-				sequence(ch(';'), group.basics.optWS()));
+				emptyDeclaration());
 	}
 	
 	public Rule classOrInterfaceDeclaration() {

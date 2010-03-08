@@ -51,6 +51,7 @@ import lombok.ast.ConstructorInvocation;
 import lombok.ast.Continue;
 import lombok.ast.Default;
 import lombok.ast.DoWhile;
+import lombok.ast.EmptyDeclaration;
 import lombok.ast.EmptyStatement;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
@@ -1020,6 +1021,16 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitWhile(While node) {
 		set(node, treeMaker.WhileLoop(toExpression(node.getCondition()), toStatement(node.getStatement())));
+		return true;
+	}
+	
+	@Override
+	public boolean visitEmptyDeclaration(EmptyDeclaration node) {
+		if (node.getParent() instanceof CompilationUnit) {
+			set(node, treeMaker.Skip());
+		} else {
+			set(node, treeMaker.Block(0, List.<JCStatement>nil()));
+		}
 		return true;
 	}
 	
