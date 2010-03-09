@@ -1,9 +1,11 @@
 <project name="lombok.ast-contrib">
 	<property name="junit-src-name" value="junit-4.8.1-src.jar" />
 	<property name="javac-src-name" value="javac-sources.zip" />
+	<property name="ecj-src-name" value="ecjsrc-3.5.2.zip" />
 	<available property="jls-available" file="contrib/jls/j3TOC.html" />
 	<available property="junit-src-available" file="contrib/${junit-src-name}" />
 	<available property="javac-src-available" file="contrib/${javac-src-name}" />
+	<available property="ecj-src-available" file="contrib/${ecj-src-name}" />
 	
 	<condition property="google-collections-src-available">
 		<and>
@@ -12,7 +14,7 @@
 		</and>
 	</condition>
 	
-	<target name="contrib" depends="jls, junit-src, javac-src, google-collections-src" />
+	<target name="contrib" depends="jls, junit-src, javac-src, google-collections-src, ecj-src" />
 	
 	<target name="jls" unless="jls-available">
 		<mkdir dir="contrib/jls" />
@@ -27,6 +29,10 @@
 	
 	<target name="javac-src" unless="javac-src-available">
 		<get src="http://projectlombok.org/ivyrepo/langtools/javac-sources.zip" dest="contrib/${javac-src-name}" verbose="on" />
+	</target>
+	
+	<target name="ecj-src" unless="ecj-src-available">
+		<get src="http://ftp.wh2.tu-dresden.de/pub/mirrors/eclipse/eclipse/downloads/drops/R-3.5.2-201002111343/ecjsrc-3.5.2.zip" dest="contrib/${ecj-src-name}" verbose="on" />
 	</target>
 	
 	<target name="google-collections-src" unless="google-collections-src-available">
