@@ -5,19 +5,16 @@ import static org.junit.Assert.assertFalse;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
-import lombok.ast.ecj.ASTNodePrinter;
+import lombok.ast.ecj.EcjAstPrinter;
 
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
-import org.eclipse.jdt.internal.compiler.IProblemFactory;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
-import org.eclipse.jdt.internal.compiler.lookup.CompilationUnitScope;
 import org.eclipse.jdt.internal.compiler.parser.Parser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
@@ -57,9 +54,9 @@ public class EcjTest {
 		assertFalse(cud.hasErrors());
 		
 		
-		ASTNodePrinter visitor = new ASTNodePrinter();
+		EcjAstPrinter visitor = new EcjAstPrinter();
 		try {
-			cud.traverse(visitor, (CompilationUnitScope)null);
+			visitor.visitEcjNode(cud);
 		}
 		catch (RuntimeException e) {
 			printDebugInformation(source, null, null);
