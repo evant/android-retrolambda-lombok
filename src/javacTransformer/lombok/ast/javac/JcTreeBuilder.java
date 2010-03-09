@@ -79,7 +79,6 @@ import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
-import lombok.ast.Position;
 import lombok.ast.Return;
 import lombok.ast.Select;
 import lombok.ast.Statement;
