@@ -51,7 +51,7 @@ public class JcTreeBuilderTest {
 	
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
-		if (source.getName().compareToIgnoreCase("B") > 0) {
+		if (source.getName().compareToIgnoreCase("C") > 0) {
 			return false;
 		}
 
