@@ -6,11 +6,13 @@ class C002_ExtremeIntegralLiterals {
         int maxOctInt = 017777777777;
         int minusOneHexInt = 0xffffffff;
         int minusOneOctInt = 037777777777;
+        int minDecInt = -2147483648;
         long minHexLong = 0x8000000000000000L;
         long minOctLong = 01000000000000000000000L;
         long maxHexLong = 0x7fffffffffffffffL;
         long maxOctLong = 0777777777777777777777L;
         long minusOneHexLong = 0xffffffffffffffffL;
         long minusOneOctLong = 01777777777777777777777L;
+        long minDecLong = -9223372036854775808L;
     }
 }
