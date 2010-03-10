@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
+import org.eclipse.jdt.internal.compiler.ast.CombinedBinaryExpression;
 
 /**
  * This class generates the EcjAstVisitor that we use, because Eclipse's own visitor sucks,
@@ -33,6 +34,10 @@ class GenerateEcjAstVisitorCode {
 				if (!visits.contains(t) && !t.getSimpleName().startsWith("Javadoc")) visits.add(t);
 			}
 		}
+		
+		Class<?> cbe = CombinedBinaryExpression.class;
+		
+		if (!visits.contains(cbe)) visits.add(cbe);
 		
 		return visits;
 	}

@@ -319,6 +319,10 @@ public abstract class EcjAstVisitor {
 			visitWildcard((Wildcard) node);
 			return;
 		}
+		if (clazz == CombinedBinaryExpression.class) {
+			visitCombinedBinaryExpression((CombinedBinaryExpression) node);
+			return;
+		}
 		
 		throw new UnsupportedOperationException("Unknown ASTNode child: " + node.getClass().getSimpleName());
 	}
@@ -636,6 +640,10 @@ public abstract class EcjAstVisitor {
 	}
 	
 	public void visitWildcard(Wildcard node) {
+		visitAny(node);
+	}
+	
+	public void visitCombinedBinaryExpression(CombinedBinaryExpression node) {
 		visitAny(node);
 	}
 }
