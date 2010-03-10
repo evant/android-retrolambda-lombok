@@ -4,6 +4,7 @@ class B005_ArrayTypes {
         int postfix [];
         int[ ] postfix2[ 
                          ] ;
+        java  .lang.String []   oneDimensional ;
         java.lang.String[]  
                          [] twoDimensional;
         java.lang.String twoDimensional2[][] ;
