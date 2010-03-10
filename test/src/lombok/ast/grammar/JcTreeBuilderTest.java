@@ -44,66 +44,24 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
 
 @RunWith(DirectoryRunner.class)
-public class JcTreeBuilderTest {
+public class JcTreeBuilderTest extends TreeBuilderTest<JCTree> {
 	public static File getDirectory() {
 		return new File("test/idempotency");
 	}
 	
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
-		String javacString = convertToString(parseWithJavac(source));
-
-		source.parseCompilationUnit();
-		if (!source.getProblems().isEmpty()) {
-			StringBuilder message = new StringBuilder();
-			for (ParseProblem p : source.getProblems()) {
-				message.append(p.toString());
-				message.append("\n");
-			}
-			printDebugInformation(source, javacString, null);
-			fail(message.toString());
-		}
-		
-		String lombokString;
-		try {
-			lombokString = convertToString(parseWithLombok(source));
-		} catch (Exception e) {
-			printDebugInformation(source, javacString, null);
-			throw e;
-		} catch (Error e) {
-			printDebugInformation(source, javacString, null);
-			throw e;
-		}
-		
-		if (!javacString.equals(lombokString)) {
-			printDebugInformation(source, javacString, lombokString);
-		}
-		
-		assertEquals(javacString, lombokString);
-		return true;
-	}
-
-	private void printDebugInformation(Source source, String javacString, String lombokString) {
-		String name = source.getName();
-		System.out.printf("==== Processing %s ====\n", name);
-		System.out.println(source.getRawInput());
-		System.out.println("=========== Expected ============");
-		System.out.println(javacString);
-		if (lombokString != null) {
-			System.out.println("============ Actual =============");
-			System.out.println(lombokString);
-		}
-		System.out.printf("======= End of %s =======\n", name);
+		return testCompiler(source);
 	}
 	
-	private String convertToString(JCTree tree) {
+	protected String convertToString(JCTree tree) {
 		JcTreePrinter printer = new JcTreePrinter();
 		tree.accept(printer);
 		String string = printer.toString();
 		return string;
 	}
 	
-	private static JCTree parseWithLombok(Source source) {
+	protected JCTree parseWithLombok(Source source) {
 		List<Node> nodes = source.getNodes();
 		assertEquals(1, nodes.size());
 		Context context = new Context();
@@ -139,10 +97,11 @@ public class JcTreeBuilderTest {
 		return builder.get();
 	}
 	
-	public static JCTree parseWithJavac(Source source) throws Exception {
+	protected JCTree parseWithTargetCompiler(Source source) throws Exception {
 		Context context = new Context();
 		JavaCompiler compiler = new JavaCompiler(context);
-		return compiler.parse(new TestJavaFileObject(source.getName(), source.getRawInput()));
+		JCTree result = compiler.parse(new TestJavaFileObject(source.getName(), source.getRawInput()));
+		return compiler.errorCount() > 0 ? null : result;
 	}
 	
 	private static class TestJavaFileObject extends SimpleJavaFileObject {

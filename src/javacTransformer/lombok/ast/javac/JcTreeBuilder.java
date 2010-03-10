@@ -136,7 +136,6 @@ import com.sun.tools.javac.util.Name.Table;
  * Turns {@code lombok.ast} based ASTs into javac's {@code JCTree} model.
  */
 public class JcTreeBuilder extends ForwardingAstVisitor {
-
 	private final TreeMaker treeMaker;
 	private final Table table;
 	
