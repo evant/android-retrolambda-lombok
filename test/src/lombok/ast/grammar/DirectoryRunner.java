@@ -180,8 +180,14 @@ public class DirectoryRunner extends Runner {
 				error = e;
 			}
 			
+			boolean skipTest = content != null && content.startsWith("//SKIP");
+			
 			for (Entry<Method, Description> test : methodList.entrySet()) {
 				Description testDescription = test.getValue();
+				if (skipTest) {
+					notifier.fireTestIgnored(testDescription);
+					continue;
+				}
 				notifier.fireTestStarted(testDescription);
 				if (error != null) {
 					notifier.fireTestFailure(new Failure(testDescription, error));

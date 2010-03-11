@@ -1,3 +1,4 @@
+//SKIP
 class I001_Deprecated {
     @Deprecated
     int x;
