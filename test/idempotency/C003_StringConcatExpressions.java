@@ -15,6 +15,6 @@ class C003_StringConcatExpressions {
         String i = (String) "a" + "b" + "c";
         String j = "a" + "b" + 'c';
         String k = "a" + 'b' + "c";
-        String l = 'a' + 'b' + 'c';
+        int l = 'a' + 'b' + 'c';
     }
 }
