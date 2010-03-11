@@ -26,6 +26,8 @@ import java.math.BigInteger;
 import lombok.Getter;
 
 public class IntegralLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
+	private static final String NEGATIVE_NUMBERS_NOT_POSSIBLE = "Negative integral literals don't exist; wrap in a UnaryExpression with operator MINUS";
+	
 	private Long value;
 	private String rawValue;
 	private String errorReasonForValue = "Missing value";
@@ -65,7 +67,29 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	}
 	
 	public String getErrorReasonForValue() {
-		return errorReasonForValue;
+		if (errorReasonForValue != null) return errorReasonForValue;
+		long v = value;
+		if (markedAsLong) {
+			if (literalType != LiteralType.DECIMAL) return null;
+			if (v >= 0) return null;
+			if (v == Long.MIN_VALUE) {
+				return containedInUnaryMinus() ? null : "Long literal too large: " + rawValue;
+			}
+			return NEGATIVE_NUMBERS_NOT_POSSIBLE;
+		} else {
+			if ((v & 0xFFFFFFFF00000000L) != 0) return "Int literal too large: " + rawValue;
+			if (literalType != LiteralType.DECIMAL) return null;
+			if (v <= Integer.MAX_VALUE) return null;
+			if (v == 1L + Integer.MAX_VALUE) {
+				return containedInUnaryMinus() ? null : "Int literal too large: " + rawValue;
+			}
+			return NEGATIVE_NUMBERS_NOT_POSSIBLE;
+		}
+	}
+	
+	private boolean containedInUnaryMinus() {
+		return getParens() == 0 && getParent() instanceof UnaryExpression &&
+				((UnaryExpression)getParent()).getOperator() == UnaryOperator.UNARY_MINUS;
 	}
 	
 	public IntegralLiteral setLiteralType(LiteralType type) {
@@ -87,9 +111,9 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		return result;
 	}
 	
+	
 	public IntegralLiteral setIntValue(int value) {
-		if (value < 0) throw new AstException(this, "Integral literals cannot be negative; wrap a literal in a UnaryExpression to accomplish this");
-		this.value = Long.valueOf(value);
+		this.value = ((long)value) & 0xFFFFFFFFL;	//Suppress sign extension.
 		this.rawValue = "" + value;
 		this.errorReasonForValue = null;
 		this.markedAsLong = false;
@@ -98,7 +122,6 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	}
 	
 	public IntegralLiteral setLongValue(long value) {
-		if (value < 0) throw new AstException(this, "Integral literals cannot be negative; wrap a literal in a UnaryExpression to accomplish this");
 		this.value = value;
 		this.rawValue = "" + value + "L";
 		this.errorReasonForValue = null;
@@ -111,23 +134,59 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 		if (errorReasonForValue != null) return;
 		String suffix = markedAsLong ? "L" : "";
 		
+		StringBuilder out;
+		boolean nulls;
+		int nibbleCounter;
+		
 		switch (literalType) {
 		case DECIMAL:
-			rawValue = value + suffix;
+			rawValue = (value < 0 ? String.valueOf(value).substring(1) : value) + suffix;
 			break;
 		case HEXADECIMAL:
-			rawValue = "0x" + Long.toString(value, 0x10) + suffix;
+			out = new StringBuilder(19);
+			out.append("0x");
+			nulls = true;
+			nibbleCounter = markedAsLong ? 60 : 28;
+			for (; nibbleCounter >= 0 ; nibbleCounter -= 4) {
+				int nibble = (int)(value >>> nibbleCounter) & 0xF;
+				if (nulls && nibble == 0 && nibbleCounter != 0) continue;
+				nulls = false;
+				out.append((char)(nibble < 10 ? '0' + nibble : 'a' - 10 + nibble));
+			}
+			out.append(suffix);
+			this.rawValue = out.toString();
 			break;
 		case OCTAL:
-			rawValue = "0" + Long.toString(value, 010) + suffix;
+			out = new StringBuilder(25);
+			out.append("0");
+			nulls = true;
+			if (markedAsLong) {
+				if ((value & 01000000000000000000000L) != 0) {
+					out.append("1");
+					nulls = false;
+				}
+				nibbleCounter = 60;
+			} else {
+				int halfNibble = ((int)(value >>> 30)) & 03;
+				if (halfNibble != 0) {
+					out.append((char)('0' + halfNibble));
+					nulls = false;
+				}
+				nibbleCounter = 27;
+			}
+			for (; nibbleCounter >= 0 ; nibbleCounter -= 3) {
+				int nibble = (int)(value >>> nibbleCounter) & 07;
+				if (nulls && nibble == 0 && nibbleCounter != 0) continue;
+				nulls = false;
+				out.append((char)('0' + nibble));
+			}
+			out.append(suffix);
+			this.rawValue = out.toString();
 			break;
 		default:
 			assert false: "literalType is null";
 		}
 	}
-	
-	private static final BigInteger MAX_LONG = new BigInteger("FFFFFFFFFFFFFFFF", 0x10);
-	private static final long MAX_INT = 0xFFFFFFFFL;
 	
 	public IntegralLiteral setRawValue(String raw) {
 		if (raw == null) {
@@ -135,71 +194,79 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 			this.value = null;
 			this.errorReasonForValue = "Missing value";
 			this.markedAsLong = false;
+			return this;
+		}
+		
+		this.rawValue = raw;
+		this.value = null;
+		this.errorReasonForValue = null;
+		this.markedAsLong = false;
+		String v = raw.trim();
+		
+		if (v.startsWith("-")) {
+			this.errorReasonForValue = NEGATIVE_NUMBERS_NOT_POSSIBLE;
+			return this;
+		}
+		
+		boolean markedAsLong = v.endsWith("L") || v.endsWith("l");
+		v = markedAsLong ? raw.substring(0, raw.length()-1) : raw;
+		LiteralType newLT;
+		int radix;
+		int prefix;
+		if (v.startsWith("0x")) {
+			newLT = LiteralType.HEXADECIMAL;
+			radix = 0x10;
+			prefix = 2;
+		} else if (v.startsWith("0") && v.length() > 1) {
+			newLT = LiteralType.OCTAL;
+			radix = 010;
+			prefix = 1;
 		} else {
-			this.rawValue = raw;
-			this.errorReasonForValue = null;
-			String v = raw.trim();
-			if (v.startsWith("-")) {
-				this.errorReasonForValue = "Integral literals can't start with -; wrap them in a UnaryExpression: " + v;
-				this.value = null;
-				return this;
-			}
-			this.markedAsLong = v.endsWith("L") || v.endsWith("l");
-			v = markedAsLong ? raw.substring(0, raw.length()-1) : raw;
-			LiteralType newLT;
+			newLT = LiteralType.DECIMAL;
+			radix = 10;
+			prefix = 0;
+		}
+		
+		long v1 = 0;
+		BigInteger v2 = null;
+		
+		try {
+			v1 = Long.parseLong(v.substring(prefix), radix);
+		} catch (NumberFormatException e) {
 			try {
-				int radix;
-				boolean noNegatives = false;
-				int prefix;
-				if (v.startsWith("0x")) {
-					newLT = LiteralType.HEXADECIMAL;
-					radix = 0x10;
-					noNegatives = true;
-					prefix = 2;
-				} else if (v.startsWith("0") && v.length() > 1) {
-					newLT = LiteralType.OCTAL;
-					radix = 010;
-					noNegatives = true;
-					prefix = 1;
-				} else {
-					newLT = LiteralType.DECIMAL;
-					radix = 10;
-					prefix = 0;
-				}
-				
-				if (this.markedAsLong && noNegatives) {
-					BigInteger parsed = new BigInteger(v.substring(prefix), radix);
-					if (parsed.compareTo(MAX_LONG) > 0) {
-						this.errorReasonForValue = "Long Literal too large: " + v;
-						this.value = null;
-						return this;
-					} else {
-						this.value = parsed.longValue();
-					}
-				} else {
-					this.value = Long.parseLong(v.substring(prefix), radix);
-					if (noNegatives) { //not marked as long
-						if (this.value > MAX_INT) {
-							this.errorReasonForValue = "Int Literal too large: " + v;
-							this.value = null;
-							return this;
-						}
-					} else if (!this.markedAsLong) {
-						if (this.value > Integer.MAX_VALUE) {
-							this.errorReasonForValue = "Int Literal too large: " + v;
-							this.value = null;
-							return this;
-						}
-					}
-				}
-				this.literalType = newLT;
-			} catch (NumberFormatException e) {
+				v2 = new BigInteger(v.substring(prefix), radix);
+			} catch (NumberFormatException e2) {
 				this.value = null;
 				this.errorReasonForValue = "Not a valid integral literal: " + v;
+				return this;
 			}
 		}
 		
+		Object result = setRawValue0(markedAsLong, v1, v2);
+		if (result instanceof Long) {
+			this.markedAsLong = markedAsLong;
+			this.literalType = newLT;
+			this.value = (Long)result;
+		} else {
+			this.errorReasonForValue = ((String)result) + v;
+		}
+		
 		return this;
+	}
+	
+	private static final BigInteger MAX_UNSIGNED_LONG = new BigInteger("FFFFFFFFFFFFFFFF", 0x10);
+	
+	private static Object setRawValue0(boolean markedAsLong, long v1, BigInteger v2) {
+		if (v2 == null) { //Parsed number fits in standard long.
+			return v1;
+		} else { //Number only fits as a BigDecimal
+			//There aren't many legal options here; it would have to be an unsigned format (hex/oct), and a long.
+			if (!markedAsLong) return "Int Literal above maximum value: ";
+			
+			if (v2.compareTo(MAX_UNSIGNED_LONG) <= 0) return v2.longValue();
+			
+			return "Long literal too large: ";
+		}
 	}
 	
 	public long longValue() throws AstException {
