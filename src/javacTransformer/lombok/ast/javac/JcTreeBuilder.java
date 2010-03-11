@@ -21,6 +21,7 @@
  */
 package lombok.ast.javac;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -34,6 +35,7 @@ import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
 import lombok.ast.ArrayInitializer;
 import lombok.ast.Assert;
+import lombok.ast.AstException;
 import lombok.ast.BinaryExpression;
 import lombok.ast.BinaryOperator;
 import lombok.ast.Block;
@@ -521,6 +523,10 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitBinaryExpression(BinaryExpression node) {
 		BinaryOperator operator = node.getOperator();
+		if (operator == BinaryOperator.PLUS) {
+			if (tryStringCombine(node)) return true;
+		}
+		
 		JCExpression lhs = toExpression(node.getLeft());
 		JCExpression rhs = toExpression(node.getRight());
 		
@@ -534,15 +540,57 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			return true;
 		}
 		
-		if (operator == BinaryOperator.PLUS && lhs instanceof JCLiteral && rhs instanceof JCLiteral) {
-			JCLiteral left = (JCLiteral)lhs;
-			JCLiteral right = (JCLiteral)rhs;
-			if (left.typetag == TypeTags.CLASS && right.typetag == TypeTags.CLASS) {
-				set(node, treeMaker.Literal(TypeTags.CLASS, String.valueOf(left.value) + String.valueOf(right.value)));
-				return true;
+		set(node, treeMaker.Binary(BINARY_OPERATORS.get(operator), lhs, rhs));
+		return true;
+	}
+	
+	private boolean tryStringCombine(BinaryExpression node) {
+		boolean allowed;
+		if (node.getParens() > 0) {
+			allowed = true;
+		} else if (node.getParent() instanceof BinaryExpression) {
+			try {
+				allowed = ((BinaryExpression)node.getParent()).getOperator().isAssignment();
+			} catch (AstException ignore) {
+				allowed = false;
+			}
+		} else if (!(node.getParent() instanceof InstanceOf)) {
+			allowed = true;
+		} else {
+			allowed = false;
+		}
+		
+		java.util.List<String> buffer = new ArrayList<String>();
+		BinaryExpression current = node;
+		while (allowed) {
+			if (current.getRawRight() instanceof StringLiteral) {
+				buffer.add(((StringLiteral)current.getRawRight()).getValue());
+			} else {
+				allowed = false;
+				break;
+			}
+			
+			if (current.getRawLeft() instanceof BinaryExpression) {
+				current = (BinaryExpression) current.getRawLeft();
+				boolean isConcat;
+				try {
+					isConcat = current.getOperator() == BinaryOperator.PLUS;
+				} catch (AstException e) {
+					isConcat = false;
+				}
+				allowed &= isConcat;
+			} else if (current.getRawLeft() instanceof StringLiteral) {
+				buffer.add(((StringLiteral)current.getRawLeft()).getValue());
+				break;
+			} else {
+				allowed = false;
 			}
 		}
-		set(node, treeMaker.Binary(BINARY_OPERATORS.get(operator), lhs, rhs));
+		
+		if (!allowed) return false;
+		StringBuilder out = new StringBuilder();
+		for (int i = buffer.size() - 1; i >= 0; i--) out.append(buffer.get(i));
+		set(node, treeMaker.Literal(TypeTags.CLASS, out.toString()));
 		return true;
 	}
 	
