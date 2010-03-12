@@ -67,9 +67,11 @@ import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.ast.Initializer;
 import org.eclipse.jdt.internal.compiler.ast.InstanceOfExpression;
 import org.eclipse.jdt.internal.compiler.ast.IntLiteral;
+import org.eclipse.jdt.internal.compiler.ast.IntLiteralMinValue;
 import org.eclipse.jdt.internal.compiler.ast.LabeledStatement;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.LongLiteral;
+import org.eclipse.jdt.internal.compiler.ast.LongLiteralMinValue;
 import org.eclipse.jdt.internal.compiler.ast.MarkerAnnotation;
 import org.eclipse.jdt.internal.compiler.ast.MemberValuePair;
 import org.eclipse.jdt.internal.compiler.ast.MessageSend;
@@ -162,6 +164,10 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 					sb.append(new lombok.ast.StringLiteral().setValue(new String((char[])single)).getRawValue());
 				}
 				content = "= {" + sb.toString() + "}";
+			} else if (val instanceof Integer) {
+				content = String.format("0x%1$08x %1$d", val);
+			} else if (val instanceof Long) {
+				content = String.format("0x%1$016x %1$d", val);
 			} else {
 				content = String.valueOf(val);
 			}
@@ -208,6 +214,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitBlock(Block node) {
 		printNode(node);
+		property("explicitDeclarations", node.explicitDeclarations);
 		children("statements", node.statements);
 		indent--;
 	}
@@ -221,6 +228,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitCompilationUnitDeclaration(CompilationUnitDeclaration node) {
 		printNode(node);
+		property("getMainTypeName()", node.getMainTypeName());
 		child("currentPackage", node.currentPackage);
 		children("imports", node.imports);
 		children("types", node.types);
@@ -244,6 +252,8 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	public void visitTypeDeclaration(TypeDeclaration node) {
 		printNode(node);
 		child("javadoc", node.javadoc);
+		child("allocation", node.allocation);
+		child("enclosingType", node.enclosingType);
 		children("annotations", node.annotations);
 		child("superclass", node.superclass);
 		children("superInterfaces", node.superInterfaces);
@@ -265,6 +275,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	public void visitInitializer(Initializer node) {
 		printNode(node);
 		property("modifiers", node.modifiers);
+		property("name", node.name);
 		child("block", node.block);
 		indent--;
 	}
@@ -288,7 +299,10 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitLocalDeclaration(LocalDeclaration node) {
 		printNode(node);
+		property("modifiers", node.modifiers);
+		property("name", node.name);
 		children("annotations", node.annotations);
+		child("type", node.type);
 		child("initialization", node.initialization);
 		indent--;
 	}
@@ -348,7 +362,21 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	}
 	
 	@Override
+	public void visitIntLiteralMinValue(IntLiteralMinValue node) {
+		printNode(node);
+		property("source", node.source());
+		indent--;
+	}
+	
+	@Override
 	public void visitLongLiteral(LongLiteral node) {
+		printNode(node);
+		property("source", node.source());
+		indent--;
+	}
+	
+	@Override
+	public void visitLongLiteralMinValue(LongLiteralMinValue node) {
 		printNode(node);
 		property("source", node.source());
 		indent--;
@@ -431,6 +459,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitBinaryExpression(BinaryExpression node) {
 		printNode(node);
+		property("operatorToString()", node.operatorToString());
 		child("lhs", node.left);
 		child("rhs", node.right);
 		indent--;
@@ -487,6 +516,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitEqualExpression(EqualExpression node) {
 		printNode(node);
+		property("operatorToString()", node.operatorToString());
 		child("left", node.left);
 		child("right", node.right);
 		indent--;
@@ -495,6 +525,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitAND_AND_Expression(AND_AND_Expression node) {
 		printNode(node);
+		property("operatorToString()", node.operatorToString());
 		child("left", node.left);
 		child("right", node.right);
 		indent--;
@@ -503,6 +534,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitOR_OR_Expression(OR_OR_Expression node) {
 		printNode(node);
+		property("operatorToString()", node.operatorToString());
 		child("left", node.left);
 		child("right", node.right);
 		indent--;
@@ -538,7 +570,10 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	public void visitCombinedBinaryExpression(CombinedBinaryExpression node) {
 		printNode(node);
 		property("arity", node.arity);
+		property("arityMax", node.arityMax);
 		children("referencesTable", node.referencesTable);
+		child("left", node.left);
+		child("right", node.right);
 		indent--;
 	}
 	

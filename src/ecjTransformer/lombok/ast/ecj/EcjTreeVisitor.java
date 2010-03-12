@@ -28,6 +28,10 @@ public abstract class EcjTreeVisitor {
 		if (node == null) return;
 		Class<?> clazz = node.getClass();
 		
+		if (clazz == AllocationExpression.class) {
+			visitAllocationExpression((AllocationExpression) node);
+			return;
+		}
 		if (clazz == AND_AND_Expression.class) {
 			visitAND_AND_Expression((AND_AND_Expression) node);
 			return;
@@ -300,10 +304,6 @@ public abstract class EcjTreeVisitor {
 			visitSynchronizedStatement((SynchronizedStatement) node);
 			return;
 		}
-		if (clazz == AllocationExpression.class) {
-			visitAllocationExpression((AllocationExpression) node);
-			return;
-		}
 		if (clazz == ThisReference.class) {
 			visitThisReference((ThisReference) node);
 			return;
@@ -344,12 +344,24 @@ public abstract class EcjTreeVisitor {
 			visitCombinedBinaryExpression((CombinedBinaryExpression) node);
 			return;
 		}
+		if (clazz == IntLiteralMinValue.class) {
+			visitIntLiteralMinValue((IntLiteralMinValue) node);
+			return;
+		}
+		if (clazz == LongLiteralMinValue.class) {
+			visitLongLiteralMinValue((LongLiteralMinValue) node);
+			return;
+		}
 		
 		throw new UnsupportedOperationException("Unknown ASTNode child: " + node.getClass().getSimpleName());
 	}
 	
 	public void visitAny(ASTNode node) {
 		throw new UnsupportedOperationException("visit" + node.getClass().getSimpleName() + " not implemented");
+	}
+	
+	public void visitAllocationExpression(AllocationExpression node) {
+		visitAny(node);
 	}
 	
 	public void visitAND_AND_Expression(AND_AND_Expression node) {
@@ -624,10 +636,6 @@ public abstract class EcjTreeVisitor {
 		visitAny(node);
 	}
 	
-	public void visitAllocationExpression(AllocationExpression node) {
-		visitAny(node);
-	}
-	
 	public void visitThisReference(ThisReference node) {
 		visitAny(node);
 	}
@@ -665,6 +673,14 @@ public abstract class EcjTreeVisitor {
 	}
 	
 	public void visitCombinedBinaryExpression(CombinedBinaryExpression node) {
+		visitAny(node);
+	}
+	
+	public void visitIntLiteralMinValue(IntLiteralMinValue node) {
+		visitAny(node);
+	}
+	
+	public void visitLongLiteralMinValue(LongLiteralMinValue node) {
 		visitAny(node);
 	}
 }
