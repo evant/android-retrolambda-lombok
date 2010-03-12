@@ -141,7 +141,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	private final TreeMaker treeMaker;
 	private final Table table;
 	
-	List<? extends JCTree> result = null;
+	private List<? extends JCTree> result = null;
 	
 	public JcTreeBuilder(Context context) {
 		this(TreeMaker.instance(context), Name.Table.instance(context));
@@ -221,9 +221,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private void set(Node node, JCTree value) {
-		if (result != null) {
-			throw new IllegalStateException("result is already set");
-		}
+		if (result != null) throw new IllegalStateException("result is already set");
 		
 		JCTree actualValue = value;
 		if (node instanceof Expression) {
@@ -545,49 +543,42 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private boolean tryStringCombine(BinaryExpression node) {
-		boolean allowed;
 		if (node.getParens() > 0) {
-			allowed = true;
+			;
 		} else if (node.getParent() instanceof BinaryExpression) {
 			try {
-				allowed = ((BinaryExpression)node.getParent()).getOperator().isAssignment();
+				if (!((BinaryExpression)node.getParent()).getOperator().isAssignment()) return false;
 			} catch (AstException ignore) {
-				allowed = false;
+				return false;
 			}
-		} else if (!(node.getParent() instanceof InstanceOf)) {
-			allowed = true;
-		} else {
-			allowed = false;
+		} else if (node.getParent() instanceof InstanceOf) {
+			return false;
 		}
 		
 		java.util.List<String> buffer = new ArrayList<String>();
 		BinaryExpression current = node;
-		while (allowed) {
-			if (current.getRawRight() instanceof StringLiteral) {
+		while (true) {
+			if (current.getRawRight() instanceof StringLiteral && current.getRight().getParens() == 0) {
 				buffer.add(((StringLiteral)current.getRawRight()).getValue());
 			} else {
-				allowed = false;
-				break;
+				return false;
 			}
 			
 			if (current.getRawLeft() instanceof BinaryExpression) {
 				current = (BinaryExpression) current.getRawLeft();
-				boolean isConcat;
 				try {
-					isConcat = current.getOperator() == BinaryOperator.PLUS;
+					if (current.getOperator() != BinaryOperator.PLUS || current.getParens() > 0) return false;
 				} catch (AstException e) {
-					isConcat = false;
+					return false;
 				}
-				allowed &= isConcat;
-			} else if (current.getRawLeft() instanceof StringLiteral) {
+			} else if (current.getRawLeft() instanceof StringLiteral && current.getLeft().getParens() == 0) {
 				buffer.add(((StringLiteral)current.getRawLeft()).getValue());
 				break;
 			} else {
-				allowed = false;
+				return false;
 			}
 		}
 		
-		if (!allowed) return false;
 		StringBuilder out = new StringBuilder();
 		for (int i = buffer.size() - 1; i >= 0; i--) out.append(buffer.get(i));
 		set(node, treeMaker.Literal(TypeTags.CLASS, out.toString()));
