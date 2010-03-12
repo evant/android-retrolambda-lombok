@@ -277,7 +277,7 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public T get(int idx) {
-			Node r = raw.first();
+			Node r = raw.get(idx);
 			if (r == null) throw new IndexOutOfBoundsException();
 			if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
 					"element #%d of %s isn't of the appropriate type(%s): %s",
