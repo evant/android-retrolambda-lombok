@@ -1,5 +1,6 @@
 class C004_ComplexExpressions {
     {
+        int ex = 1 + 2 + 3 + 4 + 5 + 6;
         int brace1 =5+ ( 2+3);
         int brace2 = (5 + 2) * 3;
         int chained1 = 5+2 + 3;
