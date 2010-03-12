@@ -38,11 +38,17 @@ public class BasicsActions extends SourceActions {
 		return text == null || !BasicsParser.KEYWORDS.contains(text);
 	}
 	
-	public Node createBlockComment(String text) {
-		return posify(new Comment().setBlockComment(true).setContent(text));
+	public boolean createBlockComment(String text) {
+		// TODO Add these as dangling node somewhere.
+		@SuppressWarnings("unused")
+		Comment comment = posify(new Comment().setBlockComment(true).setContent(text));
+		return true;
 	}
 	
-	public Node createLineComment(String text) {
-		return posify(new Comment().setBlockComment(false).setContent(text));
+	public boolean createLineComment(String text) {
+		// TODO Add these as dangling node somewhere.
+		@SuppressWarnings("unused")
+		Comment comment = posify(new Comment().setBlockComment(false).setContent(text));
+		return true;
 	}
 }

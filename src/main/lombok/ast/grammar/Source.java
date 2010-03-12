@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import lombok.Getter;
+import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
 import lombok.ast.Position;
 
@@ -165,5 +167,23 @@ public class Source {
 		}
 		
 		preprocessed = out.toString();
+	}
+	
+	/*
+	 * TODO
+	 * 
+	 * The idea is to create a TreeSet containing the end pos of every node. Then, given any position, it is trivial to ask for some non-hierarchical thingie
+	 * from the source, such as a structural element (e.g. a ; between a for's init and condition), or javadoc.
+	 */
+	void todoFixMe(Node compilationUnit) {
+		final TreeSet<Integer> endPosTable = new TreeSet<Integer>();
+		compilationUnit.accept(new ForwardingAstVisitor() {
+			@Override
+			public boolean visitNode(Node node) {
+				if (!node.isGenerated()) endPosTable.add(node.getPosition().getEnd());
+				return false;
+			}
+		});
+		System.out.println(endPosTable);
 	}
 }

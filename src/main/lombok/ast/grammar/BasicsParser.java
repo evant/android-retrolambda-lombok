@@ -140,18 +140,16 @@ public class BasicsParser extends BaseParser<Node> {
 		return enforcedSequence(
 				string("//"),
 				zeroOrMore(sequence(testNot(lineTerminator()), any())).label("comment"),
-				lineTerminator());
-		// TODO add as dangling node
-//				SET(actions.createLineComment(TEXT("comment"))));
+				lineTerminator(),
+				actions.createLineComment(TEXT("comment")));
 	}
 	
 	Rule blockComment() {
 		return enforcedSequence(
 				string("/*"),
 				zeroOrMore(sequence(testNot(string("*/")), any())).label("comment"),
-				string("*/"));
-// TODO add as dangling node
-//				SET(actions.createBlockComment(TEXT("comment"))));
+				string("*/"),
+				actions.createBlockComment(TEXT("comment")));
 	}
 	
 	/**
