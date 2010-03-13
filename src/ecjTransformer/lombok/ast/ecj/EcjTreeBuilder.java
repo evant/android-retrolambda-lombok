@@ -28,6 +28,8 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 
+import lombok.ast.ArrayCreation;
+import lombok.ast.ArrayDimension;
 import lombok.ast.BinaryOperator;
 import lombok.ast.UnaryOperator;
 
@@ -786,6 +788,30 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			for (Statement s : block.statements) if (s instanceof LocalDeclaration) block.explicitDeclarations++;
 		}
 		set(node, block);
+		return true;
+	}
+	
+	@Override
+	public boolean visitArrayInitializer(lombok.ast.ArrayInitializer node) {
+		ArrayInitializer arrayInitializer = new ArrayInitializer();
+		arrayInitializer.expressions = toList(Expression.class, node.expressions());
+		set(node, arrayInitializer);
+		return true;
+	}
+	
+	@Override
+	public boolean visitArrayCreation(ArrayCreation node) {
+		ArrayAllocationExpression aae = new ArrayAllocationExpression();
+		aae.type = (TypeReference) toTree(node.getComponentTypeReference());
+		aae.dimensions = toList(Expression.class, node.dimensions());
+		aae.initializer = (ArrayInitializer) toTree(node.getInitializer());
+		set(node, aae);
+		return true;
+	}
+	
+	@Override
+	public boolean visitArrayDimension(ArrayDimension node) {
+		set(node, toExpression(node.getDimension()));
 		return true;
 	}
 	
