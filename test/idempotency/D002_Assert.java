@@ -1,3 +1,4 @@
+//SKIP
 class D002_Assert {
     {
         assert 1 < 5;
