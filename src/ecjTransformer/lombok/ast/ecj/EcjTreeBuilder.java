@@ -763,7 +763,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		} else {
 			//TODO test what happens with vardecls in catch blocks and for each loops, as well as for inner blocks.
 			block.explicitDeclarations = 0;
-			for (Statement s : block.statements) if (s instanceof LocalDeclaration) block.explicitDeclarations++;
+			for (lombok.ast.Statement s : node.contents()) if (s instanceof lombok.ast.VariableDeclaration) block.explicitDeclarations++;
 		}
 		return set(node, block);
 	}
