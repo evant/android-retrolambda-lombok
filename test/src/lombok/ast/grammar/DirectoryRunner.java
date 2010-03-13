@@ -30,7 +30,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.Map.Entry;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
@@ -177,7 +176,7 @@ public class DirectoryRunner extends Runner {
 			return;
 		}
 		
-		for (Entry<String, Map<Method, Description>> entry : tests.entrySet()) {
+		for (Map.Entry<String, Map<Method, Description>> entry : tests.entrySet()) {
 			Map<Method, Description> methodList = entry.getValue();
 			String content;
 			Throwable error;
@@ -193,7 +192,7 @@ public class DirectoryRunner extends Runner {
 			
 			boolean skipTest = content != null && content.startsWith("//SKIP");
 			
-			for (Entry<Method, Description> test : methodList.entrySet()) {
+			for (Map.Entry<Method, Description> test : methodList.entrySet()) {
 				Description testDescription = test.getValue();
 				if (skipTest) {
 					notifier.fireTestIgnored(testDescription);
@@ -229,6 +228,7 @@ public class DirectoryRunner extends Runner {
 		case 1:
 			if (mirrorDirectory != null) return false;
 			if (paramTypes[0] == String.class) params = new Object[] {rawSource};
+			else if (paramTypes[0] == File.class) params = new Object[] {new File(directory, fileName)};
 			else if (paramTypes[0] == Source.class) params = new Object[] {new Source(rawSource, fileName)};
 			else return false;
 			break;
@@ -239,10 +239,12 @@ public class DirectoryRunner extends Runner {
 			String expectedContent = FileUtils.readFileToString(new File(directory, mainFileName), "UTF-8");
 			
 			if (paramTypes[0] == String.class) params[0] = expectedContent;
+			else if (paramTypes[0] == File.class) params[0] = new File(directory, fileName);
 			else if (paramTypes[0] == Source.class) params[0] = new Source(expectedContent, mainFileName);
 			else return false;
 			
 			if (paramTypes[1] == String.class) params[1] = rawSource;
+			else if (paramTypes[1] == File.class) params[1] = new File(mirrorDirectory, fileName);
 			else if (paramTypes[1] == Source.class) params[1] = new Source(rawSource, fileName);
 			else return false;
 			
