@@ -220,7 +220,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return result;
 	}
 	
-	private void set(Node node, JCTree value) {
+	private boolean set(Node node, JCTree value) {
 		if (result != null) throw new IllegalStateException("result is already set");
 		
 		JCTree actualValue = value;
@@ -230,11 +230,13 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			}
 		}
 		result = List.of(actualValue);
+		return true;
 	}
 	
-	private void set(List<? extends JCTree> values) {
+	private boolean set(List<? extends JCTree> values) {
 		if (result != null) throw new IllegalStateException("result is already set");
 		result = values;
+		return true;
 	}
 	
 	private JcTreeBuilder create() {
@@ -265,8 +267,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			}
 		}
 		
-		set(node, treeMaker.TopLevel(annotations, pid, imports.appendList(types)));
-		return true;
+		return set(node, treeMaker.TopLevel(annotations, pid, imports.appendList(types)));
 	}
 	
 	@Override
@@ -290,13 +291,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (node.isStarImport()) {
 			name = treeMaker.Select(name, table.fromString("*"));
 		}
-		set(node, treeMaker.Import(name, node.isStaticImport()));
-		return true;
+		return set(node, treeMaker.Import(name, node.isStaticImport()));
 	}
 	
 	@Override
 	public boolean visitClassDeclaration(ClassDeclaration node) {
-		set(node, treeMaker.ClassDef(
+		return set(node, treeMaker.ClassDef(
 				(JCModifiers) toTree(node.getModifiers()),
 				toName(node.getName()),
 				toList(JCTypeParameter.class, node.typeVariables()),
@@ -304,14 +304,13 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				toList(JCExpression.class, node.implementing()),
 				node.getBody() == null ? List.<JCTree>nil() : toList(JCTree.class, node.getBody().members())
 		));
-		return true;
 	}
 	
 	@Override
 	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
 		JCModifiers modifiers = (JCModifiers) toTree(node.getModifiers());
 		modifiers.flags |= Flags.INTERFACE;
-		set(node, treeMaker.ClassDef(
+		return set(node, treeMaker.ClassDef(
 				modifiers,
 				toName(node.getName()),
 				toList(JCTypeParameter.class, node.typeVariables()),
@@ -319,19 +318,17 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				toList(JCExpression.class, node.extending()),
 				node.getBody() == null ? List.<JCTree>nil() : toList(JCTree.class, node.getBody().members())
 		));
-		return true;
 	}
 	
 	public boolean visitEmptyStatement(EmptyStatement node) {
-		set(node, treeMaker.Skip());
-		return true;
+		return set(node, treeMaker.Skip());
 	}
 	
 	@Override
 	public boolean visitEnumDeclaration(EnumDeclaration node) {
 		JCModifiers modifiers = (JCModifiers) toTree(node.getModifiers());
 		modifiers.flags |= Flags.ENUM;
-		set(node, treeMaker.ClassDef(
+		return set(node, treeMaker.ClassDef(
 				modifiers,
 				toName(node.getName()),
 				List.<JCTypeParameter>nil(),
@@ -339,7 +336,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				toList(JCExpression.class, node.implementing()),
 				node.getBody() == null ? List.<JCTree>nil() : toList(JCTree.class, node.getBody())
 		));
-		return true;
 	}
 	
 	@Override
@@ -358,7 +354,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		JCIdent parentType = treeMaker.Ident(toName(((EnumDeclaration)node.getParent().getParent()).getName()));
 		JCClassDecl body = (JCClassDecl) toTree(node.getBody());
 		if (body != null) body.mods.flags |= Flags.STATIC | Flags.ENUM;
-		set(node, treeMaker.VarDef(
+		return set(node, treeMaker.VarDef(
 				treeMaker.Modifiers(ENUM_CONSTANT_FLAGS, toList(JCAnnotation.class, node.annotations())),
 				toName(node.getName()), 
 				parentType, 
@@ -370,96 +366,79 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 						body
 				)
 		));
-		return true;
 	}
 	
 	@Override
 	public boolean visitTypeBody(TypeBody node) {
-		set(node, treeMaker.ClassDef(treeMaker.Modifiers(0), table.empty,
+		return set(node, treeMaker.ClassDef(treeMaker.Modifiers(0), table.empty,
 				List.<JCTypeParameter>nil(), null, List.<JCExpression>nil(), toList(JCTree.class, node.members())));
-		return true;
 	}
 	
 	@Override
 	public boolean visitExpressionStatement(ExpressionStatement node) {
-		set(node, treeMaker.Exec(toExpression(node.getExpression())));
-		return true;
+		return set(node, treeMaker.Exec(toExpression(node.getExpression())));
 	}
 	
 	@Override
 	public boolean visitIntegralLiteral(IntegralLiteral node) {
 		if (node.isMarkedAsLong()) {
-			set(node, treeMaker.Literal(TypeTags.LONG, node.longValue()));
+			return set(node, treeMaker.Literal(TypeTags.LONG, node.longValue()));
 		}
-		else {
-			set(node, treeMaker.Literal(TypeTags.INT, node.intValue()));
-		}
-		return true;
+		return set(node, treeMaker.Literal(TypeTags.INT, node.intValue()));
 	}
 	
 	@Override
 	public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {
 		if (node.isMarkedAsFloat()) {
-			set(node, treeMaker.Literal(TypeTags.FLOAT, node.floatValue()));
+			return set(node, treeMaker.Literal(TypeTags.FLOAT, node.floatValue()));
 		}
-		else {
-			set(node, treeMaker.Literal(TypeTags.DOUBLE, node.doubleValue()));
-		}
-		return true;
+		return set(node, treeMaker.Literal(TypeTags.DOUBLE, node.doubleValue()));
 	}
 	
 	@Override
 	public boolean visitBooleanLiteral(BooleanLiteral node) {
-		set(node, treeMaker.Literal(TypeTags.BOOLEAN, node.getValue() ? 1 : 0));
-		return true;
+		return set(node, treeMaker.Literal(TypeTags.BOOLEAN, node.getValue() ? 1 : 0));
 	}
 	
 	@Override
 	public boolean visitCharLiteral(CharLiteral node) {
-		set(node, treeMaker.Literal(TypeTags.CHAR, (int)node.getValue()));
-		return true;
+		return set(node, treeMaker.Literal(TypeTags.CHAR, (int)node.getValue()));
 	}
 	
 	@Override
 	public boolean visitNullLiteral(NullLiteral node) {
-		set(node, treeMaker.Literal(TypeTags.BOT, null));
-		return true;
+		return set(node, treeMaker.Literal(TypeTags.BOT, null));
 	}
 	
 	@Override
 	public boolean visitStringLiteral(StringLiteral node) {
-		set(node, treeMaker.Literal(TypeTags.CLASS, node.getValue()));
-		return true;
+		return set(node, treeMaker.Literal(TypeTags.CLASS, node.getValue()));
 	}
 	
 	@Override
 	public boolean visitIdentifier(Identifier node) {
-		set(node, treeMaker.Ident(toName(node)));
-		return true;
+		return set(node, treeMaker.Ident(toName(node)));
 	}
 	
 	@Override
 	public boolean visitCast(Cast node) {
-		set(node, treeMaker.TypeCast(toTree(node.getRawTypeReference()), toExpression(node.getOperand())));
-		return true;
+		return set(node, treeMaker.TypeCast(toTree(node.getRawTypeReference()), toExpression(node.getOperand())));
 	}
 	
 	@Override
 	public boolean visitConstructorInvocation(ConstructorInvocation node) {
-		set(node, treeMaker.NewClass(
+		return set(node, treeMaker.NewClass(
 				toExpression(node.getQualifier()), 
 				toList(JCExpression.class, node.getConstructorTypeArguments()), 
 				toExpression(node.getTypeReference()), 
 				toList(JCExpression.class, node.arguments()), 
 				(JCClassDecl)toTree(node.getAnonymousClassBody())
 		));
-		return true;
 	}
 	
 	@Override
 	public boolean visitSelect(Select node) {
-		set(node, treeMaker.Select(toExpression(node.getOperand()), toName(node.getIdentifier())));
-		return true;
+		return set(node, treeMaker.Select(toExpression(node.getOperand()), toName(node.getIdentifier())));
 	}
 	
 	@Override
@@ -469,22 +448,19 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (operator == UnaryOperator.UNARY_MINUS && operand instanceof Literal && !(operand instanceof CharLiteral)) {
 			JCLiteral result = (JCLiteral) toTree(operand);
 			result.value = negative(result.value);
-			set(node, result);
-			return true;
+			return set(node, result);
 		}
 		
-		set(node, treeMaker.Unary(UNARY_OPERATORS.get(operator), toExpression(operand)));
-		return true;
+		return set(node, treeMaker.Unary(UNARY_OPERATORS.get(operator), toExpression(operand)));
 	}
 	
 	@Override
 	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
-		set(node, treeMaker.Exec(treeMaker.Apply(
+		return set(node, treeMaker.Exec(treeMaker.Apply(
 				toList(JCExpression.class, node.getConstructorTypeArguments()), 
 				treeMaker.Ident(table._this),
 				toList(JCExpression.class, node.arguments()))
 		));
-		return true;
 	}
 	
 	@Override
@@ -498,12 +474,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 					table._super);
 		}
 		
-		set(node, treeMaker.Exec(treeMaker.Apply(
+		return set(node, treeMaker.Exec(treeMaker.Apply(
 				toList(JCExpression.class, node.getConstructorTypeArguments()), 
 				methodId, 
 				toList(JCExpression.class, node.arguments()))
 		));
-		return true;
 	}
 	
 	@Override
@@ -514,8 +489,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		} else {
 			tree = treeMaker.Ident(table._super);
 		}
-		set(node, tree);
-		return true;
+		return set(node, tree);
 	}
 	
 	@Override
@@ -529,17 +503,14 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		JCExpression rhs = toExpression(node.getRight());
 		
 		if (operator == BinaryOperator.ASSIGN) {
-			set(node, treeMaker.Assign(lhs, rhs));
-			return true;
+			return set(node, treeMaker.Assign(lhs, rhs));
 		}
 		
 		if (operator.isAssignment()) {
-			set(node, treeMaker.Assignop(BINARY_OPERATORS.get(operator), lhs, rhs));
-			return true;
+			return set(node, treeMaker.Assignop(BINARY_OPERATORS.get(operator), lhs, rhs));
 		}
 		
-		set(node, treeMaker.Binary(BINARY_OPERATORS.get(operator), lhs, rhs));
-		return true;
+		return set(node, treeMaker.Binary(BINARY_OPERATORS.get(operator), lhs, rhs));
 	}
 	
 	private boolean tryStringCombine(BinaryExpression node) {
@@ -581,23 +552,20 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		StringBuilder out = new StringBuilder();
 		for (int i = buffer.size() - 1; i >= 0; i--) out.append(buffer.get(i));
-		set(node, treeMaker.Literal(TypeTags.CLASS, out.toString()));
-		return true;
+		return set(node, treeMaker.Literal(TypeTags.CLASS, out.toString()));
 	}
 	
 	@Override
 	public boolean visitInstanceOf(InstanceOf node) {
-		set(node, treeMaker.TypeTest(toExpression(node.getObjectReference()), toExpression(node.getTypeReference())));
-		return true;
+		return set(node, treeMaker.TypeTest(toExpression(node.getObjectReference()), toExpression(node.getTypeReference())));
 	}
 	
 	@Override
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
-		set(node, treeMaker.Conditional(
+		return set(node, treeMaker.Conditional(
 				toExpression(node.getCondition()), 
 				toExpression(node.getIfTrue()), 
 				toExpression(node.getIfFalse())));
-		return true;
 	}
 	
 	@Override
@@ -611,22 +579,20 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 					toName(node.getName()));
 		}
 		
-		set(node, treeMaker.Apply(
+		return set(node, treeMaker.Apply(
 				toList(JCExpression.class, node.getMethodTypeArguments()), 
 				methodId, 
 				toList(JCExpression.class, node.arguments())
 		));
-		return true;
 	}
 	
 	@Override
 	public boolean visitArrayInitializer(ArrayInitializer node) {
-		set(node, treeMaker.NewArray(
+		return set(node, treeMaker.NewArray(
 				null,
 				List.<JCExpression>nil(),
 				toList(JCExpression.class, node.expressions())
 		));
-		return true;
 	}
 	
 	@Override
@@ -653,14 +619,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		for (int i = 0; i < typeTrees; i++) {
 			elementType = treeMaker.TypeArray(elementType);
 		}
-		set(node, treeMaker.NewArray(elementType, dims, init));
-		return true;
+		return set(node, treeMaker.NewArray(elementType, dims, init));
 	}
 	
 	@Override
 	public boolean visitArrayDimension(ArrayDimension node) {
-		set(node, toTree(node.getDimension()));
-		return true;
+		return set(node, toTree(node.getDimension()));
 	}
 	
 	private static Object negative(Object value) {
@@ -675,26 +639,22 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitAssert(Assert node) {
-		set(node, treeMaker.Assert(toExpression(node.getAssertion()), toExpression(node.getMessage())));
-		return true;
+		return set(node, treeMaker.Assert(toExpression(node.getAssertion()), toExpression(node.getMessage())));
 	}
 	
 	@Override
 	public boolean visitBreak(Break node) {
-		set(node, treeMaker.Break(toName(node.getLabel())));
-		return true;
+		return set(node, treeMaker.Break(toName(node.getLabel())));
 	}
 	
 	@Override
 	public boolean visitContinue(Continue node) {
-		set(node, treeMaker.Continue(toName(node.getLabel())));
-		return true;
+		return set(node, treeMaker.Continue(toName(node.getLabel())));
 	}
 	
 	@Override
 	public boolean visitDoWhile(DoWhile node) {
-		set(node, treeMaker.DoLoop(toStatement(node.getStatement()), toExpression(node.getCondition())));
-		return true;
+		return set(node, treeMaker.DoLoop(toStatement(node.getStatement()), toExpression(node.getCondition())));
 	}
 	
 	@Override
@@ -716,58 +676,49 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			updates = updates.append(treeMaker.Exec(expr));
 		}
 		
-		set(node, treeMaker.ForLoop(inits, toExpression(node.getCondition()), updates, toStatement(node.getStatement())));
-		return true;
+		return set(node, treeMaker.ForLoop(inits, toExpression(node.getCondition()), updates, toStatement(node.getStatement())));
 	}
 	
 	@Override
 	public boolean visitForEach(ForEach node) {
-		set(node, treeMaker.ForeachLoop((JCVariableDecl) toTree(node.getVariable()), toExpression(node.getIterable()), toStatement(node.getStatement())));
-		return true;
+		return set(node, treeMaker.ForeachLoop((JCVariableDecl) toTree(node.getVariable()), toExpression(node.getIterable()), toStatement(node.getStatement())));
 	}
 	
 	@Override
 	public boolean visitIf(If node) {
-		set(node, treeMaker.If(toExpression(node.getCondition()), toStatement(node.getStatement()), toStatement(node.getElseStatement())));
-		return true;
+		return set(node, treeMaker.If(toExpression(node.getCondition()), toStatement(node.getStatement()), toStatement(node.getElseStatement())));
 	}
 	
 	@Override
 	public boolean visitLabelledStatement(LabelledStatement node) {
-		set(node, treeMaker.Labelled(toName(node.getLabel()), toStatement(node.getStatement())));
-		return true;
+		return set(node, treeMaker.Labelled(toName(node.getLabel()), toStatement(node.getStatement())));
 	}
 	
 	@Override
 	public boolean visitModifiers(Modifiers node) {
-		set(node, treeMaker.Modifiers(node.getExplicitModifierFlags(), toList(JCAnnotation.class, node.annotations())));
-		return true;
+		return set(node, treeMaker.Modifiers(node.getExplicitModifierFlags(), toList(JCAnnotation.class, node.annotations())));
 	}
 	
 	@Override
 	public boolean visitKeywordModifier(KeywordModifier node) {
-		set(node, treeMaker.Modifiers(getModifier(node)));
-		return true;
+		return set(node, treeMaker.Modifiers(getModifier(node)));
 	}
 	
 	@Override
 	public boolean visitInstanceInitializer(InstanceInitializer node) {
-		set(node, toTree(node.getBody()));
-		return true;
+		return set(node, toTree(node.getBody()));
 	}
 	
 	@Override
 	public boolean visitStaticInitializer(StaticInitializer node) {
 		JCBlock block = (JCBlock) toTree(node.getBody());
 		block.flags |= Flags.STATIC; 
-		set(node, block);
-		return true;
+		return set(node, block);
 	}
 	
 	@Override
 	public boolean visitBlock(Block node) {
-		set(node, treeMaker.Block(0, toList(JCStatement.class, node.contents())));
-		return true;
+		return set(node, treeMaker.Block(0, toList(JCStatement.class, node.contents())));
 	}
 	
 	@Override
@@ -800,7 +751,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
 		JCModifiers modifiers = (JCModifiers) toTree(node.getModifiers());
 		modifiers.flags |= Flags.INTERFACE | Flags.ANNOTATION;
-		set(node, treeMaker.ClassDef(
+		return set(node, treeMaker.ClassDef(
 				modifiers,
 				toName(node.getName()),
 				List.<JCTypeParameter>nil(),
@@ -808,7 +759,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				List.<JCExpression>nil(),
 				node.getBody() == null ? List.<JCTree>nil() : toList(JCTree.class, node.getBody().members())
 		));
-		return true;
 	}
 	
 	@Override
@@ -823,14 +773,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 				null,
 				toExpression(node.getDefaultValue())
 		);
-		set(node, methodDef);
-		return true;
+		return set(node, methodDef);
 	}
 	
 	@Override
 	public boolean visitClassLiteral(ClassLiteral node) {
-		set(node, treeMaker.Select((JCExpression) toTree(node.getTypeReference()), table._class));
-		return true;
+		return set(node, treeMaker.Select((JCExpression) toTree(node.getTypeReference()), table._class));
 	}
 	
 	@Override
@@ -839,21 +787,18 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (node.getName() != null) {
 			arg = treeMaker.Assign((JCIdent) toTree(node.getName()), arg);
 		}
-		set(node, arg);
-		return true;
+		return set(node, arg);
 	}
 	
 	@Override public boolean visitAnnotation(Annotation node) {
-		set(node, treeMaker.Annotation(toTree(node.getAnnotationTypeReference()), toList(JCExpression.class, node.elements())));
-		return true;
+		return set(node, treeMaker.Annotation(toTree(node.getAnnotationTypeReference()), toList(JCExpression.class, node.elements())));
 	}
 	
 	@Override
 	public boolean visitTypeReference(TypeReference node) {
 		WildcardKind wildcard = node.getWildcard();
 		if (wildcard == WildcardKind.UNBOUND) {
-			set(node, treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.UNBOUND), null));
-			return true;
+			return set(node, treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.UNBOUND), null));
 		}
 		
 		JCExpression result = plainTypeReference(node);
@@ -861,14 +806,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		result = addWildcards(result, wildcard);
 		result = addDimensions(result, node.getArrayDimensions());
 		
-		set(node, result);
-		return true;
+		return set(node, result);
 	}
 	
 	@Override
 	public boolean visitArrayAccess(ArrayAccess node) {
-		set(node, treeMaker.Indexed(toExpression(node.getOperand()), toExpression(node.getIndexExpression())));
-		return true;
+		return set(node, treeMaker.Indexed(toExpression(node.getOperand()), toExpression(node.getIndexExpression())));
 	}
 	
 	private JCExpression addDimensions(JCExpression type, int dimensions) {
@@ -927,11 +870,10 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		List<JCExpression> typeArguments = toList(JCExpression.class, node.getTypeArguments());
 		if (typeArguments.isEmpty()) {
-			set(node, ident);
+			return set(node, ident);
 		} else {
-			set(node, treeMaker.TypeApply(ident, typeArguments));
+			return set(node, treeMaker.TypeApply(ident, typeArguments));
 		}
-		return true;
 	}
 	
 	@Override
@@ -942,8 +884,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitTypeVariable(TypeVariable node) {
-		set(node, treeMaker.TypeParameter(toName(node.getName()), toList(JCExpression.class, node.extending())));
-		return true;
+		return set(node, treeMaker.TypeParameter(toName(node.getName()), toList(JCExpression.class, node.extending())));
 	}
 	
 	@Override
@@ -961,8 +902,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		for (JCVariableDecl decl : methodDef.params) {
 			decl.mods.flags |= Flags.PARAMETER;
 		}
-		set(node, methodDef);
-		return true;
+		return set(node, methodDef);
 	}
 	
 	@Override
@@ -979,14 +919,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		for (JCVariableDecl decl : constrDef.params) {
 			decl.mods.flags |= Flags.PARAMETER;
 		}
-		set(node, constrDef);
-		return true;
+		return set(node, constrDef);
 	}
 	
 	@Override
 	public boolean visitReturn(Return node) {
-		set(node, treeMaker.Return(toExpression(node.getValue())));
-		return true;
+		return set(node, treeMaker.Return(toExpression(node.getValue())));
 	}
 	
 	@Override
@@ -1017,15 +955,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		if (!preamble) cases = cases.append(treeMaker.Case(currentPat, stats));
 		
-		set(node, treeMaker.Switch(toExpression(node.getCondition()), cases));
-		return true;
+		return set(node, treeMaker.Switch(toExpression(node.getCondition()), cases));
 	}
 	
 	@Override
 	public boolean visitSynchronized(Synchronized node) {
-		set(node, treeMaker.Synchronized(toExpression(node.getLock()), (JCBlock)toTree(node.getBody()))); 
-		
-		return true;
+		return set(node, treeMaker.Synchronized(toExpression(node.getLock()), (JCBlock)toTree(node.getBody()))); 
 	}
 	
 	@Override
@@ -1036,46 +971,39 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		} else {
 			tree = treeMaker.Ident(table._this);
 		}
-		set(node, tree);
-		return true;
+		return set(node, tree);
 	}
 	
 	@Override
 	public boolean visitTry(Try node) {
 		List<JCCatch> catches = toList(JCCatch.class, node.catches());
 		
-		set(node, treeMaker.Try((JCBlock) toTree(node.getBody()), catches, (JCBlock) toTree(node.getFinally())));
-		return true;
+		return set(node, treeMaker.Try((JCBlock) toTree(node.getBody()), catches, (JCBlock) toTree(node.getFinally())));
 	}
 	
 	@Override
 	public boolean visitCatch(Catch node) {
 		JCVariableDecl exceptionDeclaration = (JCVariableDecl) toTree(node.getExceptionDeclaration());
 		exceptionDeclaration.getModifiers().flags |= Flags.PARAMETER;
-		set(node, treeMaker.Catch(exceptionDeclaration, (JCBlock) toTree(node.getBody())));
-		return true;
+		return set(node, treeMaker.Catch(exceptionDeclaration, (JCBlock) toTree(node.getBody())));
 	}
 	
 	@Override
 	public boolean visitThrow(Throw node) {
-		set(node, treeMaker.Throw(toExpression(node.getThrowable())));
-		return true;
+		return set(node, treeMaker.Throw(toExpression(node.getThrowable())));
 	}
 	
 	@Override
 	public boolean visitWhile(While node) {
-		set(node, treeMaker.WhileLoop(toExpression(node.getCondition()), toStatement(node.getStatement())));
-		return true;
+		return set(node, treeMaker.WhileLoop(toExpression(node.getCondition()), toStatement(node.getStatement())));
 	}
 	
 	@Override
 	public boolean visitEmptyDeclaration(EmptyDeclaration node) {
 		if (node.getParent() instanceof CompilationUnit) {
-			set(node, treeMaker.Skip());
-		} else {
-			set(node, treeMaker.Block(0, List.<JCStatement>nil()));
-		}
-		return true;
+			return set(node, treeMaker.Skip());
+		} 
+		return set(node, treeMaker.Block(0, List.<JCStatement>nil()));
 	}
 	
 	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);

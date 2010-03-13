@@ -251,9 +251,13 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitTypeDeclaration(TypeDeclaration node) {
 		printNode(node);
+		if (node.enclosingType == null) {
+			property("enclosingType", null);
+		} else {
+			property("enclosingType.name", node.enclosingType.name);
+		}
 		child("javadoc", node.javadoc);
 		child("allocation", node.allocation);
-		child("enclosingType", node.enclosingType);
 		children("annotations", node.annotations);
 		child("superclass", node.superclass);
 		children("superInterfaces", node.superInterfaces);
