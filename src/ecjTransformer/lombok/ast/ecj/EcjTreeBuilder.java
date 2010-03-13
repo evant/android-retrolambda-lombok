@@ -798,16 +798,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitArrayCreation(lombok.ast.ArrayCreation node) {
 		ArrayAllocationExpression aae = new ArrayAllocationExpression();
 		aae.type = (TypeReference) toTree(node.getComponentTypeReference());
+		// TODO uncompilable parser test: new Type<Generics>[]...
+		// TODO uncompilable parser test: new Type[][expr][][expr]...
 		aae.type.bits |= ASTNode.IgnoreRawTypeCheck;
 		
-		Expression[] dimensions = toList(Expression.class, node.dimensions());
-		int dims = node.dimensions().size();
-		if (dimensions == null) {
-			dimensions = new Expression[dims];
-		} else if (dimensions.length < dims) {
-			dimensions = Arrays.copyOf(dimensions, dims);
+		int i = 0;
+		Expression[] dimensions = new Expression[node.dimensions().size()];
+		for (lombok.ast.ArrayDimension dim : node.dimensions()) {
+			dimensions[i++] = (Expression) toTree(dim.getDimension());
 		}
-		
 		aae.dimensions = dimensions;
 		aae.initializer = (ArrayInitializer) toTree(node.getInitializer());
 		return set(node, aae);
