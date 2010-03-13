@@ -472,6 +472,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		} else if (node.getOperator() == BinaryOperator.LOGICAL_OR) {
 			return new OR_OR_Expression(lhs, rhs, ecjOperator);
 		} else if (node.getOperator() == BinaryOperator.PLUS && node.getLeft().getParens() == 0) {
+			Expression stringConcatExpr = tryStringConcat(lhs, rhs);
+			if (stringConcatExpr != null) return stringConcatExpr;
+		}
+		
+		return new BinaryExpression(lhs, rhs, ecjOperator);
+	}
+	
+	private Expression tryStringConcat(Expression lhs, Expression rhs) {
+		if (this.options.parseLiteralExpressionsAsConstants) {
 			if (lhs instanceof ExtendedStringLiteral) {
 				if (rhs instanceof CharLiteral) {
 					return ((ExtendedStringLiteral)lhs).extendWith((CharLiteral)rhs);
@@ -485,9 +494,19 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 					return new ExtendedStringLiteral((StringLiteral)lhs, (StringLiteral)rhs);
 				}
 			}
+		} else {
+			if (lhs instanceof StringLiteralConcatenation) {
+				if (rhs instanceof StringLiteral) {
+					return ((StringLiteralConcatenation)lhs).extendsWith((StringLiteral)rhs);
+				}
+			} else if (lhs instanceof StringLiteral) {
+				if (rhs instanceof StringLiteral) {
+					return new StringLiteralConcatenation((StringLiteral) lhs, (StringLiteral) rhs);
+				}
+			}
 		}
 		
-		return new BinaryExpression(lhs, rhs, ecjOperator);
+		return null;
 	}
 	
 	@Override
