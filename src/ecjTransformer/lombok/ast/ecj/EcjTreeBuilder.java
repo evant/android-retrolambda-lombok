@@ -30,6 +30,12 @@ import java.util.List;
 import java.util.Locale;
 
 import lombok.ast.BinaryOperator;
+import lombok.ast.Break;
+import lombok.ast.Continue;
+import lombok.ast.DoWhile;
+import lombok.ast.ForEach;
+import lombok.ast.MethodInvocation;
+import lombok.ast.Select;
 import lombok.ast.UnaryOperator;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
@@ -96,6 +102,7 @@ import org.eclipse.jdt.internal.compiler.ast.MarkerAnnotation;
 import org.eclipse.jdt.internal.compiler.ast.MemberValuePair;
 import org.eclipse.jdt.internal.compiler.ast.MessageSend;
 import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.NameReference;
 import org.eclipse.jdt.internal.compiler.ast.NormalAnnotation;
 import org.eclipse.jdt.internal.compiler.ast.NullLiteral;
 import org.eclipse.jdt.internal.compiler.ast.OR_OR_Expression;
@@ -187,6 +194,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	private char[] toName(lombok.ast.Identifier node) {
+		if (node == null) {
+			return null;
+		}
 		return node.getName().toCharArray();
 	}
 	
@@ -241,6 +251,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (node instanceof lombok.ast.Expression) {
 			int parens = ((lombok.ast.Expression)node).getIntendedParens();
 			value.bits |= (parens << ASTNode.ParenthesizedSHIFT) & ASTNode.ParenthesizedMASK;
+		}
+		if (value instanceof NameReference) {
+			updateRestrictionFlags(node, (NameReference)value);
 		}
 		List<ASTNode> result = new ArrayList<ASTNode>();
 		if (value != null) result.add(value);
@@ -414,6 +427,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		inv.arguments = toList(Expression.class, node.arguments());
 		inv.receiver = toExpression(node.getOperand());
+		if (inv.receiver instanceof NameReference) {
+			inv.receiver.bits |= Binding.TYPE;
+		}
 		//TODO check if getMethodTypeArguments() should perhaps be never null.
 		if (node.getMethodTypeArguments() != null) inv.typeArguments = toList(TypeReference.class, node.getMethodTypeArguments().generics());
 		inv.selector = toName(node.getName());
@@ -516,9 +532,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			SingleTypeReference str = (SingleTypeReference) typeRef;
 			//Why you ask? I don't know. It seems dumb. Ask the ecj guys.
 			typeRef = new SingleNameReference(str.token, 0);
+			typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
 			typeRef.sourceStart = str.sourceStart;
 			typeRef.sourceEnd = str.sourceEnd;
-			typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
 		} else if (typeRef.getClass() == QualifiedTypeReference.class) {
 			QualifiedTypeReference qtr = (QualifiedTypeReference) typeRef;
 			//Same here, but for the more complex types, they stay types.
@@ -572,61 +588,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 					Collections.reverse(selects);
 					char[][] tokens = chain(selects, selects.size());
 					QualifiedNameReference ref = new QualifiedNameReference(tokens, new long[tokens.length], 0, 0);
-					ref.bits &= ~Binding.TYPE;
 					return set(node, ref);
 				} else {
 					break;
 				}
 			}
 		}
-		
+		//TODO ("" + 10).a.b = ... DONT forget to doublecheck var/type restriction flags
 		throw new RuntimeException("Select fail");
-	}
-	
-	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);
-	static {
-		UNARY_OPERATORS.put(UnaryOperator.BINARY_NOT, OperatorIds.TWIDDLE);
-		UNARY_OPERATORS.put(UnaryOperator.LOGICAL_NOT, OperatorIds.NOT); 
-		UNARY_OPERATORS.put(UnaryOperator.UNARY_PLUS, OperatorIds.PLUS);
-		UNARY_OPERATORS.put(UnaryOperator.PREFIX_INCREMENT, OperatorIds.PLUS); 
-		UNARY_OPERATORS.put(UnaryOperator.UNARY_MINUS, OperatorIds.MINUS);
-		UNARY_OPERATORS.put(UnaryOperator.PREFIX_DECREMENT, OperatorIds.MINUS); 
-		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_INCREMENT, OperatorIds.PLUS); 
-		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_DECREMENT, OperatorIds.MINUS);
-	}
-	
-	private static final EnumMap<BinaryOperator, Integer> BINARY_OPERATORS = Maps.newEnumMap(BinaryOperator.class);
-	static {
-		BINARY_OPERATORS.put(BinaryOperator.PLUS_ASSIGN, OperatorIds.PLUS);
-		BINARY_OPERATORS.put(BinaryOperator.MINUS_ASSIGN, OperatorIds.MINUS);
-		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY_ASSIGN, OperatorIds.MULTIPLY);
-		BINARY_OPERATORS.put(BinaryOperator.DIVIDE_ASSIGN, OperatorIds.DIVIDE);
-		BINARY_OPERATORS.put(BinaryOperator.REMAINDER_ASSIGN, OperatorIds.REMAINDER);
-		BINARY_OPERATORS.put(BinaryOperator.AND_ASSIGN, OperatorIds.AND);
-		BINARY_OPERATORS.put(BinaryOperator.XOR_ASSIGN, OperatorIds.XOR);
-		BINARY_OPERATORS.put(BinaryOperator.OR_ASSIGN, OperatorIds.OR);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT_ASSIGN, OperatorIds.LEFT_SHIFT);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT_ASSIGN, OperatorIds.RIGHT_SHIFT);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT_ASSIGN, OperatorIds.UNSIGNED_RIGHT_SHIFT);
-		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_OR, OperatorIds.OR_OR);
-		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_AND, OperatorIds.AND_AND);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_OR, OperatorIds.OR);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_XOR, OperatorIds.XOR);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_AND, OperatorIds.AND);
-		BINARY_OPERATORS.put(BinaryOperator.EQUALS, OperatorIds.EQUAL_EQUAL);
-		BINARY_OPERATORS.put(BinaryOperator.NOT_EQUALS, OperatorIds.NOT_EQUAL);
-		BINARY_OPERATORS.put(BinaryOperator.GREATER, OperatorIds.GREATER);
-		BINARY_OPERATORS.put(BinaryOperator.GREATER_OR_EQUAL, OperatorIds.GREATER_EQUAL);
-		BINARY_OPERATORS.put(BinaryOperator.LESS, OperatorIds.LESS);
-		BINARY_OPERATORS.put(BinaryOperator.LESS_OR_EQUAL, OperatorIds.LESS_EQUAL);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT, OperatorIds.LEFT_SHIFT);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT, OperatorIds.RIGHT_SHIFT);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT, OperatorIds.UNSIGNED_RIGHT_SHIFT);
-		BINARY_OPERATORS.put(BinaryOperator.PLUS, OperatorIds.PLUS);
-		BINARY_OPERATORS.put(BinaryOperator.MINUS, OperatorIds.MINUS);
-		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY, OperatorIds.MULTIPLY);
-		BINARY_OPERATORS.put(BinaryOperator.DIVIDE, OperatorIds.DIVIDE);
-		BINARY_OPERATORS.put(BinaryOperator.REMAINDER, OperatorIds.REMAINDER);
 	}
 	
 	@Override
@@ -761,15 +730,16 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitIdentifier(lombok.ast.Identifier node) {
 		SingleNameReference ref = new SingleNameReference(toName(node), 0L);
-		ref.bits &= ~Binding.TYPE;
 		return set(node, ref);
 	}
 	
-	@Override public boolean visitCharLiteral(lombok.ast.CharLiteral node) {
+	@Override
+	public boolean visitCharLiteral(lombok.ast.CharLiteral node) {
 		return set(node, new CharLiteral(node.getRawValue().toCharArray(), 0, 0));
 	}
 	
-	@Override public boolean visitStringLiteral(lombok.ast.StringLiteral node) {
+	@Override
+	public boolean visitStringLiteral(lombok.ast.StringLiteral node) {
 		return set(node, new StringLiteral(node.getValue().toCharArray(), 0, 0, 0));
 	}
 	
@@ -845,6 +815,26 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	@Override
+	public boolean visitDoWhile(DoWhile node) {
+		return set(node, new DoStatement(toExpression(node.getCondition()), (Statement) toTree(node.getStatement()), 0, 0));
+	}
+	
+	@Override
+	public boolean visitContinue(Continue node) {
+		return set(node, new ContinueStatement(toName(node.getLabel()), 0, 0));
+	}
+	
+	@Override
+	public boolean visitBreak(Break node) {
+		return set(node, new BreakStatement(toName(node.getLabel()), 0, 0));
+	}
+	
+	@Override
+	public boolean visitForEach(ForEach node) {
+		return set(node, dummy());
+	}
+	
+	@Override
 	public boolean visitEmptyStatement(lombok.ast.EmptyStatement node) {
 		return set(node, new EmptyStatement(0, 0));
 	}
@@ -874,6 +864,69 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			c[i++] = part.getName().toCharArray();
 		}
 		return c;
+	}
+	
+	private void updateRestrictionFlags(lombok.ast.Node node, NameReference ref) {
+		ref.bits &= ~ASTNode.RestrictiveFlagMASK;
+		ref.bits |= Binding.VARIABLE;
+		
+		if (node.getParent() instanceof MethodInvocation) {
+			if (((MethodInvocation)node.getParent()).getOperand() == node) {
+				ref.bits |= Binding.TYPE;
+			}
+		}
+		
+		if (node.getParent() instanceof Select) {
+			if (((Select)node.getParent()).getOperand() == node) {
+				ref.bits |= Binding.TYPE;
+			}
+		}
+	}
+
+	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);
+	static {
+		UNARY_OPERATORS.put(UnaryOperator.BINARY_NOT, OperatorIds.TWIDDLE);
+		UNARY_OPERATORS.put(UnaryOperator.LOGICAL_NOT, OperatorIds.NOT); 
+		UNARY_OPERATORS.put(UnaryOperator.UNARY_PLUS, OperatorIds.PLUS);
+		UNARY_OPERATORS.put(UnaryOperator.PREFIX_INCREMENT, OperatorIds.PLUS); 
+		UNARY_OPERATORS.put(UnaryOperator.UNARY_MINUS, OperatorIds.MINUS);
+		UNARY_OPERATORS.put(UnaryOperator.PREFIX_DECREMENT, OperatorIds.MINUS); 
+		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_INCREMENT, OperatorIds.PLUS); 
+		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_DECREMENT, OperatorIds.MINUS);
+	}
+	
+	private static final EnumMap<BinaryOperator, Integer> BINARY_OPERATORS = Maps.newEnumMap(BinaryOperator.class);
+	static {
+		BINARY_OPERATORS.put(BinaryOperator.PLUS_ASSIGN, OperatorIds.PLUS);
+		BINARY_OPERATORS.put(BinaryOperator.MINUS_ASSIGN, OperatorIds.MINUS);
+		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY_ASSIGN, OperatorIds.MULTIPLY);
+		BINARY_OPERATORS.put(BinaryOperator.DIVIDE_ASSIGN, OperatorIds.DIVIDE);
+		BINARY_OPERATORS.put(BinaryOperator.REMAINDER_ASSIGN, OperatorIds.REMAINDER);
+		BINARY_OPERATORS.put(BinaryOperator.AND_ASSIGN, OperatorIds.AND);
+		BINARY_OPERATORS.put(BinaryOperator.XOR_ASSIGN, OperatorIds.XOR);
+		BINARY_OPERATORS.put(BinaryOperator.OR_ASSIGN, OperatorIds.OR);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT_ASSIGN, OperatorIds.LEFT_SHIFT);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT_ASSIGN, OperatorIds.RIGHT_SHIFT);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT_ASSIGN, OperatorIds.UNSIGNED_RIGHT_SHIFT);
+		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_OR, OperatorIds.OR_OR);
+		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_AND, OperatorIds.AND_AND);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_OR, OperatorIds.OR);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_XOR, OperatorIds.XOR);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_AND, OperatorIds.AND);
+		BINARY_OPERATORS.put(BinaryOperator.EQUALS, OperatorIds.EQUAL_EQUAL);
+		BINARY_OPERATORS.put(BinaryOperator.NOT_EQUALS, OperatorIds.NOT_EQUAL);
+		BINARY_OPERATORS.put(BinaryOperator.GREATER, OperatorIds.GREATER);
+		BINARY_OPERATORS.put(BinaryOperator.GREATER_OR_EQUAL, OperatorIds.GREATER_EQUAL);
+		BINARY_OPERATORS.put(BinaryOperator.LESS, OperatorIds.LESS);
+		BINARY_OPERATORS.put(BinaryOperator.LESS_OR_EQUAL, OperatorIds.LESS_EQUAL);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT, OperatorIds.LEFT_SHIFT);
+		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT, OperatorIds.RIGHT_SHIFT);
+		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT, OperatorIds.UNSIGNED_RIGHT_SHIFT);
+		BINARY_OPERATORS.put(BinaryOperator.PLUS, OperatorIds.PLUS);
+		BINARY_OPERATORS.put(BinaryOperator.MINUS, OperatorIds.MINUS);
+		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY, OperatorIds.MULTIPLY);
+		BINARY_OPERATORS.put(BinaryOperator.DIVIDE, OperatorIds.DIVIDE);
+		BINARY_OPERATORS.put(BinaryOperator.REMAINDER, OperatorIds.REMAINDER);
 	}
 	
 	private Expression dummy() {
