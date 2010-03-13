@@ -818,6 +818,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	@Override
+	public boolean visitAssert(lombok.ast.Assert node) {
+		//TODO check the flags after more test have been added: asserts in constructors, methods etc.
+		if (node.getMessage() == null) {
+			return set(node, new AssertStatement(toExpression(node.getAssertion()), 0));
+		}
+		return set(node, new AssertStatement(toExpression(node.getMessage()), toExpression(node.getAssertion()), 0));
+	}
+	
+	@Override
 	public boolean visitEmptyStatement(lombok.ast.EmptyStatement node) {
 		return set(node, new EmptyStatement(0, 0));
 	}
