@@ -34,12 +34,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(DirectoryRunner.class)
-public class AliasTest {
-	public static File getDirectory() {
+public class AliasTest extends DirectoryRunner.SourceFileBasedTester {
+	protected File getDirectory() {
 		return new File("test/idempotency");
 	}
 	
-	public static File getMirrorDirectory() {
+	protected File getMirrorDirectory() {
 		return new File("test/alias");
 	}
 	

@@ -23,7 +23,6 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
@@ -45,10 +44,6 @@ import com.sun.tools.javac.util.Context;
 
 @RunWith(DirectoryRunner.class)
 public class JcTreeBuilderTest extends TreeBuilderTest<JCTree> {
-	public static File getDirectory() {
-		return new File("test/idempotency");
-	}
-	
 	@Test
 	public boolean testJavaCompiler(Source source) throws Exception {
 		return testCompiler(source);

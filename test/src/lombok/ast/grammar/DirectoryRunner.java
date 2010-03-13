@@ -44,6 +44,18 @@ import org.junit.runner.notification.RunNotifier;
 import com.google.common.collect.Lists;
 
 public class DirectoryRunner extends Runner {
+	public static abstract class SourceFileBasedTester {
+		protected abstract File getDirectory();
+		
+		protected File getMirrorDirectory() {
+			return null;
+		}
+		
+		protected boolean shouldProcess(File file) {
+			return file.getName().endsWith(".java");
+		}
+	}
+	
 	private static final Comparator<Method> methodComparator = new Comparator<Method>() {
 		@Override public int compare(Method o1, Method o2) {
 			String sig1 = o1.getName() + Arrays.toString(o1.getParameterTypes());
@@ -81,15 +93,14 @@ public class DirectoryRunner extends Runner {
 	}
 	
 	private void addTests(Class<?> testClass) throws Exception {
-		Method directoryMethod = testClass.getDeclaredMethod("getDirectory");
-		directory = (File) directoryMethod.invoke(null);
-		
-		try {
-			Method mirrorMethod = testClass.getDeclaredMethod("getMirrorDirectory");
-			mirrorDirectory = (File)mirrorMethod.invoke(null);
-		} catch (NoSuchMethodException e) {
-			//then we'll go on without one!
+		if (!SourceFileBasedTester.class.isAssignableFrom(testClass)) {
+			throw new AssertionError("Can't add tests if the class doesn't extend SourceFileBasedTester.");
 		}
+		
+		SourceFileBasedTester tester = (SourceFileBasedTester) testClass.newInstance();
+		
+		directory = tester.getDirectory();
+		mirrorDirectory = tester.getMirrorDirectory();
 		
 		File root = mirrorDirectory == null ? directory : mirrorDirectory;
 		List<File> files = listFilesRecursively(root);
@@ -97,13 +108,13 @@ public class DirectoryRunner extends Runner {
 		Map<Method, Description> noFileNeededMap = new TreeMap<Method, Description>(methodComparator);
 		
 		for (File file : files) {
-			if (!file.getName().endsWith(".java")) continue;
+			if (!tester.shouldProcess(file)) continue;
 			Map<Method, Description> methodToDescMap = new TreeMap<Method, Description>(methodComparator);
 			
 			String fileName = root.toURI().relativize(file.toURI()).toString();
 			tests.put(fileName, methodToDescMap);
 			
-			for (Method m : testClass.getMethods()) {
+			for (Method m : testClass.getDeclaredMethods()) {
 				if (m.getAnnotation(Test.class) != null) {
 					if (m.getParameterTypes().length == 0) {
 						if (!noFileNeededMap.containsKey(m)) {

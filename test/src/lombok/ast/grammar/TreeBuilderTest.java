@@ -2,7 +2,15 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
-abstract class TreeBuilderTest<N> {
+import java.io.File;
+
+abstract class TreeBuilderTest<N> extends DirectoryRunner.SourceFileBasedTester {
+	private static final boolean TIMETEST = false;
+	
+	protected File getDirectory() {
+		return new File("test/idempotency");
+	}
+	
 	protected boolean testCompiler(Source source) throws Exception {
 		N parsedWithTargetCompiler = parseWithTargetCompiler(source);
 		if (parsedWithTargetCompiler == null) {
