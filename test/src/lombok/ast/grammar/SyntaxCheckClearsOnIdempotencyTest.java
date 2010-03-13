@@ -36,8 +36,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(DirectoryRunner.class)
-public class SyntaxCheckClearsOnIdempotencyTest {
-	public static File getDirectory() {
+public class SyntaxCheckClearsOnIdempotencyTest extends DirectoryRunner.SourceFileBasedTester {
+	protected File getDirectory() {
 		return new File("test/idempotency");
 	}
 	

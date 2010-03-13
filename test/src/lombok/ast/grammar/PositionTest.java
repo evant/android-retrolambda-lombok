@@ -35,8 +35,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(DirectoryRunner.class)
-public class PositionTest {
-	public static File getDirectory() {
+public class PositionTest extends DirectoryRunner.SourceFileBasedTester {
+	protected File getDirectory() {
 		return new File("test/idempotency");
 	}
 	

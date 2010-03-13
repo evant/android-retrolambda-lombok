@@ -2,7 +2,6 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
 import java.util.List;
 
 import lombok.ast.Node;
@@ -24,10 +23,6 @@ import org.junit.runner.RunWith;
 
 @RunWith(DirectoryRunner.class)
 public class EcjTreeBuilderTest extends TreeBuilderTest<ASTNode> {
-	public static File getDirectory() {
-		return new File("test/idempotency");
-	}
-	
 	@Test
 	public boolean testEcjCompiler(Source source) throws Exception {
 		if (source.getName().compareToIgnoreCase("E") > 0) {
@@ -37,12 +32,11 @@ public class EcjTreeBuilderTest extends TreeBuilderTest<ASTNode> {
 		return testCompiler(source);
 	}
 	
-	private static CompilerOptions ecjCompilerOptions() {
+	protected CompilerOptions ecjCompilerOptions() {
 		CompilerOptions options = new CompilerOptions();
 		options.complianceLevel = ClassFileConstants.JDK1_6;
 		options.sourceLevel = ClassFileConstants.JDK1_6;
 		options.targetJDK = ClassFileConstants.JDK1_6;
-		//TODO turn this off. String concats should continue to work.
 		options.parseLiteralExpressionsAsConstants = true;
 		return options;
 	}

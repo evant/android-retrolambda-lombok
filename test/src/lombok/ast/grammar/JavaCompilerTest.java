@@ -39,8 +39,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(DirectoryRunner.class)
-public class JavaCompilerTest {
-	public static File getDirectory() {
+public class JavaCompilerTest extends DirectoryRunner.SourceFileBasedTester {
+	protected File getDirectory() {
 		return new File("test/idempotency");
 	}
 	
@@ -54,7 +54,7 @@ public class JavaCompilerTest {
 		assertTrue(task.call());
 	}
 	
-	private static File getTempDir() {
+	private File getTempDir() {
 		String[] rawDirs = {
 				System.getProperty("java.io.tmpdir"),
 				"/tmp",
