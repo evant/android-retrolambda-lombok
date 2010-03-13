@@ -1,4 +1,4 @@
-class H008_Methods {
+class H008_SimpleMethods {
     private int x;
     
     public int test(int z) {
