@@ -23,8 +23,10 @@ package lombok.ast.ecj;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -195,7 +197,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (list.isEmpty()) return null;
 		@SuppressWarnings("unchecked")
 		T[] emptyArray = (T[]) Array.newInstance(type, 0);
-		return list.isEmpty() ? null : list.toArray(emptyArray);
+		return list.toArray(emptyArray);
 	}
 	
 	private <T extends ASTNode> T[] toList(Class<T> type, lombok.ast.StrictListAccessor<?, ?> accessor) {
@@ -803,7 +805,17 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitArrayCreation(ArrayCreation node) {
 		ArrayAllocationExpression aae = new ArrayAllocationExpression();
 		aae.type = (TypeReference) toTree(node.getComponentTypeReference());
-		aae.dimensions = toList(Expression.class, node.dimensions());
+		aae.type.bits |= ASTNode.IgnoreRawTypeCheck;
+		
+		Expression[] dimensions = toList(Expression.class, node.dimensions());
+		int dims = node.dimensions().size();
+		if (dimensions == null) {
+			dimensions = new Expression[dims];
+		} else if (dimensions.length < dims) {
+			dimensions = Arrays.copyOf(dimensions, dims);
+		}
+		
+		aae.dimensions = dimensions;
 		aae.initializer = (ArrayInitializer) toTree(node.getInitializer());
 		set(node, aae);
 		return true;
