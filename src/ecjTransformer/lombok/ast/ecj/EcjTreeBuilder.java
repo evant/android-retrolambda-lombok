@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.Locale;
 
 import lombok.ast.BinaryOperator;
+import lombok.ast.Break;
+import lombok.ast.Continue;
+import lombok.ast.DoWhile;
 import lombok.ast.UnaryOperator;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
@@ -187,6 +190,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	private char[] toName(lombok.ast.Identifier node) {
+		if (node == null) {
+			return null;
+		}
 		return node.getName().toCharArray();
 	}
 	
@@ -824,6 +830,22 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			return set(node, new AssertStatement(toExpression(node.getAssertion()), 0));
 		}
 		return set(node, new AssertStatement(toExpression(node.getMessage()), toExpression(node.getAssertion()), 0));
+	}
+	
+	@Override
+	public boolean visitDoWhile(DoWhile node) {
+		return set(node, new DoStatement(toExpression(node.getCondition()), (Statement) toTree(node.getStatement()), 0, 0));
+	}
+	
+	@Override
+	public boolean visitContinue(Continue node) {
+		return set(node, new ContinueStatement(toName(node.getLabel()), 0, 0));
+	}
+	
+	@Override
+	public boolean visitBreak(Break node) {
+		return set(node, new BreakStatement(toName(node.getLabel()), 0, 0));
+//		return set(node, dummy());
 	}
 	
 	@Override
