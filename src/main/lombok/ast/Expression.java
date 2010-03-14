@@ -21,10 +21,13 @@
  */
 package lombok.ast;
 
+import java.util.List;
+
 public interface Expression extends Node {
 	/**
 	 * Returns the actual amount of parentheses physically around this expression.
 	 * 
+	 * @see #getParensPositions()
 	 * @see #getIntendedParens()
 	 */
 	int getParens();
@@ -36,9 +39,13 @@ public interface Expression extends Node {
 	int getIntendedParens();
 	
 	/**
+	 * Returns the start/end position of each paren pair around this node. The only canonical aspect
+	 * of this list is the size of it. The positions are set to appropriate files after parsing, from
+	 * the innermost parens at index 0 to the outermost at the final index.
+	 * 
 	 * @see #getParens()
 	 */
-	Expression setParens(int parens);
+	List<Position> getParensPositions();
 	
 	/**
 	 * Returns {@code true} if the expression would need parentheses because without them the interpretation

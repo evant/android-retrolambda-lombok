@@ -122,4 +122,28 @@ abstract class AbstractNode implements Node {
 		accept(printer);
 		return formatter.finish();
 	}
+	
+	abstract static class WithParens extends AbstractNode {
+		private List<Position> parensPositions = new ArrayList<Position>();
+		
+		@Override
+		public boolean needsParentheses() {
+			return false;
+		}
+		
+		@Override
+		public List<Position> getParensPositions() {
+			return parensPositions;
+		}
+		
+		@Override
+		public int getParens() {
+			return this.parensPositions.size();
+		}
+		
+		@Override
+		public int getIntendedParens() {
+			return this.parensPositions.size();
+		}
+	}
 }

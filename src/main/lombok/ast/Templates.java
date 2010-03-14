@@ -35,7 +35,15 @@ import lombok.ast.template.InitialValue;
 import lombok.ast.template.NotChildOfNode;
 
 class ExpressionMixin {
-	@NotChildOfNode int parens;
+	@NotChildOfNode(suppressSetter=true)
+	@NonNull
+	@InitialValue("new java.util.ArrayList<Position>()")
+	List<Position> parensPositions;
+	
+	@CopyMethod
+	static int getParens(Expression self) {
+		return self.getParensPositions() == null ? 0 : self.getParensPositions().size();
+	}
 	
 	@CopyMethod
 	static int getIntendedParens(Expression self) {

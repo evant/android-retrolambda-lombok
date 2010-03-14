@@ -22,10 +22,12 @@
 package lombok.ast;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.Getter;
 
-public class IntegralLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
+public class IntegralLiteral extends AbstractNode.WithParens implements Literal, Expression, DescribedNode {
 	private static final String NEGATIVE_NUMBERS_NOT_POSSIBLE = "Negative integral literals don't exist; wrap in a UnaryExpression with operator MINUS";
 	
 	private Long value;
@@ -33,28 +35,6 @@ public class IntegralLiteral extends AbstractNode implements Literal, Expression
 	private String errorReasonForValue = "Missing value";
 	@Getter private boolean markedAsLong;
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
-	private int parens;
-	
-	@Override
-	public IntegralLiteral setParens(int parens) {
-		this.parens = parens;
-		return this;
-	}
-	
-	@Override
-	public int getParens() {
-		return this.parens;
-	}
-	
-	@Override
-	public int getIntendedParens() {
-		return this.parens;
-	}
-	
-	@Override
-	public boolean needsParentheses() {
-		return false;
-	}
 	
 	@Override
 	public boolean isStatementExpression() {

@@ -21,36 +21,17 @@
  */
 package lombok.ast;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import lombok.Getter;
 
-public class FloatingPointLiteral extends AbstractNode implements Literal, Expression, DescribedNode {
+public class FloatingPointLiteral extends AbstractNode.WithParens implements Literal, Expression, DescribedNode {
 	private Double value;
 	private String rawValue;
 	private String errorReasonForValue = "Missing value";
 	@Getter private boolean markedAsFloat;
 	@Getter private LiteralType literalType = LiteralType.DECIMAL;
-	private int parens;
-	
-	@Override
-	public FloatingPointLiteral setParens(int parens) {
-		this.parens = parens;
-		return this;
-	}
-	
-	@Override
-	public boolean needsParentheses() {
-		return false;
-	}
-	
-	@Override
-	public int getParens() {
-		return this.parens;
-	}
-	
-	@Override
-	public int getIntendedParens() {
-		return this.parens;
-	}
 	
 	@Override
 	public boolean isStatementExpression() {
