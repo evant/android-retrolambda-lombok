@@ -124,6 +124,7 @@ import com.sun.tools.javac.tree.JCTree.JCCatch;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
+import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCLiteral;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
@@ -141,18 +142,20 @@ import com.sun.tools.javac.util.Name.Table;
  * Turns {@code lombok.ast} based ASTs into javac's {@code JCTree} model.
  */
 public class JcTreeBuilder extends ForwardingAstVisitor {
+	private final boolean includePositions;
 	private final TreeMaker treeMaker;
 	private final Table table;
 	
 	private List<? extends JCTree> result = null;
 	
-	public JcTreeBuilder(Context context) {
-		this(TreeMaker.instance(context), Name.Table.instance(context));
+	public JcTreeBuilder(Context context, boolean includePositions) {
+		this(TreeMaker.instance(context), Name.Table.instance(context), includePositions);
 	}
 	
-	private JcTreeBuilder(TreeMaker treeMaker, Table table) {
+	private JcTreeBuilder(TreeMaker treeMaker, Table table, boolean includePositions) {
 		this.treeMaker = treeMaker;
 		this.table = table;
+		this.includePositions = includePositions;
 	}
 	
 	private Name toName(Identifier identifier) {
@@ -228,11 +231,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private boolean set(Node node, JCTree value) {
 		if (result != null) throw new IllegalStateException("result is already set");
-		
 		JCTree actualValue = value;
 		if (node instanceof Expression) {
 			for (int i = 0; i < ((Expression)node).getIntendedParens(); i++) {
 				actualValue = treeMaker.Parens((JCExpression)actualValue);
+				posParen(node, i, actualValue);
 			}
 		}
 		result = List.of(actualValue);
@@ -246,7 +249,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private JcTreeBuilder create() {
-		return new JcTreeBuilder(treeMaker, table);
+		return new JcTreeBuilder(treeMaker, table, includePositions);
 	}
 	
 	@Override
@@ -273,7 +276,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			}
 		}
 		
-		return set(node, treeMaker.TopLevel(annotations, pid, imports.appendList(types)));
+		return set(node, pos(node, treeMaker.TopLevel(annotations, pid, imports.appendList(types))));
 	}
 	
 	@Override
@@ -295,21 +298,21 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitImportDeclaration(ImportDeclaration node) {
 		JCExpression name = chain(node.parts());
 		if (node.isStarImport()) {
-			name = treeMaker.Select(name, table.fromString("*"));
+			name = posStar(node, treeMaker.Select(name, table.fromString("*")));
 		}
-		return set(node, treeMaker.Import(name, node.isStaticImport()));
+		return set(node, pos(node, treeMaker.Import(name, node.isStaticImport())));
 	}
 	
 	@Override
 	public boolean visitClassDeclaration(ClassDeclaration node) {
-		return set(node, treeMaker.ClassDef(
+		return set(node, posClass(node, treeMaker.ClassDef(
 				(JCModifiers) toTree(node.getModifiers()),
 				toName(node.getName()),
 				toList(JCTypeParameter.class, node.typeVariables()),
 				toTree(node.getExtending()),
 				toList(JCExpression.class, node.implementing()),
 				node.getBody() == null ? List.<JCTree>nil() : toList(JCTree.class, node.getBody().members())
-		));
+		)));
 	}
 	
 	@Override
@@ -327,7 +330,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitEmptyStatement(EmptyStatement node) {
-		return set(node, treeMaker.Skip());
+		return set(node, pos(node, treeMaker.Skip()));
 	}
 	
 	@Override
@@ -716,7 +719,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		if (javadoc != null && DEPRECATED_DETECTOR.matcher(javadoc.getContent()).matches()) mods.flags |= Flags.DEPRECATED;
 		
-		return set(node, mods);
+		if (node.isEmpty()) {
+			return set(node, mods);
+		} else {
+			return set(node, pos(node, mods));
+		}
 	}
 	
 	@Override
@@ -733,12 +740,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitStaticInitializer(StaticInitializer node) {
 		JCBlock block = (JCBlock) toTree(node.getBody());
 		block.flags |= Flags.STATIC; 
-		return set(node, block);
+		return set(node, pos(node, block));
 	}
 	
 	@Override
 	public boolean visitBlock(Block node) {
-		return set(node, treeMaker.Block(0, toList(JCStatement.class, node.contents())));
+		return set(node, pos(node, treeMaker.Block(0, toList(JCStatement.class, node.contents()))));
 	}
 	
 	@Override
@@ -759,7 +766,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		List<JCVariableDecl> defs = List.nil();
 		for (VariableDefinitionEntry e : node.variables()) {
-			defs = defs.append(treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer())));
+			defs = defs.append(pos(
+					e,
+					treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer()))));
 		}
 		
 		if (defs.isEmpty()) throw new RuntimeException("Empty VariableDefinition node");
@@ -846,7 +855,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (node.isPrimitive() || node.parts().size() == 1) {
 			Identifier identifier = node.parts().first().getIdentifier();
 			int typeTag = primitiveTypeTag(identifier.getName());
-			if (typeTag > 0) return treeMaker.TypeIdent(typeTag);
+			if (typeTag > 0) return pos(node, treeMaker.TypeIdent(typeTag));
 		}
 		
 		List<JCExpression> list = toList(JCExpression.class, node.parts());
@@ -1021,9 +1030,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitEmptyDeclaration(EmptyDeclaration node) {
 		if (node.getParent() instanceof CompilationUnit) {
-			return set(node, treeMaker.Skip());
+			return set(node, pos(node, treeMaker.Skip()));
 		} 
-		return set(node, treeMaker.Block(0, List.<JCStatement>nil()));
+		return set(node, posNone(node, treeMaker.Block(0, List.<JCStatement>nil())));
 	}
 	
 	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);
@@ -1097,9 +1106,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		for (Identifier part : parts) {
 			Name next = toName(part);
 			if (previous == null) {
-				previous = treeMaker.Ident(next);
+				previous = pos(part, treeMaker.Ident(next));
 			} else {
-				previous = treeMaker.Select(previous, next);
+				previous = posDot(part, treeMaker.Select(previous, next));
 			}
 		}
 		return previous;
@@ -1108,5 +1117,39 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@SuppressWarnings("all")
 	private JCTree dummy() {
 		return treeMaker.Ident(table.fromString("<dummy>"));
+	}
+	
+	private <T extends JCTree> T pos(Node node, T jcTree) {
+		return setPos(jcTree, node.getPosition().getStart());
+	}
+	
+	private <T extends JCTree> T posDot(Node node, T jcTree) {
+		return setPos(jcTree, node.getPosition().getStart() - 1);
+	}
+	
+	private <T extends JCTree> T posNone(Node node, T jcTree) {
+		return jcTree;
+	}
+	
+	private <T extends JCTree> T posParen(Node node, int iteration, T jcTree) {
+		return setPos(jcTree, node.getPosition().getStart() - 1 - iteration);
+	}
+	
+	private JCFieldAccess posStar(ImportDeclaration node, JCFieldAccess jcTree) {
+		return setPos(jcTree, node.parts().last().getPosition().getEnd());
+	}
+	private JCTree posClass(ClassDeclaration node, JCClassDecl jcTree) {
+//		return setPos(jcTree, node.);
+		if (node.getModifiers().isEmpty()) {
+			return pos(node, jcTree);
+		}
+		return setPos(jcTree, node.getModifiers().getPosition().getEnd() + 1);
+	}
+	
+	private <T extends JCTree> T setPos(T jcTree, int position) {
+		if (includePositions) {
+			jcTree.pos = position;
+		}
+		return jcTree;
 	}
 }

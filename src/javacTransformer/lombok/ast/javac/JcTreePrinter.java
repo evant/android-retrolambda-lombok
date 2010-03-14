@@ -87,6 +87,7 @@ import com.sun.tools.javac.util.List;
  */
 public class JcTreePrinter extends JCTree.Visitor {
 	private final StringBuilder output = new StringBuilder();
+	private final boolean includePositions;
 	private int indent;
 	private String rel;
 	
@@ -108,7 +109,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 		GET_TAG_METHOD = m;
 		TAG_FIELD = f;
 	}
-	
+
 	static int getTag(JCTree tree) {
 		if (GET_TAG_METHOD != null) {
 			try {
@@ -126,13 +127,25 @@ public class JcTreePrinter extends JCTree.Visitor {
 		}
 	}
 	
+	public JcTreePrinter(boolean includePositions) {
+		this.includePositions = includePositions;
+	}
+	
 	@Override
 	public String toString() {
 		return output.toString();
 	}
 	
 	private void printNode(JCTree nodeKind) {
-		printNode(nodeKind == null ? "NULL" : nodeKind.getClass().getSimpleName());
+		if (nodeKind == null) {
+			printNode("NULL");
+		} else {
+			if (includePositions) {
+				printNode(nodeKind.getClass().getSimpleName() + "(" + nodeKind.pos + ")");
+			} else {
+				printNode(nodeKind.getClass().getSimpleName());
+			}
+		}
 	}
 	
 	private void printNode(String nodeKind) {
