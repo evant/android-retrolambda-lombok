@@ -142,6 +142,52 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	private final CompilationResult compilationResult;
 	private final CompilerOptions options;
 	
+	private enum VariableKind {
+		UNSUPPORTED {
+			AbstractVariableDeclaration create() {
+				throw new UnsupportedOperationException(); 
+			}
+		},
+		FIELD {
+			AbstractVariableDeclaration create() {
+				return new FieldDeclaration(); 
+			}
+		}, 
+		LOCAL {
+			AbstractVariableDeclaration create() {
+				return new LocalDeclaration(null, 0, 0); 
+			}
+		}, 
+		ARGUMENT {
+			AbstractVariableDeclaration create() {
+				return new Argument(null, 0, null, 0);
+			}
+		};
+		
+		abstract AbstractVariableDeclaration create();
+
+		static VariableKind kind(lombok.ast.VariableDefinition node) {
+			lombok.ast.Node parent = node.getParent();
+			if (parent instanceof lombok.ast.VariableDeclaration) {
+				if (parent.getParent() instanceof lombok.ast.TypeDeclaration) {
+					return FIELD;
+				} else {
+					return LOCAL;
+				}
+			}
+			if (parent instanceof lombok.ast.For){
+				return LOCAL;
+			}
+			if (parent instanceof lombok.ast.ForEach){
+				return LOCAL;
+			}
+			if (parent instanceof lombok.ast.Catch){
+				return ARGUMENT;
+			}
+			return UNSUPPORTED;
+		}
+	}
+	
 	public EcjTreeBuilder(lombok.ast.grammar.Source source, CompilerOptions options) {
 		this.options = options;
 		IErrorHandlingPolicy policy = new IErrorHandlingPolicy() {
@@ -833,9 +879,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		Annotation[] annotations = null; //TODO
 		int modifiers = toModifiers(node.getModifiers());
-		boolean isFieldDecls = node.getParent() instanceof lombok.ast.VariableDeclaration && node.getParent().getParent() instanceof lombok.ast.TypeDeclaration;
 		for (lombok.ast.VariableDefinitionEntry entry : node.variables()) {
-			AbstractVariableDeclaration decl = isFieldDecls ? new FieldDeclaration() : new LocalDeclaration(null, 0, 0);
+			AbstractVariableDeclaration decl = VariableKind.kind(node).create();
 			decl.annotations = annotations;
 			decl.initialization = toExpression(entry.getInitializer());
 			decl.modifiers = modifiers;
@@ -848,7 +893,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		return set(node, values);
 	}
-
+	
 	@Override
 	public boolean visitIf(lombok.ast.If node) {
 		if (node.getElseStatement() == null) {
@@ -912,7 +957,16 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		}
 		tryStatement.finallyBlock = (Block) toTree(node.getFinally());
 		return set(node, tryStatement);
-//		return set(node, dummy());
+	}
+	
+	@Override
+	public boolean visitThrow(lombok.ast.Throw node) {
+		return set(node, new ThrowStatement(toExpression(node.getThrowable()), 0, 0));
+	}
+	
+	@Override
+	public boolean visitWhile(lombok.ast.While node) {
+		return set(node, new WhileStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), 0, 0));
 	}
 	
 	@Override
