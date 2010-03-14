@@ -916,7 +916,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	@Override
-	public boolean visitCase(Case node) {
+	public boolean visitCase(lombok.ast.Case node) {
 		return set(node, new CaseStatement(toExpression(node.getCondition()), 0, 0));
 	}
 	
@@ -961,14 +961,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		ref.bits &= ~ASTNode.RestrictiveFlagMASK;
 		ref.bits |= Binding.VARIABLE;
 		
-		if (node.getParent() instanceof MethodInvocation) {
-			if (((MethodInvocation)node.getParent()).getOperand() == node) {
+		if (node.getParent() instanceof lombok.ast.MethodInvocation) {
+			if (((lombok.ast.MethodInvocation)node.getParent()).getOperand() == node) {
 				ref.bits |= Binding.TYPE;
 			}
 		}
 		
-		if (node.getParent() instanceof Select) {
-			if (((Select)node.getParent()).getOperand() == node) {
+		if (node.getParent() instanceof lombok.ast.Select) {
+			if (((lombok.ast.Select)node.getParent()).getOperand() == node) {
 				ref.bits |= Binding.TYPE;
 			}
 		}
@@ -979,7 +979,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (block == null) {
 			return false;
 		}
-		Position pos = block.getPosition();
+		lombok.ast.Position pos = block.getPosition();
 		if (pos.isUnplaced() && pos.size() < 2) {
 			return false;
 		}
