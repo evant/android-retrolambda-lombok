@@ -24,6 +24,7 @@ package lombok.ast.javac;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
@@ -47,6 +48,7 @@ import lombok.ast.Catch;
 import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.ClassLiteral;
+import lombok.ast.Comment;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.ConstructorInvocation;
@@ -72,6 +74,7 @@ import lombok.ast.InstanceInitializer;
 import lombok.ast.InstanceOf;
 import lombok.ast.IntegralLiteral;
 import lombok.ast.InterfaceDeclaration;
+import lombok.ast.JavadocContainer;
 import lombok.ast.KeywordModifier;
 import lombok.ast.LabelledStatement;
 import lombok.ast.Literal;
@@ -697,9 +700,23 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return set(node, treeMaker.Labelled(toName(node.getLabel()), toStatement(node.getStatement())));
 	}
 	
+	private static final Pattern DEPRECATED_DETECTOR = Pattern.compile("^(?:.*(?:[*{}]|\\s))?@deprecated(?:(?:[*{}]|\\s).*)?$", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+	
 	@Override
 	public boolean visitModifiers(Modifiers node) {
-		return set(node, treeMaker.Modifiers(node.getExplicitModifierFlags(), toList(JCAnnotation.class, node.annotations())));
+		JCModifiers mods = treeMaker.Modifiers(node.getExplicitModifierFlags(), toList(JCAnnotation.class, node.annotations()));
+		
+		Comment javadoc = null;
+		
+		if (node.getParent() instanceof JavadocContainer) {
+			javadoc = ((JavadocContainer)node.getParent()).getJavadoc();
+		} else if (node.getParent() instanceof VariableDefinition && node.getParent().getParent() instanceof JavadocContainer) {
+			javadoc = ((JavadocContainer)node.getParent().getParent()).getJavadoc();
+		}
+		
+		if (javadoc != null && DEPRECATED_DETECTOR.matcher(javadoc.getContent()).matches()) mods.flags |= Flags.DEPRECATED;
+		
+		return set(node, mods);
 	}
 	
 	@Override
