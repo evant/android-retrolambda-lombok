@@ -704,6 +704,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitSwitchStatement(SwitchStatement node) {
 		printNode(node);
+		property("explicitDeclarations", node.explicitDeclarations);
 		child("expression", node.expression);
 		children("statements", node.statements);
 		indent--;
