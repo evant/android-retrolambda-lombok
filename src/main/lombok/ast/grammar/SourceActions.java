@@ -21,14 +21,22 @@
  */
 package lombok.ast.grammar;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.Position;
+import lombok.ast.Node.PositionKey;
 
 import org.parboiled.BaseActions;
 
+import com.google.common.collect.MapMaker;
+
 class SourceActions extends BaseActions<Node> {
 	protected final Source source;
+	private static final Map<org.parboiled.Context<Node>, Map<PositionKey, Position>> extraPositionsStore =
+		new MapMaker().weakKeys().makeMap();
 	
 	SourceActions(Source source) {
 		this.source = source;
@@ -37,6 +45,23 @@ class SourceActions extends BaseActions<Node> {
 	Node createNewModifiersIfNeeded(Node modifiers, int pos) {
 		if (modifiers != null) return modifiers;
 		return new Modifiers().setPosition(new Position(pos, pos));
+	}
+	
+	void markStart(PositionKey key) {
+		Map<PositionKey, Position> m = extraPositionsStore.get(getContext());
+		if (m == null) {
+			m = new HashMap<PositionKey, Position>();
+			extraPositionsStore.put(getContext(), m);
+		}
+		m.put(key, new Position(getContext().getCurrentLocation().index, -1));
+	}
+	
+	void markEnd(PositionKey key) {
+		Map<PositionKey, Position> m = extraPositionsStore.get(getContext());
+		Position p = null;
+		if (m != null) p = m.get(key);
+		if (p == null) throw new IllegalStateException("Start not marked for PositionKey: " + key.name());
+		m.put(key, new Position(p.getStart(), getContext().getCurrentLocation().index));
 	}
 	
 	<T extends Node> T posify(T node) {

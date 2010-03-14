@@ -22,6 +22,10 @@
 package lombok.ast;
 
 public interface Node {
+	public interface PositionKey {
+		String name();
+	}
+	
 	boolean isGenerated();
 	
 	Node getGeneratedBy();
@@ -29,6 +33,8 @@ public interface Node {
 	boolean hasParent();
 	
 	Node setPosition(Position position);
+	
+	Node setPosition(PositionKey key, Position position);
 	
 	void accept(AstVisitor visitor);
 	
@@ -39,4 +45,6 @@ public interface Node {
 	Node getParent();
 	
 	Position getPosition();
+	
+	Position getPosition(PositionKey key);
 }
