@@ -29,7 +29,7 @@ import lombok.Data;
  * refer to the places where the node would have appeared if it wasn't generated.
  */
 @Data
-public class Position {
+public final class Position {
 	private int start, end;
 	private Node generatedBy;
 	
@@ -45,6 +45,10 @@ public class Position {
 		this.start = start;
 		this.end = end;
 		this.generatedBy = generatedBy;
+	}
+	
+	public int size() {
+		return end - start;
 	}
 	
 	public boolean isUnplaced() {

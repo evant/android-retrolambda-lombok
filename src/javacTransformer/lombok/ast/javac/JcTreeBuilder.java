@@ -213,6 +213,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	public JCTree get() {
+		if (result.size() > 1) {
+			throw new RuntimeException("Expected only one result but got " + result.size());
+		}
 		return result.head;
 	}
 	

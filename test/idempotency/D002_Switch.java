@@ -22,6 +22,7 @@ class D002_Switch {
         switch (i) {
         case 1:
             {
+                ;
             }
         default:
             {
@@ -35,6 +36,16 @@ class D002_Switch {
         default:
             {
                 break;
+            }
+        }
+        switch (i) {
+        case 1:
+            int j = 3;
+        }
+        switch (i) {
+        case 1:
+            {
+                int j = 3;
             }
         }
     }
