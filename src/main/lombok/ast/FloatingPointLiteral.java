@@ -21,9 +21,6 @@
  */
 package lombok.ast;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import lombok.Getter;
 
 public class FloatingPointLiteral extends AbstractNode.WithParens implements Literal, Expression, DescribedNode {

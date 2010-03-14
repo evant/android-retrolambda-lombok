@@ -21,14 +21,9 @@
  */
 package lombok.ast;
 
-import java.util.ArrayList;
-import java.util.List;
-
-
 public class NullLiteral extends AbstractNode.WithParens implements Literal, Expression {
 	private String rawValue;
 	private String errorReasonForValue = "Missing value";
-	private List<Position> parensPositions = new ArrayList<Position>();
 	
 	@Override
 	public boolean isStatementExpression() {

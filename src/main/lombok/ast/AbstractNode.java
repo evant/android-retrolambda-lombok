@@ -21,6 +21,7 @@
  */
 package lombok.ast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Getter;
@@ -123,7 +124,7 @@ abstract class AbstractNode implements Node {
 		return formatter.finish();
 	}
 	
-	abstract static class WithParens extends AbstractNode {
+	abstract static class WithParens extends AbstractNode implements Expression {
 		private List<Position> parensPositions = new ArrayList<Position>();
 		
 		@Override

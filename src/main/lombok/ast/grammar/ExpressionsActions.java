@@ -288,7 +288,9 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node addParens(Node v) {
 		if (v instanceof Expression) {
-			((Expression)v).setParens(Math.max(0, ((Expression)v).getParens()) + 1);
+			((Expression)v).getParensPositions().add(new Position(
+					source.mapPosition(getContext().getStartLocation().index),
+					source.mapPosition(getContext().getCurrentLocation().index)));
 		}
 		return v;
 	}

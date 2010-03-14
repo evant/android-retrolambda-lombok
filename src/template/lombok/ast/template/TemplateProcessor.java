@@ -69,11 +69,13 @@ public class TemplateProcessor extends AbstractProcessor {
 		private final String initialValue;
 		private final VariableElement element;
 		private final boolean astNode;
+		private final boolean suppressSetter;
+		private final String codeToCopy;
 		
 		public String getType() {
 			String result = element.asType().toString();
 			
-			if (element.asType() instanceof DeclaredType) {
+			if (isAstNode() && element.asType() instanceof DeclaredType) {
 				DeclaredType t = (DeclaredType) element.asType();
 				if (t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<")) {
 					result = t.getTypeArguments().get(0).toString();
@@ -88,7 +90,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		public boolean isList() {
-			if (element.asType() instanceof DeclaredType) {
+			if (isAstNode() && element.asType() instanceof DeclaredType) {
 				DeclaredType t = (DeclaredType) element.asType();
 				return t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<");
 			}
@@ -115,6 +117,12 @@ public class TemplateProcessor extends AbstractProcessor {
 			/* grab initial value */ {
 				InitialValue iv = field.getAnnotation(InitialValue.class);
 				this.initialValue = iv == null ? "" : iv.value();
+			}
+			this.suppressSetter = ncon != null && ncon.suppressSetter();
+			if (ncon != null) {
+				this.codeToCopy = ncon.codeToCopy().isEmpty() ? ("this." + this.name) : ncon.codeToCopy();
+			} else {
+				this.codeToCopy = null;
 			}
 		}
 		
@@ -312,10 +320,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		
 		out.write(" {\n");
 		for (FieldData field : fields) {
-			if (field.isList() && !field.isAstNode()) {
-				throw new UnsupportedOperationException("Generating an AST Node with a list containing non lombok.ast.Node-based objects is not supported: " + field.getName());
-			}
-			
 			if (field.isList()) {
 				generateFieldsForList(out, className, typeName, fields.size(), field);
 				continue;
@@ -339,15 +343,17 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			if (!field.isAstNode()) {
 				generateFairWeatherGetter(out, field, false);
-				if (field.getRawFormGenerator().isEmpty()) {
-					generateFairWeatherSetter(out, className, field);
-				} else {
-					generateFairWeatherSetterForRawBasics(out, className, field);
+				if (!field.isSuppressSetter()) {
+					if (field.getRawFormGenerator().isEmpty()) {
+						generateFairWeatherSetter(out, className, field);
+					} else {
+						generateFairWeatherSetterForRawBasics(out, className, field);
+					}
 				}
 				if (!field.getRawFormParser().isEmpty()) {
 					generateRawGetter(out, field, true);
 					generateGetErrorReason(out, field);
-					generateRawSetterForBasic(out, className, field);
+					if (!field.isSuppressSetter()) generateRawSetterForBasic(out, className, field);
 				}
 				continue;
 			}
@@ -392,8 +398,8 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (!field.isAstNode()) {
 					out.write("\t\tresult.");
 					out.write(field.getName());
-					out.write(" = this.");
-					out.write(field.getName());
+					out.write(" = ");
+					out.write(field.getCodeToCopy());
 					out.write(";\n");
 					if (!field.getRawFormParser().isEmpty()) {
 						out.write("\t\tresult.raw");

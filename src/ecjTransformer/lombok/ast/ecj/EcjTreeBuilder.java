@@ -23,7 +23,6 @@ package lombok.ast.ecj;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;

@@ -35,9 +35,9 @@ import lombok.ast.template.InitialValue;
 import lombok.ast.template.NotChildOfNode;
 
 class ExpressionMixin {
-	@NotChildOfNode(suppressSetter=true)
+	@NotChildOfNode(suppressSetter=true, codeToCopy="new java.util.ArrayList<lombok.ast.Position>(this.parensPositions)")
 	@NonNull
-	@InitialValue("new java.util.ArrayList<Position>()")
+	@InitialValue("new java.util.ArrayList<lombok.ast.Position>()")
 	List<Position> parensPositions;
 	
 	@CopyMethod

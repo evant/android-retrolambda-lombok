@@ -50,4 +50,17 @@ public @interface NotChildOfNode {
 	 * @see #rawFormParser()
 	 */
 	String rawFormGenerator() default "";
+	
+	/**
+	 * Tells the template generator to generate only a getter for this field. Intended primarily fields of mutable types.
+	 */
+	boolean suppressSetter() default false;
+	
+	/**
+	 * Supply some raw java code here that copies the field when the entire node is {@link lombok.ast.Node#copy()}ied.
+	 * By default this is just the {@code this.fieldName} (resulting in {@code copy.fieldName = this.fieldName}).
+	 * <p>
+	 * Example for a list: {@code new java.util.ArrayList<Type>(this.fieldName)}
+	 */
+	String codeToCopy() default "";
 }

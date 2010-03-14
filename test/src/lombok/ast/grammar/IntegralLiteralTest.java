@@ -2,9 +2,6 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import lombok.ast.IntegralLiteral;
 import lombok.ast.LiteralType;
 import lombok.ast.Position;
@@ -53,8 +50,7 @@ public class IntegralLiteralTest {
 		assertNotNull(n.getErrorReasonForValue());
 		unary.setOperator(UnaryOperator.UNARY_MINUS);
 		assertNull(n.getErrorReasonForValue());
-		
-		n.setParens(1);
+		n.getParensPositions().add(Position.UNPLACED);
 		assertNotNull(n.getErrorReasonForValue());
 	}
 	

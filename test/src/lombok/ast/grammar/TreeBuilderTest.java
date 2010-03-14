@@ -5,8 +5,6 @@ import static org.junit.Assert.*;
 import java.io.File;
 
 abstract class TreeBuilderTest<N> extends DirectoryRunner.SourceFileBasedTester {
-	private static final boolean TIMETEST = false;
-	
 	protected File getDirectory() {
 		return new File("test/idempotency");
 	}

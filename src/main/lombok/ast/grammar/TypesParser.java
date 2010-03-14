@@ -31,8 +31,8 @@ public class TypesParser extends BaseParser<Node> {
 	final TypesActions actions;
 	
 	public TypesParser(ParserGroup group) {
-		this.group = group;
 		actions = new TypesActions(group.getSource());
+		this.group = group;
 	}
 	
 	public Rule nonArrayType() {
