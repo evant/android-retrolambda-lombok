@@ -1,4 +1,3 @@
-//SKIP
 /**
  * jdoc1
  * multiliner

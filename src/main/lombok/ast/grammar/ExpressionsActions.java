@@ -145,7 +145,7 @@ public class ExpressionsActions extends SourceActions {
 			else if (op.equals("--")) current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.POSTFIX_DECREMENT);
 			org.parboiled.Node<Node> p = nodes.get(i);
 			if (prev != null && !prev.getPosition().isUnplaced() && p != null) {
-				current.setPosition(new Position(prev.getPosition().getStart(), source.mapPositionRtrim(p.getEndLocation().index)));
+				current.setPosition(new Position(prev.getPosition().getStart(), p.getEndLocation().index));
 			}
 		}
 		return current;
@@ -273,7 +273,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createDimension(Node dimExpr, org.parboiled.Node<Node> arrayOpen) {
 		ArrayDimension d = new ArrayDimension().setRawDimension(dimExpr);
-		if (arrayOpen != null) d.setPosition(new Position(source.mapPosition(arrayOpen.getStartLocation().index), getCurrentLocationRtrim()));
+		if (arrayOpen != null) d.setPosition(new Position(arrayOpen.getStartLocation().index, currentPos()));
 		return d;
 	}
 	
@@ -288,9 +288,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node addParens(Node v) {
 		if (v instanceof Expression) {
-			((Expression)v).getParensPositions().add(new Position(
-					source.mapPosition(getContext().getStartLocation().index),
-					source.mapPosition(getContext().getCurrentLocation().index)));
+			((Expression)v).getParensPositions().add(new Position(startPos(), currentPos()));
 		}
 		return v;
 	}

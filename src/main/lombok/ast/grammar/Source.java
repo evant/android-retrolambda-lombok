@@ -78,6 +78,8 @@ public class Source {
 		nodes = Collections.unmodifiableList(nodes);
 		problems = Collections.unmodifiableList(problems);
 		
+		rtrimPositions(nodes, comments);
+		
 		//TODO Write test case with javadoc intermixed with empty declares.
 		//TODO test javadoc on a package declaration.
 		//TODO javadoc in between keywords.
@@ -86,6 +88,56 @@ public class Source {
 		parsed = true;
 	}
 	
+	/**
+	 * The end positions of all nodes include their trailing whitespace which isn't very convenient.
+	 * We'll 'fix' the end marker of each node by trimming it back. This is somewhat complicated as comments also need to be trimmed across.
+	 * We also adjust all positions to conform with the raw input (undoing any positional shifts caused by preprocessing).
+	 */
+	private void rtrimPositions(List<Node> nodes, List<Comment> comments) {
+		final boolean[] whitespace = new boolean[preprocessed.length()];
+		for (Comment comment : comments) {
+			Position p = comment.getPosition();
+			if (!p.isUnplaced()) {
+				for (int i = p.getStart(); i < p.getEnd(); i++) whitespace[i] = true;
+			}
+		}
+		/* Process actual whitespace in preprocessed source data */ {
+			char[] chars = preprocessed.toCharArray();
+			for (int i = 0; i < chars.length; i++) if (Character.isWhitespace(chars[i])) whitespace[i] = true;
+		}
+		
+		for (Node node : nodes) node.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitNode(Node node) {
+				Position p = node.getPosition();
+				if (p.isUnplaced()) return false;
+				
+				int trimmed = p.getEnd();
+				while (trimmed > 0 && whitespace[trimmed-1]) trimmed--;
+				
+				int start, end;
+				
+				if (p.getEnd() - p.getStart() == 0) {
+					if (node.getParent() != null) {
+						start = Math.min(node.getParent().getPosition().getEnd(), Math.max(node.getParent().getPosition().getStart(), p.getStart()));
+						end = start;
+					} else {
+						start = p.getStart();
+						end = start;
+					}
+				} else {
+					start = p.getStart();
+					end = Math.max(trimmed, start);
+				}
+				
+				node.setPosition(new Position(mapPosition(start), mapPosition(end)));
+				return false;
+			}
+		});
+	}
+	
+	/**
+	 * Associates comments that are javadocs to the node they belong to, by checking if the node that immediately follows a javadoc node is a JavadocContainer.
+	 */
 	private void associateJavadoc(List<Comment> comments, List<Node> nodes) {
 		final TreeMap<Integer, Node> startPosMap = new TreeMap<Integer, Node>();
 		for (Node node : nodes) node.accept(new ForwardingAstVisitor() {
@@ -115,6 +167,9 @@ public class Source {
 		}
 	}
 	
+	/**
+	 * Delves through the parboiled node tree to find comments.
+	 */
 	private void gatherComments(org.parboiled.Node<Node> parsed) {
 		if (parsed.getValue() instanceof Comment) {
 			comments.add((Comment) parsed.getValue());
@@ -130,25 +185,17 @@ public class Source {
 		positionDeltas.put(position, i + delta);
 	}
 	
+	/**
+	 * Maps a position in the {@code preprocessed} string to the equivalent character in the {@code rawInput}.
+	 * 
+	 * The difference is caused by decoding backslash-U unicode escapes, for example.
+	 */
 	int mapPosition(int position) {
 		int out = position;
 		for (int delta : positionDeltas.headMap(position, true).values()) {
 			out += delta;
 		}
 		return out;
-	}
-	
-	int mapPositionRtrim(int pos) {
-		char c;
-		
-		pos = Math.min(pos, preprocessed.length());
-		
-		do {
-			if (pos == 0) return 0;
-			c = preprocessed.charAt(--pos);
-		} while (Character.isWhitespace(c));
-		
-		return mapPosition(pos+1);
 	}
 	
 	private String preProcess() {

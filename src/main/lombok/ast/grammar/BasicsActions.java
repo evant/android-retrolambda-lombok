@@ -41,17 +41,13 @@ public class BasicsActions extends SourceActions {
 	
 	public Node createBlockComment(String text) {
 		Comment c = new Comment().setBlockComment(true).setContent(text);
-		c.setPosition(new Position(
-				source.mapPosition(getContext().getStartLocation().index),
-				source.mapPosition(getContext().getCurrentLocation().index)));
+		c.setPosition(new Position(startPos(), currentPos()));
 		return c;
 	}
 	
 	public Node createLineComment(String text) {
 		Comment c = new Comment().setBlockComment(false).setContent(text);
-		c.setPosition(new Position(
-				source.mapPosition(getContext().getStartLocation().index),
-				source.mapPosition(getContext().getCurrentLocation().index)));
+		c.setPosition(new Position(startPos(), currentPos()));
 		return c;
 	}
 }

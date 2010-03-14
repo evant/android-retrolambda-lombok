@@ -136,7 +136,7 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createMethodParameter(Node modifiers, Node type, String varargs, Node name, List<String> dims) {
 		VariableDefinitionEntry e = new VariableDefinitionEntry().setRawName(name).setArrayDimensions(dims == null ? 0 : dims.size());
-		if (name != null) e.setPosition(new Position(name.getPosition().getStart(), getCurrentLocationRtrim()));
+		if (name != null) e.setPosition(new Position(name.getPosition().getStart(), currentPos()));
 		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		if (varargs != null && !varargs.trim().isEmpty()) decl.setVarargs(true);
@@ -314,7 +314,7 @@ public class StructuresActions extends SourceActions {
 	public Node createAnnotationDeclaration(Node modifiers, Node name, List<Node> members, org.parboiled.Node<Node> typeOpen, org.parboiled.Node<Node> typeClose) {
 		Node typeBody = createTypeBody(members);
 		if (typeOpen != null && typeClose != null) {
-			typeBody.setPosition(new Position(source.mapPosition(typeOpen.getStartLocation().index), source.mapPosition(typeClose.getEndLocation().index)));
+			typeBody.setPosition(new Position(typeOpen.getStartLocation().index, typeClose.getEndLocation().index));
 		}
 		AnnotationDeclaration decl = new AnnotationDeclaration().setRawName(name).setRawBody(typeBody);
 		if (modifiers != null) decl.setRawModifiers(modifiers);

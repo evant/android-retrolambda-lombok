@@ -50,7 +50,7 @@ public class TypesActions extends SourceActions {
 	
 	public Node createTypeReferencePart(Node identifier, Node typeArguments) {
 		Node emptyArgs = null;
-		if (typeArguments == null) emptyArgs = new TypeArguments().setPosition(new Position(getCurrentLocationRtrim(), getCurrentLocationRtrim()));
+		if (typeArguments == null) emptyArgs = new TypeArguments().setPosition(new Position(currentPos(), currentPos()));
 		return posify(new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments == null ? emptyArgs : typeArguments));
 	}
 	

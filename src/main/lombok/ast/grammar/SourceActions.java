@@ -40,24 +40,22 @@ class SourceActions extends BaseActions<Node> {
 	}
 	
 	<T extends Node> T posify(T node) {
-		int start = source.mapPosition(getContext().getStartLocation().index);
-		int end = Math.max(start, getCurrentLocationRtrim());
+		int start = startPos();
+		int end = Math.max(start, currentPos());
 		node.setPosition(new Position(start, end));
 		return node;
 	}
 	
-	int getCurrentLocationRtrim() {
-		return rtrim(getContext().getCurrentLocation().index);
+	int startPos() {
+		return getContext().getStartLocation().index;
 	}
 	
-	int rtrim(int position) {
-		return source.mapPositionRtrim(position);
+	int currentPos() {
+		return getContext().getCurrentLocation().index;
 	}
 	
 	void positionSpan(Node target, org.parboiled.Node<Node> start, org.parboiled.Node<Node> end) {
 		if (target == null || start == null || end == null) return;
-		target.setPosition(new Position(
-				source.mapPosition(start.getStartLocation().index),
-				source.mapPositionRtrim(end.getEndLocation().index)));
+		target.setPosition(new Position(start.getStartLocation().index, end.getEndLocation().index));
 	}
 }
