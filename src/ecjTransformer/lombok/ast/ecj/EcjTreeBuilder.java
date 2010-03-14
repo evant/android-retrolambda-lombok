@@ -25,6 +25,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -34,19 +35,12 @@ import lombok.ast.UnaryOperator;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.IErrorHandlingPolicy;
-import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
-import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
-import org.eclipse.jdt.internal.compiler.lookup.Binding;
-import org.eclipse.jdt.internal.compiler.lookup.ExtraCompilerModifiers;
-import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
-import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 import org.eclipse.jdt.internal.compiler.ast.AND_AND_Expression;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.AbstractMethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.AbstractVariableDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.AllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.Annotation;
-import org.eclipse.jdt.internal.compiler.ast.AnnotationMethodDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.Argument;
 import org.eclipse.jdt.internal.compiler.ast.ArrayAllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
@@ -62,7 +56,6 @@ import org.eclipse.jdt.internal.compiler.ast.CaseStatement;
 import org.eclipse.jdt.internal.compiler.ast.CastExpression;
 import org.eclipse.jdt.internal.compiler.ast.CharLiteral;
 import org.eclipse.jdt.internal.compiler.ast.ClassLiteralAccess;
-import org.eclipse.jdt.internal.compiler.ast.Clinit;
 import org.eclipse.jdt.internal.compiler.ast.CombinedBinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.CompoundAssignment;
@@ -78,7 +71,6 @@ import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.ExtendedStringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.FalseLiteral;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.FieldReference;
 import org.eclipse.jdt.internal.compiler.ast.FloatLiteral;
 import org.eclipse.jdt.internal.compiler.ast.ForStatement;
 import org.eclipse.jdt.internal.compiler.ast.ForeachStatement;
@@ -107,7 +99,6 @@ import org.eclipse.jdt.internal.compiler.ast.PostfixExpression;
 import org.eclipse.jdt.internal.compiler.ast.PrefixExpression;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedAllocationExpression;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedNameReference;
-import org.eclipse.jdt.internal.compiler.ast.QualifiedSuperReference;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedThisReference;
 import org.eclipse.jdt.internal.compiler.ast.QualifiedTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
@@ -117,7 +108,6 @@ import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.Statement;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteralConcatenation;
-import org.eclipse.jdt.internal.compiler.ast.SuperReference;
 import org.eclipse.jdt.internal.compiler.ast.SwitchStatement;
 import org.eclipse.jdt.internal.compiler.ast.SynchronizedStatement;
 import org.eclipse.jdt.internal.compiler.ast.ThisReference;
@@ -130,6 +120,12 @@ import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.WhileStatement;
 import org.eclipse.jdt.internal.compiler.ast.Wildcard;
+import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
+import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
+import org.eclipse.jdt.internal.compiler.lookup.Binding;
+import org.eclipse.jdt.internal.compiler.lookup.ExtraCompilerModifiers;
+import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
+import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 
 import com.google.common.collect.Maps;
 
@@ -142,6 +138,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	private final ProblemReporter reporter;
 	private final CompilationResult compilationResult;
 	private final CompilerOptions options;
+	private final EnumSet<BubblingFlags> bubblingFlags = EnumSet.noneOf(BubblingFlags.class);
+	
+	private enum BubblingFlags {
+		ASSERT, LOCALTYPE
+	}
 	
 	private enum VariableKind {
 		UNSUPPORTED {
@@ -229,6 +230,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (node == null) return null;
 		EcjTreeBuilder visitor = create();
 		node.accept(visitor);
+		bubblingFlags.addAll(visitor.bubblingFlags);
 		try {
 			return visitor.get();
 		} catch (RuntimeException e) {
@@ -260,6 +262,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		for (lombok.ast.Node node : accessor) {
 			EcjTreeBuilder visitor = create();
 			node.accept(visitor);
+			bubblingFlags.addAll(visitor.bubblingFlags);
 			
 			List<? extends ASTNode> values;
 			
@@ -280,6 +283,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (node == null) return new ArrayList<T>();
 		EcjTreeBuilder visitor = create();
 		node.accept(visitor);
+		bubblingFlags.addAll(visitor.bubblingFlags);
 		@SuppressWarnings("unchecked")
 		List<T> all = (List<T>)visitor.getAll();
 		return new ArrayList<T>(all);
@@ -333,6 +337,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		cud.imports = toArray(ImportReference.class, node.importDeclarations());
 		cud.types = toArray(TypeDeclaration.class, node.typeDeclarations());
 		
+		bubblingFlags.remove(BubblingFlags.ASSERT);
+		if (!bubblingFlags.isEmpty()) {
+			throw new RuntimeException("Unhandled bubbling flags left: " + bubblingFlags);
+		}
 		return set(node, cud);
 	}
 	
@@ -369,9 +377,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.bits |= ASTNode.IsMemberType;
 			} else {
 				decl.bits |= ASTNode.IsLocalType;
+				bubblingFlags.add(BubblingFlags.LOCALTYPE);
 			}
 		}
-		
 		
 		//TODO test inner types. Give em everything - (abstract) methods, initializers, static initializers, MULTIPLE initializers.
 		return set(node, decl);
@@ -424,6 +432,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		decl.memberTypes = toArray(TypeDeclaration.class, types);
 		decl.methods = toArray(AbstractMethodDeclaration.class, methods);
 		decl.fields = toArray(FieldDeclaration.class, fields);
+		if (bubblingFlags.contains(BubblingFlags.ASSERT)) {
+			decl.bits |= ASTNode.ContainsAssertion;
+		}
 		decl.addClinit();
 		return decl;
 	}
@@ -598,14 +609,20 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitConstructorInvocation(lombok.ast.ConstructorInvocation node) {
 		AllocationExpression inv;
-		if (node.getQualifier() != null) {
-			inv = new QualifiedAllocationExpression();
-			((QualifiedAllocationExpression)inv).enclosingInstance = toExpression(node.getQualifier());
-		} else if (node.getAnonymousClassBody() != null) {
-			TypeDeclaration decl = createTypeBody(node.getAnonymousClassBody(), true, 0);;
-			decl.name = "".toCharArray();
-			decl.bits |= ASTNode.IsAnonymousType | ASTNode.IsLocalType;
-			inv = new QualifiedAllocationExpression(decl);
+		if (node.getQualifier() != null || node.getAnonymousClassBody() != null) {
+			if (node.getAnonymousClassBody() != null) {
+				TypeDeclaration decl = createTypeBody(node.getAnonymousClassBody(), true, 0);;
+				decl.name = CharOperation.NO_CHAR;
+				decl.bits |= ASTNode.IsAnonymousType | ASTNode.IsLocalType;
+				bubblingFlags.add(BubblingFlags.LOCALTYPE);
+				inv = new QualifiedAllocationExpression(decl);
+			} else {
+				inv = new QualifiedAllocationExpression();
+			}
+			if (node.getQualifier() != null) {
+				((QualifiedAllocationExpression)inv).enclosingInstance = toExpression(node.getQualifier());
+			}
+			
 		} else {
 			inv = new AllocationExpression();
 		}
@@ -739,7 +756,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitInstanceInitializer(lombok.ast.InstanceInitializer node) {
 		Initializer init = new Initializer((Block) toTree(node.getBody()), 0);
-		//TODO set the haslocaltypes bit
+		if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
+			init.bits |= ASTNode.HasLocalType;
+		}
 		return set(node, init);
 	}
 	
@@ -856,6 +875,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitAssert(lombok.ast.Assert node) {
 		//TODO check the flags after more test have been added: asserts in constructors, methods etc.
+		bubblingFlags.add(BubblingFlags.ASSERT);
 		if (node.getMessage() == null) {
 			return set(node, new AssertStatement(toExpression(node.getAssertion()), 0));
 		}
@@ -904,6 +924,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 			if (node.isVarargs()) {
 				decl.type.bits |= ASTNode.IsVarArgs;
+			}
+			if (decl instanceof FieldDeclaration) {
+				if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
+					decl.bits |= ASTNode.HasLocalType;
+				}
 			}
 			values.add(decl);
 		}
