@@ -851,6 +851,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	//Structural
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
+		visit(node.getRawJavadoc());
 		formatter.buildBlock(node);
 		visit(node.getRawDefinition());
 		formatter.append(";");
@@ -982,6 +983,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	//Class Bodies
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
+		visit(node.getRawJavadoc());
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
@@ -1018,6 +1020,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
+		visit(node.getRawJavadoc());
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
@@ -1098,6 +1101,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitClassDeclaration(ClassDeclaration node) {
+		visit(node.getRawJavadoc());
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
@@ -1130,6 +1134,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
+		visit(node.getRawJavadoc());
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
@@ -1155,6 +1160,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitEnumDeclaration(EnumDeclaration node) {
+		visit(node.getRawJavadoc());
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());
@@ -1180,6 +1186,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitEnumConstant(EnumConstant node) {
+		visit(node.getRawJavadoc());
 		formatter.buildInline(node);
 		visitAll(node.rawAnnotations(), "", "", "");
 		formatter.nameNextElement("name");
@@ -1196,6 +1203,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
+		visit(node.getRawJavadoc());
 		formatter.buildBlock(node);
 		if (node.getRawModifiers() != null) {
 			visit(node.getRawModifiers());

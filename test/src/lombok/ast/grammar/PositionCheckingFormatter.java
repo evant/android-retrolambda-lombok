@@ -44,17 +44,13 @@ public class PositionCheckingFormatter extends TextFormatter {
 		return p;
 	}
 	
-	@Override public void buildBlock(Node node) {
-		super.buildBlock(node);
-		registerNode(node);
-	}
-	
 	private void registerNode(Node node) {
 		nodeStack.add(node);
 		if (node == null) return;
 		
 		Position p = node.getPosition();
-		if (p.isUnplaced()) problems.add(new AstException(node, "this node is unplaced"));
+		if (p.isUnplaced()) problems.add(new AstException(node, String.format(
+				"this node is unplaced [%s]", node.getClass().getSimpleName())));
 		else {
 			int delta = p.getStart() - getCurrentPosition(true);
 			if (delta != 0) {
@@ -63,6 +59,11 @@ public class PositionCheckingFormatter extends TextFormatter {
 				reportError(node, "start", actualPos, repPos);
 			}
 		}
+	}
+	
+	@Override public void buildBlock(Node node) {
+		super.buildBlock(node);
+		registerNode(node);
 	}
 	
 	@Override public void buildInline(Node node) {
@@ -102,11 +103,9 @@ public class PositionCheckingFormatter extends TextFormatter {
 		String actualPostfix = getCharsAfterPosition(actualPos, raw);
 		String reportedPrefix = getCharsBeforePosition(repPos, raw);
 		String reportedPostfix = getCharsAfterPosition(repPos, raw);
-//		if (node instanceof BinaryExpression) System.err.println(
-//				((IntegralLiteral)
-//				((BinaryExpression)node).getLeft()).intValue());
 		problems.add(new AstException(node, String.format(
-			"this node's " + description + " is misreported with %+d\nactual: \"%s⊚%s\"\nreported: \"%s⊚%s\"",
+			"this[%s] node's " + description + " is misreported with %+d\nactual: \"%s⊚%s\"\nreported: \"%s⊚%s\"",
+			node.getClass().getSimpleName(),
 			delta, actualPrefix, actualPostfix, reportedPrefix, reportedPostfix)));
 	}
 	

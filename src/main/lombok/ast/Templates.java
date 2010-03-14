@@ -339,8 +339,9 @@ class ModifiersTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Statement.class, TypeMember.class})
+@GenerateAstNode(implementing={Statement.class, TypeMember.class, JavadocContainer.class})
 class VariableDeclarationTemplate {
+	Comment javadoc;
 	@NonNull VariableDefinition definition;
 }
 
@@ -1090,6 +1091,11 @@ class CommentTemplate {
 	
 	@NotChildOfNode
 	String content;
+	
+	@CopyMethod
+	static boolean isJavadoc(Comment self) {
+		return self.isBlockComment() && self.getContent().startsWith("*");
+	}
 }
 
 @GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
@@ -1111,8 +1117,10 @@ class AnnotationMethodDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class})
 class MethodDeclarationTemplate {
+	Comment javadoc;
+	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
@@ -1133,8 +1141,10 @@ class MethodDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing=TypeMember.class)
+@GenerateAstNode(implementing={TypeMember.class, JavadocContainer.class})
 class ConstructorDeclarationTemplate {
+	Comment javadoc;
+	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
@@ -1166,8 +1176,10 @@ class EnumTypeBodyTemplate {
 	List<EnumConstant> constants;
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class})
 class AnnotationDeclarationTemplate {
+	Comment javadoc;
+	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
@@ -1199,8 +1211,10 @@ class EmptyDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class})
+@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class, JavadocContainer.class})
 class ClassDeclarationTemplate {
+	Comment javadoc;
+	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
@@ -1220,8 +1234,10 @@ class ClassDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class})
 class InterfaceDeclarationTemplate {
+	Comment javadoc;
+	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
@@ -1240,8 +1256,9 @@ class InterfaceDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class})
 class EnumConstantTemplate {
+	Comment javadoc;
 	TypeBody body;
 	@NonNull Identifier name;
 	List<Annotation> annotations;
@@ -1257,8 +1274,10 @@ class EnumConstantTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class})
 class EnumDeclarationTemplate {
+	Comment javadoc;
+	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	

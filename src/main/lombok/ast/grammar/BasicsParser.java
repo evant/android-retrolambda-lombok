@@ -50,7 +50,7 @@ public class BasicsParser extends BaseParser<Node> {
 	public Rule optWS() {
 		return sequence(
 				zeroOrMore(firstOf(comment(), whitespaceChar())),
-				SET((Node) null));
+				SET((Node) null)).label("optWS");
 	}
 	
 	/**
@@ -58,7 +58,9 @@ public class BasicsParser extends BaseParser<Node> {
 	 * but only matches if there is at least one comment or whitespace character to gobble up.
 	 */
 	public Rule mandatoryWS() {
-		return oneOrMore(firstOf(comment(), whitespaceChar()));
+		return sequence(
+				oneOrMore(firstOf(comment(), whitespaceChar())),
+				SET((Node) null)).label("mandatoryWS");
 	}
 	
 	public Rule testLexBreak() {
@@ -141,7 +143,7 @@ public class BasicsParser extends BaseParser<Node> {
 				string("//"),
 				zeroOrMore(sequence(testNot(lineTerminator()), any())).label("comment"),
 				lineTerminator(),
-				actions.createLineComment(TEXT("comment")));
+				SET(actions.createLineComment(TEXT("comment"))));
 	}
 	
 	Rule blockComment() {
@@ -149,7 +151,7 @@ public class BasicsParser extends BaseParser<Node> {
 				string("/*"),
 				zeroOrMore(sequence(testNot(string("*/")), any())).label("comment"),
 				string("*/"),
-				actions.createBlockComment(TEXT("comment")));
+				SET(actions.createBlockComment(TEXT("comment"))));
 	}
 	
 	/**

@@ -2,8 +2,12 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import lombok.ast.IntegralLiteral;
 import lombok.ast.LiteralType;
+import lombok.ast.Position;
 import lombok.ast.UnaryExpression;
 import lombok.ast.UnaryOperator;
 

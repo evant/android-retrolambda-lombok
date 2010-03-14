@@ -24,11 +24,13 @@ package lombok.ast.grammar;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import lombok.Getter;
+import lombok.ast.Comment;
 import lombok.ast.ForwardingAstVisitor;
+import lombok.ast.JavadocContainer;
 import lombok.ast.Node;
 import lombok.ast.Position;
 
@@ -40,6 +42,7 @@ public class Source {
 	@Getter private final String rawInput;
 	private List<Node> nodes = new ArrayList<Node>();
 	private List<ParseProblem> problems = new ArrayList<ParseProblem>();
+	private List<Comment> comments = new ArrayList<Comment>();
 	private boolean parsed;
 	
 	private TreeMap<Integer, Integer> positionDeltas = new TreeMap<Integer, Integer>();
@@ -70,9 +73,55 @@ public class Source {
 		for (ParseError error : parsingResult.parseErrors) {
 			problems.add(new ParseProblem(new Position(mapPosition(error.getErrorStart().index), mapPosition(error.getErrorEnd().index)), error.getErrorMessage()));
 		}
+		gatherComments(parsingResult.parseTreeRoot);
+		comments = Collections.unmodifiableList(comments);
 		nodes = Collections.unmodifiableList(nodes);
 		problems = Collections.unmodifiableList(problems);
+		
+		//TODO Write test case with javadoc intermixed with empty declares.
+		//TODO test javadoc on a package declaration.
+		//TODO javadoc in between keywords.
+		
+		associateJavadoc(comments, nodes);
 		parsed = true;
+	}
+	
+	private void associateJavadoc(List<Comment> comments, List<Node> nodes) {
+		final TreeMap<Integer, Node> startPosMap = new TreeMap<Integer, Node>();
+		for (Node node : nodes) node.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitNode(Node node) {
+				if (node.isGenerated()) return false;
+				int startPos = node.getPosition().getStart();
+				Node current = startPosMap.get(startPos);
+				if (current == null || !(current instanceof JavadocContainer)) {
+					startPosMap.put(startPos, node);
+				}
+				
+				return false;
+			}
+		});
+		
+		for (Comment comment : comments) {
+			if (!comment.isJavadoc()) continue;
+			Map<Integer, Node> tailMap = startPosMap.tailMap(comment.getPosition().getEnd());
+			if (tailMap.isEmpty()) continue;
+			Node assoc = tailMap.values().iterator().next();
+			if (!(assoc instanceof JavadocContainer)) continue;
+			JavadocContainer jc = (JavadocContainer) assoc;
+			if (jc.getRawJavadoc() != null) {
+				if (jc.getRawJavadoc().getPosition().getEnd() >= comment.getPosition().getEnd()) continue;
+			}
+			jc.setRawJavadoc(comment);
+		}
+	}
+	
+	private void gatherComments(org.parboiled.Node<Node> parsed) {
+		if (parsed.getValue() instanceof Comment) {
+			comments.add((Comment) parsed.getValue());
+			return;
+		}
+		
+		for (org.parboiled.Node<Node> child : parsed.getChildren()) gatherComments(child);
 	}
 	
 	private void setPositionDelta(int position, int delta) {
@@ -167,23 +216,5 @@ public class Source {
 		}
 		
 		preprocessed = out.toString();
-	}
-	
-	/*
-	 * TODO
-	 * 
-	 * The idea is to create a TreeSet containing the end pos of every node. Then, given any position, it is trivial to ask for some non-hierarchical thingie
-	 * from the source, such as a structural element (e.g. a ; between a for's init and condition), or javadoc.
-	 */
-	void todoFixMe(Node compilationUnit) {
-		final TreeSet<Integer> endPosTable = new TreeSet<Integer>();
-		compilationUnit.accept(new ForwardingAstVisitor() {
-			@Override
-			public boolean visitNode(Node node) {
-				if (!node.isGenerated()) endPosTable.add(node.getPosition().getEnd());
-				return false;
-			}
-		});
-		System.out.println(endPosTable);
 	}
 }

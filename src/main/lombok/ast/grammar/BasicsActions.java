@@ -24,6 +24,7 @@ package lombok.ast.grammar;
 import lombok.ast.Comment;
 import lombok.ast.Identifier;
 import lombok.ast.Node;
+import lombok.ast.Position;
 
 public class BasicsActions extends SourceActions {
 	public BasicsActions(Source source) {
@@ -38,17 +39,19 @@ public class BasicsActions extends SourceActions {
 		return text == null || !BasicsParser.KEYWORDS.contains(text);
 	}
 	
-	public boolean createBlockComment(String text) {
-		// TODO Add these as dangling node somewhere.
-		@SuppressWarnings("unused")
-		Comment comment = posify(new Comment().setBlockComment(true).setContent(text));
-		return true;
+	public Node createBlockComment(String text) {
+		Comment c = new Comment().setBlockComment(true).setContent(text);
+		c.setPosition(new Position(
+				source.mapPosition(getContext().getStartLocation().index),
+				source.mapPosition(getContext().getCurrentLocation().index)));
+		return c;
 	}
 	
-	public boolean createLineComment(String text) {
-		// TODO Add these as dangling node somewhere.
-		@SuppressWarnings("unused")
-		Comment comment = posify(new Comment().setBlockComment(false).setContent(text));
-		return true;
+	public Node createLineComment(String text) {
+		Comment c = new Comment().setBlockComment(false).setContent(text);
+		c.setPosition(new Position(
+				source.mapPosition(getContext().getStartLocation().index),
+				source.mapPosition(getContext().getCurrentLocation().index)));
+		return c;
 	}
 }
