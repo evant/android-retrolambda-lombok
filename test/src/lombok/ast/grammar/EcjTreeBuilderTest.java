@@ -25,7 +25,8 @@ import org.junit.runner.RunWith;
 public class EcjTreeBuilderTest extends TreeBuilderTest<ASTNode> {
 	@Test
 	public boolean testEcjCompiler(Source source) throws Exception {
-		if (source.getName().compareToIgnoreCase("E") > 0) {
+//		if (!source.getName().startsWith("G004")) {
+		if (source.getName().compareToIgnoreCase("H") > 0) {
 			return false;
 		}
 		
