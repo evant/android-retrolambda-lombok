@@ -4,7 +4,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 
-abstract class TreeBuilderTest<N> extends DirectoryRunner.SourceFileBasedTester {
+abstract class TreeBuilderRunner<N> extends DirectoryRunner.SourceFileBasedTester {
 	protected File getDirectory() {
 		return new File("test/idempotency");
 	}

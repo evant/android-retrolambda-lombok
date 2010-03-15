@@ -22,7 +22,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(DirectoryRunner.class)
-public class EcjTreeBuilderTest extends TreeBuilderTest<ASTNode> {
+public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 	@Test
 	public boolean testEcjCompiler(Source source) throws Exception {
 //		if (!source.getName().startsWith("H002")) {

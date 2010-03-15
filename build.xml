@@ -85,6 +85,7 @@
 			<src path="src/main" />
 			<src path="src/printer" />
 			<src path="src/javacTransformer" />
+			<src path="src/ecjTransformer" />
 			<compilerarg value="-s" />
 			<compilerarg path="build/lombok.ast_generatedSource" />
 		</javac>
