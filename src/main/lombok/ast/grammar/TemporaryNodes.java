@@ -96,14 +96,6 @@ abstract class TemporaryNode implements Node {
 		return position;
 	}
 	
-	@Override public Node setPosition(PositionKey key, Position position) {
-		throw new UnsupportedOperationException();
-	}
-	
-	@Override public Position getPosition(PositionKey key) {
-		throw new UnsupportedOperationException();
-	}
-	
 	@Override public Node getParent() {
 		return null;
 	}

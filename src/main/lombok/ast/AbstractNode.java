@@ -22,9 +22,7 @@
 package lombok.ast;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import lombok.Getter;
 import lombok.ast.printer.SourcePrinter;
@@ -32,8 +30,8 @@ import lombok.ast.printer.TextFormatter;
 import lombok.ast.syntaxChecks.SyntacticValidityVisitorBase;
 
 abstract class AbstractNode implements Node {
+	@Getter private Position position = Position.UNPLACED;
 	@Getter private Node parent;
-	private final Map<PositionKey, Position> extraPositions = new HashMap<PositionKey, Position>();
 	
 	/**
 	 * Checks if a given child is syntactically valid and throws an {@code AstException} otherwise.
@@ -52,11 +50,11 @@ abstract class AbstractNode implements Node {
 	}
 	
 	@Override public boolean isGenerated() {
-		return getPosition().getGeneratedBy() != null;
+		return position.getGeneratedBy() != null;
 	}
 	
 	@Override public Node getGeneratedBy() {
-		return getPosition().getGeneratedBy();
+		return position.getGeneratedBy();
 	}
 	
 	@Override public boolean hasParent() {
@@ -113,22 +111,9 @@ abstract class AbstractNode implements Node {
 				child.getClass().getName(), this.getClass().getName()));
 	}
 	
-	@Override public Position getPosition() {
-		return getPosition(null);
-	}
-	
-	@Override public Position getPosition(PositionKey key) {
-		Position p = this.extraPositions.get(key);
-		return p == null ? Position.UNPLACED : p;
-	}
-	
 	@Override public Node setPosition(Position position) {
-		return setPosition(null, position);
-	}
-	
-	@Override public Node setPosition(PositionKey key, Position position) {
 		if (position == null) throw new NullPointerException("position");
-		this.extraPositions.put(key, position);
+		this.position = position;
 		return this;
 	}
 	
