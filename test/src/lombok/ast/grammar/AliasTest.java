@@ -52,7 +52,7 @@ public class AliasTest extends DirectoryRunner.SourceFileBasedTester {
 		}
 		
 		Node node = actual.getNodes().get(0);
-		TextFormatter formatter = new TextFormatter(actual.getRawInput());
+		TextFormatter formatter = new TextFormatter(actual);
 		node.accept(new SourcePrinter(formatter));
 		String actualString = formatter.finish();
 		assertEquals(expected, actualString);

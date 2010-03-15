@@ -50,7 +50,7 @@ public class JcTreeBuilderTest extends TreeBuilderTest<JCTree> {
 	}
 	
 	protected String convertToString(JCTree tree) {
-		JcTreePrinter printer = new JcTreePrinter();
+		JcTreePrinter printer = new JcTreePrinter(false);
 		tree.accept(printer);
 		String string = printer.toString();
 		return string;
@@ -87,7 +87,7 @@ public class JcTreeBuilderTest extends TreeBuilderTest<JCTree> {
 			throw new RuntimeException("Neither com.sun.tools.javac.util.JavacFileManager nor com.sun.tools.javac.util.DefaultFileManager could be configured", failTrace);
 		}
 		
-		JcTreeBuilder builder = new JcTreeBuilder(context);
+		JcTreeBuilder builder = new JcTreeBuilder(source, context);
 		nodes.get(0).accept(builder);
 		return builder.get();
 	}

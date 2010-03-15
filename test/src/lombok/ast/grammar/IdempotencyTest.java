@@ -48,7 +48,7 @@ public class IdempotencyTest extends DirectoryRunner.SourceFileBasedTester {
 		}
 		
 		Node node = source.getNodes().get(0);
-		TextFormatter formatter = new TextFormatter(source.getRawInput());
+		TextFormatter formatter = new TextFormatter(source);
 		node.accept(new SourcePrinter(formatter));
 		String actual = formatter.finish();
 		try {

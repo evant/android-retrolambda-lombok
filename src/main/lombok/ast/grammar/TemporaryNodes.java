@@ -30,7 +30,7 @@ import lombok.ast.Position;
 
 abstract class TemporaryNode implements Node {
 	private Position position = Position.UNPLACED;
-
+	
 	@Override public void accept(AstVisitor visitor) {
 		visitor.visitParseArtefact(this);
 	}

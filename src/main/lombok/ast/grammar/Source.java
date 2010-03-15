@@ -22,6 +22,7 @@
 package lombok.ast.grammar;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,9 @@ import lombok.ast.Position;
 import org.parboiled.support.ParseError;
 import org.parboiled.support.ParsingResult;
 
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.ListMultimap;
+
 public class Source {
 	@Getter private final String name;
 	@Getter private final String rawInput;
@@ -44,6 +48,7 @@ public class Source {
 	private List<ParseProblem> problems = new ArrayList<ParseProblem>();
 	private List<Comment> comments = new ArrayList<Comment>();
 	private boolean parsed;
+	private ParsingResult<Node> parsingResult;
 	
 	private TreeMap<Integer, Integer> positionDeltas = new TreeMap<Integer, Integer>();
 	private String preprocessed;
@@ -54,21 +59,25 @@ public class Source {
 	}
 	
 	public List<Node> getNodes() {
+		parseCompilationUnit();
 		if (!parsed) throw new IllegalStateException("Code hasn't been parsed yet.");
 		return nodes;
 	}
 	
 	public List<ParseProblem> getProblems() {
+		parseCompilationUnit();
 		return problems;
 	}
 	
 	public void parseCompilationUnit() {
+		if (parsed) return;
 		preProcess();
 		ParserGroup group = new ParserGroup(this);
-		postProcess(group.structures.parse(group.structures.compilationUnitEoi(), preprocessed));
+		this.parsingResult = group.structures.parse(group.structures.compilationUnitEoi(), preprocessed);
+		postProcess();
 	}
 	
-	private void postProcess(ParsingResult<Node> parsingResult) {
+	private void postProcess() {
 		nodes.add(parsingResult.parseTreeRoot.getValue());
 		for (ParseError error : parsingResult.parseErrors) {
 			problems.add(new ParseProblem(new Position(mapPosition(error.getErrorStart().index), mapPosition(error.getErrorEnd().index)), error.getErrorMessage()));
@@ -86,6 +95,52 @@ public class Source {
 		
 		associateJavadoc(comments, nodes);
 		parsed = true;
+	}
+	
+	public Map<Node, Collection<SourceStructure>> getSourceStructures() {
+		parseCompilationUnit();
+		ListMultimap<Node, SourceStructure> map = LinkedListMultimap.create();
+		
+		org.parboiled.Node<Node> pNode = parsingResult.parseTreeRoot;
+		
+		buildSourceStructures(pNode, null, null, map);
+		
+		return map.asMap();
+	}
+	
+	private void addSourceStructure(ListMultimap<Node, SourceStructure> map, Node node, SourceStructure structure) {
+		if (structure.getPosition().size() > 0 && structure.getContent().trim().length() > 0 &&
+				!structure.getPosition().equals(node.getPosition())) {
+			
+			map.put(node, structure);
+		}
+	}
+	
+	private void buildSourceStructures(org.parboiled.Node<Node> node, Node owner, Node sibling, ListMultimap<Node, SourceStructure> map) {
+		if (node.getChildren().isEmpty()) {
+			int start = node.getStartLocation().index;
+			int end = node.getEndLocation().index;
+			String text = preprocessed.substring(start, end);
+			SourceStructure structure = new SourceStructure(new Position(start, end), text);
+			if (node.getValue() != null) addSourceStructure(map, node.getValue(), structure);
+			else if (text.equals(".") && sibling != null) addSourceStructure(map, sibling, structure);
+			else if (owner != null) addSourceStructure(map, owner, structure);
+		} else {
+			if (node.getValue() != null) owner = node.getValue();
+			
+			sibling = null;
+			for (org.parboiled.Node<Node> pNode : node.getChildren()) {
+				if (pNode.getValue() == null) continue;
+				if (sibling == null) sibling = pNode.getValue();
+				else {
+					sibling = null;
+					break;
+				}
+			}
+			for (org.parboiled.Node<Node> pNode : node.getChildren()) {
+				buildSourceStructures(pNode, owner, sibling, map);
+			}
+		}
 	}
 	
 	/**

@@ -53,7 +53,7 @@ public class Main {
 		Node result = source.getNodes().get(0);
 		long taken = System.currentTimeMillis() - now;
 		SourceFormatter formatter = isText ?
-				new TextFormatter(source.getRawInput()) :
+				new TextFormatter(source) :
 				new HtmlFormatter(source.getRawInput());
 		formatter.setTimeTaken(taken);
 		result.accept(new SourcePrinter(formatter));
