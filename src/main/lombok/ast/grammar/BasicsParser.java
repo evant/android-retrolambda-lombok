@@ -44,6 +44,7 @@ public class BasicsParser extends BaseParser<Node> {
 		this.group = group;
 		this.actions = new BasicsActions(group.getSource());
 	}
+	
 	/**
 	 * Eats up any whitespace and comments at the current position.
 	 */
@@ -69,7 +70,7 @@ public class BasicsParser extends BaseParser<Node> {
 	
 	public Rule identifier() {
 		return sequence(
-				sequence(identifierStart(), zeroOrMore(identifierPart())).label("identifier"),
+				identifierRaw().label("identifier"),
 				actions.checkIfKeyword(TEXT("identifier")),
 				SET(actions.createIdentifier(TEXT("identifier"))),
 				optWS()).label("identifier");
@@ -90,27 +91,21 @@ public class BasicsParser extends BaseParser<Node> {
 			"public", "private", "protected"
 	));
 	
-	public Rule identifierStart() {
-		return new IdentifierMatcher(true);
+	public Rule identifierRaw() {
+		return new IdentifierMatcher();
 	}
 	
 	public Rule identifierPart() {
-		return new IdentifierMatcher(false);
+		return new TestBreakMatcher();
 	}
 	
-	private static class IdentifierMatcher extends AbstractMatcher<Node> {
-		private final boolean start;
-		
-		public IdentifierMatcher(boolean start) {
-			this.start = start;
-		}
-		
+	private static class TestBreakMatcher extends AbstractMatcher<Node> {
 		@Override public Characters getStarterChars() {
 			Characters c = Characters.NONE;
 			
 			for (char a = 'a'; a <= 'z'; a++) c = c.add(a);
 			for (char a = 'A'; a <= 'Z'; a++) c = c.add(a);
-			if (!start) for (char a = '0'; a <= '9'; a++) c = c.add(a);
+			for (char a = '0'; a <= '9'; a++) c = c.add(a);
 			c = c.add('$').add('_');
 			
 			return c;
@@ -118,8 +113,35 @@ public class BasicsParser extends BaseParser<Node> {
 		
 		@Override public boolean match(MatcherContext<Node> context) {
 			char current = context.getCurrentLocation().currentChar;
-			if (start ? Character.isJavaIdentifierStart(current) : Character.isJavaIdentifierPart(current)) {
+			if (Character.isJavaIdentifierPart(current)) {
 				context.advanceInputLocation();
+				context.createNode();
+				context.createNode();
+				return true;
+			}
+			return false;
+		}
+	}
+	
+	private static class IdentifierMatcher extends AbstractMatcher<Node> {
+		@Override public Characters getStarterChars() {
+			Characters c = Characters.NONE;
+			
+			for (char a = 'a'; a <= 'z'; a++) c = c.add(a);
+			for (char a = 'A'; a <= 'Z'; a++) c = c.add(a);
+			c = c.add('$').add('_');
+			
+			return c;
+		}
+		
+		@Override public boolean match(MatcherContext<Node> context) {
+			//TODO What happens when a file ends in an identifier?
+			char current = context.getCurrentLocation().currentChar;
+			if (Character.isJavaIdentifierStart(current)) {
+				context.advanceInputLocation();
+				while (Character.isJavaIdentifierPart(context.getCurrentLocation().currentChar)) {
+					context.advanceInputLocation();
+				}
 				context.createNode();
 				return true;
 			}
