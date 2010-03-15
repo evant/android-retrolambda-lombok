@@ -136,7 +136,6 @@ import com.sun.tools.javac.tree.JCTree.JCStatement;
 import com.sun.tools.javac.tree.JCTree.JCTypeApply;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
-import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
@@ -146,21 +145,19 @@ import com.sun.tools.javac.util.Name.Table;
  * Turns {@code lombok.ast} based ASTs into javac's {@code JCTree} model.
  */
 public class JcTreeBuilder extends ForwardingAstVisitor {
-	private final boolean includePositions;
 	private final TreeMaker treeMaker;
 	private final Table table;
 	private final Map<Node, Collection<SourceStructure>> sourceStructures;
 	
 	private List<? extends JCTree> result = null;
 	
-	public JcTreeBuilder(Source source, Context context, boolean includePositions) {
-		this(source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context), includePositions);
+	public JcTreeBuilder(Source source, Context context) {
+		this(source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context));
 	}
 	
-	private JcTreeBuilder(Map<Node, Collection<SourceStructure>> structures, TreeMaker treeMaker, Table table, boolean includePositions) {
+	private JcTreeBuilder(Map<Node, Collection<SourceStructure>> structures, TreeMaker treeMaker, Table table) {
 		this.treeMaker = treeMaker;
 		this.table = table;
-		this.includePositions = includePositions;
 		this.sourceStructures = structures;
 	}
 	
@@ -262,7 +259,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private JcTreeBuilder create() {
-		return new JcTreeBuilder(sourceStructures, treeMaker, table, includePositions);
+		return new JcTreeBuilder(sourceStructures, treeMaker, table);
 	}
 	
 	@Override
@@ -896,19 +893,13 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private JCExpression addWildcards(JCExpression type, WildcardKind wildcardKind) {
-		JCWildcard wc;
-		
 		switch (wildcardKind) {
 		case NONE:
 			return type;
 		case EXTENDS:
-			wc = treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.EXTENDS), type);
-			wc.pos = type.pos;
-			return wc;
+			return setPos(type.pos, treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.EXTENDS), type));
 		case SUPER:
-			wc = treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.SUPER), type);
-			wc.pos = type.pos;
-			return wc;
+			return setPos(type.pos, treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.SUPER), type));
 		default:
 			throw new IllegalStateException("Unexpected unbound wildcard: " + wildcardKind);
 		}
@@ -1175,9 +1166,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private <T extends JCTree> T setPos(int position, T jcTree) {
-		if (includePositions) {
-			jcTree.pos = position;
-		}
+		jcTree.pos = position;
 		return jcTree;
 	}
 }
