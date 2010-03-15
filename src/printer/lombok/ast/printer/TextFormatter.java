@@ -27,19 +27,20 @@ import java.util.Stack;
 
 import lombok.Getter;
 import lombok.ast.Node;
+import lombok.ast.grammar.Source;
 
 import com.google.common.base.Joiner;
 
 public class TextFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
-	@Getter private final String rawSource;
+	@Getter private final Source source;
 	private final StringBuilder sb = new StringBuilder();
 	private final List<String> errors = new ArrayList<String>();
 	private int indent;
 	private boolean suppress, newline;
 	
-	public TextFormatter(String rawSource) {
-		this.rawSource = rawSource;
+	public TextFormatter(Source source) {
+		this.source = source;
 	}
 	
 	private TextFormatter a(String text) {

@@ -49,7 +49,7 @@ public class PositionTest extends DirectoryRunner.SourceFileBasedTester {
 		}
 		
 		Node node = source.getNodes().get(0);
-		PositionCheckingFormatter formatter = new PositionCheckingFormatter(source.getRawInput());
+		PositionCheckingFormatter formatter = new PositionCheckingFormatter(source);
 		node.accept(new SourcePrinter(formatter));
 		List<AstException> problems = formatter.getProblems();
 		if (!problems.isEmpty()) fail("position error: " + problems.get(0));

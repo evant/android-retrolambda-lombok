@@ -34,8 +34,8 @@ public class PositionCheckingFormatter extends TextFormatter {
 	private Stack<Node> nodeStack = new Stack<Node>();
 	private List<AstException> problems = new ArrayList<AstException>();
 	
-	public PositionCheckingFormatter(String rawSource) {
-		super(rawSource);
+	public PositionCheckingFormatter(Source source) {
+		super(source);
 	}
 	
 	public List<AstException> getProblems() {
@@ -98,7 +98,7 @@ public class PositionCheckingFormatter extends TextFormatter {
 	private static final int RANGE = 12;
 	private void reportError(Node node, String description, int actualPos, int repPos) {
 		int delta = repPos - actualPos;
-		String raw = getRawSource();
+		String raw = getSource().getRawInput();
 		String actualPrefix = getCharsBeforePosition(actualPos, raw);
 		String actualPostfix = getCharsAfterPosition(actualPos, raw);
 		String reportedPrefix = getCharsBeforePosition(repPos, raw);
