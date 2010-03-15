@@ -257,6 +257,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 			property("enclosingType.name", node.enclosingType.name);
 			property("enclosingType.className", node.enclosingType.getClass().getSimpleName());
 		}
+		property("modifiers", node.modifiers);
 		child("javadoc", node.javadoc);
 		if (node.allocation != null && node.allocation.anonymousType == node) {
 			property("allocation", "allocation.anonymousType = this");
@@ -853,13 +854,8 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitQualifiedAllocationExpression(QualifiedAllocationExpression node) {
 		printNode(node);
-		if (node.anonymousType == null) {
-			property("anonymousType.name", null);
-		} else {
-			property("anonymousType.name", node.anonymousType.name);
-			property("anonymousType.className", node.anonymousType.getClass().getSimpleName());
-		}
 		child("enclosingInstance", node.enclosingInstance);
+		child("anonymousType", node.anonymousType);
 		children("typeArguments", node.typeArguments);
 		child("type", node.type);
 		children("arguments", node.arguments);
