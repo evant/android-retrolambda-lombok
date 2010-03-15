@@ -23,6 +23,7 @@ package lombok.ast.ecj;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -30,7 +31,17 @@ import java.util.List;
 import java.util.Locale;
 
 import lombok.ast.BinaryOperator;
+import lombok.ast.ConstructorInvocation;
+import lombok.ast.EnumConstant;
+import lombok.ast.EnumDeclaration;
+import lombok.ast.EnumTypeBody;
+import lombok.ast.InterfaceDeclaration;
+import lombok.ast.Node;
+import lombok.ast.StrictListAccessor;
+import lombok.ast.TypeBody;
+import lombok.ast.TypeMember;
 import lombok.ast.UnaryOperator;
+import lombok.ast.VariableDeclaration;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
@@ -71,6 +82,7 @@ import org.eclipse.jdt.internal.compiler.ast.Expression;
 import org.eclipse.jdt.internal.compiler.ast.ExtendedStringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.FalseLiteral;
 import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.FieldReference;
 import org.eclipse.jdt.internal.compiler.ast.FloatLiteral;
 import org.eclipse.jdt.internal.compiler.ast.ForStatement;
 import org.eclipse.jdt.internal.compiler.ast.ForeachStatement;
@@ -80,6 +92,7 @@ import org.eclipse.jdt.internal.compiler.ast.Initializer;
 import org.eclipse.jdt.internal.compiler.ast.InstanceOfExpression;
 import org.eclipse.jdt.internal.compiler.ast.IntLiteral;
 import org.eclipse.jdt.internal.compiler.ast.IntLiteralMinValue;
+import org.eclipse.jdt.internal.compiler.ast.Javadoc;
 import org.eclipse.jdt.internal.compiler.ast.LabeledStatement;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.LongLiteral;
@@ -171,7 +184,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		static VariableKind kind(lombok.ast.VariableDefinition node) {
 			lombok.ast.Node parent = node.getParent();
 			if (parent instanceof lombok.ast.VariableDeclaration) {
-				if (parent.getParent() instanceof lombok.ast.TypeBody) {
+				if (parent.getParent() instanceof lombok.ast.TypeBody ||
+					parent.getParent() instanceof lombok.ast.EnumTypeBody) {
 					return FIELD;
 				} else {
 					return LOCAL;
@@ -358,43 +372,148 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitClassDeclaration(lombok.ast.ClassDeclaration node) {
-		// the modifiers must be set before the TypeDeclara
-		TypeDeclaration decl = createTypeBody(node.getBody(), false, toModifiers(node.getModifiers()));
+		// the modifiers must be set before the TypeDeclaration
+		TypeDeclaration decl = createTypeBody(node.getBody().members(), true, toModifiers(node.getModifiers()));
 		
+		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.superclass = (TypeReference) toTree(node.getExtending());
 		decl.superInterfaces = toArray(TypeReference.class, node.implementing());
+		
+		markTypeReferenceIsSuperType(decl);
+		
 		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
 		
 		decl.name = toName(node.getName());
-		if (node.hasParent()) {
-			if (node.getParent() instanceof lombok.ast.CompilationUnit) {
-				char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
-				if (!CharOperation.equals(decl.name, mainTypeName)) {
-					decl.bits |= ASTNode.IsSecondaryType;
-				}
-			} else if (node.getParent() instanceof lombok.ast.TypeBody) {
-				decl.bits |= ASTNode.IsMemberType;
-			} else {
-				decl.bits |= ASTNode.IsLocalType;
-				bubblingFlags.add(BubblingFlags.LOCALTYPE);
-			}
-		}
+		
+		updateTypeBits(node.getParent(), decl);
 		
 		//TODO test inner types. Give em everything - (abstract) methods, initializers, static initializers, MULTIPLE initializers.
 		return set(node, decl);
 	}
 
-	private TypeDeclaration createTypeBody(lombok.ast.TypeBody typeBody, boolean anonymous, int modifiers) {
+	private void updateTypeBits(Node parent, TypeDeclaration decl) {
+		if (parent == null) {
+			return;
+		}
+		if (parent instanceof lombok.ast.CompilationUnit) {
+			char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
+			if (!CharOperation.equals(decl.name, mainTypeName)) {
+				decl.bits |= ASTNode.IsSecondaryType;
+			}
+			return;
+		} 
+		
+		if (parent instanceof lombok.ast.TypeBody) {
+			decl.bits |= ASTNode.IsMemberType;
+			return;
+		}
+		
+		//TODO test if a type declared in an enum constant is possible
+		decl.bits |= ASTNode.IsLocalType;
+		bubblingFlags.add(BubblingFlags.LOCALTYPE);
+	}
+	
+	private void markTypeReferenceIsSuperType(TypeDeclaration decl) {
+		if (decl.superclass != null) {
+			decl.superclass.bits |= ASTNode.IsSuperType;
+		}
+		if (decl.superInterfaces != null) {
+			for (TypeReference t : decl.superInterfaces) {
+				t.bits |= ASTNode.IsSuperType;
+			}
+		}
+	}
+	
+	
+	@Override
+	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
+		// the modifiers must be set before the TypeDeclaration
+		int modifiers = toModifiers(node.getModifiers()) | ClassFileConstants.AccInterface;
+		TypeDeclaration decl = createTypeBody(node.getBody().members(), false, modifiers);
+		
+		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
+		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
+		decl.superInterfaces = toArray(TypeReference.class, node.extending());
+
+		markTypeReferenceIsSuperType(decl);
+
+		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
+		decl.name = toName(node.getName());
+		
+		updateTypeBits(node.getParent(), decl);
+		
+		return set(node, decl);
+	}	
+	
+	
+	@Override
+	public boolean visitEnumDeclaration(EnumDeclaration node) {
+		FieldDeclaration[] fields = null;
+		
+		if (node.getBody() != null) {
+			fields = toArray(FieldDeclaration.class, node.getBody().constants());
+		}
+		// the modifiers must be set before the TypeDeclaration
+		int modifiers = toModifiers(node.getModifiers()) | ClassFileConstants.AccEnum;
+		TypeDeclaration decl = createTypeBody(node.getBody().members(), true, modifiers, fields);
+		
+		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
+		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
+		decl.superInterfaces = toArray(TypeReference.class, node.implementing());
+		
+		markTypeReferenceIsSuperType(decl);
+		
+		decl.name = toName(node.getName());
+		
+		updateTypeBits(node.getParent(), decl);
+		
+		return set(node, decl);
+	}
+	
+	@Override
+	public boolean visitEnumConstant(EnumConstant node) {
+		//TODO check where the javadoc and annotations go: the field or the type
+
+		//[javadoc][annotations] *static *final [ENUMTYPE] [name] = new [ENUMTYPE.name] ([arguments]) [body]
+		int modifiers = ClassFileConstants.AccEnum;
+		FieldDeclaration decl = new FieldDeclaration();
+		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
+		decl.annotations = toArray(Annotation.class, node.annotations());
+		decl.name = toName(node.getName());
+		
+		AllocationExpression init;
+		if (node.getBody() == null) {
+			init = new AllocationExpression();
+		} else {
+			TypeDeclaration type = createTypeBody(node.getBody().members(), false, modifiers);
+			type.name = CharOperation.NO_CHAR;
+			init = new QualifiedAllocationExpression(type);
+		}
+		init.arguments = toArray(Expression.class, node.arguments());
+		decl.initialization = init;
+		
+		if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
+			decl.bits |= ASTNode.HasLocalType;
+		}
+		
+		return set(node, decl);
+	}
+	
+	private TypeDeclaration createTypeBody(StrictListAccessor<TypeMember, ?> members, boolean canHaveConstructor, int modifiers, FieldDeclaration... initialFields) {
 		TypeDeclaration decl = new TypeDeclaration(compilationResult);
 		decl.modifiers = modifiers;
-		if (isUndocumented(typeBody)) decl.bits |= ASTNode.UndocumentedEmptyBlock;
+		if (members.isEmpty() && isUndocumented(members.owner())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
 		
-		boolean hasExplicitConstructor = anonymous;
+		boolean hasExplicitConstructor = false;
 		List<AbstractMethodDeclaration> methods = new ArrayList<AbstractMethodDeclaration>();
 		List<FieldDeclaration> fields = new ArrayList<FieldDeclaration>();
 		List<TypeDeclaration> types = new ArrayList<TypeDeclaration>();
-		for (lombok.ast.TypeMember member : typeBody.members()) {
+
+		if (initialFields != null) {
+			fields.addAll(Arrays.asList(initialFields));
+		}
+		for (lombok.ast.TypeMember member : members) {
 			if (member instanceof lombok.ast.ConstructorDeclaration) {
 				hasExplicitConstructor = true;
 				methods.add((AbstractMethodDeclaration) toTree(member));
@@ -421,7 +540,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 		}
 		
-		if (!hasExplicitConstructor) {
+		if (!hasExplicitConstructor && canHaveConstructor) {
 			ConstructorDeclaration defaultConstructor = new ConstructorDeclaration(compilationResult);
 			defaultConstructor.bits |= ASTNode.IsDefaultConstructor;
 			defaultConstructor.constructorCall = new ExplicitConstructorCall(ExplicitConstructorCall.ImplicitSuper);
@@ -611,7 +730,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		AllocationExpression inv;
 		if (node.getQualifier() != null || node.getAnonymousClassBody() != null) {
 			if (node.getAnonymousClassBody() != null) {
-				TypeDeclaration decl = createTypeBody(node.getAnonymousClassBody(), true, 0);;
+				TypeDeclaration decl = createTypeBody(node.getAnonymousClassBody().members(), false, 0);;
 				decl.name = CharOperation.NO_CHAR;
 				decl.bits |= ASTNode.IsAnonymousType | ASTNode.IsLocalType;
 				bubblingFlags.add(BubblingFlags.LOCALTYPE);
@@ -656,8 +775,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				}
 			}
 		}
+		
+		FieldReference ref = new FieldReference(toName(node.getIdentifier()), 0);
+		ref.receiver = toExpression(node.getOperand());
+		
 		//TODO ("" + 10).a.b = ... DONT forget to doublecheck var/type restriction flags
-		throw new RuntimeException("Select fail");
+		return set(node, ref);
 	}
 	
 	@Override
@@ -926,6 +1049,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.type.bits |= ASTNode.IsVarArgs;
 			}
 			if (decl instanceof FieldDeclaration) {
+				if (node.getParent() instanceof VariableDeclaration) {
+					((FieldDeclaration)decl).javadoc = (Javadoc) toTree(((VariableDeclaration)node.getParent()).getJavadoc());
+				}
 				if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
 					decl.bits |= ASTNode.HasLocalType;
 				}
@@ -1102,6 +1228,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		return set(node, pair);
 	}
 	
+	
 	@Override
 	public boolean visitCase(lombok.ast.Case node) {
 		return set(node, new CaseStatement(toExpression(node.getCondition()), 0, 0));
@@ -1161,14 +1288,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		}
 	}
 	
-	// Only works for TypeBody and Block
+	// Only works for TypeBody, EnumTypeBody and Block
 	private boolean isUndocumented(lombok.ast.Node block) {
 		if (block == null) {
 			return false;
 		}
 		lombok.ast.Position pos = block.getPosition();
-		if (pos.isUnplaced() && pos.size() < 2) {
-			return false;
+		if (pos.isUnplaced() || pos.size() < 3) {
+			return true;
 		}
 		String content = source.getRawInput().substring(pos.getStart() + 1, pos.getEnd() - 1);
 		return content.trim().isEmpty();
