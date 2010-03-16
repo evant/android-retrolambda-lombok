@@ -784,14 +784,14 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		if (node.isVarargs()) {
 			mods.flags |= Flags.VARARGS;
-			vartype = addDimensions(vartype, 1);
+			vartype = addDimensions(node, vartype, 1);
 		}
 		
 		List<JCVariableDecl> defs = List.nil();
 		for (VariableDefinitionEntry e : node.variables()) {
 			defs = defs.append(setPos(
 					e,
-					treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer()))));
+					treeMaker.VarDef(mods, toName(e.getName()), addDimensions(node, vartype, e.getArrayDimensions()), toExpression(e.getInitializer()))));
 		}
 		
 		/* the endpos when multiple nodes are generated is after the comma for all but the last item, for some reason. */ {
@@ -862,7 +862,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		JCExpression result = plainTypeReference(node);
 		
 		result = addWildcards(result, wildcard);
-		result = addDimensions(result, node.getArrayDimensions());
+		result = addDimensions(node, result, node.getArrayDimensions());
 		
 		return set(node, result);
 	}
@@ -872,10 +872,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return set(node, treeMaker.Indexed(toExpression(node.getOperand()), toExpression(node.getIndexExpression())));
 	}
 	
-	private JCExpression addDimensions(JCExpression type, int dimensions) {
+	private JCExpression addDimensions(Node node, JCExpression type, int dimensions) {
 		JCExpression resultingType = type;
 		for (int i = 0; i < dimensions; i++) {
-			resultingType = treeMaker.TypeArray(resultingType);
+			int start = posOfStructure(node, "[", i, true);
+			int end = posOfStructure(node, "]", i, false);
+			resultingType = setPos(start, end, treeMaker.TypeArray(resultingType));
 		}
 		return resultingType;
 	}
@@ -944,7 +946,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitTypeVariable(TypeVariable node) {
-		return set(node, treeMaker.TypeParameter(toName(node.getName()), toList(JCExpression.class, node.extending())));
+		return posSet(node, treeMaker.TypeParameter(toName(node.getName()), toList(JCExpression.class, node.extending())));
 	}
 	
 	@Override

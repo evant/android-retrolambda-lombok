@@ -45,7 +45,7 @@ import com.sun.tools.javac.util.Context;
 @RunWith(DirectoryRunner.class)
 public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 	@Test
-	public boolean testJavaCompiler(Source source) throws Exception {
+	public boolean testJcTreeBuilder(Source source) throws Exception {
 		return testCompiler(source);
 	}
 	

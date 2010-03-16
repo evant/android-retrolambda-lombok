@@ -144,7 +144,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 		} else {
 			if (includePositions) {
 				int endPos = tree.getEndPosition(endPosTable);
-				if (tree instanceof JCTypeApply || tree instanceof JCWildcard) {
+				if (tree instanceof JCTypeApply || tree instanceof JCWildcard || tree instanceof JCTypeParameter) {
 					//Javac itself actually has bugs in generating the right endpos. To make sure our tests that compare end pos don't fail,
 					//as we do set the end pos at the right place, we overwrite it with magic value -2 which means: javac screws this up.
 					endPos = -2;
