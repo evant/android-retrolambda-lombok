@@ -126,19 +126,21 @@ public class Source {
 			else if (text.equals(".") && sibling != null) addSourceStructure(map, sibling, structure);
 			else if (owner != null) addSourceStructure(map, owner, structure);
 		} else {
-			if (node.getValue() != null) owner = node.getValue();
-			
+			Node possibleOwner = node.getValue();
 			sibling = null;
+			boolean multipleSiblings = false;
 			for (org.parboiled.Node<Node> pNode : node.getChildren()) {
 				if (pNode.getValue() == null) continue;
+				/* If the next if holds true, then we aren't the true generator; the child generated the node and this pNode adopted it */
+				if (pNode.getValue() == possibleOwner) possibleOwner = null;
 				if (sibling == null) sibling = pNode.getValue();
-				else {
-					sibling = null;
-					break;
-				}
+				else multipleSiblings = true;
 			}
+			
+			if (possibleOwner != null) owner = possibleOwner;
+			
 			for (org.parboiled.Node<Node> pNode : node.getChildren()) {
-				buildSourceStructures(pNode, owner, sibling, map);
+				buildSourceStructures(pNode, owner, multipleSiblings ? null : sibling, map);
 			}
 		}
 	}
