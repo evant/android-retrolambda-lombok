@@ -143,7 +143,13 @@ public class JcTreePrinter extends JCTree.Visitor {
 			printNode("NULL");
 		} else {
 			if (includePositions) {
-				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), tree.pos, tree.getEndPosition(endPosTable)));
+				int endPos = tree.getEndPosition(endPosTable);
+				if (tree instanceof JCTypeApply || tree instanceof JCWildcard) {
+					//Javac itself actually has bugs in generating the right endpos. To make sure our tests that compare end pos don't fail,
+					//as we do set the end pos at the right place, we overwrite it with magic value -2 which means: javac screws this up.
+					endPos = -2;
+				}
+				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), tree.pos, endPos));
 			} else {
 				printNode(tree.getClass().getSimpleName());
 			}

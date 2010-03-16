@@ -896,11 +896,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			}
 			if (expr instanceof JCIdent) {
 				current = treeMaker.Select(current, ((JCIdent)expr).name);
-				current.pos = posOfStructure(part, ".", true);
+				setPos(posOfStructure(part, ".", true), part.getPosition().getEnd(), current);
 			} else if (expr instanceof JCTypeApply) {
 				JCTypeApply apply = (JCTypeApply)expr;
 				apply.clazz = treeMaker.Select(current, ((JCIdent)apply.clazz).name);
-				apply.clazz.pos = posOfStructure(part, ".", true);
+				setPos(posOfStructure(part, ".", true), part.getIdentifier().getPosition().getEnd(), apply.clazz);
 				current = apply;
 			} else {
 				throw new IllegalStateException("Didn't expect a " + expr.getClass().getName() + " in " + node);
@@ -932,8 +932,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			return set(node, ident);
 		} else {
 			JCTypeApply typeApply = treeMaker.TypeApply(ident, typeArguments);
-			typeApply.pos = posOfStructure(node.getTypeArguments(), "<", true);
-			return set(node, typeApply);
+			return set(node, setPos(node.getTypeArguments(), typeApply));
 		}
 	}
 	
