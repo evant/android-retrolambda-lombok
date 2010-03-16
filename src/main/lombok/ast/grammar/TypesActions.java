@@ -90,12 +90,17 @@ public class TypesActions extends SourceActions {
 		return posify(t);
 	}
 	
-	public Node addArrayDimensionsToType(Node value, List<String> bracketPairs) {
+	public Node setArrayDimensionsOfType(Node value, List<String> bracketPairs) {
+		//TODO test a public int foo() [] {} method declaration.
 		int arrayDims = bracketPairs == null ? 0 : bracketPairs.size();
 		if (arrayDims == 0) return value;
 		
-		TypeReference ref = value instanceof TypeReference ? ((TypeReference)value).copy() : new TypeReference();
-		ref.setArrayDimensions(arrayDims);
+		TypeReference ref = new TypeReference().setArrayDimensions(arrayDims);
+		if (value instanceof TypeReference) {
+			TypeReference orig = (TypeReference)value;
+			ref.setWildcard(orig.getWildcard());
+			ref.rawParts().migrateAllFrom(orig.rawParts());
+		}
 		return posify(ref);
 	}
 	

@@ -248,7 +248,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		result = List.of(actualValue);
 		return true;
 	}
-
+	
 	private void posParen(Node node, int iteration, java.util.List<Position> parenPositions, JCTree jcTree) {
 		Position p = null;
 		if (parenPositions.size() > iteration) p = parenPositions.get(iteration);
@@ -684,7 +684,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitDoWhile(DoWhile node) {
-		return set(node, treeMaker.DoLoop(toStatement(node.getStatement()), toExpression(node.getCondition())));
+		JCExpression expr = toExpression(node.getCondition());
+		int start = posOfStructure(node, "(", true);
+		int end = posOfStructure(node, ")", false);
+		expr = setPos(start, end, treeMaker.Parens(expr));
+		return set(node, treeMaker.DoLoop(toStatement(node.getStatement()), expr));
 	}
 	
 	@Override
@@ -791,7 +795,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		for (VariableDefinitionEntry e : node.variables()) {
 			defs = defs.append(setPos(
 					e,
-					treeMaker.VarDef(mods, toName(e.getName()), addDimensions(node, vartype, e.getArrayDimensions()), toExpression(e.getInitializer()))));
+					treeMaker.VarDef(mods, toName(e.getName()), addDimensions(e, vartype, e.getArrayDimensions()), toExpression(e.getInitializer()))));
 		}
 		
 		/* the endpos when multiple nodes are generated is after the comma for all but the last item, for some reason. */ {
@@ -875,8 +879,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	private JCExpression addDimensions(Node node, JCExpression type, int dimensions) {
 		JCExpression resultingType = type;
 		for (int i = 0; i < dimensions; i++) {
-			int start = posOfStructure(node, "[", i, true);
-			int end = posOfStructure(node, "]", i, false);
+			int start = posOfStructure(node, "[", dimensions - i - 1, true);
+			int end = posOfStructure(node, "]", false);
 			resultingType = setPos(start, end, treeMaker.TypeArray(resultingType));
 		}
 		return resultingType;
@@ -884,9 +888,15 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private JCExpression plainTypeReference(TypeReference node) {
 		if (node.isPrimitive() || node.parts().size() == 1) {
+			int end = node.getPosition().getEnd();
+			if (node.getArrayDimensions() > 0) {
+				end = posOfStructure(node, "[", true);
+			}
+			if (end == node.getPosition().getStart()) end = node.getPosition().getEnd();
+			
 			Identifier identifier = node.parts().first().getIdentifier();
 			int typeTag = primitiveTypeTag(identifier.getName());
-			if (typeTag > 0) return setPos(node, treeMaker.TypeIdent(typeTag));
+			if (typeTag > 0) return setPos(node.getPosition().getStart(), end, treeMaker.TypeIdent(typeTag));
 		}
 		
 		JCExpression current = null;
@@ -1057,7 +1067,11 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitWhile(While node) {
-		return set(node, treeMaker.WhileLoop(toExpression(node.getCondition()), toStatement(node.getStatement())));
+		JCExpression expr = toExpression(node.getCondition());
+		int start = posOfStructure(node, "(", true);
+		int end = posOfStructure(node, ")", false);
+		expr = setPos(start, end, treeMaker.Parens(expr));
+		return set(node, treeMaker.WhileLoop(expr, toStatement(node.getStatement())));
 	}
 	
 	@Override

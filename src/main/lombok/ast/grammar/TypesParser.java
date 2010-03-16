@@ -48,7 +48,7 @@ public class TypesParser extends BaseParser<Node> {
 				SET(),
 				zeroOrMore(sequence(
 						ch('['), group.basics.optWS(), ch(']'), group.basics.optWS())),
-				SET(actions.addArrayDimensionsToType(VALUE(), TEXTS("zeroOrMore/sequence")))).label("type");
+				SET(actions.setArrayDimensionsOfType(VALUE(), TEXTS("zeroOrMore/sequence")))).label("type");
 	}
 	
 	/**
