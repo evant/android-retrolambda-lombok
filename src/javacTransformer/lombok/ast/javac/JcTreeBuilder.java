@@ -24,6 +24,7 @@ package lombok.ast.javac;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -126,6 +127,7 @@ import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCCase;
 import com.sun.tools.javac.tree.JCTree.JCCatch;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
+import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
@@ -148,17 +150,19 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	private final TreeMaker treeMaker;
 	private final Table table;
 	private final Map<Node, Collection<SourceStructure>> sourceStructures;
+	private final Map<JCTree, Integer> endPosTable;
 	
 	private List<? extends JCTree> result = null;
 	
 	public JcTreeBuilder(Source source, Context context) {
-		this(source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context));
+		this(source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context), new HashMap<JCTree, Integer>());
 	}
 	
-	private JcTreeBuilder(Map<Node, Collection<SourceStructure>> structures, TreeMaker treeMaker, Table table) {
+	private JcTreeBuilder(Map<Node, Collection<SourceStructure>> structures, TreeMaker treeMaker, Table table, Map<JCTree, Integer> endPosTable) {
 		this.treeMaker = treeMaker;
 		this.table = table;
 		this.sourceStructures = structures;
+		this.endPosTable = endPosTable;
 	}
 	
 	private Name toName(Identifier identifier) {
@@ -249,7 +253,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		Position p = null;
 		if (parenPositions.size() > iteration) p = parenPositions.get(iteration);
 		int start = (p == null || p.isUnplaced() || p.getStart() < 0) ? node.getPosition().getStart() - 1 - iteration : p.getStart();
-		setPos(start, jcTree);
+		int end = (p == null || p.isUnplaced() || p.getEnd() < 0) ? node.getPosition().getEnd() + 1 + iteration : p.getEnd();
+		setPos(start, end, jcTree);
 	}
 	
 	private boolean set(List<? extends JCTree> values) {
@@ -259,7 +264,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private JcTreeBuilder create() {
-		return new JcTreeBuilder(sourceStructures, treeMaker, table);
+		return new JcTreeBuilder(sourceStructures, treeMaker, table, endPosTable);
 	}
 	
 	@Override
@@ -286,7 +291,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			}
 		}
 		
-		return posSet(node, treeMaker.TopLevel(annotations, pid, imports.appendList(types)));
+		JCCompilationUnit topLevel = treeMaker.TopLevel(annotations, pid, imports.appendList(types));
+		topLevel.endPositions = endPosTable;
+		return posSet(node, topLevel);
 	}
 	
 	@Override
@@ -308,22 +315,25 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitImportDeclaration(ImportDeclaration node) {
 		JCExpression name = chain(node.parts());
 		if (node.isStarImport()) {
-			name = setPos(node.parts().last().getPosition().getEnd(),
-					treeMaker.Select(name, table.fromString("*")));
+			int start = posOfStructure(node, ".", true);
+			int end = posOfStructure(node, "*", false);
+			name = setPos(start, end, treeMaker.Select(name, table.asterisk));
 		}
 		return posSet(node, treeMaker.Import(name, node.isStaticImport()));
 	}
 	
 	@Override
 	public boolean visitClassDeclaration(ClassDeclaration node) {
-		return posSetOnStructure(node, "class", true, treeMaker.ClassDef(
+		int start = posOfStructure(node, "class", true);
+		int end = node.getPosition().getEnd();
+		return set(node, setPos(start, end, treeMaker.ClassDef(
 				(JCModifiers) toTree(node.getModifiers()),
 				toName(node.getName()),
 				toList(JCTypeParameter.class, node.typeVariables()),
 				toTree(node.getExtending()),
 				toList(JCExpression.class, node.implementing()),
 				node.getBody() == null ? List.<JCTree>nil() : toList(JCTree.class, node.getBody().members())
-		));
+		)));
 	}
 	
 	@Override
@@ -761,8 +771,10 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
-		set(toList(JCVariableDecl.class, node.getDefinition()));
-		return true;
+		List<JCVariableDecl> list = toList(JCVariableDecl.class, node.getDefinition());
+		JCVariableDecl last = list.get(list.size() -1);
+		endPosTable.put(last, node.getPosition().getEnd());
+		return set(list);
 	}
 	
 	@Override
@@ -780,6 +792,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			defs = defs.append(setPos(
 					e,
 					treeMaker.VarDef(mods, toName(e.getName()), addDimensions(vartype, e.getArrayDimensions()), toExpression(e.getInitializer()))));
+		}
+		
+		/* the endpos when multiple nodes are generated is after the comma for all but the last item, for some reason. */ {
+			for (int i = 0; i < defs.size() -1; i++) {
+				endPosTable.put(defs.get(i), posOfStructure(node, ",", i, false));
+			}
 		}
 		
 		if (defs.isEmpty()) throw new RuntimeException("Empty VariableDefinition node");
@@ -897,9 +915,9 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		case NONE:
 			return type;
 		case EXTENDS:
-			return setPos(type.pos, treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.EXTENDS), type));
+			return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.EXTENDS), type));
 		case SUPER:
-			return setPos(type.pos, treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.SUPER), type));
+			return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.SUPER), type));
 		default:
 			throw new IllegalStateException("Unexpected unbound wildcard: " + wildcardKind);
 		}
@@ -1046,7 +1064,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (node.getParent() instanceof CompilationUnit) {
 			return posSet(node, treeMaker.Skip());
 		} 
-		return set(node, posNone(node, treeMaker.Block(0, List.<JCStatement>nil())));
+		return set(node, posNone(treeMaker.Block(0, List.<JCStatement>nil())));
 	}
 	
 	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);
@@ -1123,25 +1141,25 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			if (previous == null) {
 				previous = setPos(part, treeMaker.Ident(next));
 			} else {
-				previous = setPosEnd(prevPart, treeMaker.Select(previous, next));
+				previous = setPosFromEndToEnd(prevPart, part, treeMaker.Select(previous, next));
 			}
 			prevPart = part;
 		}
 		return previous;
 	}
 	
-	private boolean posSetOnStructure(Node node, String structure, boolean atStart, JCTree jcTree) {
-		return set(node, setPos(posOfStructure(node, structure, atStart), jcTree));
+	private int posOfStructure(Node node, String structure, boolean atStart) {
+		return posOfStructure(node, structure, atStart ? 0 : Integer.MAX_VALUE, atStart);
 	}
 	
-	private int posOfStructure(Node node, String structure, boolean atStart) {
+	private int posOfStructure(Node node, String structure, int idx, boolean atStart) {
 		int start = node.getPosition().getStart();
 		
 		if (sourceStructures != null && sourceStructures.containsKey(node)) {
 			for (SourceStructure struct : sourceStructures.get(node)) {
 				if (structure.equals(struct.getContent())) {
 					start = atStart ? struct.getPosition().getStart() : struct.getPosition().getEnd();
-					if (atStart) break;
+					if (idx-- <= 0) break;
 				}
 			}
 		}
@@ -1153,20 +1171,23 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return set(node, setPos(node, jcTree));
 	}
 	
-	private <T extends JCTree> T posNone(Node node, T jcTree) {
+	private <T extends JCTree> T posNone(T jcTree) {
+		jcTree.pos = -1;
+		endPosTable.remove(jcTree);
 		return jcTree;
 	}
 	
 	private <T extends JCTree> T setPos(Node node, T jcTree) {
-		return setPos(node.getPosition().getStart(), jcTree);
+		return setPos(node.getPosition().getStart(), node.getPosition().getEnd(), jcTree);
 	}
 	
-	private <T extends JCTree> T setPosEnd(Node node, T jcTree) {
-		return setPos(node.getPosition().getEnd(), jcTree);
+	private <T extends JCTree> T setPosFromEndToEnd(Node from, Node to, T jcTree) {
+		return setPos(from.getPosition().getEnd(), to.getPosition().getEnd(), jcTree);
 	}
 	
-	private <T extends JCTree> T setPos(int position, T jcTree) {
-		jcTree.pos = position;
+	private <T extends JCTree> T setPos(int start, int end, T jcTree) {
+		jcTree.pos = start;
+		endPosTable.put(jcTree, end);
 		return jcTree;
 	}
 }

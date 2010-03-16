@@ -95,6 +95,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 	protected JCTree parseWithTargetCompiler(Source source) throws Exception {
 		Context context = new Context();
 		JavaCompiler compiler = new JavaCompiler(context);
+		compiler.genEndPos = true;
 		JCTree result = compiler.parse(new TestJavaFileObject(source.getName(), source.getRawInput()));
 		return compiler.errorCount() > 0 ? null : result;
 	}

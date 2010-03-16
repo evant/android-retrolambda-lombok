@@ -24,6 +24,7 @@ package lombok.ast.javac;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Map;
 
 import lombok.ast.StringLiteral;
 
@@ -90,6 +91,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 	private final boolean includePositions;
 	private int indent;
 	private String rel;
+	private Map<JCTree, Integer> endPosTable;
 	
 	private static final Method GET_TAG_METHOD;
 	private static final Field TAG_FIELD;
@@ -136,14 +138,14 @@ public class JcTreePrinter extends JCTree.Visitor {
 		return output.toString();
 	}
 	
-	private void printNode(JCTree nodeKind) {
-		if (nodeKind == null) {
+	private void printNode(JCTree tree) {
+		if (tree == null) {
 			printNode("NULL");
 		} else {
 			if (includePositions) {
-				printNode(nodeKind.getClass().getSimpleName() + "(" + nodeKind.pos + ")");
+				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), tree.pos, tree.getEndPosition(endPosTable)));
 			} else {
-				printNode(nodeKind.getClass().getSimpleName());
+				printNode(tree.getClass().getSimpleName());
 			}
 		}
 	}
@@ -168,7 +170,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 		if (rel != null)
 			output.append(rel).append(": ");
 		if (val instanceof JCTree)
-			output.append("!!JCT-AS-PROP!!");
+			output.append("!!JCTree-AS-PROP!!");
 		if (val == null) {
 			output.append("[NULL]\n");
 		} else {
@@ -212,6 +214,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 	
 	public void visitTopLevel(JCCompilationUnit tree) {
 		printNode(tree);
+		this.endPosTable = tree.endPositions;
 		child("pid", tree.pid);
 		children("defs", tree.defs);
 		indent--;
