@@ -171,11 +171,11 @@ public class ExpressionsParser extends BaseParser<Node> {
 	
 	Rule methodInvocationWithTypeArgsOperation() {
 		return sequence(
-				ch('.'), group.basics.optWS(),
+				ch('.').label("dot"), group.basics.optWS(),
 				group.types.typeArguments().label("typeArguments"),
 				group.basics.identifier().label("name"),
 				group.structures.methodArguments().label("methodArguments"),
-				SET(actions.createMethodInvocationOperation(VALUE("typeArguments"), VALUE("name"), VALUE("methodArguments"))));
+				SET(actions.createMethodInvocationOperation(NODE("dot"), VALUE("typeArguments"), VALUE("name"), VALUE("methodArguments"))));
 	}
 	
 	Rule select() {
@@ -395,7 +395,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 								conditionalOrExpressionChaining().label("tail2")
 								)),
 				SET(actions.createInlineIfExpression(NODE("head"),
-						TEXTS("zeroOrMore/sequence/operator1"), TEXTS("zeroOrMore/sequence/operator2"),
+						NODES("zeroOrMore/sequence/operator1"), NODES("zeroOrMore/sequence/operator2"),
 						NODES("zeroOrMore/sequence/tail1"), NODES("zeroOrMore/sequence/tail2"))),
 				group.basics.optWS());
 	}

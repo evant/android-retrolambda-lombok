@@ -77,7 +77,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createInlineIfExpression(
 			org.parboiled.Node<Node> head,
-			List<String> operators1, List<String> operators2,
+			List<org.parboiled.Node<Node>> operators1Nodes, List<org.parboiled.Node<Node>> operators2Nodes,
 			List<org.parboiled.Node<Node>> tail1, List<org.parboiled.Node<Node>> tail2) {
 		
 		if (tail1.size() == 0 || tail2.size() == 0) return head.getValue();
@@ -87,6 +87,8 @@ public class ExpressionsActions extends SourceActions {
 		
 		Collections.reverse(tail1);
 		Collections.reverse(tail2);
+		Collections.reverse(operators1Nodes);
+		Collections.reverse(operators2Nodes);
 		tail2.add(head);
 		
 		for (int i = 0; i < tail1.size(); i++) {
@@ -94,6 +96,8 @@ public class ExpressionsActions extends SourceActions {
 					.setRawCondition(tail2.get(i).getValue())
 					.setRawIfTrue(tail1.get(i).getValue())
 					.setRawIfFalse(currentNode);
+			source.registerStructure(currentNode, operators1Nodes.get(i));
+			source.registerStructure(currentNode, operators2Nodes.get(i));
 			positionSpan(currentNode, tail2.get(i), end);
 		}
 		
@@ -213,9 +217,12 @@ public class ExpressionsActions extends SourceActions {
 		return current;
 	}
 	
-	public Node createMethodInvocationOperation(Node typeArguments, Node name, Node arguments) {
+	public Node createMethodInvocationOperation(org.parboiled.Node<Node> dot, Node typeArguments, Node name, Node arguments) {
 		MethodInvocation mi = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
 		//TODO hang dangling node on mi if arguments is non null but also not an MI.
+		
+		source.registerStructure(mi, dot);
+		
 		return posify(mi.setRawName(name).setRawMethodTypeArguments(typeArguments));
 	}
 	
