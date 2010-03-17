@@ -458,7 +458,10 @@ public class ExpressionsParser extends BaseParser<Node> {
 				new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
 						setContext(context);
-						return SET(actions.createLeftAssociativeBinaryExpression(NODE("head"), TEXTS("zeroOrMore/sequence/operator"), NODES("zeroOrMore/sequence/tail")));
+						return SET(actions.createLeftAssociativeBinaryExpression(
+								NODE("head"),
+								NODES("zeroOrMore/sequence/operator"), TEXTS("zeroOrMore/sequence/operator"),
+								NODES("zeroOrMore/sequence/tail")));
 					}
 				},
 				group.basics.optWS());

@@ -54,6 +54,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createLeftAssociativeBinaryExpression(
 			org.parboiled.Node<Node> head,
+			List<org.parboiled.Node<Node>> operatorsNodes, 
 			List<String> operators,
 			List<org.parboiled.Node<Node>> tail) {
 		
@@ -63,6 +64,7 @@ public class ExpressionsActions extends SourceActions {
 			currentLeft = new BinaryExpression()
 					.setRawLeft(currentLeft)
 					.setRawRight(tail.get(i).getValue()).setRawOperator(operators.get(i));
+			source.registerStructure(currentLeft, operatorsNodes.get(i));
 			positionSpan(currentLeft, head, tail.get(i));
 		}
 		
