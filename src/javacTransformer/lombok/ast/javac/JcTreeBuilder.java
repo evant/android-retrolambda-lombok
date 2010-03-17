@@ -724,8 +724,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return set(node, treeMaker.Labelled(toName(node.getLabel()), toStatement(node.getStatement())));
 	}
 	
-	private static final Pattern DEPRECATED_DETECTOR = Pattern.compile("^(?:.*(?:[*{}]|\\s))?@deprecated(?:(?:[*{}]|\\s).*)?$", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-	
 	@Override
 	public boolean visitModifiers(Modifiers node) {
 		JCModifiers mods = treeMaker.Modifiers(node.getExplicitModifierFlags(), toList(JCAnnotation.class, node.annotations()));
@@ -738,7 +736,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			javadoc = ((JavadocContainer)node.getParent().getParent()).getJavadoc();
 		}
 		
-		if (javadoc != null && DEPRECATED_DETECTOR.matcher(javadoc.getContent()).matches()) mods.flags |= Flags.DEPRECATED;
+		if (javadoc != null && javadoc.isMarkedDeprecated()) mods.flags |= Flags.DEPRECATED;
 		
 		if (node.isEmpty()) {
 			return set(node, mods);

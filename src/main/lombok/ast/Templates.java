@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import lombok.NonNull;
 import lombok.ast.template.CopyMethod;
@@ -1094,6 +1095,8 @@ class ThrowTemplate {
 
 @GenerateAstNode
 class CommentTemplate {
+	private static final Pattern DEPRECATED_DETECTOR = Pattern.compile("^(?:.*(?:[*{}]|\\s))?@deprecated(?:(?:[*{}]|\\s).*)?$", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+
 	@NotChildOfNode
 	boolean blockComment;
 	
@@ -1104,10 +1107,17 @@ class CommentTemplate {
 	static boolean isJavadoc(Comment self) {
 		return self.isBlockComment() && self.getContent().startsWith("*");
 	}
+	
+	@CopyMethod
+	static boolean isMarkedDeprecated(Comment self) {
+		return isJavadoc(self) && DEPRECATED_DETECTOR.matcher(self.getContent()).matches();
+	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class})
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class})
 class AnnotationMethodDeclarationTemplate {
+	Comment javadoc;
+	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
 	@NonNull Modifiers modifiers;
 	
