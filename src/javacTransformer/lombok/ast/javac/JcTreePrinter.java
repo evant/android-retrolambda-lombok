@@ -84,7 +84,7 @@ import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.List;
 
 /**
- * Diagnostic class that turns a {@code JCTree} (javac) based tree into a hierarchical dump that should make
+ * Diagnostic tool that turns a {@code JCTree} (javac) based tree into a hierarchical dump that should make
  * it easy to analyse the exact structure of the AST.
  */
 public class JcTreePrinter extends JCTree.Visitor {
@@ -170,6 +170,13 @@ public class JcTreePrinter extends JCTree.Visitor {
 				
 				//In rare conditions, the end pos table is filled with a silly value, but start is -1.
 				if (startPos == -1 && endPos >= 0) endPos = -1;
+				
+				//Javac bug: sometimes the startpos of a binary expression is set to the wrong operator.
+				if (tree instanceof JCBinary && ((JCBinary)tree).rhs instanceof JCBinary) {
+					if (getTag(tree) != getTag(((JCBinary)tree).rhs)) {
+						startPos = -2;
+					}
+				}
 				
 				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), startPos, endPos));
 			} else {
