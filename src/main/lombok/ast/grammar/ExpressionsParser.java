@@ -66,7 +66,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 				group.basics.testLexBreak(),
 				group.basics.optWS(),
 				testNot(ch('(')),
-				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuper"), null)));
+				SET(actions.createThisOrSuperOrClass(null, TEXT("thisOrSuper"), null)));
 	}
 	
 	/**
@@ -75,11 +75,11 @@ public class ExpressionsParser extends BaseParser<Node> {
 	Rule qualifiedClassOrThisOrSuperLiteral() {
 		return sequence(
 				group.types.type().label("type"),
-				ch('.'), group.basics.optWS(),
+				ch('.').label("dot"), group.basics.optWS(),
 				firstOf(string("this"), string("super"), string("class")).label("thisOrSuperOrClass"),
 				group.basics.testLexBreak(),
 				group.basics.optWS(),
-				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuperOrClass"), VALUE("type"))));
+				SET(actions.createThisOrSuperOrClass(NODE("dot"), TEXT("thisOrSuperOrClass"), VALUE("type"))));
 	}
 	
 	Rule unqualifiedConstructorInvocation() {

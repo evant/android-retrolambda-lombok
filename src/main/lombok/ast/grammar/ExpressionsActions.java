@@ -180,7 +180,6 @@ public class ExpressionsActions extends SourceActions {
 				classTypeArgs0.setPosition(new Position(pos, pos));
 			}
 		}
-		MethodInvocation methodArguments0 = (methodArguments instanceof MethodInvocation) ? (MethodInvocation)methodArguments : new MethodInvocation();
 		
 		TypeReference typeReference = new TypeReference().parts().addToEnd(
 				classTypeArgs0.setRawIdentifier(identifierNode));
@@ -191,11 +190,19 @@ public class ExpressionsActions extends SourceActions {
 		} else {
 			positionSpan(typeReference, identifier, classTypeArgs);
 		}
-		return posify(new ConstructorInvocation()
+		
+		ConstructorInvocation constructorInvocation = new ConstructorInvocation()
 				.setRawConstructorTypeArguments(constructorTypeArgs)
 				.setRawTypeReference(typeReference)
-				.rawArguments().migrateAllFrom(methodArguments0.rawArguments())
-				.setRawAnonymousClassBody(classBody));
+				.setRawAnonymousClassBody(classBody);
+		
+		if (methodArguments instanceof TemporaryNode.MethodArguments) {
+			for (Node arg : ((TemporaryNode.MethodArguments)methodArguments).arguments) {
+				constructorInvocation.rawArguments().addToEnd(arg);
+			}
+		}
+		
+		return posify(constructorInvocation);
 	}
 	
 	public Node createChainOfQualifiedConstructorInvocations(
@@ -218,12 +225,17 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createMethodInvocationOperation(org.parboiled.Node<Node> dot, Node typeArguments, Node name, Node arguments) {
-		MethodInvocation mi = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
+		MethodInvocation mi = new MethodInvocation().setRawName(name).setRawMethodTypeArguments(typeArguments);
+		if (arguments instanceof TemporaryNode.MethodArguments) {
+			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
+				mi.rawArguments().addToEnd(arg);
+			}
+		}
 		//TODO hang dangling node on mi if arguments is non null but also not an MI.
 		
 		source.registerStructure(mi, dot);
 		
-		return posify(mi.setRawName(name).setRawMethodTypeArguments(typeArguments));
+		return posify(mi);
 	}
 	
 	public Node createSelectOperation(Node identifier) {
@@ -256,21 +268,31 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createPrimary(Node identifier, Node methodArguments) {
-		if (methodArguments instanceof MethodInvocation) return posify(((MethodInvocation)methodArguments).setRawName(identifier));
+		if (methodArguments instanceof TemporaryNode.MethodArguments) {
+			MethodInvocation invoke = new MethodInvocation().setRawName(identifier);
+			for (Node arg : ((TemporaryNode.MethodArguments)methodArguments).arguments) {
+				invoke.rawArguments().addToEnd(arg);
+			}
+			return posify(invoke);
+		}
 		//TODO if (methodArguments != null) add dangling node.
 		
 		return identifier;
 	}
 	
 	public Node createUnqualifiedConstructorInvocation(Node constructorTypeArgs, Node type, Node args, Node anonymousClassBody) {
-		MethodInvocation args0 = (args instanceof MethodInvocation) ? (MethodInvocation)args : new MethodInvocation();
-		//TODO if (args != null) add dangling.
-		
-		return posify(new ConstructorInvocation()
+		ConstructorInvocation result = new ConstructorInvocation()
 				.setRawConstructorTypeArguments(constructorTypeArgs)
 				.setRawTypeReference(type)
-				.rawArguments().migrateAllFrom(args0.rawArguments())
-				.setRawAnonymousClassBody(anonymousClassBody));
+				.setRawAnonymousClassBody(anonymousClassBody);
+		if (args instanceof TemporaryNode.MethodArguments) {
+			for (Node arg : ((TemporaryNode.MethodArguments)args).arguments) {
+				result.rawArguments().addToEnd(arg);
+			}
+		} else {
+			//TODO if (args != null) add dangling.
+		}
+		return posify(result);
 	}
 	
 	public Node createArrayInitializerExpression(Node head, List<Node> tail) {
@@ -302,10 +324,13 @@ public class ExpressionsActions extends SourceActions {
 		return v;
 	}
 	
-	public Node createThisOrSuperOrClass(String text, Node qualifier) {
-		if ("super".equals(text)) return posify(new Super().setRawQualifier(qualifier));
-		if ("class".equals(text)) return posify(new ClassLiteral().setRawTypeReference(qualifier));
-		return posify(new This().setRawQualifier(qualifier));
+	public Node createThisOrSuperOrClass(org.parboiled.Node<Node> dot, String text, Node qualifier) {
+		Node result;
+		if ("super".equals(text)) result = new Super().setRawQualifier(qualifier);
+		else if ("class".equals(text)) result = new ClassLiteral().setRawTypeReference(qualifier);
+		else result = new This().setRawQualifier(qualifier);
+		if (dot != null) source.registerStructure(result, dot);
+		return posify(result);
 	}
 	
 	public boolean checkIfLevel1ExprIsValidForAssignment(Node node) {

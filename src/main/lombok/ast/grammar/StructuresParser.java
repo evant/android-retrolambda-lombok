@@ -251,8 +251,8 @@ public class StructuresParser extends BaseParser<Node> {
 				group.types.type().label("type"),
 				optional(sequence(string("..."), group.basics.optWS())).label("varargs"),
 				group.basics.identifier().label("name"),
-				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
-				SET(actions.createMethodParameter(VALUE("modifiers"), VALUE("type"), TEXT("varargs"), VALUE("name"), TEXTS("dims/dim"))));
+				zeroOrMore(sequence(ch('[').label("open"), group.basics.optWS(), ch(']').label("closed"), group.basics.optWS()).label("dim")).label("dims"),
+				SET(actions.createMethodParameter(VALUE("modifiers"), VALUE("type"), TEXT("varargs"), VALUE("name"), NODES("dims/dim/open"), NODES("dims/dim/closed"))));
 	}
 	
 	public Rule instanceInitializer() {

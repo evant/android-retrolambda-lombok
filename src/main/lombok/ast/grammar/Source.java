@@ -133,15 +133,16 @@ public class Source {
 			String text = preprocessed.substring(start, end);
 			SourceStructure structure = new SourceStructure(new Position(start, end), text);
 			if (target != null) addSourceStructure(map, target, structure);
-			else if (pNode.getValue() != null) addSourceStructure(map, pNode.getValue(), structure);
+			else if (pNode.getValue() != null && !(pNode.getValue() instanceof TemporaryNode)) addSourceStructure(map, pNode.getValue(), structure);
 			else if (text.equals(".") && sibling != null) addSourceStructure(map, sibling, structure);
 			else if (owner != null) addSourceStructure(map, owner, structure);
 		} else {
 			Node possibleOwner = pNode.getValue();
+			if (possibleOwner instanceof TemporaryNode) possibleOwner = null;
 			sibling = null;
 			boolean multipleSiblings = false;
 			for (org.parboiled.Node<Node> child : pNode.getChildren()) {
-				if (child.getValue() == null) continue;
+				if (child.getValue() == null || child.getValue() instanceof TemporaryNode) continue;
 				/* If the next if holds true, then we aren't the true generator; the child generated the node and this pNode adopted it */
 				if (child.getValue() == possibleOwner) possibleOwner = null;
 				if (sibling == null) sibling = child.getValue();
