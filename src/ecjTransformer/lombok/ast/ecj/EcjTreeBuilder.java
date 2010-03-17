@@ -402,20 +402,22 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		decl.name = toName(node.getName());
 		
-		updateTypeBits(node.getParent(), decl);
+		updateTypeBits(node.getParent(), decl, false);
 		
 		//TODO test inner types. Give em everything - (abstract) methods, initializers, static initializers, MULTIPLE initializers.
 		return set(node, decl);
 	}
 
-	private void updateTypeBits(lombok.ast.Node parent, TypeDeclaration decl) {
+	private void updateTypeBits(lombok.ast.Node parent, TypeDeclaration decl, boolean isEnum) {
 		if (parent == null) {
 			return;
 		}
 		if (parent instanceof lombok.ast.CompilationUnit) {
-			char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
-			if (!CharOperation.equals(decl.name, mainTypeName)) {
-				decl.bits |= ASTNode.IsSecondaryType;
+			if (!isEnum) {
+				char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
+				if (!CharOperation.equals(decl.name, mainTypeName)) {
+					decl.bits |= ASTNode.IsSecondaryType;
+				}
 			}
 			return;
 		} 
@@ -458,7 +460,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
 		decl.name = toName(node.getName());
 		
-		updateTypeBits(node.getParent(), decl);
+		updateTypeBits(node.getParent(), decl, false);
 		
 		return set(node, decl);
 	}	
@@ -483,7 +485,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		decl.name = toName(node.getName());
 		
-		updateTypeBits(node.getParent(), decl);
+		updateTypeBits(node.getParent(), decl, true);
 		
 		return set(node, decl);
 	}
@@ -499,13 +501,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		decl.annotations = toArray(Annotation.class, node.annotations());
 		decl.name = toName(node.getName());
 		
+		decl.bits |= ASTNode.IsSecondaryType;
+		
 		AllocationExpression init;
 		if (node.getBody() == null) {
 			init = new AllocationExpression();
 		} else {
 			TypeDeclaration type = createTypeBody(node.getBody().members(), false, modifiers);
 			type.name = CharOperation.NO_CHAR;
-			updateTypeBits(node.getParent(), type);
+			updateTypeBits(node.getParent(), type, false);
 			init = new QualifiedAllocationExpression(type);
 		}
 		init.arguments = toArray(Expression.class, node.arguments());
@@ -524,7 +528,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		TypeDeclaration decl = createTypeBody(node.getBody().members(), false, modifiers);
 //		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.name = toName(node.getName());
-		updateTypeBits(node.getParent(), decl);
+		updateTypeBits(node.getParent(), decl, false);
 		return set(node, decl);
 	}
 	
