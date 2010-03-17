@@ -1,3 +1,6 @@
+import static java.util.Collections.*;
+import java.util.*;
+
 class H008_SimpleMethods {
     private int x;
     
@@ -10,5 +13,6 @@ class H008_SimpleMethods {
     
     public void set() {
         int y = test(01);
+        unmodifiableSet(new HashSet<Integer>());
     }
 }

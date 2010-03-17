@@ -6,4 +6,22 @@ class I001_Deprecated {
      * @deprecated
      */
     int y;
+    
+    /**
+     * @deprecated
+     */
+    class Inner {
+        /**
+         * @deprecated
+         */
+        Inner() {
+        }
+        
+        /**
+         * @deprecated
+         */
+        int test() {
+            return 0;
+        }
+    }
 }
