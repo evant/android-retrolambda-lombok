@@ -68,6 +68,10 @@ import org.eclipse.jdt.internal.compiler.ast.Initializer;
 import org.eclipse.jdt.internal.compiler.ast.InstanceOfExpression;
 import org.eclipse.jdt.internal.compiler.ast.IntLiteral;
 import org.eclipse.jdt.internal.compiler.ast.IntLiteralMinValue;
+import org.eclipse.jdt.internal.compiler.ast.Javadoc;
+import org.eclipse.jdt.internal.compiler.ast.JavadocReturnStatement;
+import org.eclipse.jdt.internal.compiler.ast.JavadocSingleNameReference;
+import org.eclipse.jdt.internal.compiler.ast.JavadocSingleTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.LabeledStatement;
 import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.LongLiteral;
@@ -94,6 +98,7 @@ import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteralConcatenation;
+import org.eclipse.jdt.internal.compiler.ast.SubRoutineStatement;
 import org.eclipse.jdt.internal.compiler.ast.SuperReference;
 import org.eclipse.jdt.internal.compiler.ast.SwitchStatement;
 import org.eclipse.jdt.internal.compiler.ast.SynchronizedStatement;
@@ -103,6 +108,7 @@ import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
 import org.eclipse.jdt.internal.compiler.ast.TryStatement;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeParameter;
+import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.WhileStatement;
 import org.eclipse.jdt.internal.compiler.ast.Wildcard;
@@ -189,8 +195,8 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 		this.rel = rel;
 		
 		if (nodes == null) {
-			printNode("ARRAYNULL");
-			indent--;
+//			printNode("ARRAYNULL");
+//			indent--;
 			return;
 		}
 		
@@ -251,6 +257,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitTypeDeclaration(TypeDeclaration node) {
 		printNode(node);
+		property("name", node.name);
 		if (node.enclosingType == null) {
 			property("enclosingType", null);
 		} else {
@@ -892,6 +899,85 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	@Override
 	public void visitSuperReference(SuperReference node) {
 		printNode(node);
+		indent--;
+	}
+	
+	@Override
+	public void visitJavadoc(Javadoc node) {
+		printNode(node);
+		
+		if (node.paramReferences == null) {
+			property("paramReferences", null);
+		} else {
+			int i = 0;
+			for (JavadocSingleNameReference s : node.paramReferences) {
+				rel = "parameterReferences[" + i + "]";
+				printNode(s == null ? "NULL" : s.getClass().getSimpleName());
+				property("bits", s.bits);
+				property("token", s.token);
+				indent--;
+			}
+		}
+		if (node.invalidParameters == null) {
+			property("invalidParameters", null);
+		} else {
+			int i = 0;
+			for (JavadocSingleNameReference s : node.invalidParameters) {
+				rel = "invalidParameters[" + i + "]";
+				printNode(s == null ? "NULL" : s.getClass().getSimpleName());
+				property("bits", s.bits);
+				property("token", s.token);
+				indent--;
+			}
+		}
+		if (node.paramTypeParameters == null) {
+			property("paramTypeParameters", null);
+		} else {
+			int i = 0;
+			for (JavadocSingleTypeReference s : node.paramTypeParameters) {
+				rel = "paramTypeParameters[" + i + "]";
+				printNode(s == null ? "NULL" : s.getClass().getSimpleName());
+				property("bits", s.bits);
+				property("token", s.token);
+				indent--;
+			}
+		}
+		JavadocReturnStatement returnStatement = node.returnStatement;
+		if (returnStatement == null) {
+			property("returnStatement.expression", null);
+		} else {
+			child("returnStatement.expression", returnStatement.expression);
+		
+			SubRoutineStatement[] subroutines = returnStatement.subroutines;
+			if (subroutines == null) {
+				property("returnStatement.subroutines", null);
+			} else {
+				int i = 0;
+				for (SubRoutineStatement s : subroutines) {
+					rel = "returnStatement.subroutines[" + i + "]";
+					printNode(s == null ? "NULL" : s.getClass().getSimpleName());
+					property("bits", s.bits);
+					indent--;
+				}
+			}
+		}
+		
+		if (node.seeReferences == null) {
+			property("seeReferences", null);
+		} else {
+			int i = 0;
+			for (Expression s : node.seeReferences) {
+				property("seeReferences[" + i + "]", s.toString());
+			}
+		}
+		if (node.exceptionReferences == null) {
+			property("exceptionReferences", null);
+		} else {
+			int i = 0;
+			for (TypeReference s : node.exceptionReferences) {
+				property("exceptionReferences[" + i + "]", s.toString());
+			}
+		}
 		indent--;
 	}
 }

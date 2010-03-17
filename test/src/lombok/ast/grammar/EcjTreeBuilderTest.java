@@ -25,11 +25,6 @@ import org.junit.runner.RunWith;
 public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 	@Test
 	public boolean testEcjCompiler(Source source) throws Exception {
-//		if (!source.getName().startsWith("H002")) {
-		if (source.getName().compareToIgnoreCase("I") > 0) {
-			return false;
-		}
-		
 		return testCompiler(source);
 	}
 	
@@ -65,7 +60,7 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 				compilerOptions,
 				new DefaultProblemFactory()
 			), compilerOptions.parseLiteralExpressionsAsConstants);
-		
+		parser.javadocParser.checkDocComment = true;
 		CompilationUnit sourceUnit = new CompilationUnit(source.getRawInput().toCharArray(), source.getName(), "UTF-8");
 		CompilationResult compilationResult = new CompilationResult(sourceUnit, 0, 0, 0);
 		CompilationUnitDeclaration cud = parser.parse(sourceUnit, compilationResult);

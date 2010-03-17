@@ -28,6 +28,7 @@ import java.util.List;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.ast.CombinedBinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.IntLiteralMinValue;
+import org.eclipse.jdt.internal.compiler.ast.Javadoc;
 import org.eclipse.jdt.internal.compiler.ast.LongLiteralMinValue;
 
 /**
@@ -74,6 +75,7 @@ class GenerateEcjTreeVisitorCode {
 		CombinedBinaryExpression.class,
 		IntLiteralMinValue.class,
 		LongLiteralMinValue.class,
+		Javadoc.class,
 	};
 	
 	static List<Class<?>> findVisits() {
