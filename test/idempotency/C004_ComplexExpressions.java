@@ -13,6 +13,7 @@ class C004_ComplexExpressions {
         int bracedCast = ((Object) "foo").hashCode();
         int chainedTernary = 1 == 2 ? 10 : 2 == 2 ? 1 : 2;
         int bracedTernary = 5 + (1 == 1 ? (2 == 3 ? 5 : 7) : 8);
+        int multipleAssignments = ex = brace1 = brace2 *= chained1 += 10;
         int postfixChained = ~brace1++;
         double postfixChained2 = (double) brace1++;
         int selfAssign = brace1;

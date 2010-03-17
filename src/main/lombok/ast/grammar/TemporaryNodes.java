@@ -35,6 +35,16 @@ abstract class TemporaryNode implements Node {
 		visitor.visitParseArtefact(this);
 	}
 	
+	static class MethodArguments extends TemporaryNode {
+		List<Node> arguments = new ArrayList<Node>();
+		
+		@Override public MethodArguments copy() {
+			MethodArguments result = new MethodArguments();
+			for (Node n : arguments) result.arguments.add(n == null ? null : n.copy());
+			return result;
+		}
+	}
+	
 	static class OrphanedTypeVariables extends TemporaryNode {
 		List<Node> variables = new ArrayList<Node>();
 		

@@ -85,12 +85,12 @@ public class StatementsParser extends BaseParser<Node> {
 	
 	public Rule explicitSuperConstructorInvocation() {
 		return sequence(
-				optional(sequence(group.expressions.allPrimaryExpressions(), ch('.'), group.basics.optWS())).label("qualifier"),
+				optional(sequence(group.expressions.allPrimaryExpressions(), ch('.').label("dot"), group.basics.optWS())).label("qualifier"),
 				group.types.typeArguments().label("typeArgs"),
 				string("super"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.structures.methodArguments().label("arguments"),
 				ch(';'), group.basics.optWS(),
-				SET(actions.createSuperConstructorInvocation(VALUE("qualifier"), VALUE("typeArgs"), VALUE("arguments"))));
+				SET(actions.createSuperConstructorInvocation(NODE("qualifier/sequence/dot"), VALUE("qualifier"), VALUE("typeArgs"), VALUE("arguments"))));
 	}
 	
 	/**

@@ -40,7 +40,6 @@ import lombok.ast.InstanceInitializer;
 import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
 import lombok.ast.MethodDeclaration;
-import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.PackageDeclaration;
@@ -51,6 +50,7 @@ import lombok.ast.TypeReference;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
+import lombok.ast.grammar.TemporaryNode.MethodArguments;
 
 public class StructuresActions extends SourceActions {
 	public StructuresActions(Source source) {
@@ -58,10 +58,10 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createMethodArguments(Node head, List<Node> tail) {
-		MethodInvocation mi = new MethodInvocation();
-		if (head != null) mi.rawArguments().addToEnd(head);
-		if (tail != null) for (Node n : tail) mi.rawArguments().addToEnd(n);
-		return posify(mi);
+		MethodArguments ma = new MethodArguments();
+		if (head != null) ma.arguments.add(head);
+		if (tail != null) for (Node n : tail) ma.arguments.add(n);
+		return posify(ma);
 	}
 	
 	public Node createKeywordModifier(String text) {
@@ -134,8 +134,18 @@ public class StructuresActions extends SourceActions {
 		return posify(result);
 	}
 	
-	public Node createMethodParameter(Node modifiers, Node type, String varargs, Node name, List<String> dims) {
-		VariableDefinitionEntry e = new VariableDefinitionEntry().setRawName(name).setArrayDimensions(dims == null ? 0 : dims.size());
+	public Node createMethodParameter(
+			Node modifiers, Node type, String varargs, Node name,
+			List<org.parboiled.Node<Node>> dimOpen, List<org.parboiled.Node<Node>> dimClosed) {
+		
+		VariableDefinitionEntry e = new VariableDefinitionEntry().setRawName(name)
+				.setArrayDimensions(dimOpen == null ? 0 : dimOpen.size());
+		if (dimOpen != null) for (org.parboiled.Node<Node> pNode : dimOpen) {
+			source.registerStructure(e, pNode);
+		}
+		if (dimClosed != null) for (org.parboiled.Node<Node> pNode : dimClosed) {
+			source.registerStructure(e, pNode);
+		}
 		if (name != null) e.setPosition(new Position(name.getPosition().getStart(), currentPos()));
 		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
@@ -282,7 +292,11 @@ public class StructuresActions extends SourceActions {
 	public Node createEnumConstant(List<Node> annotations, Node name, Node arguments, Node body) {
 		EnumConstant result = new EnumConstant().setRawName(name).setRawBody(body);
 		if (annotations != null) for (Node n : annotations) if (n != null) result.rawAnnotations().addToEnd(n);
-		if (arguments instanceof MethodInvocation) result.rawArguments().migrateAllFrom(((MethodInvocation)arguments).rawArguments());
+		if (arguments instanceof TemporaryNode.MethodArguments) {
+			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
+				result.rawArguments().addToEnd(arg);
+			}
+		}
 		return posify(result);
 	}
 	

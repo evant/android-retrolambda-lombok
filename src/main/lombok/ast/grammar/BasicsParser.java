@@ -135,12 +135,13 @@ public class BasicsParser extends BaseParser<Node> {
 		}
 		
 		@Override public boolean match(MatcherContext<Node> context) {
-			//TODO What happens when a file ends in an identifier?
 			char current = context.getCurrentLocation().currentChar;
 			if (Character.isJavaIdentifierStart(current)) {
 				context.advanceInputLocation();
 				while (Character.isJavaIdentifierPart(context.getCurrentLocation().currentChar)) {
+					int pos = context.getCurrentLocation().index;
 					context.advanceInputLocation();
+					if (pos == context.getCurrentLocation().index) break;
 				}
 				context.createNode();
 				return true;

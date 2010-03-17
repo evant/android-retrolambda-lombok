@@ -40,6 +40,7 @@ import org.parboiled.support.ParsingResult;
 
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.MapMaker;
 
 public class Source {
 	@Getter private final String name;
@@ -51,7 +52,10 @@ public class Source {
 	private ParsingResult<Node> parsingResult;
 	
 	private TreeMap<Integer, Integer> positionDeltas = new TreeMap<Integer, Integer>();
+	private Map<org.parboiled.Node<Node>, Node> registeredStructures =
+			new MapMaker().weakKeys().makeMap();
 	private String preprocessed;
+	private Map<Node, Collection<SourceStructure>> cachedSourceStructures;
 	
 	public Source(String rawInput, String name) {
 		this.rawInput = rawInput;
@@ -97,7 +101,12 @@ public class Source {
 		parsed = true;
 	}
 	
+	void registerStructure(Node node, org.parboiled.Node<Node> pNode) {
+		registeredStructures.put(pNode, node);
+	}
+	
 	public Map<Node, Collection<SourceStructure>> getSourceStructures() {
+		if (cachedSourceStructures != null) return cachedSourceStructures;
 		parseCompilationUnit();
 		ListMultimap<Node, SourceStructure> map = LinkedListMultimap.create();
 		
@@ -105,7 +114,7 @@ public class Source {
 		
 		buildSourceStructures(pNode, null, null, map);
 		
-		return map.asMap();
+		return cachedSourceStructures = map.asMap();
 	}
 	
 	private void addSourceStructure(ListMultimap<Node, SourceStructure> map, Node node, SourceStructure structure) {
@@ -116,31 +125,34 @@ public class Source {
 		}
 	}
 	
-	private void buildSourceStructures(org.parboiled.Node<Node> node, Node owner, Node sibling, ListMultimap<Node, SourceStructure> map) {
-		if (node.getChildren().isEmpty()) {
-			int start = node.getStartLocation().index;
-			int end = node.getEndLocation().index;
+	private void buildSourceStructures(org.parboiled.Node<Node> pNode, Node owner, Node sibling, ListMultimap<Node, SourceStructure> map) {
+		Node target = registeredStructures.remove(pNode);
+		if (target != null || pNode.getChildren().isEmpty()) {
+			int start = pNode.getStartLocation().index;
+			int end = pNode.getEndLocation().index;
 			String text = preprocessed.substring(start, end);
 			SourceStructure structure = new SourceStructure(new Position(start, end), text);
-			if (node.getValue() != null) addSourceStructure(map, node.getValue(), structure);
+			if (target != null) addSourceStructure(map, target, structure);
+			else if (pNode.getValue() != null && !(pNode.getValue() instanceof TemporaryNode)) addSourceStructure(map, pNode.getValue(), structure);
 			else if (text.equals(".") && sibling != null) addSourceStructure(map, sibling, structure);
 			else if (owner != null) addSourceStructure(map, owner, structure);
 		} else {
-			Node possibleOwner = node.getValue();
+			Node possibleOwner = pNode.getValue();
+			if (possibleOwner instanceof TemporaryNode) possibleOwner = null;
 			sibling = null;
 			boolean multipleSiblings = false;
-			for (org.parboiled.Node<Node> pNode : node.getChildren()) {
-				if (pNode.getValue() == null) continue;
+			for (org.parboiled.Node<Node> child : pNode.getChildren()) {
+				if (child.getValue() == null || child.getValue() instanceof TemporaryNode) continue;
 				/* If the next if holds true, then we aren't the true generator; the child generated the node and this pNode adopted it */
-				if (pNode.getValue() == possibleOwner) possibleOwner = null;
-				if (sibling == null) sibling = pNode.getValue();
+				if (child.getValue() == possibleOwner) possibleOwner = null;
+				if (sibling == null) sibling = child.getValue();
 				else multipleSiblings = true;
 			}
 			
 			if (possibleOwner != null) owner = possibleOwner;
 			
-			for (org.parboiled.Node<Node> pNode : node.getChildren()) {
-				buildSourceStructures(pNode, owner, multipleSiblings ? null : sibling, map);
+			for (org.parboiled.Node<Node> child : pNode.getChildren()) {
+				buildSourceStructures(child, owner, multipleSiblings ? null : sibling, map);
 			}
 		}
 	}

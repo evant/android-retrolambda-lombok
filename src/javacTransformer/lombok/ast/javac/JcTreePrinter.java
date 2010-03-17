@@ -29,6 +29,7 @@ import java.util.Map;
 import lombok.ast.StringLiteral;
 
 import com.sun.tools.javac.code.BoundKind;
+import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
@@ -83,7 +84,7 @@ import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.List;
 
 /**
- * Diagnostic class that turns a {@code JCTree} (javac) based tree into a hierarchical dump that should make
+ * Diagnostic tool that turns a {@code JCTree} (javac) based tree into a hierarchical dump that should make
  * it easy to analyse the exact structure of the AST.
  */
 public class JcTreePrinter extends JCTree.Visitor {
@@ -92,6 +93,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 	private int indent;
 	private String rel;
 	private Map<JCTree, Integer> endPosTable;
+	private boolean modsOfEnum;
 	
 	private static final Method GET_TAG_METHOD;
 	private static final Field TAG_FIELD;
@@ -144,12 +146,39 @@ public class JcTreePrinter extends JCTree.Visitor {
 		} else {
 			if (includePositions) {
 				int endPos = tree.getEndPosition(endPosTable);
+				int startPos = tree.pos;
 				if (tree instanceof JCTypeApply || tree instanceof JCWildcard || tree instanceof JCTypeParameter) {
-					//Javac itself actually has bugs in generating the right endpos. To make sure our tests that compare end pos don't fail,
-					//as we do set the end pos at the right place, we overwrite it with magic value -2 which means: javac screws this up.
+					// Javac itself actually has bugs in generating the right endpos. To make sure our tests that compare end pos don't fail,
+					// as we do set the end pos at the right place, we overwrite it with magic value -2 which means: javac screws this up.
 					endPos = -2;
 				}
-				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), tree.pos, endPos));
+				
+				// When there are no modifiers but an internal flag is set, javac screws up,
+				// and sets start to the beginning of the node, and end to the last non-whitespace thing before it;
+				// yes - that would make for negatively sized modifier nodes.
+				if (tree instanceof JCModifiers && endPos-tree.pos <= 0) {
+					startPos = -1;
+					endPos = -1;
+				}
+				
+				// Modifiers of enums never get their position set, but we do set the position.
+				if (modsOfEnum) {
+					startPos = -1;
+					endPos = -1;
+					modsOfEnum = false;
+				}
+				
+				//In rare conditions, the end pos table is filled with a silly value, but start is -1.
+				if (startPos == -1 && endPos >= 0) endPos = -1;
+				
+				//Javac bug: sometimes the startpos of a binary expression is set to the wrong operator.
+				if (tree instanceof JCBinary && ((JCBinary)tree).rhs instanceof JCBinary) {
+					if (getTag(tree) != getTag(((JCBinary)tree).rhs)) {
+						startPos = -2;
+					}
+				}
+				
+				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), startPos, endPos));
 			} else {
 				printNode(tree.getClass().getSimpleName());
 			}
@@ -235,6 +264,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 	
 	public void visitClassDef(JCClassDecl tree) {
 		printNode(tree);
+		modsOfEnum = (tree.mods != null && (tree.mods.flags & Flags.ENUM) != 0);
 		child("mods", tree.mods);
 		property("name", tree.name);
 		children("typarams", tree.typarams);

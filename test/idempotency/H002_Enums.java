@@ -1,3 +1,4 @@
+@SuppressWarnings("all")
 public enum H002_Enums implements java.util.RandomAccess {
     A,
     B,

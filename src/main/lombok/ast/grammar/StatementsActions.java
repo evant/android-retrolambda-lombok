@@ -40,7 +40,6 @@ import lombok.ast.For;
 import lombok.ast.ForEach;
 import lombok.ast.If;
 import lombok.ast.LabelledStatement;
-import lombok.ast.MethodInvocation;
 import lombok.ast.Node;
 import lombok.ast.Position;
 import lombok.ast.Return;
@@ -199,13 +198,26 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createAlternateConstructorInvocation(Node typeArguments, Node arguments) {
-		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
-		return posify(new AlternateConstructorInvocation().setRawConstructorTypeArguments(typeArguments).rawArguments().migrateAllFrom(args.rawArguments()));
+		AlternateConstructorInvocation result = new AlternateConstructorInvocation()
+				.setRawConstructorTypeArguments(typeArguments);
+		if (arguments instanceof TemporaryNode.MethodArguments) {
+			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
+				result.rawArguments().addToEnd(arg);
+			}
+		}
+		return posify(result);
 	}
 	
-	public Node createSuperConstructorInvocation(Node qualifier, Node typeArguments, Node arguments) {
-		MethodInvocation args = (arguments instanceof MethodInvocation) ? (MethodInvocation)arguments : new MethodInvocation();
-		return posify(new SuperConstructorInvocation().setRawQualifier(qualifier).setRawConstructorTypeArguments(typeArguments).rawArguments().migrateAllFrom(args.rawArguments()));
+	public Node createSuperConstructorInvocation(org.parboiled.Node<Node> dot, Node qualifier, Node typeArguments, Node arguments) {
+		SuperConstructorInvocation result = new SuperConstructorInvocation().setRawQualifier(qualifier)
+				.setRawConstructorTypeArguments(typeArguments);
+		if (arguments instanceof TemporaryNode.MethodArguments) {
+			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
+				result.rawArguments().addToEnd(arg);
+			}
+		}
+		if (dot != null) source.registerStructure(result, dot);
+		return posify(result);
 	}
 	
 	public Node createExpressionStatement(Node expression) {

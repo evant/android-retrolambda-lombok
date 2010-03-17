@@ -66,7 +66,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 				group.basics.testLexBreak(),
 				group.basics.optWS(),
 				testNot(ch('(')),
-				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuper"), null)));
+				SET(actions.createThisOrSuperOrClass(null, TEXT("thisOrSuper"), null)));
 	}
 	
 	/**
@@ -75,11 +75,11 @@ public class ExpressionsParser extends BaseParser<Node> {
 	Rule qualifiedClassOrThisOrSuperLiteral() {
 		return sequence(
 				group.types.type().label("type"),
-				ch('.'), group.basics.optWS(),
+				ch('.').label("dot"), group.basics.optWS(),
 				firstOf(string("this"), string("super"), string("class")).label("thisOrSuperOrClass"),
 				group.basics.testLexBreak(),
 				group.basics.optWS(),
-				SET(actions.createThisOrSuperOrClass(TEXT("thisOrSuperOrClass"), VALUE("type"))));
+				SET(actions.createThisOrSuperOrClass(NODE("dot"), TEXT("thisOrSuperOrClass"), VALUE("type"))));
 	}
 	
 	Rule unqualifiedConstructorInvocation() {
@@ -171,11 +171,11 @@ public class ExpressionsParser extends BaseParser<Node> {
 	
 	Rule methodInvocationWithTypeArgsOperation() {
 		return sequence(
-				ch('.'), group.basics.optWS(),
+				ch('.').label("dot"), group.basics.optWS(),
 				group.types.typeArguments().label("typeArguments"),
 				group.basics.identifier().label("name"),
 				group.structures.methodArguments().label("methodArguments"),
-				SET(actions.createMethodInvocationOperation(VALUE("typeArguments"), VALUE("name"), VALUE("methodArguments"))));
+				SET(actions.createMethodInvocationOperation(NODE("dot"), VALUE("typeArguments"), VALUE("name"), VALUE("methodArguments"))));
 	}
 	
 	Rule select() {
@@ -395,7 +395,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 								conditionalOrExpressionChaining().label("tail2")
 								)),
 				SET(actions.createInlineIfExpression(NODE("head"),
-						TEXTS("zeroOrMore/sequence/operator1"), TEXTS("zeroOrMore/sequence/operator2"),
+						NODES("zeroOrMore/sequence/operator1"), NODES("zeroOrMore/sequence/operator2"),
 						NODES("zeroOrMore/sequence/tail1"), NODES("zeroOrMore/sequence/tail2"))),
 				group.basics.optWS());
 	}
@@ -458,7 +458,10 @@ public class ExpressionsParser extends BaseParser<Node> {
 				new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
 						setContext(context);
-						return SET(actions.createLeftAssociativeBinaryExpression(NODE("head"), TEXTS("zeroOrMore/sequence/operator"), NODES("zeroOrMore/sequence/tail")));
+						return SET(actions.createLeftAssociativeBinaryExpression(
+								NODE("head"),
+								NODES("zeroOrMore/sequence/operator"), TEXTS("zeroOrMore/sequence/operator"),
+								NODES("zeroOrMore/sequence/tail")));
 					}
 				},
 				group.basics.optWS());

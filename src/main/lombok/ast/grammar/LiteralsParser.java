@@ -24,7 +24,10 @@ package lombok.ast.grammar;
 import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
+import org.parboiled.MatcherContext;
 import org.parboiled.Rule;
+import org.parboiled.matchers.AbstractMatcher;
+import org.parboiled.support.Characters;
 
 public class LiteralsParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -61,17 +64,46 @@ public class LiteralsParser extends BaseParser<Node> {
 	 */
 	public Rule stringLiteral() {
 		return enforcedSequence(
-				enforcedSequence(
-						ch('"'),
-						zeroOrMore(
-								sequence(
-										testNot(firstOf(ch('"'), group.basics.lineTerminator())),
-										firstOf(
-												escapedSequence(),
-												any()))),
-						ch('"')),
+				new StringLiteralMatcher(),
 				SET(actions.createStringLiteral(LAST_TEXT())),
 				group.basics.optWS());
+	}
+	
+	private static class StringLiteralMatcher extends AbstractMatcher<Node> {
+		@Override public Characters getStarterChars() {
+			return Characters.of('"');
+		}
+		
+		@Override public boolean match(MatcherContext<Node> context) {
+			char current = context.getCurrentLocation().currentChar;
+			if (current == '"') {
+				context.advanceInputLocation();
+				boolean backslashEscape = false;
+				while (true) {
+					char c = context.getCurrentLocation().currentChar;
+					if (backslashEscape) backslashEscape = false;
+					else {
+						if (c == '"') {
+							context.advanceInputLocation();
+							context.createNode();
+							return true;
+						} else if (c == '\n' || c == '\r') {
+							context.createNode();
+							return true;
+						}
+						backslashEscape = c == '\\';
+					}
+					int pos = context.getCurrentLocation().index;
+					context.advanceInputLocation();
+					if (pos == context.getCurrentLocation().index) {
+						//EOF
+						context.createNode();
+						return true;
+					}
+				}
+			}
+			return false;
+		}
 	}
 	
 	/**
