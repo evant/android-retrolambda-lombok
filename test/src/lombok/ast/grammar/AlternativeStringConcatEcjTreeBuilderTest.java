@@ -6,7 +6,7 @@ import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(DirectoryRunner.class)
+@RunWith(RunForEachFileInDirRunner.class)
 public class AlternativeStringConcatEcjTreeBuilderTest extends EcjTreeBuilderTest {
 	protected boolean shouldProcess(File file) {
 		return file.getName().endsWith("StringConcatExpressions.java");

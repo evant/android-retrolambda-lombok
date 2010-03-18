@@ -26,10 +26,14 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
+
+import lombok.Data;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
@@ -42,17 +46,34 @@ import org.junit.runner.notification.RunNotifier;
 
 import com.google.common.collect.Lists;
 
-public class DirectoryRunner extends Runner {
+public class RunForEachFileInDirRunner extends Runner {
+	@Data
+	public static final class DirDescriptor {
+		private final File directory;
+		private final Pattern inclusionPattern;
+		private final Pattern exclusionPattern;
+		private final File mirrorDirectory;
+		private final boolean recurse;
+		
+		public static DirDescriptor of(File directory, boolean recurse) {
+			return new DirDescriptor(directory, Pattern.compile("^.*\\.java$"), null, null, recurse);
+		}
+		
+		public DirDescriptor withExclusion(Pattern pattern) {
+			return new DirDescriptor(directory, inclusionPattern, pattern, mirrorDirectory, recurse);
+		}
+		
+		public DirDescriptor withInclusion(Pattern pattern) {
+			return new DirDescriptor(directory, pattern, exclusionPattern, mirrorDirectory, recurse);
+		}
+		
+		public DirDescriptor withMirror(File mirror) {
+			return new DirDescriptor(directory, inclusionPattern, exclusionPattern, mirror, recurse);
+		}
+	}
+	
 	public static abstract class SourceFileBasedTester {
-		protected abstract File getDirectory();
-		
-		protected File getMirrorDirectory() {
-			return null;
-		}
-		
-		protected boolean shouldProcess(File file) {
-			return file.getName().endsWith(".java");
-		}
+		protected abstract Collection<DirDescriptor> getDirDesciptors();
 	}
 	
 	private static final Comparator<Method> methodComparator = new Comparator<Method>() {
@@ -78,7 +99,7 @@ public class DirectoryRunner extends Runner {
 	private final Class<?> testClass;
 	private File directory, mirrorDirectory;
 	
-	public DirectoryRunner(Class<?> testClass) {
+	public RunForEachFileInDirRunner(Class<?> testClass) {
 		this.testClass = testClass;
 		description = Description.createSuiteDescription(testClass);
 		Throwable error = null;
@@ -98,42 +119,46 @@ public class DirectoryRunner extends Runner {
 		
 		SourceFileBasedTester tester = (SourceFileBasedTester) testClass.newInstance();
 		
-		directory = tester.getDirectory();
-		mirrorDirectory = tester.getMirrorDirectory();
-		
-		File root = mirrorDirectory == null ? directory : mirrorDirectory;
-		List<File> files = listFilesRecursively(root);
-		
-		Map<Method, Description> noFileNeededMap = new TreeMap<Method, Description>(methodComparator);
-		
-		for (File file : files) {
-			if (!tester.shouldProcess(file)) continue;
-			Map<Method, Description> methodToDescMap = new TreeMap<Method, Description>(methodComparator);
+		for (DirDescriptor descriptor : tester.getDirDesciptors()) {
+			directory = descriptor.getDirectory();
+			mirrorDirectory = descriptor.getMirrorDirectory();
 			
-			String fileName = root.toURI().relativize(file.toURI()).toString();
-			tests.put(fileName, methodToDescMap);
+			File root = mirrorDirectory == null ? directory : mirrorDirectory;
+			List<File> files = listFiles(root, descriptor.isRecurse());
 			
-			for (Method m : testClass.getDeclaredMethods()) {
-				if (m.getAnnotation(Test.class) != null) {
-					if (m.getParameterTypes().length == 0) {
-						if (!noFileNeededMap.containsKey(m)) {
-							Description testDescription = Description.createTestDescription(testClass, m.getName());
+			Map<Method, Description> noFileNeededMap = new TreeMap<Method, Description>(methodComparator);
+			
+			for (File file : files) {
+				if (descriptor.getInclusionPattern() != null && !descriptor.getInclusionPattern().matcher(file.getCanonicalPath()).matches()) continue;
+				if (descriptor.getExclusionPattern() != null && descriptor.getExclusionPattern().matcher(file.getCanonicalPath()).matches()) continue;
+				
+				Map<Method, Description> methodToDescMap = new TreeMap<Method, Description>(methodComparator);
+				
+				String fileName = root.toURI().relativize(file.toURI()).toString();
+				tests.put(fileName, methodToDescMap);
+				
+				for (Method m : testClass.getDeclaredMethods()) {
+					if (m.getAnnotation(Test.class) != null) {
+						if (m.getParameterTypes().length == 0) {
+							if (!noFileNeededMap.containsKey(m)) {
+								Description testDescription = Description.createTestDescription(testClass, m.getName());
+								description.addChild(testDescription);
+								noFileNeededMap.put(m, testDescription);
+							}
+						} else {
+							Description testDescription = Description.createTestDescription(testClass, m.getName() + ": " + fileName);
 							description.addChild(testDescription);
-							noFileNeededMap.put(m, testDescription);
+							methodToDescMap.put(m, testDescription);
 						}
-					} else {
-						Description testDescription = Description.createTestDescription(testClass, m.getName() + ": " + fileName);
-						description.addChild(testDescription);
-						methodToDescMap.put(m, testDescription);
 					}
 				}
 			}
 		}
 	}
 	
-	private List<File> listFilesRecursively(File directory) {
+	private List<File> listFiles(File directory, boolean recurse) {
 		List<File> all = Lists.newArrayList();
-		listFilesRecursively(all, directory);
+		_listFiles(all, directory, recurse);
 		return all;
 	}
 	
@@ -150,12 +175,12 @@ public class DirectoryRunner extends Runner {
 		}
 	};
 	
-	private void listFilesRecursively(List<File> collector, File directory) {
+	private void _listFiles(List<File> collector, File directory, boolean recurse) {
 		File[] listFiles = directory.listFiles();
 		Arrays.sort(listFiles, FILE_SORTER);
 		for (File f : listFiles) {
-			if (f.isDirectory()) {
-				listFilesRecursively(collector, f);
+			if (f.isDirectory() && recurse) {
+				_listFiles(collector, f, recurse);
 			} else {
 				collector.add(f);
 			}

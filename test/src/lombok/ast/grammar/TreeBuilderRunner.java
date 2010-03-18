@@ -3,10 +3,15 @@ package lombok.ast.grammar;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.util.Collection;
+import java.util.Collections;
 
-abstract class TreeBuilderRunner<N> extends DirectoryRunner.SourceFileBasedTester {
-	protected File getDirectory() {
-		return new File("test/resources/idempotency");
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
+
+abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFileBasedTester {
+	@Override
+	protected Collection<DirDescriptor> getDirDesciptors() {
+		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
 	}
 	
 	protected boolean testCompiler(Source source) throws Exception {

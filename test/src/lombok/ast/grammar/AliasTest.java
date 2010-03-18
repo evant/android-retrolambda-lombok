@@ -25,22 +25,22 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 
 import lombok.ast.Node;
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.TextFormatter;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(DirectoryRunner.class)
-public class AliasTest extends DirectoryRunner.SourceFileBasedTester {
-	protected File getDirectory() {
-		return new File("test/resources/idempotency");
-	}
-	
-	protected File getMirrorDirectory() {
-		return new File("test/resources/alias");
+@RunWith(RunForEachFileInDirRunner.class)
+public class AliasTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
+	@Override
+	protected Collection<DirDescriptor> getDirDesciptors() {
+		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true).withMirror(new File("test/resources/alias")));
 	}
 	
 	@Test

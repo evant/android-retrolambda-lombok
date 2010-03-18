@@ -25,19 +25,23 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.AstException;
 import lombok.ast.Node;
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.printer.SourcePrinter;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(DirectoryRunner.class)
-public class PositionTest extends DirectoryRunner.SourceFileBasedTester {
-	protected File getDirectory() {
-		return new File("test/resources/idempotency");
+@RunWith(RunForEachFileInDirRunner.class)
+public class PositionTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
+	@Override
+	protected Collection<DirDescriptor> getDirDesciptors() {
+		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
 	}
 	
 	@Test

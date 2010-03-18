@@ -26,19 +26,23 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.Node;
 import lombok.ast.SyntaxProblem;
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.syntaxChecks.SyntacticValidityVisitor;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(DirectoryRunner.class)
-public class SyntaxCheckClearsOnIdempotencyTest extends DirectoryRunner.SourceFileBasedTester {
-	protected File getDirectory() {
-		return new File("test/resources/idempotency");
+@RunWith(RunForEachFileInDirRunner.class)
+public class SyntaxCheckClearsOnIdempotencyTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
+	@Override
+	protected Collection<DirDescriptor> getDirDesciptors() {
+		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
 	}
 	
 	@Test

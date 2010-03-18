@@ -26,16 +26,21 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collection;
+import java.util.Collections;
+
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(DirectoryRunner.class)
-public class EcjCompilerTest extends DirectoryRunner.SourceFileBasedTester {
-	protected File getDirectory() {
-		return new File("test/resources/idempotency");
+@RunWith(RunForEachFileInDirRunner.class)
+public class EcjCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
+	@Override
+	protected Collection<DirDescriptor> getDirDesciptors() {
+		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
 	}
 	
 	protected CompilerOptions ecjCompilerOptions() {
@@ -80,6 +85,6 @@ public class EcjCompilerTest extends DirectoryRunner.SourceFileBasedTester {
 			return new File(f, "lombok.ast-test");
 		}
 		
-		return new File(getDirectory(), "tmp");
+		return new File(getDirDesciptors().iterator().next().getDirectory(), "tmp");
 	}
 }

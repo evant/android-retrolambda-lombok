@@ -21,7 +21,7 @@ import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-@RunWith(DirectoryRunner.class)
+@RunWith(RunForEachFileInDirRunner.class)
 public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 	@Test
 	public boolean testEcjCompiler(Source source) throws Exception {

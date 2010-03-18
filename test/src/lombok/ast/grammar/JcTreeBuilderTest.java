@@ -42,7 +42,7 @@ import com.sun.tools.javac.main.JavaCompiler;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
 
-@RunWith(DirectoryRunner.class)
+@RunWith(RunForEachFileInDirRunner.class)
 public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 	@Test
 	public boolean testJcTreeBuilder(Source source) throws Exception {
