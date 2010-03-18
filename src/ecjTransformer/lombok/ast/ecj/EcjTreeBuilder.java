@@ -495,21 +495,25 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		//TODO check where the javadoc and annotations go: the field or the type
 
 		//[javadoc][annotations] *static *final [ENUMTYPE] [name] = new [ENUMTYPE.name] ([arguments]) [body]
-		int modifiers = ClassFileConstants.AccEnum;
 		FieldDeclaration decl = new FieldDeclaration();
 		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.annotations());
 		decl.name = toName(node.getName());
 		
-		decl.bits |= ASTNode.IsSecondaryType;
+		char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
+		if (!CharOperation.equals(decl.name, mainTypeName)) {
+			decl.bits |= ASTNode.IsSecondaryType;
+		}
 		
 		AllocationExpression init;
 		if (node.getBody() == null) {
 			init = new AllocationExpression();
 		} else {
-			TypeDeclaration type = createTypeBody(node.getBody().members(), false, modifiers);
+			TypeDeclaration type = createTypeBody(node.getBody().members(), false, 0);
 			type.name = CharOperation.NO_CHAR;
-			updateTypeBits(node.getParent(), type, false);
+			type.bits &= ~ASTNode.IsMemberType;
+			decl.bits |= ASTNode.HasLocalType;
+			type.bits |= ASTNode.IsLocalType | ASTNode.IsAnonymousType;
 			init = new QualifiedAllocationExpression(type);
 		}
 		init.arguments = toArray(Expression.class, node.arguments());
