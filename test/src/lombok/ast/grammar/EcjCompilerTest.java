@@ -35,7 +35,7 @@ import org.junit.runner.RunWith;
 @RunWith(DirectoryRunner.class)
 public class EcjCompilerTest extends DirectoryRunner.SourceFileBasedTester {
 	protected File getDirectory() {
-		return new File("test/idempotency");
+		return new File("test/resources/idempotency");
 	}
 	
 	protected CompilerOptions ecjCompilerOptions() {

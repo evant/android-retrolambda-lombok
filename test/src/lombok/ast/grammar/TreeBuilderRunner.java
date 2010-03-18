@@ -6,7 +6,7 @@ import java.io.File;
 
 abstract class TreeBuilderRunner<N> extends DirectoryRunner.SourceFileBasedTester {
 	protected File getDirectory() {
-		return new File("test/idempotency");
+		return new File("test/resources/idempotency");
 	}
 	
 	protected boolean testCompiler(Source source) throws Exception {

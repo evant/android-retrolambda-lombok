@@ -41,7 +41,7 @@ import org.junit.runner.RunWith;
 @RunWith(DirectoryRunner.class)
 public class JavaCompilerTest extends DirectoryRunner.SourceFileBasedTester {
 	protected File getDirectory() {
-		return new File("test/idempotency");
+		return new File("test/resources/idempotency");
 	}
 	
 	@Test
