@@ -961,7 +961,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override public boolean visitAnnotation(Annotation node) {
 		int start = node.getPosition().getStart();
-		int end = node.getAnnotationTypeReference().getPosition().getEnd();
+		int end = node.getPosition().getEnd();
 		return set(node, setPos(start, end,
 				treeMaker.Annotation(toTree(node.getAnnotationTypeReference()), toList(JCExpression.class, node.elements()))));
 	}
