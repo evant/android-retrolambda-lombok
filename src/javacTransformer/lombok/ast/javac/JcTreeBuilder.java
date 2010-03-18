@@ -140,6 +140,7 @@ import com.sun.tools.javac.tree.JCTree.JCStatement;
 import com.sun.tools.javac.tree.JCTree.JCTypeApply;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
+import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
@@ -974,7 +975,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		JCExpression result = plainTypeReference(node);
 		
-		result = addWildcards(result, wildcard);
+		result = addWildcards(node, result, wildcard);
 		result = addDimensions(node, result, node.getArrayDimensions());
 		
 		return set(node, result);
@@ -1034,14 +1035,19 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return current;
 	}
 	
-	private JCExpression addWildcards(JCExpression type, WildcardKind wildcardKind) {
+	private JCExpression addWildcards(Node node, JCExpression type, WildcardKind wildcardKind) {
+		TypeBoundKind typeBoundKind;
 		switch (wildcardKind) {
 		case NONE:
 			return type;
 		case EXTENDS:
-			return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.EXTENDS), type));
+			typeBoundKind = treeMaker.TypeBoundKind(BoundKind.EXTENDS);
+			setPos(posOfStructure(node, "extends", true), posOfStructure(node, "extends", false), typeBoundKind);
+			return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(typeBoundKind, type));
 		case SUPER:
-			return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(treeMaker.TypeBoundKind(BoundKind.SUPER), type));
+			typeBoundKind = treeMaker.TypeBoundKind(BoundKind.SUPER);
+			setPos(posOfStructure(node, "super", true), posOfStructure(node, "super", false), typeBoundKind);
+			return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(typeBoundKind, type));
 		default:
 			throw new IllegalStateException("Unexpected unbound wildcard: " + wildcardKind);
 		}

@@ -54,20 +54,35 @@ public class TypesActions extends SourceActions {
 		return posify(new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments == null ? emptyArgs : typeArguments));
 	}
 	
-	public Node createWildcardedType(String extendsOrSuper, Node type) {
+	public Node createWildcardedType(org.parboiled.Node<Node> qmark, org.parboiled.Node<Node> boundType, String extendsOrSuper, Node type) {
 		if (extendsOrSuper != null) extendsOrSuper = extendsOrSuper.trim();
 		WildcardKind wildcard = WildcardKind.UNBOUND;
 		if ("extends".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.EXTENDS;
 		if ("super".equalsIgnoreCase(extendsOrSuper)) wildcard = WildcardKind.SUPER;
 		
-		if (!(type instanceof TypeReference)) return posify(new TypeReference().setWildcard(wildcard));
-		//TODO add screwed up typePart as dangling tail to returned node.
+		TypeReference ref;
 		
-		return posify(((TypeReference)type).setWildcard(wildcard));
+		if (!(type instanceof TypeReference)) {
+			ref = new TypeReference();
+			if (type != null) {
+				//TODO add screwed up typePart as dangling tail to returned node.
+			}
+		} else {
+			ref = (TypeReference)type;
+		}
+		
+		ref.setWildcard(wildcard);
+		source.registerStructure(ref, qmark);
+		for (org.parboiled.Node<Node> childPNode : boundType.getChildren()) {
+			if (childPNode != null) source.registerStructure(ref, childPNode);
+		}
+		return posify(ref);
 	}
 	
-	public Node createUnboundedWildcardType() {
-		return posify(new TypeReference().setWildcard(WildcardKind.UNBOUND));
+	public Node createUnboundedWildcardType(org.parboiled.Node<Node> qmark) {
+		TypeReference ref = new TypeReference().setWildcard(WildcardKind.UNBOUND);
+		source.registerStructure(ref, qmark);
+		return posify(ref);
 	}
 	
 	public Node createTypeArguments(Node head, List<Node> tail) {

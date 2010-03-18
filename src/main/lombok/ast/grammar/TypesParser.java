@@ -160,16 +160,16 @@ public class TypesParser extends BaseParser<Node> {
 		return firstOf(
 				type(),
 				sequence(
-						ch('?'),
+						ch('?').label("qmark"),
 						group.basics.optWS(),
-						firstOf(string("extends"), string("super")),
+						firstOf(string("extends"), string("super")).label("boundType"),
 						group.basics.testLexBreak(),
 						group.basics.optWS(),
 						type(),
-						SET(actions.createWildcardedType(TEXT("firstOf"), VALUE("type")))),
+						SET(actions.createWildcardedType(NODE("qmark"), NODE("boundType"), TEXT("boundType"), VALUE("type")))),
 				sequence(
-						ch('?'),
-						SET(actions.createUnboundedWildcardType()),
+						ch('?').label("qmark"),
+						SET(actions.createUnboundedWildcardType(NODE("qmark"))),
 						group.basics.optWS()));
 	}
 }
