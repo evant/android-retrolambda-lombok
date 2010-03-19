@@ -109,6 +109,7 @@
 		</javac>
 		<junit haltonfailure="yes" fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
+			<jvmarg value="-Xbootclasspath/p:lib/test/javac.jar" />
 			<classpath refid="test.path" />
 			<classpath path="build/lombok.ast" />
 			<classpath path="build/tests" />
