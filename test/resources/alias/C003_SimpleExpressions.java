@@ -16,7 +16,7 @@ class C003_SimpleExpressions {
         boolean unary9=!true;
         int unary10 =( int )1.1;
         Object constructor = new Object ( ) ;
-        Object memberAccess = java.lang.String .CASE_INSENSITIVE_ORDER;
+        Object memberAccess = java.lang. String .CASE_INSENSITIVE_ORDER;
         int p3a = 5*2;
         int p3b =5 / 2;
         int p3c = 5 % 2;

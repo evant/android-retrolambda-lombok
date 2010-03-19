@@ -1003,7 +1003,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		if (node.isPrimitive() || node.parts().size() == 1) {
 			int end = node.getPosition().getEnd();
 			if (node.getArrayDimensions() > 0) {
-				end = posOfStructure(node, "[", true);
+				end = node.parts().last().getPosition().getEnd();
 			}
 			if (end == node.getPosition().getStart()) end = node.getPosition().getEnd();
 			
@@ -1297,15 +1297,13 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private JCExpression chain(Iterable<Identifier> parts) {
 		JCExpression previous = null;
-		Identifier prevPart = null;
 		for (Identifier part : parts) {
 			Name next = toName(part);
 			if (previous == null) {
 				previous = setPos(part, treeMaker.Ident(next));
 			} else {
-				previous = setPosFromEndToEnd(prevPart, part, treeMaker.Select(previous, next));
+				previous = setPos(posOfStructure(part, ".", true), part.getPosition().getEnd(), treeMaker.Select(previous, next));
 			}
-			prevPart = part;
 		}
 		return previous;
 	}
@@ -1341,10 +1339,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private <T extends JCTree> T setPos(Node node, T jcTree) {
 		return setPos(node.getPosition().getStart(), node.getPosition().getEnd(), jcTree);
-	}
-	
-	private <T extends JCTree> T setPosFromEndToEnd(Node from, Node to, T jcTree) {
-		return setPos(from.getPosition().getEnd(), to.getPosition().getEnd(), jcTree);
 	}
 	
 	private <T extends JCTree> T setPos(int start, int end, T jcTree) {

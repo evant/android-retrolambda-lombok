@@ -76,18 +76,24 @@ public class TypesParser extends BaseParser<Node> {
 	public Rule referenceType() {
 		return sequence(
 				referenceTypePart().label("head"),
-				zeroOrMore(sequence(
-						ch('.'),
-						group.basics.optWS(),
-						referenceTypePart().label("tail"))),
-				SET(actions.createReferenceType(VALUE("head"), VALUES("zeroOrMore/sequence/tail"))));
+				zeroOrMore(dotReferenceTypePart().label("tail")),
+				SET(actions.createReferenceType(VALUE("head"), VALUES("zeroOrMore/tail"))));
+	}
+	
+	Rule dotReferenceTypePart() {
+		return sequence(
+				ch('.'), group.basics.optWS(),
+				group.basics.identifier().label("partName"),
+				optional(typeArguments()),
+				SET(actions.createTypeReferencePart(NODE("partName"), VALUE("optional/typeArguments"))),
+				group.basics.optWS());
 	}
 	
 	Rule referenceTypePart() {
 		return sequence(
 				group.basics.identifier().label("partName"),
 				optional(typeArguments()),
-				SET(actions.createTypeReferencePart(VALUE("partName"), VALUE("optional/typeArguments"))),
+				SET(actions.createTypeReferencePart(NODE("partName"), VALUE("optional/typeArguments"))),
 				group.basics.optWS());
 	}
 	
@@ -104,7 +110,7 @@ public class TypesParser extends BaseParser<Node> {
 	Rule plainReferenceTypePart() {
 		return sequence(
 				group.basics.identifier().label("partName"),
-				SET(actions.createTypeReferencePart(VALUE("partName"), null)),
+				SET(actions.createTypeReferencePart(NODE("partName"), null)),
 				group.basics.optWS());
 	}
 	

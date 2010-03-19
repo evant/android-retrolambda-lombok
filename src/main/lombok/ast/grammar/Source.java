@@ -112,7 +112,7 @@ public class Source {
 		
 		org.parboiled.Node<Node> pNode = parsingResult.parseTreeRoot;
 		
-		buildSourceStructures(pNode, null, null, map);
+		buildSourceStructures(pNode, null, map);
 		
 		return cachedSourceStructures = map.asMap();
 	}
@@ -125,7 +125,7 @@ public class Source {
 		}
 	}
 	
-	private void buildSourceStructures(org.parboiled.Node<Node> pNode, Node owner, Node sibling, ListMultimap<Node, SourceStructure> map) {
+	private void buildSourceStructures(org.parboiled.Node<Node> pNode, Node owner, ListMultimap<Node, SourceStructure> map) {
 		Node target = registeredStructures.remove(pNode);
 		if (target != null || pNode.getChildren().isEmpty()) {
 			int start = pNode.getStartLocation().index;
@@ -134,25 +134,20 @@ public class Source {
 			SourceStructure structure = new SourceStructure(new Position(start, end), text);
 			if (target != null) addSourceStructure(map, target, structure);
 			else if (pNode.getValue() != null && !(pNode.getValue() instanceof TemporaryNode)) addSourceStructure(map, pNode.getValue(), structure);
-			else if (text.equals(".") && sibling != null) addSourceStructure(map, sibling, structure);
 			else if (owner != null) addSourceStructure(map, owner, structure);
 		} else {
 			Node possibleOwner = pNode.getValue();
 			if (possibleOwner instanceof TemporaryNode) possibleOwner = null;
-			sibling = null;
-			boolean multipleSiblings = false;
 			for (org.parboiled.Node<Node> child : pNode.getChildren()) {
 				if (child.getValue() == null || child.getValue() instanceof TemporaryNode) continue;
 				/* If the next if holds true, then we aren't the true generator; the child generated the node and this pNode adopted it */
 				if (child.getValue() == possibleOwner) possibleOwner = null;
-				if (sibling == null) sibling = child.getValue();
-				else multipleSiblings = true;
 			}
 			
 			if (possibleOwner != null) owner = possibleOwner;
 			
 			for (org.parboiled.Node<Node> child : pNode.getChildren()) {
-				buildSourceStructures(child, owner, multipleSiblings ? null : sibling, map);
+				buildSourceStructures(child, owner, map);
 			}
 		}
 	}

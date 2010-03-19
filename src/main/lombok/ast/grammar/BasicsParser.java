@@ -72,7 +72,16 @@ public class BasicsParser extends BaseParser<Node> {
 		return sequence(
 				identifierRaw().label("identifier"),
 				actions.checkIfKeyword(TEXT("identifier")),
-				SET(actions.createIdentifier(TEXT("identifier"))),
+				SET(actions.createIdentifier(TEXT("identifier"), NODE("identifier"))),
+				optWS()).label("identifier");
+	}
+	
+	public Rule dotIdentifier() {
+		return sequence(
+				ch('.'), optWS(),
+				identifierRaw().label("identifier"),
+				actions.checkIfKeyword(TEXT("identifier")),
+				SET(actions.createIdentifier(TEXT("identifier"), NODE("identifier"))),
 				optWS()).label("identifier");
 	}
 	

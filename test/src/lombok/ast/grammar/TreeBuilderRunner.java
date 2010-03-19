@@ -3,15 +3,17 @@ package lombok.ast.grammar;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFileBasedTester {
 	@Override
 	protected Collection<DirDescriptor> getDirDescriptors() {
-		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
+		return Arrays.asList(
+				DirDescriptor.of(new File("test/resources/idempotency"), true),
+				DirDescriptor.of(new File("test/resources/alias"), true));
 	}
 	
 	protected boolean testCompiler(Source source) throws Exception {

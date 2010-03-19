@@ -180,8 +180,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	
 	Rule select() {
 		return sequence(
-				ch('.'), group.basics.optWS(),
-				group.basics.identifier().label("identifier"),
+				group.basics.dotIdentifier().label("identifier"),
 				testNot(ch('(')),
 				SET(actions.createSelectOperation(VALUE("identifier"))));
 	}

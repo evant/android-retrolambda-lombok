@@ -403,9 +403,7 @@ public class StructuresParser extends BaseParser<Node> {
 						zeroOrMore(annotation().label("annotation")).label("annotations"),
 						string("package"), group.basics.testLexBreak(), group.basics.optWS()),
 				group.basics.identifier().label("head"),
-				zeroOrMore(sequence(
-						ch('.'), group.basics.optWS(),
-						group.basics.identifier()).label("tail")),
+				zeroOrMore(group.basics.dotIdentifier().label("tail")),
 				ch(';'), group.basics.optWS(),
 				SET(actions.createPackageDeclaration(VALUES("sequence/annotations/annotation"), VALUE("head"), VALUES("zeroOrMore/tail"))));
 	}
@@ -415,9 +413,7 @@ public class StructuresParser extends BaseParser<Node> {
 				sequence(string("import"), group.basics.testLexBreak(), group.basics.optWS()),
 				optional(sequence(string("static"), group.basics.testLexBreak(), group.basics.optWS())).label("static"),
 				group.basics.identifier().label("head"),
-				zeroOrMore(sequence(
-						ch('.'), group.basics.optWS(),
-						group.basics.identifier()).label("tail")),
+				zeroOrMore(group.basics.dotIdentifier().label("tail")),
 				optional(sequence(
 						ch('.'), group.basics.optWS(),
 						ch('*'), group.basics.optWS())).label("dotStar"),

@@ -31,8 +31,14 @@ public class BasicsActions extends SourceActions {
 		super(source);
 	}
 	
-	public Node createIdentifier(String text) {
-		return posify(text == null ? new Identifier() : new Identifier().setName(text));
+	public Node createIdentifier(String text, org.parboiled.Node<Node> rawIdentifier) {
+		Identifier id = new Identifier();
+		if (text != null) id.setName(text);
+		
+		int start = rawIdentifier.getStartLocation().index;
+		int end = Math.max(start, rawIdentifier.getEndLocation().index);
+		id.setPosition(new Position(start, end));
+		return id;
 	}
 	
 	public boolean checkIfKeyword(String text) {

@@ -48,10 +48,12 @@ public class TypesActions extends SourceActions {
 		return posify(new TypeReference().rawParts().addToStart(typeReferencePart));
 	}
 	
-	public Node createTypeReferencePart(Node identifier, Node typeArguments) {
+	public Node createTypeReferencePart(org.parboiled.Node<Node> identifier, Node typeArguments) {
 		Node emptyArgs = null;
 		if (typeArguments == null) emptyArgs = new TypeArguments().setPosition(new Position(currentPos(), currentPos()));
-		return posify(new TypeReferencePart().setRawIdentifier(identifier).setRawTypeArguments(typeArguments == null ? emptyArgs : typeArguments));
+		TypeReferencePart result = new TypeReferencePart().setRawIdentifier(identifier.getValue()).setRawTypeArguments(typeArguments == null ? emptyArgs : typeArguments);
+		posify(result); //We only care about the end position here.
+		return result.setPosition(new Position(identifier.getStartLocation().index, result.getPosition().getEnd()));
 	}
 	
 	public Node createWildcardedType(org.parboiled.Node<Node> qmark, org.parboiled.Node<Node> boundType, String extendsOrSuper, Node type) {
