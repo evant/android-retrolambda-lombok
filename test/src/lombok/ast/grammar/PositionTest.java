@@ -21,7 +21,7 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +40,7 @@ import org.junit.runner.RunWith;
 @RunWith(RunForEachFileInDirRunner.class)
 public class PositionTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
 	@Override
-	protected Collection<DirDescriptor> getDirDesciptors() {
+	protected Collection<DirDescriptor> getDirDescriptors() {
 		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
 	}
 	

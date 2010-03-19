@@ -39,7 +39,7 @@ import org.junit.runner.RunWith;
 @RunWith(RunForEachFileInDirRunner.class)
 public class AliasTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
 	@Override
-	protected Collection<DirDescriptor> getDirDesciptors() {
+	protected Collection<DirDescriptor> getDirDescriptors() {
 		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true).withMirror(new File("test/resources/alias")));
 	}
 	

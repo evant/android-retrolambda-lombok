@@ -21,7 +21,7 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,8 +44,10 @@ import org.junit.runner.RunWith;
 @RunWith(RunForEachFileInDirRunner.class)
 public class JavaCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
 	@Override
-	protected Collection<DirDescriptor> getDirDesciptors() {
-		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
+	protected Collection<DirDescriptor> getDirDescriptors() {
+		return Arrays.asList(
+				DirDescriptor.of(new File("test/resources/idempotency"), true),
+				DirDescriptor.of(new File("test/resources/alias"), true));
 	}
 	
 	@Test
@@ -72,7 +74,7 @@ public class JavaCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedT
 			return new File(f, "lombok.ast-test");
 		}
 		
-		return new File(getDirDesciptors().iterator().next().getDirectory(), "tmp");
+		return new File(getDirDescriptors().iterator().next().getDirectory(), "tmp");
 	}
 	
 	private static class TestJavaFileObject extends SimpleJavaFileObject {

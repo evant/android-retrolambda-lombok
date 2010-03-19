@@ -21,13 +21,13 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.Node;
@@ -41,8 +41,10 @@ import org.junit.runner.RunWith;
 @RunWith(RunForEachFileInDirRunner.class)
 public class SyntaxCheckClearsOnIdempotencyTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
 	@Override
-	protected Collection<DirDescriptor> getDirDesciptors() {
-		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
+	protected Collection<DirDescriptor> getDirDescriptors() {
+		return Arrays.asList(
+				DirDescriptor.of(new File("test/resources/idempotency"), true),
+				DirDescriptor.of(new File("test/resources/alias"), true));
 	}
 	
 	@Test

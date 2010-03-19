@@ -10,7 +10,7 @@ import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFileBasedTester {
 	@Override
-	protected Collection<DirDescriptor> getDirDesciptors() {
+	protected Collection<DirDescriptor> getDirDescriptors() {
 		return Collections.singleton(DirDescriptor.of(new File("test/resources/idempotency"), true));
 	}
 	

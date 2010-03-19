@@ -25,8 +25,10 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +50,7 @@ import com.google.common.collect.Lists;
 
 public class RunForEachFileInDirRunner extends Runner {
 	@Data
-	public static final class DirDescriptor {
+	public static final class DirDescriptor implements Comparable<DirDescriptor> {
 		private final File directory;
 		private final Pattern inclusionPattern;
 		private final Pattern exclusionPattern;
@@ -70,10 +72,36 @@ public class RunForEachFileInDirRunner extends Runner {
 		public DirDescriptor withMirror(File mirror) {
 			return new DirDescriptor(directory, inclusionPattern, exclusionPattern, mirror, recurse);
 		}
+		
+		@Override
+		public int compareTo(DirDescriptor other) {
+			int result = directory.getAbsolutePath().compareTo(other.directory.getAbsolutePath());
+			if (result != 0) return result;
+			if (mirrorDirectory != null && other.mirrorDirectory == null) return +1;
+			if (mirrorDirectory == null && other.mirrorDirectory != null) return -1;
+			if (mirrorDirectory != null) result = mirrorDirectory.getAbsolutePath().compareTo(other.mirrorDirectory.getAbsolutePath());
+			if (result != 0) return result;
+			if (recurse && !other.recurse) return +1;
+			if (!recurse && other.recurse) return -1;
+			if (inclusionPattern != null && other.inclusionPattern == null) return +1;
+			if (inclusionPattern == null && other.inclusionPattern != null) return -1;
+			if (inclusionPattern != null) result = inclusionPattern.pattern().compareTo(other.inclusionPattern.pattern());
+			if (result != 0) return result;
+			if (exclusionPattern != null && other.exclusionPattern == null) return +1;
+			if (exclusionPattern == null && other.exclusionPattern != null) return -1;
+			if (exclusionPattern != null) result = exclusionPattern.pattern().compareTo(other.exclusionPattern.pattern());
+			return result;
+		}
+	}
+	
+	@Data
+	private static final class RunData {
+		private final File main, alias;
+		private final Map<Method, Description> methods;
 	}
 	
 	public static abstract class SourceFileBasedTester {
-		protected abstract Collection<DirDescriptor> getDirDesciptors();
+		protected abstract Collection<DirDescriptor> getDirDescriptors();
 	}
 	
 	private static final Comparator<Method> methodComparator = new Comparator<Method>() {
@@ -94,10 +122,9 @@ public class RunForEachFileInDirRunner extends Runner {
 	};
 	
 	private final Description description;
-	private final Map<String, Map<Method, Description>> tests = new TreeMap<String, Map<Method, Description>>(stringComparator);
+	private final Map<String, RunData> tests = new TreeMap<String, RunData>(stringComparator);
 	private final Throwable failure;
 	private final Class<?> testClass;
-	private File directory, mirrorDirectory;
 	
 	public RunForEachFileInDirRunner(Class<?> testClass) {
 		this.testClass = testClass;
@@ -119,9 +146,14 @@ public class RunForEachFileInDirRunner extends Runner {
 		
 		SourceFileBasedTester tester = (SourceFileBasedTester) testClass.newInstance();
 		
-		for (DirDescriptor descriptor : tester.getDirDesciptors()) {
-			directory = descriptor.getDirectory();
-			mirrorDirectory = descriptor.getMirrorDirectory();
+		List<DirDescriptor> descriptors = new ArrayList<DirDescriptor>(tester.getDirDescriptors());
+		Collections.sort(descriptors);
+		
+		File commonRoot = findCommonRoots(descriptors);
+		
+		for (DirDescriptor descriptor : descriptors) {
+			File directory = descriptor.getDirectory();
+			File mirrorDirectory = descriptor.getMirrorDirectory();
 			
 			File root = mirrorDirectory == null ? directory : mirrorDirectory;
 			List<File> files = listFiles(root, descriptor.isRecurse());
@@ -134,8 +166,12 @@ public class RunForEachFileInDirRunner extends Runner {
 				
 				Map<Method, Description> methodToDescMap = new TreeMap<Method, Description>(methodComparator);
 				
-				String fileName = root.toURI().relativize(file.toURI()).toString();
-				tests.put(fileName, methodToDescMap);
+				String fileName = commonRoot == null ? file.getCanonicalPath() : commonRoot.toURI().relativize(file.toURI()).toString();
+				String relativePath = root.toURI().relativize(file.toURI()).toString();
+				tests.put(fileName, new RunData(
+						new File(directory, relativePath),
+						mirrorDirectory == null ? null : new File(mirrorDirectory, relativePath),
+						methodToDescMap));
 				
 				for (Method m : testClass.getDeclaredMethods()) {
 					if (m.getAnnotation(Test.class) != null) {
@@ -153,6 +189,46 @@ public class RunForEachFileInDirRunner extends Runner {
 					}
 				}
 			}
+		}
+	}
+	
+	private static File findCommonRoots(Collection<DirDescriptor> dirDescriptors) throws IOException {
+		List<File> dirs = new ArrayList<File>();
+		for (DirDescriptor d : dirDescriptors) dirs.add(d.getMirrorDirectory() == null ? d.getDirectory() : d.getMirrorDirectory());
+		
+		File common = dirs == null ? null : dirs.get(0).getCanonicalFile();
+		for (int i = 1; i < dirs.size(); i++) common = commonality(common, dirs.get(i).getCanonicalFile());
+		return common == null ? new File(".") : common;
+	}
+	
+	private static File commonality(File a, File b) throws IOException {
+		if (a == null || b == null) return null;
+		
+		List<File> pa = new ArrayList<File>();
+		List<File> pb = new ArrayList<File>();
+		
+		a = a.getCanonicalFile();
+		b = b.getCanonicalFile();
+		
+		while (a != null) {
+			pa.add(a);
+			a = a.getParentFile();
+		}
+		
+		while (b != null) {
+			pb.add(b);
+			b = b.getParentFile();
+		}
+		
+		Collections.reverse(pa);
+		Collections.reverse(pb);
+		
+		File common = null;
+		
+		for (int i = 0; ; i++) {
+			if (pa.size() <= i || pb.size() <= i) return common;
+			if (!pa.get(i).equals(pb.get(i))) return common;
+			common = pa.get(i);
 		}
 	}
 	
@@ -201,14 +277,15 @@ public class RunForEachFileInDirRunner extends Runner {
 			return;
 		}
 		
-		for (Map.Entry<String, Map<Method, Description>> entry : tests.entrySet()) {
-			Map<Method, Description> methodList = entry.getValue();
+		for (Map.Entry<String, RunData> entry : tests.entrySet()) {
+			RunData data = entry.getValue();
+			Map<Method, Description> methodList = data.getMethods();
 			String content;
 			Throwable error;
 			
 			try {
-				content = entry.getKey() == null ? null : FileUtils.readFileToString(new File(
-						mirrorDirectory == null ? directory : mirrorDirectory, entry.getKey()), "UTF-8");
+				content = entry.getKey() == null ? null : FileUtils.readFileToString(
+						data.getAlias() == null ? data.getMain() : data.getAlias(), "UTF-8");
 				error = null;
 			} catch (IOException e) {
 				content = null;
@@ -228,7 +305,7 @@ public class RunForEachFileInDirRunner extends Runner {
 					notifier.fireTestFailure(new Failure(testDescription, error));
 				} else {
 					try {
-						if (!runTest(content, entry.getKey(), test.getKey())) {
+						if (!runTest(content, data.getMain(), data.getAlias(), test.getKey())) {
 							notifier.fireTestIgnored(testDescription);
 						}
 					} catch (Throwable t) {
@@ -240,7 +317,7 @@ public class RunForEachFileInDirRunner extends Runner {
 		}
 	}
 	
-	private boolean runTest(String rawSource, String fileName, Method method) throws Throwable {
+	private boolean runTest(String rawSource, File main, File alias, Method method) throws Throwable {
 		Class<?>[] paramTypes = method.getParameterTypes();
 		Object[] params;
 		Test t = method.getAnnotation(Test.class);
@@ -251,26 +328,27 @@ public class RunForEachFileInDirRunner extends Runner {
 			params = new Object[0];
 			break;
 		case 1:
-			if (mirrorDirectory != null) return false;
+			if (alias != null) return false;
 			if (paramTypes[0] == String.class) params = new Object[] {rawSource};
-			else if (paramTypes[0] == File.class) params = new Object[] {new File(directory, fileName)};
-			else if (paramTypes[0] == Source.class) params = new Object[] {new Source(rawSource, fileName)};
+			else if (paramTypes[0] == File.class) params = new Object[] {main};
+			else if (paramTypes[0] == Source.class) params = new Object[] {new Source(rawSource, main.getAbsolutePath())};
 			else return false;
 			break;
 		case 2:
-			if (mirrorDirectory == null) return false;
+			if (alias == null) return false;
 			params = new Object[2];
-			String mainFileName = fileName.replaceAll("\\.\\d+\\.java$", ".java");
-			String expectedContent = FileUtils.readFileToString(new File(directory, mainFileName), "UTF-8");
+			main = new File(main.getParent(), alias.getName().replaceAll("\\.\\d+\\.java$", ".java"));
+			
+			String expectedContent = FileUtils.readFileToString(main, "UTF-8");
 			
 			if (paramTypes[0] == String.class) params[0] = expectedContent;
-			else if (paramTypes[0] == File.class) params[0] = new File(directory, fileName);
-			else if (paramTypes[0] == Source.class) params[0] = new Source(expectedContent, mainFileName);
+			else if (paramTypes[0] == File.class) params[0] = main;
+			else if (paramTypes[0] == Source.class) params[0] = new Source(expectedContent, main.getAbsolutePath());
 			else return false;
 			
 			if (paramTypes[1] == String.class) params[1] = rawSource;
-			else if (paramTypes[1] == File.class) params[1] = new File(mirrorDirectory, fileName);
-			else if (paramTypes[1] == Source.class) params[1] = new Source(rawSource, fileName);
+			else if (paramTypes[1] == File.class) params[1] = alias;
+			else if (paramTypes[1] == Source.class) params[1] = new Source(rawSource, alias.getAbsolutePath());
 			else return false;
 			
 			break;
