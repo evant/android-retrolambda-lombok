@@ -253,6 +253,7 @@ public class RunForEachFileInDirRunner extends Runner {
 	
 	private void _listFiles(List<File> collector, File directory, boolean recurse) {
 		File[] listFiles = directory.listFiles();
+		if (listFiles == null) listFiles = new File[0];
 		Arrays.sort(listFiles, FILE_SORTER);
 		for (File f : listFiles) {
 			if (f.isDirectory() && recurse) {

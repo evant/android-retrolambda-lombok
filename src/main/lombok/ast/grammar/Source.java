@@ -234,13 +234,18 @@ public class Source {
 	/**
 	 * Delves through the parboiled node tree to find comments.
 	 */
-	private void gatherComments(org.parboiled.Node<Node> parsed) {
-		if (parsed.getValue() instanceof Comment) {
-			comments.add((Comment) parsed.getValue());
-			return;
+	private boolean gatherComments(org.parboiled.Node<Node> parsed) {
+		boolean foundComments = false;
+		for (org.parboiled.Node<Node> child : parsed.getChildren()) {
+			foundComments |= gatherComments(child);
 		}
 		
-		for (org.parboiled.Node<Node> child : parsed.getChildren()) gatherComments(child);
+		if (!foundComments && parsed.getValue() instanceof Comment) {
+			comments.add((Comment) parsed.getValue());
+			return true;
+		}
+		
+		return foundComments;
 	}
 	
 	private void setPositionDelta(int position, int delta) {

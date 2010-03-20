@@ -13,7 +13,8 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 	protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(
 				DirDescriptor.of(new File("test/resources/idempotency"), true),
-				DirDescriptor.of(new File("test/resources/alias"), true));
+				DirDescriptor.of(new File("test/resources/alias"), true),
+				DirDescriptor.of(new File("test/resources/special"), true));
 	}
 	
 	protected boolean testCompiler(Source source) throws Exception {
