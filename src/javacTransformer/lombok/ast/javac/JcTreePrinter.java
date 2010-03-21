@@ -178,6 +178,10 @@ public class JcTreePrinter extends JCTree.Visitor {
 					}
 				}
 				
+				if (tree instanceof JCBinary && ((JCBinary)tree).rhs instanceof JCInstanceOf) {
+					startPos = -2;
+				}
+				
 				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), startPos, endPos));
 			} else {
 				printNode(tree.getClass().getSimpleName());
