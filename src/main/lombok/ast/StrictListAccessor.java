@@ -18,6 +18,6 @@ public interface StrictListAccessor<T extends Node, P extends Node> extends Iter
 	P addBefore(Node ref, T... node);
 	P addAfter(Node ref, T... node);
 	P replace(Node source, T replacement);
-	P remove(Node source) throws NoSuchElementException;
+	void remove(Node source) throws NoSuchElementException;
 	RawListAccessor<T, P> asRawAccessor();
 }

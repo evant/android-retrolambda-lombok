@@ -22,6 +22,7 @@
 package lombok.ast.grammar;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.AstVisitor;
@@ -33,6 +34,18 @@ abstract class TemporaryNode implements Node {
 	
 	@Override public void accept(AstVisitor visitor) {
 		visitor.visitParseArtefact(this);
+	}
+	
+	@Override public List<Node> getChildren() {
+		return Collections.emptyList();
+	}
+	
+	@Override public Node detach(Node child) {
+		return this;
+	}
+	
+	@Override public Node unparent() {
+		return this;
 	}
 	
 	static class MethodArguments extends TemporaryNode {

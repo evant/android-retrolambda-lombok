@@ -212,19 +212,19 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override
-		public P remove(Node source) {
-			if (source == null) return returnAsParent;
-			if (source.getParent() != parent) return returnAsParent;
+		public boolean remove(Node source) {
+			if (source == null) return false;
+			if (source.getParent() != parent) return false;
 			
 			for (int i = 0; i < list.size(); i++) {
 				if (list.get(i) == source) {
 					parent.disown((AbstractNode)source);
 					list.remove(i);
-					return returnAsParent;
+					return true;
 				}
 			}
 			
-			return returnAsParent;
+			return false;
 		}
 		
 		@Override
@@ -321,7 +321,7 @@ class ListAccessor<T extends Node, P extends Node> {
 			return raw.replace(source, replacement);
 		}
 		
-		@Override public P remove(Node source) throws NoSuchElementException {
+		@Override public void remove(Node source) throws NoSuchElementException {
 			if (source == null) throw new NullPointerException();
 			if (source.getParent() != parent) throw new NoSuchElementException(listName + " is not the parent of: " + source);
 			
@@ -329,7 +329,7 @@ class ListAccessor<T extends Node, P extends Node> {
 				if (list.get(i) == source) {
 					parent.disown((AbstractNode)source);
 					list.remove(i);
-					return returnAsParent;
+					return;
 				}
 			}
 			

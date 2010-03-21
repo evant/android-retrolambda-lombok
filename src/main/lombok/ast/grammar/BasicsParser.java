@@ -51,7 +51,7 @@ public class BasicsParser extends BaseParser<Node> {
 	public Rule optWS() {
 		return sequence(
 				zeroOrMore(firstOf(comment(), whitespaceChar())),
-				SET((Node) null)).label("optWS");
+				SET(null)).label("optWS");
 	}
 	
 	/**
@@ -61,7 +61,7 @@ public class BasicsParser extends BaseParser<Node> {
 	public Rule mandatoryWS() {
 		return sequence(
 				oneOrMore(firstOf(comment(), whitespaceChar())),
-				SET((Node) null)).label("mandatoryWS");
+				SET(null)).label("mandatoryWS");
 	}
 	
 	public Rule testLexBreak() {

@@ -21,12 +21,20 @@
  */
 package lombok.ast;
 
+import java.util.List;
+
 public interface Node {
 	boolean isGenerated();
 	
 	Node getGeneratedBy();
 	
 	boolean hasParent();
+	
+	List<Node> getChildren();
+	
+	Node detach(Node child);
+	
+	Node unparent();
 	
 	Node setPosition(Position position);
 	

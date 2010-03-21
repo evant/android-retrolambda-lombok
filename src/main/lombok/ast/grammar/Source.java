@@ -86,7 +86,9 @@ public class Source {
 		for (ParseError error : parsingResult.parseErrors) {
 			problems.add(new ParseProblem(new Position(mapPosition(error.getErrorStart().index), mapPosition(error.getErrorEnd().index)), error.getErrorMessage()));
 		}
+		
 		gatherComments(parsingResult.parseTreeRoot);
+		
 		comments = Collections.unmodifiableList(comments);
 		nodes = Collections.unmodifiableList(nodes);
 		problems = Collections.unmodifiableList(problems);
@@ -241,7 +243,9 @@ public class Source {
 		}
 		
 		if (!foundComments && parsed.getValue() instanceof Comment) {
-			comments.add((Comment) parsed.getValue());
+			Comment comment = (Comment) parsed.getValue();
+			comments.add(comment);
+			comment.unparent();
 			return true;
 		}
 		

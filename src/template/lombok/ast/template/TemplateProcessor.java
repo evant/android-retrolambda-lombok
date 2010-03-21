@@ -364,6 +364,52 @@ public class TemplateProcessor extends AbstractProcessor {
 			generateRawSetter(out, className, field);
 		}
 		
+		/* children */ {
+			out.write("\t@java.lang.Override public java.util.List<Node> getChildren() {\n");
+			out.write("\t\tjava.util.List<Node> result = new java.util.ArrayList<Node>();\n");
+			for (FieldData data : fields) {
+				if (!data.isAstNode()) continue;
+				if (!data.isList()) {
+					out.write("\t\tif (this.");
+					out.write(data.getName());
+					out.write(" != null) result.add(this.");
+					out.write(data.getName());
+					out.write(");\n");
+				} else {
+					out.write("\tresult.addAll(this.");
+					out.write(data.getName());
+					out.write(");\n");
+				}
+			}
+			out.write("\treturn result;\n\t}\n\t\n");
+		}
+		
+		/* detach */ {
+			out.write("\t@java.lang.Override public ");
+			out.write(typeName);
+			out.write(" detach(Node child) {\n");
+			for (FieldData field : fields) {
+				if (!field.isAstNode()) continue;
+				if (!field.isList()) {
+					out.write("\t\tif (this.");
+					out.write(field.getName());
+					out.write(" == child) {\n");
+					out.write("\t\t\tthis.disown((AbstractNode)child);\n");
+					out.write("\t\t\tthis.");
+					out.write(field.getName());
+					out.write(" = null;\n");
+					out.write("\t\t\treturn this;\n");
+					out.write("\t\t}\n");
+				} else {
+					out.write("\t\tif (this.raw");
+					out.write(field.titleCasedName());
+					out.write("().remove(child)) return this;\n");
+				}
+			}
+			out.write("\t\treturn this;\n");
+			out.write("\t}\n\t\n");
+		}
+		
 		/* accept */ {
 			out.write("\t@java.lang.Override public void accept(lombok.ast.AstVisitor visitor) {\n");
 			out.write("\t\tif (visitor.visit");

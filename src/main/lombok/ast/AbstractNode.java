@@ -21,6 +21,8 @@
  */
 package lombok.ast;
 
+import static java.util.Collections.emptyList;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,6 +61,19 @@ abstract class AbstractNode implements Node {
 	
 	@Override public boolean hasParent() {
 		return parent != null;
+	}
+	
+	@Override public List<Node> getChildren() {
+		return emptyList();
+	}
+	
+	@Override public Node detach(Node child) {
+		return this;
+	}
+	
+	@Override public Node unparent() {
+		if (this.parent != null) this.parent.detach(this);
+		return this;
 	}
 	
 	/**
