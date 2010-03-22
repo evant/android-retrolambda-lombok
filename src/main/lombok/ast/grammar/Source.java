@@ -35,6 +35,7 @@ import lombok.ast.JavadocContainer;
 import lombok.ast.Node;
 import lombok.ast.Position;
 
+import org.parboiled.Context;
 import org.parboiled.support.ParseError;
 import org.parboiled.support.ParsingResult;
 
@@ -54,6 +55,8 @@ public class Source {
 	private TreeMap<Integer, Integer> positionDeltas = new TreeMap<Integer, Integer>();
 	private Map<org.parboiled.Node<Node>, Node> registeredStructures =
 			new MapMaker().weakKeys().makeMap();
+	private Map<org.parboiled.Node<Node>, List<Comment>> registeredComments =
+		new MapMaker().weakKeys().makeMap();
 	private String preprocessed;
 	private Map<Node, Collection<SourceStructure>> cachedSourceStructures;
 	
@@ -167,6 +170,7 @@ public class Source {
 				for (int i = p.getStart(); i < p.getEnd(); i++) whitespace[i] = true;
 			}
 		}
+		
 		/* Process actual whitespace in preprocessed source data */ {
 			char[] chars = preprocessed.toCharArray();
 			for (int i = 0; i < chars.length; i++) if (Character.isWhitespace(chars[i])) whitespace[i] = true;
@@ -233,6 +237,15 @@ public class Source {
 		}
 	}
 	
+	void registerComment(Context<Node> context, Comment c) {
+		List<Comment> list = registeredComments.get(context);
+		if (list == null) {
+			list = new ArrayList<Comment>();
+			registeredComments.put(context.getSubNodes().get(0), list);
+		}
+		list.add(c);
+	}
+	
 	/**
 	 * Delves through the parboiled node tree to find comments.
 	 */
@@ -242,10 +255,9 @@ public class Source {
 			foundComments |= gatherComments(child);
 		}
 		
-		if (!foundComments && parsed.getValue() instanceof Comment) {
-			Comment comment = (Comment) parsed.getValue();
-			comments.add(comment);
-			comment.unparent();
+		List<Comment> cmts = registeredComments.get(parsed);
+		if (cmts != null) for (Comment c : cmts) {
+			comments.add(c);
 			return true;
 		}
 		

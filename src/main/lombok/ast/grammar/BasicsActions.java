@@ -45,15 +45,20 @@ public class BasicsActions extends SourceActions {
 		return text == null || !BasicsParser.KEYWORDS.contains(text);
 	}
 	
-	public Node createBlockComment(String text) {
+	public boolean logBlockComment(String text) {
+		if (text.startsWith("/*")) text = text.substring(2);
+		if (text.endsWith("*/")) text = text.substring(0, text.length() - 2);
 		Comment c = new Comment().setBlockComment(true).setContent(text);
 		c.setPosition(new Position(startPos(), currentPos()));
-		return c;
+		source.registerComment(getContext(), c);
+		return true;
 	}
 	
-	public Node createLineComment(String text) {
+	public boolean logLineComment(String text) {
+		if (text.startsWith("//")) text = text.substring(2);
 		Comment c = new Comment().setBlockComment(false).setContent(text);
 		c.setPosition(new Position(startPos(), currentPos()));
-		return c;
+		source.registerComment(getContext(), c);
+		return true;
 	}
 }

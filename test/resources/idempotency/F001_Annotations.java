@@ -15,7 +15,7 @@ class F001_Annotations {
         return null;
     }
     
-    @SuppressWarnings("all")
+    @SuppressWarnings("serial")
     @Override
     public int hashCode() {
         return 0;

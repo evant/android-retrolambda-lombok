@@ -32,6 +32,7 @@ import org.parboiled.MatcherContext;
 import org.parboiled.Rule;
 import org.parboiled.matchers.AbstractMatcher;
 import org.parboiled.support.Characters;
+import org.parboiled.support.InputLocation;
 
 /**
  * Contains the basics of java parsing: Whitespace and comment handling, as well as applying backslash-u escapes.
@@ -49,9 +50,7 @@ public class BasicsParser extends BaseParser<Node> {
 	 * Eats up any whitespace and comments at the current position.
 	 */
 	public Rule optWS() {
-		return sequence(
-				zeroOrMore(firstOf(comment(), whitespaceChar())),
-				SET(null)).label("optWS");
+		return zeroOrMore(firstOf(comment(), whitespaceChar())).label("optWS");
 	}
 	
 	/**
@@ -59,9 +58,7 @@ public class BasicsParser extends BaseParser<Node> {
 	 * but only matches if there is at least one comment or whitespace character to gobble up.
 	 */
 	public Rule mandatoryWS() {
-		return sequence(
-				oneOrMore(firstOf(comment(), whitespaceChar())),
-				SET(null)).label("mandatoryWS");
+		return oneOrMore(firstOf(comment(), whitespaceChar())).label("optWS");
 	}
 	
 	public Rule testLexBreak() {
@@ -132,6 +129,83 @@ public class BasicsParser extends BaseParser<Node> {
 		}
 	}
 	
+	private static class LineCommentMatcher extends AbstractMatcher<Node> {
+		@Override public Characters getStarterChars() {
+			return Characters.of('/');
+		}
+		
+		@Override public boolean match(MatcherContext<Node> context) {
+			InputLocation start = context.getCurrentLocation();
+			if (context.getCurrentLocation().currentChar != '/') return false;
+			context.advanceInputLocation();
+			if (context.getCurrentLocation().currentChar != '/') {
+				context.setCurrentLocation(start);
+				return false;
+			}
+			
+			int pos = context.getCurrentLocation().index;
+			while (true) {
+				context.advanceInputLocation();
+				int newPos = context.getCurrentLocation().index;
+				if (pos == newPos) {
+					//We're at the end of the file.
+					context.createNode();
+					return true;
+				}
+				pos = newPos;
+				char c = context.getCurrentLocation().currentChar;
+				if (c == '\n') {
+					context.advanceInputLocation();
+					context.createNode();
+					return true;
+				}
+				if (c == '\r') {
+					context.advanceInputLocation();
+					if (context.getCurrentLocation().currentChar == '\n') {
+						context.advanceInputLocation();
+					}
+					context.createNode();
+					return true;
+				}
+			}
+		}
+	}
+	
+	private static class BlockCommentMatcher extends AbstractMatcher<Node> {
+		@Override public Characters getStarterChars() {
+			return Characters.of('/');
+		}
+		
+		@Override public boolean match(MatcherContext<Node> context) {
+			InputLocation start = context.getCurrentLocation();
+			if (context.getCurrentLocation().currentChar != '/') return false;
+			context.advanceInputLocation();
+			if (context.getCurrentLocation().currentChar != '*') {
+				context.setCurrentLocation(start);
+				return false;
+			}
+			int pos = context.getCurrentLocation().index;
+			boolean star = false;
+			while (true) {
+				context.advanceInputLocation();
+				int newPos = context.getCurrentLocation().index;
+				if (pos == newPos) {
+					//We're at the end of the file.
+					context.createNode();
+					return true;
+				}
+				pos = newPos;
+				char c = context.getCurrentLocation().currentChar;
+				if (c == '/' && star) {
+					context.advanceInputLocation();
+					context.createNode();
+					return true;
+				}
+				star = c == '*';
+			}
+		}
+	}
+	
 	private static class IdentifierMatcher extends AbstractMatcher<Node> {
 		@Override public Characters getStarterChars() {
 			Characters c = Characters.NONE;
@@ -172,18 +246,14 @@ public class BasicsParser extends BaseParser<Node> {
 	
 	Rule lineComment() {
 		return enforcedSequence(
-				string("//"),
-				zeroOrMore(sequence(testNot(lineTerminator()), any())).label("comment"),
-				lineTerminator(),
-				SET(actions.createLineComment(TEXT("comment"))));
+				new LineCommentMatcher(),
+				actions.logLineComment(LAST_TEXT()));
 	}
 	
 	Rule blockComment() {
 		return enforcedSequence(
-				string("/*"),
-				zeroOrMore(sequence(testNot(string("*/")), any())).label("comment"),
-				string("*/"),
-				SET(actions.createBlockComment(TEXT("comment"))));
+				new BlockCommentMatcher(),
+				actions.logBlockComment(LAST_TEXT()));
 	}
 	
 	/**
