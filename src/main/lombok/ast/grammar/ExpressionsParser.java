@@ -384,18 +384,18 @@ public class ExpressionsParser extends BaseParser<Node> {
 		return sequence(
 				conditionalOrExpressionChaining().label("head"),
 				SET(),
-				zeroOrMore(
+				optional(
 						sequence(
 								sequence(ch('?'), testNot(firstOf(ch('.'), ch(':'), ch('?')))).label("operator1"),
 								group.basics.optWS(),
-								conditionalOrExpressionChaining().label("tail1"),
+								assignmentExpressionChaining().label("tail1"),
 								ch(':').label("operator2"),
 								group.basics.optWS(),
-								conditionalOrExpressionChaining().label("tail2")
+								assignmentExpressionChaining().label("tail2")
 								)),
-				SET(actions.createInlineIfExpression(NODE("head"),
-						NODES("zeroOrMore/sequence/operator1"), NODES("zeroOrMore/sequence/operator2"),
-						NODES("zeroOrMore/sequence/tail1"), NODES("zeroOrMore/sequence/tail2"))),
+				SET(actions.createInlineIfExpression(VALUE("head"),
+						NODE("optional/sequence/operator1"), NODE("optional/sequence/operator2"),
+						VALUE("optional/sequence/tail1"), VALUE("optional/sequence/tail2"))),
 				group.basics.optWS());
 	}
 	

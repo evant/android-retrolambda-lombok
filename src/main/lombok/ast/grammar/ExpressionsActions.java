@@ -21,7 +21,6 @@
  */
 package lombok.ast.grammar;
 
-import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.ArrayAccess;
@@ -76,32 +75,16 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createInlineIfExpression(
-			org.parboiled.Node<Node> head,
-			List<org.parboiled.Node<Node>> operators1Nodes, List<org.parboiled.Node<Node>> operators2Nodes,
-			List<org.parboiled.Node<Node>> tail1, List<org.parboiled.Node<Node>> tail2) {
+			Node head, org.parboiled.Node<Node> operator1Node,
+			org.parboiled.Node<Node> operator2Node, Node tail1, Node tail2) {
 		
-		if (tail1.size() == 0 || tail2.size() == 0) return head.getValue();
+		if (tail1 == null || tail2 == null) return head;
 		
-		org.parboiled.Node<Node> end = tail2.remove(tail2.size() -1);
-		Node currentNode = end.getValue();
-		
-		Collections.reverse(tail1);
-		Collections.reverse(tail2);
-		Collections.reverse(operators1Nodes);
-		Collections.reverse(operators2Nodes);
-		tail2.add(head);
-		
-		for (int i = 0; i < tail1.size(); i++) {
-			currentNode = new InlineIfExpression()
-					.setRawCondition(tail2.get(i).getValue())
-					.setRawIfTrue(tail1.get(i).getValue())
-					.setRawIfFalse(currentNode);
-			source.registerStructure(currentNode, operators1Nodes.get(i));
-			source.registerStructure(currentNode, operators2Nodes.get(i));
-			positionSpan(currentNode, tail2.get(i), end);
-		}
-		
-		return currentNode;
+		InlineIfExpression result = new InlineIfExpression()
+				.setRawCondition(head).setRawIfTrue(tail1).setRawIfFalse(tail2);
+		source.registerStructure(result, operator1Node);
+		source.registerStructure(result, operator2Node);
+		return posify(result);
 	}
 	
 	public Node createUnaryPrefixExpression(
