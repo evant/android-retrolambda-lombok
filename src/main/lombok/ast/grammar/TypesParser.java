@@ -151,14 +151,14 @@ public class TypesParser extends BaseParser<Node> {
 		return optional(sequence(
 				ch('<'),
 				group.basics.optWS(),
-				optional(enforcedSequence(
+				optional(sequence(
 						typeArgument().label("head"),
-						zeroOrMore(enforcedSequence(
+						zeroOrMore(sequence(
 								ch(','),
 								group.basics.optWS(),
 								typeArgument().label("tail"))))),
 				ch('>'),
-				SET(actions.createTypeArguments(VALUE("optional/enforcedSequence/head"), VALUES("optional/enforcedSequence/zeroOrMore/enforcedSequence/tail"))),
+				SET(actions.createTypeArguments(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))),
 				group.basics.optWS())).label("typeArguments");
 	}
 	
