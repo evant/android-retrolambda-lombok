@@ -171,17 +171,34 @@ public class JcTreePrinter extends JCTree.Visitor {
 				//In rare conditions, the end pos table is filled with a silly value, but start is -1.
 				if (startPos == -1 && endPos >= 0) endPos = -1;
 				
-				//Javac bug: sometimes the startpos of a binary expression is set to the wrong operator.
-				if (tree instanceof JCBinary && ((JCBinary)tree).rhs instanceof JCBinary) {
-					if (getTag(tree) != getTag(((JCBinary)tree).rhs)) {
+				/*Javac bug: sometimes the startpos of a binary expression is set to the wrong operator.*/ {
+					if (tree instanceof JCBinary && ((JCBinary)tree).rhs instanceof JCBinary) {
+						if (getTag(tree) != getTag(((JCBinary)tree).rhs)) {
+							startPos = -2;
+						}
+					}
+					
+					if (tree instanceof JCBinary && ((JCBinary)tree).rhs instanceof JCInstanceOf) {
 						startPos = -2;
 					}
 				}
 				
-				if (tree instanceof JCBinary && ((JCBinary)tree).rhs instanceof JCInstanceOf) {
-					startPos = -2;
+				/* Javac bug: The end position of a "super.FOO" node which is itself the LHS of a select-like
+				   concept (Select, Method Invocation, etcetera) are set to right after the dot following
+				   it. This doesn't happen with 'this' or anything other than super. */ {
+					if (tree instanceof JCMethodInvocation) {
+						JCMethodInvocation invoke = (JCMethodInvocation) tree;
+						if (invoke.meth instanceof JCFieldAccess && ((JCFieldAccess) invoke.meth).selected instanceof JCIdent) {
+							JCIdent selected = (JCIdent) ((JCFieldAccess) invoke.meth).selected;
+							if (selected.name.toString().equals("super")) endPos = -2;
+						}
+					}
+					
+					if (tree instanceof JCFieldAccess && ((JCFieldAccess) tree).selected instanceof JCIdent) {
+						JCIdent selected = (JCIdent) ((JCFieldAccess) tree).selected;
+						if (selected.name.toString().equals("super")) endPos = -2;
+					}
 				}
-				
 				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), startPos, endPos));
 			} else {
 				printNode(tree.getClass().getSimpleName());

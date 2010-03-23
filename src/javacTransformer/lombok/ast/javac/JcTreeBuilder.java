@@ -1032,6 +1032,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			}
 		}
 		
+		//TODO add a lot more tests involving 'void', apparently we're missing a bunch.
+		
 		return current;
 	}
 	
