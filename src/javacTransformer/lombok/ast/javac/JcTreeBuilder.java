@@ -823,8 +823,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		if (node.getParent() instanceof JavadocContainer) {
 			javadoc = ((JavadocContainer)node.getParent()).getJavadoc();
-		} else if (node.getParent() instanceof VariableDefinition && node.getParent().getParent() instanceof JavadocContainer) {
-			javadoc = ((JavadocContainer)node.getParent().getParent()).getJavadoc();
+		} else if (node.getParent() instanceof VariableDefinition && node.getParent().getParent() instanceof VariableDeclaration) {
+			javadoc = ((VariableDeclaration)node.getParent().getParent()).getJavadoc();
 		}
 		
 		if (javadoc != null && javadoc.isMarkedDeprecated()) mods.flags |= Flags.DEPRECATED;
