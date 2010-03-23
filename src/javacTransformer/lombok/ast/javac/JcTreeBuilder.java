@@ -1000,7 +1000,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	private JCExpression plainTypeReference(TypeReference node) {
-		if (node.isPrimitive() || node.parts().size() == 1) {
+		if (node.isPrimitive() || node.isVoid() || node.parts().size() == 1) {
 			int end = node.getPosition().getEnd();
 			if (node.getArrayDimensions() > 0) {
 				end = node.parts().last().getPosition().getEnd();
@@ -1284,6 +1284,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		.put("float", TypeTags.FLOAT)
 		.put("double", TypeTags.DOUBLE)
 		.put("boolean", TypeTags.BOOLEAN)
+		.put("void", TypeTags.VOID)
 		.build();
 	
 	static int primitiveTypeTag(String typeName) {
