@@ -321,6 +321,7 @@ public class Source {
 					state = 2;
 				}
 				break;
+				//TODO add a test for more backslash-U stuff.
 			default:
 				//Gobbling hex digits. state-2 is our current position. We want 4.
 				buffer.append(c);
@@ -332,10 +333,11 @@ public class Source {
 					if (state == 6) {
 						//We've got our 4 hex digits.
 						out.append((char)Integer.parseInt(buffer.substring(buffer.length()-4), 0x10));
+						int delta = buffer.length() -1;	//Buffer goes away but 1 character appears in its place.
+						setPositionDelta(idx - delta, delta);
 						buffer.setLength(0);
 						//We don't have to check if this char is a backslash and set state to 1; JLS says backslash-u is not recursively applied.
 						state = 0;
-						setPositionDelta(idx, 1-buffer.length());	//buffer goes away, but in its place, 1 character.
 					}
 				} else {
 					//Invalid unicode escape.
