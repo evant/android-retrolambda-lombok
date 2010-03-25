@@ -357,6 +357,10 @@ public abstract class EcjTreeVisitor {
 			return;
 		}
 		
+		visitOther(node);
+	}
+	
+	public void visitOther(ASTNode node) {
 		throw new UnsupportedOperationException("Unknown ASTNode child: " + node.getClass().getSimpleName());
 	}
 	

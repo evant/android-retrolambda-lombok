@@ -110,9 +110,12 @@ class GenerateEcjTreeVisitorCode {
 	}
 	
 	private static void infix(StringBuilder out) {
-		out.append("\t\t\n\t\tthrow new UnsupportedOperationException(\"Unknown ASTNode child: \" + ");
-		out.append("node.getClass().getSimpleName());\n");
-		out.append("\t}\n\t\n\tpublic void visitAny(ASTNode node) {\n");
+		out.append("\t\t\n\t\tvisitOther(node);\n");
+		out.append("\t}\n\t\n");
+		out.append("\tpublic void visitOther(ASTNode node) {\n");
+		out.append("\t\tthrow new UnsupportedOperationException(\"Unknown ASTNode child: \" + ");
+		out.append("node.getClass().getSimpleName());\n\t}\n\t\n");
+		out.append("\tpublic void visitAny(ASTNode node) {\n");
 		out.append("\t\tthrow new UnsupportedOperationException(\"visit\" + node.getClass().getSimpleName()");
 		out.append(" + \" not implemented\");\n\t}\n");
 	}
