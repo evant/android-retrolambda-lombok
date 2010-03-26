@@ -103,6 +103,10 @@ public class Source {
 		//TODO javadoc in between keywords.
 		
 		associateJavadoc(comments, nodes);
+		
+		fixPositions(nodes);
+		fixPositions(comments);
+		
 		parsed = true;
 	}
 	
@@ -119,7 +123,17 @@ public class Source {
 		
 		buildSourceStructures(pNode, null, map);
 		
-		return cachedSourceStructures = map.asMap();
+		Map<Node, Collection<SourceStructure>> result = map.asMap();
+		
+		for (Collection<SourceStructure> structures : result.values()) {
+			for (SourceStructure structure : structures) {
+				structure.setPosition(new Position(
+						mapPosition(structure.getPosition().getStart()),
+						mapPosition(structure.getPosition().getEnd())));
+			}
+		}
+		
+		return cachedSourceStructures = result;
 	}
 	
 	private void addSourceStructure(ListMultimap<Node, SourceStructure> map, Node node, SourceStructure structure) {
@@ -199,7 +213,20 @@ public class Source {
 					end = Math.max(trimmed, start);
 				}
 				
-				node.setPosition(new Position(mapPosition(start), mapPosition(end)));
+				node.setPosition(new Position(start, end));
+				
+				return false;
+			}
+		});
+	}
+	
+	private void fixPositions(List<? extends Node> nodes) {
+		for (Node node : nodes) node.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitNode(Node node) {
+				Position p = node.getPosition();
+				if (!p.isUnplaced()) {
+					node.setPosition(new Position(mapPosition(p.getStart()), mapPosition(p.getEnd())));
+				}
 				return false;
 			}
 		});
