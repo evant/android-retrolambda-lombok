@@ -25,11 +25,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.TreeMap;
 
 import lombok.Getter;
 import lombok.ast.Comment;
+import lombok.ast.Expression;
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.JavadocContainer;
 import lombok.ast.Node;
@@ -226,6 +228,19 @@ public class Source {
 				Position p = node.getPosition();
 				if (!p.isUnplaced()) {
 					node.setPosition(new Position(mapPosition(p.getStart()), mapPosition(p.getEnd())));
+				}
+				if (node instanceof Expression) {
+					List<Position> list = ((Expression)node).getParensPositions();
+					if (list != null) {
+						ListIterator<Position> li = list.listIterator();
+						while (li.hasNext()) {
+							Position parenPos = li.next();
+							if (!parenPos.isUnplaced()) {
+								parenPos = new Position(mapPosition(parenPos.getStart()), mapPosition(parenPos.getEnd()));
+								li.set(parenPos);
+							}
+						}
+					}
 				}
 				return false;
 			}
