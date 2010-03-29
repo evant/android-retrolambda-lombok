@@ -21,6 +21,7 @@
  */
 package lombok.ast.grammar;
 
+import java.util.Collections;
 import java.util.List;
 
 import lombok.ast.ArrayAccess;
@@ -45,6 +46,7 @@ import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
 import lombok.ast.UnaryOperator;
+import lombok.ast.grammar.TemporaryNode.ExprChain;
 
 public class ExpressionsActions extends SourceActions {
 	public ExpressionsActions(Source source) {
@@ -322,5 +324,50 @@ public class ExpressionsActions extends SourceActions {
 	
 	public boolean checkIfMethodOrConstructorInvocation(Node node) {
 		return node instanceof MethodInvocation || node instanceof ConstructorInvocation;
+	}
+	
+	public Node padBinaryExpressionChain(org.parboiled.Node<Node> tail, String opText, org.parboiled.Node<Node> opNode, org.parboiled.Node<Node> head) {
+		if (tail == null) return head == null ? null : head.getValue();
+		
+		ExprChain chain = null;
+		if (tail.getValue() instanceof ExprChain) {
+			chain = (ExprChain)tail.getValue();
+		} else {
+			chain = new ExprChain();
+			chain.tail = tail;
+		}
+		
+		if (opNode != null || opText != null || head != null) {
+			chain.opNodes.add(opNode);
+			chain.opTexts.add(opText);
+			chain.heads.add(head);
+		}
+		return chain;
+	}
+	
+	public Node convertBinaryExpressionChain(Node node) {
+		if (!(node instanceof ExprChain)) return node;
+		
+		ExprChain chain = (ExprChain) node;
+		org.parboiled.Node<Node> head = null;
+		
+		if (chain.heads.isEmpty()) {
+			head = chain.tail;
+		} else {
+			head = chain.heads.remove(chain.heads.size()-1);
+			Collections.reverse(chain.heads);
+			Collections.reverse(chain.opNodes);
+			Collections.reverse(chain.opTexts);
+			chain.heads.add(chain.tail);
+		}
+		
+		Node currentLeft = head.getValue();
+		
+		for (int i = 0; i < chain.heads.size(); i++) {
+			currentLeft = new BinaryExpression().setRawLeft(currentLeft).setRawRight(chain.heads.get(i).getValue()).setRawOperator(chain.opTexts.get(i));
+			source.registerStructure(currentLeft, chain.opNodes.get(i));
+			positionSpan(currentLeft, head, chain.heads.get(i));
+		}
+		return currentLeft;
 	}
 }
