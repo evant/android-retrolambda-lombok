@@ -239,7 +239,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 						firstOf(string("++"), string("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
 						postfixIncrementExpressionChaining().label("operand"), SET(),
-				SET(actions.createUnaryPrefixExpression(NODE("operand"), NODES("oneOrMore/operatorCt/operator"), TEXTS("oneOrMore/operatorCt/operator"))));
+				SET(actions.createUnaryPrefixExpressions(NODE("operand"), NODES("oneOrMore/operatorCt/operator"), TEXTS("oneOrMore/operatorCt/operator"))));
 	}
 	
 	/**
@@ -248,20 +248,19 @@ public class ExpressionsParser extends BaseParser<Node> {
 	Rule level2ExpressionChaining() {
 		return firstOf(
 				sequence(
-						zeroOrMore(sequence(
-								firstOf(
-										string("++"), string("--"),
-										ch('!'), ch('~'),
-										solitarySymbol('+'), solitarySymbol('-'),
-										sequence(
-												ch('('), group.basics.optWS(),
-												group.types.type(),
-												ch(')')).label("cast")
-										).label("operator"),
-								group.basics.optWS()).label("operatorCt")),
-						postfixIncrementExpressionChaining().label("operand"), SET(),
-						SET(actions.createUnaryPrefixExpression(NODE("operand"), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator")))),
-				sequence(postfixIncrementExpressionChaining(), SET()));
+						firstOf(
+								string("++"), string("--"),
+								ch('!'), ch('~'),
+								solitarySymbol('+'), solitarySymbol('-'),
+								sequence(
+										ch('('), group.basics.optWS(),
+										group.types.type(),
+										ch(')')).label("cast")
+								).label("operator"),
+						group.basics.optWS(),
+						level2ExpressionChaining().label("operand"), SET(),
+						SET(actions.createUnaryPrefixExpression(VALUE("operand"), NODE("operator"), TEXT("operator")))),
+					sequence(postfixIncrementExpressionChaining(), SET()));
 	}
 	
 	/**

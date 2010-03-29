@@ -89,7 +89,25 @@ public class ExpressionsActions extends SourceActions {
 		return posify(result);
 	}
 	
-	public Node createUnaryPrefixExpression(
+	public Node createUnaryPrefixExpression(Node operand, org.parboiled.Node<Node> opNode, String symbol) {
+		if (opNode == null) return operand;
+		
+		if (!opNode.getChildren().isEmpty() && "cast".equals(opNode.getChildren().get(0).getLabel())) {
+			return posify(new Cast().setRawOperand(operand).setRawTypeReference(opNode.getValue()));
+		} else {
+			if (symbol != null) symbol = symbol.trim();
+			if (!symbol.isEmpty()) {
+				UnaryOperator op = UnaryOperator.fromSymbol(symbol, false);
+				UnaryExpression expr = new UnaryExpression().setRawOperand(operand);
+				if (op != null) expr.setOperator(op);
+				return posify(expr);
+			}
+		}
+		
+		return operand;
+	}
+	
+	public Node createUnaryPrefixExpressions(
 			org.parboiled.Node<Node> operand,
 			List<org.parboiled.Node<Node>> operators,
 			List<String> operatorTexts) {
@@ -97,8 +115,7 @@ public class ExpressionsActions extends SourceActions {
 		if (operators == null || operators.isEmpty()) return operand.getValue();
 		
 		Node current = operand.getValue();
-		
-		for (int i = operators.size()-1; i >= 0; i--) {
+		for (int i = operators.size() - 1; i >= 0; i--) {
 			org.parboiled.Node<Node> operator = operators.get(i);
 			Node prev = current;
 			if (operator == null) continue;
@@ -115,6 +132,7 @@ public class ExpressionsActions extends SourceActions {
 				if (op != null) expr.setOperator(op);
 				current = expr;
 			}
+			
 			if (prev != null && !prev.getPosition().isUnplaced() && prev != current && current != null) {
 				positionSpan(current, operator, operand);
 			}

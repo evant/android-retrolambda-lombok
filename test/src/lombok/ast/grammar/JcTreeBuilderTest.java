@@ -59,6 +59,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 	protected JCTree parseWithLombok(Source source) {
 		List<Node> nodes = source.getNodes();
 		assertEquals(1, nodes.size());
+		
 		Context context = new Context();
 		boolean success = false;
 		Throwable failTrace = null;
