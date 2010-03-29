@@ -199,6 +199,14 @@ public class JcTreePrinter extends JCTree.Visitor {
 						if (selected.name.toString().equals("super")) endPos = -2;
 					}
 				}
+				
+				
+				/* Javac bug: the 'JCAssign' starts at a dot (if present) in the expression instead of at the start of it, which is weird
+				   and inconsistent. */ {
+					if (tree instanceof JCAssign && ((JCAssign) tree).rhs instanceof JCFieldAccess) {
+						startPos = -2;
+					}
+				}
 				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), startPos, endPos));
 			} else {
 				printNode(tree.getClass().getSimpleName());
