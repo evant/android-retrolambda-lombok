@@ -38,7 +38,8 @@ import lombok.ast.Node;
 import lombok.ast.Position;
 
 import org.parboiled.Context;
-import org.parboiled.support.ParseError;
+import org.parboiled.RecoveringParseRunner;
+import org.parboiled.errors.ParseError;
 import org.parboiled.support.ParsingResult;
 
 import com.google.common.collect.LinkedListMultimap;
@@ -78,18 +79,46 @@ public class Source {
 		return problems;
 	}
 	
+	public void clear() {
+		nodes = new ArrayList<Node>();
+		problems = new ArrayList<ParseProblem>();
+		comments = new ArrayList<Comment>();
+		parsed = false;
+		parsingResult = null;
+		positionDeltas = new TreeMap<Integer, Integer>();
+		registeredComments = new MapMaker().weakKeys().makeMap();
+		registeredStructures = new MapMaker().weakKeys().makeMap();
+		cachedSourceStructures = null;
+	}
+	
+	public String profileParse() {
+		clear();
+		preProcess();
+		ParserGroup group = new ParserGroup(this);
+		ProfilerParseRunner<Node> runner = new ProfilerParseRunner<Node>(group.structures.compilationUnitEoi(), preprocessed);
+		this.parsingResult = runner.run();
+		StringBuilder out = new StringBuilder();
+		out.append(" ================ " + getName() + " ===================");
+		out.append(runner.getReport(true));
+		out.append(" ==================================");
+		postProcess();
+		return out.toString();
+	}
+	
 	public void parseCompilationUnit() {
 		if (parsed) return;
 		preProcess();
 		ParserGroup group = new ParserGroup(this);
-		this.parsingResult = group.structures.parse(group.structures.compilationUnitEoi(), preprocessed);
+		this.parsingResult = RecoveringParseRunner.run(group.structures.compilationUnitEoi(), preprocessed);
 		postProcess();
 	}
 	
 	private void postProcess() {
 		nodes.add(parsingResult.parseTreeRoot.getValue());
 		for (ParseError error : parsingResult.parseErrors) {
-			problems.add(new ParseProblem(new Position(mapPosition(error.getErrorStart().index), mapPosition(error.getErrorEnd().index)), error.getErrorMessage()));
+			int errStart = error.getErrorLocation().getIndex();
+			int errEnd = errStart + error.getErrorCharCount();
+			problems.add(new ParseProblem(new Position(mapPosition(errStart), mapPosition(errEnd)), error.getErrorMessage()));
 		}
 		
 		gatherComments(parsingResult.parseTreeRoot);
@@ -149,8 +178,8 @@ public class Source {
 	private void buildSourceStructures(org.parboiled.Node<Node> pNode, Node owner, ListMultimap<Node, SourceStructure> map) {
 		Node target = registeredStructures.remove(pNode);
 		if (target != null || pNode.getChildren().isEmpty()) {
-			int start = pNode.getStartLocation().index;
-			int end = pNode.getEndLocation().index;
+			int start = pNode.getStartLocation().getIndex();
+			int end = pNode.getEndLocation().getIndex();
 			String text = preprocessed.substring(start, end);
 			SourceStructure structure = new SourceStructure(new Position(start, end), text);
 			if (target != null) addSourceStructure(map, target, structure);

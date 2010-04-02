@@ -47,15 +47,15 @@ class SourceActions extends BaseActions<Node> {
 	}
 	
 	int startPos() {
-		return getContext().getStartLocation().index;
+		return getContext().getStartLocation().getIndex();
 	}
 	
 	int currentPos() {
-		return getContext().getCurrentLocation().index;
+		return getContext().getCurrentLocation().getIndex();
 	}
 	
 	void positionSpan(Node target, org.parboiled.Node<Node> start, org.parboiled.Node<Node> end) {
 		if (target == null || start == null || end == null) return;
-		target.setPosition(new Position(start.getStartLocation().index, end.getEndLocation().index));
+		target.setPosition(new Position(start.getStartLocation().getIndex(), end.getEndLocation().getIndex()));
 	}
 }

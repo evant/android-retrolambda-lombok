@@ -138,6 +138,8 @@
 		</ant>
 	</target>
 	
+	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps, ensureTestDeps" />
+	
 	<target name="ensureBuildDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
 		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />

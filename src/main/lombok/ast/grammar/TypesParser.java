@@ -55,7 +55,7 @@ public class TypesParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2
 	 */
 	public Rule primitiveType() {
-		return enforcedSequence(
+		return sequence(
 				firstOf(
 						sequence(string("boolean"), group.basics.testLexBreak()),
 						sequence(string("int"), group.basics.testLexBreak()),
@@ -120,24 +120,24 @@ public class TypesParser extends BaseParser<Node> {
 	}
 	
 	public Rule typeVariables() {
-		return optional(enforcedSequence(
+		return optional(sequence(
 				ch('<'),
 				group.basics.optWS(),
-				optional(enforcedSequence(
+				optional(sequence(
 						typeVariable().label("head"),
-						zeroOrMore(enforcedSequence(
+						zeroOrMore(sequence(
 								ch(','),
 								group.basics.optWS(),
 								typeVariable().label("tail"))))),
 				ch('>'),
-				SET(actions.createTypeVariables(VALUE("optional/enforcedSequence/head"), VALUES("optional/enforcedSequence/zeroOrMore/enforcedSequence/tail"))),
+				SET(actions.createTypeVariables(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))),
 				group.basics.optWS()));
 	}
 	
 	Rule typeVariable() {
 		return sequence(
 				group.basics.identifier(),
-				optional(enforcedSequence(
+				optional(sequence(
 						sequence(
 							string("extends"),
 							group.basics.testLexBreak(),
@@ -146,7 +146,7 @@ public class TypesParser extends BaseParser<Node> {
 						zeroOrMore(sequence(
 								ch('&'), group.basics.optWS(),
 								type())))),
-				SET(actions.createTypeVariable(VALUE("identifier"), VALUE("optional/enforcedSequence/type"), VALUES("optional/enforcedSequence/zeroOrMore/sequence/type"))));
+				SET(actions.createTypeVariable(VALUE("identifier"), VALUE("optional/sequence/type"), VALUES("optional/sequence/zeroOrMore/sequence/type"))));
 	}
 	
 	/**

@@ -2,10 +2,12 @@
 	<property name="junit-src-name" value="junit-4.8.1-src.jar" />
 	<property name="javac-src-name" value="javac-sources.zip" />
 	<property name="ecj-src-name" value="ecjsrc-3.5.2.zip" />
+	<property name="parboiled-src-name" value="parboiled-src.jar" />
 	<available property="jls-available" file="contrib/jls/j3TOC.html" />
 	<available property="junit-src-available" file="contrib/${junit-src-name}" />
 	<available property="javac-src-available" file="contrib/${javac-src-name}" />
 	<available property="ecj-src-available" file="contrib/${ecj-src-name}" />
+	<available property="parboiled-src-available" file="contrib/${parboiled-src-name}" />
 	
 	<condition property="google-collections-src-available">
 		<and>
@@ -14,7 +16,7 @@
 		</and>
 	</condition>
 	
-	<target name="contrib" depends="jls, junit-src, javac-src, google-collections-src, ecj-src" />
+	<target name="contrib" depends="jls, junit-src, javac-src, google-collections-src, ecj-src, parboiled-src" />
 	
 	<target name="jls" unless="jls-available">
 		<mkdir dir="contrib/jls" />
@@ -53,5 +55,9 @@
 			<mapper type="regexp" from="^.*[\\/]javadoc[\\/](.*)$$" to="\1" />
 		</move>
 		<zip destfile="contrib/google-collections-javadoc.zip" basedir="build/contrib/google-collections/javadoc" />
+	</target>
+	
+	<target name="parboiled-src" unless="parboiled-src-available">
+		<get src="http://github.com/sirthias/parboiled/downloads/parboiled-0.9.5.1-src.jar" dest="contrib/${parboiled-src-name}" verbose="on" />
 	</target>
 </project>

@@ -36,7 +36,7 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule typeBody() {
-		return enforcedSequence(
+		return sequence(
 				ch('{'), group.basics.optWS(),
 				typeBodyDeclarations(), SET(),
 				ch('}'), group.basics.optWS(),
@@ -62,7 +62,7 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule methodArguments() {
-		return enforcedSequence(
+		return sequence(
 				ch('('),
 				group.basics.optWS(),
 				optional(sequence(
@@ -100,20 +100,20 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	Rule extendsClause() {
-		return enforcedSequence(
+		return sequence(
 				sequence(string("extends"), group.basics.testLexBreak(), group.basics.optWS()),
 				group.types.type().label("head"),
-				zeroOrMore(enforcedSequence(
+				zeroOrMore(sequence(
 						ch(','), group.basics.optWS(),
 						group.types.type()).label("tail")),
 				SET(actions.createExtendsClause(VALUE("head"), VALUES("zeroOrMore/tail"))));
 	}
 	
 	Rule implementsClause() {
-		return enforcedSequence(
+		return sequence(
 				sequence(string("implements"), group.basics.testLexBreak(), group.basics.optWS()),
 				group.types.type().label("head"),
-				zeroOrMore(enforcedSequence(
+				zeroOrMore(sequence(
 						ch(','), group.basics.optWS(),
 						group.types.type()).label("tail")),
 				SET(actions.createImplementsClause(VALUE("head"), VALUES("zeroOrMore/tail"))));
@@ -185,7 +185,7 @@ public class StructuresParser extends BaseParser<Node> {
 				group.types.typeVariables().label("typeParameters"),
 				group.basics.identifier().label("typeName"),
 				methodParameters().label("params"),
-				optional(enforcedSequence(
+				optional(sequence(
 						sequence(string("throws"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type().label("throwsHead"),
 						zeroOrMore(sequence(ch(','), group.basics.optWS(), group.types.type()).label("throwsTail"))
@@ -194,7 +194,7 @@ public class StructuresParser extends BaseParser<Node> {
 						sequence(ch(';'), group.basics.optWS()),
 						group.statements.blockStatement()).label("body"),
 				SET(actions.createConstructorDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("typeName"), VALUE("params"), 
-						VALUE("throwsClause/enforcedSequence/throwsHead"), VALUES("throwsClause/enforcedSequence/zeroOrMore/throwsTail"),
+						VALUE("throwsClause/sequence/throwsHead"), VALUES("throwsClause/sequence/zeroOrMore/throwsTail"),
 						VALUE("body"))));
 	}
 	
@@ -205,7 +205,7 @@ public class StructuresParser extends BaseParser<Node> {
 				group.basics.identifier().label("methodName"),
 				ch('('), group.basics.optWS(),
 				ch(')'), group.basics.optWS(),
-				optional(enforcedSequence(
+				optional(sequence(
 						sequence(string("default"), group.basics.testLexBreak(), group.basics.optWS()),
 						annotationElementValue())).label("defaultValue"),
 				ch(';'), group.basics.optWS(),
@@ -219,8 +219,8 @@ public class StructuresParser extends BaseParser<Node> {
 				group.types.type().label("resultType"),
 				group.basics.identifier().label("methodName"),
 				methodParameters().label("params"),
-				zeroOrMore(enforcedSequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
-				optional(enforcedSequence(
+				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				optional(sequence(
 						sequence(string("throws"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type().label("throwsHead"),
 						zeroOrMore(sequence(ch(','), group.basics.optWS(), group.types.type()).label("throwsTail"))
@@ -229,7 +229,7 @@ public class StructuresParser extends BaseParser<Node> {
 						sequence(ch(';'), group.basics.optWS()),
 						group.statements.blockStatement()).label("body"),
 				SET(actions.createMethodDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("resultType"), VALUE("methodName"), VALUE("params"), 
-						TEXTS("dims/dim"), VALUE("throwsClause/enforcedSequence/throwsHead"), VALUES("throwsClause/enforcedSequence/zeroOrMore/throwsTail"),
+						TEXTS("dims/dim"), VALUE("throwsClause/sequence/throwsHead"), VALUES("throwsClause/sequence/zeroOrMore/throwsTail"),
 						VALUE("body"))));
 	}
 	
@@ -292,14 +292,14 @@ public class StructuresParser extends BaseParser<Node> {
 	Rule variableDefinitionPartNoAssign() {
 		return sequence(
 				group.basics.identifier().label("varName"),
-				zeroOrMore(enforcedSequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
 				SET(actions.createVariableDefinitionPart(VALUE("varName"), TEXTS("dims/dim"), null)));
 	}
 	
 	Rule variableDefinitionPart() {
 		return sequence(
 				group.basics.identifier().label("varName"),
-				zeroOrMore(enforcedSequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
 				optional(sequence(
 						ch('='), group.basics.optWS(),
 						firstOf(
@@ -312,7 +312,7 @@ public class StructuresParser extends BaseParser<Node> {
 		return sequence(
 				ch('@'), group.basics.optWS(),
 				group.types.plainReferenceType().label("annotationType"),
-				optional(enforcedSequence(
+				optional(sequence(
 						ch('('), group.basics.optWS(),
 						optional(firstOf(
 								annotationElements(),
@@ -342,7 +342,7 @@ public class StructuresParser extends BaseParser<Node> {
 	Rule annotationElementValue() {
 		return firstOf(
 				annotation(),
-				enforcedSequence(
+				sequence(
 						ch('{'), group.basics.optWS(),
 						optional(sequence(
 								annotationElementValue().label("head"),
@@ -398,7 +398,7 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule packageDeclaration() {
-		return enforcedSequence(
+		return sequence(
 				sequence(
 						zeroOrMore(annotation().label("annotation")).label("annotations"),
 						string("package"), group.basics.testLexBreak(), group.basics.optWS()),
@@ -409,7 +409,7 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule importDeclaration() {
-		return enforcedSequence(
+		return sequence(
 				sequence(string("import"), group.basics.testLexBreak(), group.basics.optWS()),
 				optional(sequence(string("static"), group.basics.testLexBreak(), group.basics.optWS())).label("static"),
 				group.basics.identifier().label("head"),
@@ -422,7 +422,7 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule compilationUnitEoi() {
-		return enforcedSequence(compilationUnit(), eoi());
+		return sequence(compilationUnit(), eoi());
 	}
 	
 	public Rule compilationUnit() {

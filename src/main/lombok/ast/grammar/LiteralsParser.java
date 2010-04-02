@@ -24,10 +24,7 @@ package lombok.ast.grammar;
 import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
-import org.parboiled.MatcherContext;
 import org.parboiled.Rule;
-import org.parboiled.matchers.AbstractMatcher;
-import org.parboiled.support.Characters;
 
 public class LiteralsParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -51,7 +48,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.7
 	 */
 	public Rule nullLiteral() {
-		return enforcedSequence(
+		return sequence(
 			sequence(
 					string("null"),
 					group.basics.testLexBreak()),
@@ -63,58 +60,34 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.5
 	 */
 	public Rule stringLiteral() {
-		return enforcedSequence(
-				new StringLiteralMatcher(),
+		return sequence(
+				sequence(
+						ch('"'),
+						zeroOrMore(firstOf(
+								stringEscape(),
+								sequence(testNot(charSet("\"\r\n")), any()))),
+						ch('"')),
 				SET(actions.createStringLiteral(LAST_TEXT())),
 				group.basics.optWS());
 	}
 	
-	private static class StringLiteralMatcher extends AbstractMatcher<Node> {
-		@Override public Characters getStarterChars() {
-			return Characters.of('"');
-		}
-		
-		@Override public boolean match(MatcherContext<Node> context) {
-			char current = context.getCurrentLocation().currentChar;
-			if (current == '"') {
-				context.advanceInputLocation();
-				boolean backslashEscape = false;
-				while (true) {
-					char c = context.getCurrentLocation().currentChar;
-					if (backslashEscape) backslashEscape = false;
-					else {
-						if (c == '"') {
-							context.advanceInputLocation();
-							context.createNode();
-							return true;
-						} else if (c == '\n' || c == '\r') {
-							context.createNode();
-							return true;
-						}
-						backslashEscape = c == '\\';
-					}
-					int pos = context.getCurrentLocation().index;
-					context.advanceInputLocation();
-					if (pos == context.getCurrentLocation().index) {
-						//EOF
-						context.createNode();
-						return true;
-					}
-				}
-			}
-			return false;
-		}
+	Rule stringEscape() {
+		return sequence(
+				ch('\\'),
+				firstOf(
+						sequence(optional(charRange('0', '3')), optional(charRange('0', '7')), charRange('0', '7')),
+						sequence(testNot("\r\n"), any())));
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.4
 	 */
 	public Rule charLiteral() {
-		return enforcedSequence(
-				enforcedSequence(
+		return sequence(
+				sequence(
 						ch('\''),
 						firstOf(
-								enforcedSequence(escapedSequence(), ch('\'')),
+								sequence(escapedSequence(), ch('\'')),
 								sequence(
 										zeroOrMore(sequence(testNot(
 												firstOf(ch('\''), group.basics.lineTerminator())), any())),
@@ -128,7 +101,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.6
 	 */
 	Rule escapedSequence() {
-		return enforcedSequence(ch('\\'),
+		return sequence(ch('\\'),
 				firstOf(
 						sequence(optional(zeroToThree()), octalDigit(), optional(octalDigit())),
 						any()));
@@ -146,7 +119,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.3
 	 */
 	public Rule booleanLiteral() {
-		return enforcedSequence(
+		return sequence(
 				sequence(
 						firstOf(string("true"), string("false")),
 						group.basics.testLexBreak()),
@@ -159,7 +132,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
 	public Rule numberLiteral() {
-		return enforcedSequence(
+		return sequence(
 				test(sequence(optional(ch('.')), charRange('0', '9'))),
 				firstOf(hexLiteral(), fpLiteral()),
 				SET(LAST_VALUE()),
@@ -171,13 +144,13 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
 	Rule fpLiteral() {
-		return enforcedSequence(
+		return sequence(
 				sequence(
 						firstOf(
-								enforcedSequence(oneOrMore(digit()), optional(sequence(ch('.'), zeroOrMore(digit())))),
-								enforcedSequence(ch('.'), oneOrMore(digit()))),
+								sequence(oneOrMore(digit()), optional(sequence(ch('.'), zeroOrMore(digit())))),
+								sequence(ch('.'), oneOrMore(digit()))),
 						optional(
-								enforcedSequence(
+								sequence(
 										charIgnoreCase('e'),
 										optional(firstOf(ch('+'), ch('-'))),
 										oneOrMore(digit()))),
@@ -190,8 +163,8 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
 	Rule hexLiteral() {
-		return enforcedSequence(
-				enforcedSequence(
+		return sequence(
+				sequence(
 						sequence(ch('0'), charIgnoreCase('x')),
 						firstOf(
 								hexFP(),
@@ -206,11 +179,11 @@ public class LiteralsParser extends BaseParser<Node> {
 	Rule hexFP() {
 		return sequence(
 				firstOf(
-						enforcedSequence(ch('.'), oneOrMore(hexDigit())),
-						enforcedSequence(
+						sequence(ch('.'), oneOrMore(hexDigit())),
+						sequence(
 								oneOrMore(hexDigit()),
-								optional(enforcedSequence(ch('.'), zeroOrMore(hexDigit()))))),
-				enforcedSequence(
+								optional(sequence(ch('.'), zeroOrMore(hexDigit()))))),
+				sequence(
 						charIgnoreCase('p'),
 						optional(firstOf(ch('+'), ch('-'))),
 						oneOrMore(digit())),

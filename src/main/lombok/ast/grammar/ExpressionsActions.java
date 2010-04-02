@@ -73,6 +73,7 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createAssignmentExpression(Node lhs, String operator, Node rhs) {
+		if (rhs == null && operator == null) return lhs;
 		return posify(new BinaryExpression().setRawLeft(lhs).setRawRight(rhs).setRawOperator(operator));
 	}
 	
@@ -154,7 +155,7 @@ public class ExpressionsActions extends SourceActions {
 			else if (op.equals("--")) current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.POSTFIX_DECREMENT);
 			org.parboiled.Node<Node> p = nodes.get(i);
 			if (prev != null && !prev.getPosition().isUnplaced() && p != null) {
-				current.setPosition(new Position(prev.getPosition().getStart(), p.getEndLocation().index));
+				current.setPosition(new Position(prev.getPosition().getStart(), p.getEndLocation().getIndex()));
 			}
 		}
 		return current;
@@ -307,7 +308,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createDimension(Node dimExpr, org.parboiled.Node<Node> arrayOpen) {
 		ArrayDimension d = new ArrayDimension().setRawDimension(dimExpr);
-		if (arrayOpen != null) d.setPosition(new Position(arrayOpen.getStartLocation().index, currentPos()));
+		if (arrayOpen != null) d.setPosition(new Position(arrayOpen.getStartLocation().getIndex(), currentPos()));
 		return d;
 	}
 	

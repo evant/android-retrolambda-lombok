@@ -328,7 +328,7 @@ public class StructuresActions extends SourceActions {
 	public Node createAnnotationDeclaration(Node modifiers, Node name, List<Node> members, org.parboiled.Node<Node> typeOpen, org.parboiled.Node<Node> typeClose) {
 		Node typeBody = createTypeBody(members);
 		if (typeOpen != null && typeClose != null) {
-			typeBody.setPosition(new Position(typeOpen.getStartLocation().index, typeClose.getEndLocation().index));
+			typeBody.setPosition(new Position(typeOpen.getStartLocation().getIndex(), typeClose.getEndLocation().getIndex()));
 		}
 		AnnotationDeclaration decl = new AnnotationDeclaration().setRawName(name).setRawBody(typeBody);
 		if (modifiers != null) decl.setRawModifiers(modifiers);

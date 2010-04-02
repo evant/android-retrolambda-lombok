@@ -100,12 +100,12 @@ public class ExpressionsParser extends BaseParser<Node> {
 		return sequence(
 				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.types.nonArrayType().label("type"),
-				oneOrMore(enforcedSequence(
+				oneOrMore(sequence(
 						ch('[').label("openArray"), group.basics.optWS(),
 						optional(anyExpression()).label("dimension"), ch(']'), group.basics.optWS(),
 						SET(actions.createDimension(VALUE("dimension"), NODE("openArray"))))),
 				optional(arrayInitializer()).label("initializer"),
-				SET(actions.createArrayCreationExpression(VALUE("type"), VALUES("oneOrMore/enforcedSequence"), VALUE("initializer"))));
+				SET(actions.createArrayCreationExpression(VALUE("type"), VALUES("oneOrMore/sequence"), VALUE("initializer"))));
 	}
 	
 	public Rule arrayInitializer() {
@@ -194,7 +194,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	Rule dotNewExpressionChaining() {
 		return sequence(
 				level1ExpressionChaining().label("head"), SET(),
-				zeroOrMore(enforcedSequence(
+				zeroOrMore(sequence(
 						sequence(
 								ch('.'),
 								group.basics.optWS(),
@@ -207,7 +207,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 						group.structures.methodArguments().label("methodArguments"),
 						optional(group.structures.typeBody()).label("classBody"),
 						SET(actions.createQualifiedConstructorInvocation(VALUE("constructorTypeArgs"), NODE("innerClassName"), NODE("classTypeArgs"), VALUE("methodArguments"), VALUE("classBody"))))),
-				SET(actions.createChainOfQualifiedConstructorInvocations(NODE("head"), NODES("zeroOrMore/enforcedSequence"))));
+				SET(actions.createChainOfQualifiedConstructorInvocations(NODE("head"), NODES("zeroOrMore/sequence"))));
 	}
 	
 	/**
@@ -304,7 +304,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 		return sequence(
 				forLeftAssociativeBinaryExpression(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftExpressionChaining()),
 				SET(),
-				optional(enforcedSequence(
+				optional(sequence(
 						sequence(string("instanceof"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type().label("type")).label("typeCt")),
 				SET(actions.createInstanceOfExpression(VALUE(), VALUE("optional/typeCt/type"))));

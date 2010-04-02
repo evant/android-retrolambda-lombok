@@ -35,14 +35,19 @@ public class BasicsActions extends SourceActions {
 		Identifier id = new Identifier();
 		if (text != null) id.setName(text);
 		
-		int start = rawIdentifier.getStartLocation().index;
-		int end = Math.max(start, rawIdentifier.getEndLocation().index);
+		int start = rawIdentifier.getStartLocation().getIndex();
+		int end = Math.max(start, rawIdentifier.getEndLocation().getIndex());
 		id.setPosition(new Position(start, end));
 		return id;
 	}
 	
 	public boolean checkIfKeyword(String text) {
 		return text == null || !BasicsParser.KEYWORDS.contains(text);
+	}
+	
+	public boolean logComment(String text) {
+		if (text.startsWith("//")) return logLineComment(text);
+		else return logBlockComment(text);
 	}
 	
 	public boolean logBlockComment(String text) {

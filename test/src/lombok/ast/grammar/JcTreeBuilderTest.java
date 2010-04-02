@@ -101,7 +101,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 		return compiler.errorCount() > 0 ? null : result;
 	}
 	
-	private static class TestJavaFileObject extends SimpleJavaFileObject {
+	static class TestJavaFileObject extends SimpleJavaFileObject {
 		private final String content;
 		
 		protected TestJavaFileObject(String name, String content) {
