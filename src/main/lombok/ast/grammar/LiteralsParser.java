@@ -25,6 +25,7 @@ import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.Rule;
+import org.parboiled.support.Leaf;
 
 public class LiteralsParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -61,14 +62,19 @@ public class LiteralsParser extends BaseParser<Node> {
 	 */
 	public Rule stringLiteral() {
 		return sequence(
-				sequence(
-						ch('"'),
-						zeroOrMore(firstOf(
-								stringEscape(),
-								sequence(testNot(charSet("\"\r\n")), any()))),
-						ch('"')),
+				stringLiteralRaw(),
 				SET(actions.createStringLiteral(LAST_TEXT())),
 				group.basics.optWS());
+	}
+	
+	@Leaf
+	Rule stringLiteralRaw() {
+		return sequence(
+				ch('"'),
+				zeroOrMore(firstOf(
+						stringEscape(),
+						sequence(testNot(charSet("\"\r\n")), any()))),
+				ch('"'));
 	}
 	
 	Rule stringEscape() {
