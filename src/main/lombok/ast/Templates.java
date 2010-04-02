@@ -569,7 +569,6 @@ class TypeReferenceTemplate {
 	
 	@CopyMethod
 	static boolean isPrimitive(TypeReference t) {
-		
 		if (t.getArrayDimensions() > 0 || t.rawParts().size() != 1) return false;
 		Node part = t.rawParts().first();
 		if (part instanceof TypeReferencePart) {
