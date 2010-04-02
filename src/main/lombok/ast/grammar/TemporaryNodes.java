@@ -98,22 +98,6 @@ abstract class TemporaryNode implements Node {
 		}
 	}
 	
-	static class ExprChain extends TemporaryNode {
-		org.parboiled.Node<Node> tail;
-		List<org.parboiled.Node<Node>> heads = new ArrayList<org.parboiled.Node<Node>>();
-		List<String> opTexts = new ArrayList<String>();
-		List<org.parboiled.Node<Node>> opNodes = new ArrayList<org.parboiled.Node<Node>>();
-		
-		@Override public ExprChain copy() {
-			ExprChain result = new ExprChain();
-			result.tail = tail;
-			result.heads.addAll(heads);
-			result.opTexts.addAll(opTexts);
-			result.opNodes.addAll(opNodes);
-			return result;
-		}
-	}
-	
 	@Override public Node getGeneratedBy() {
 		return null;
 	}

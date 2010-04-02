@@ -447,43 +447,28 @@ public class ExpressionsParser extends BaseParser<Node> {
 	@Cached
 	Rule forLeftAssociativeBinaryExpression(Rule operator, Rule nextHigher) {
 		return sequence(
-				forLeftAssociativeBinaryExpression0(operator, nextHigher),
+				nextHigher.label("head"), new Action<Node>() {
+					@Override public boolean run(Context<Node> context) {
+						setContext(context);
+						return SET();
+					}
+				},
+				group.basics.optWS(),
+				zeroOrMore(sequence(
+						operator.label("operator"),
+						group.basics.optWS(),
+						nextHigher.label("tail"),
+						group.basics.optWS())),
 				new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
 						setContext(context);
-						return SET(actions.convertBinaryExpressionChain(LAST_VALUE()));
+						return SET(actions.createLeftAssociativeBinaryExpression(
+								NODE("head"),
+								NODES("zeroOrMore/sequence/operator"), TEXTS("zeroOrMore/sequence/operator"),
+								NODES("zeroOrMore/sequence/tail")));
 					}
-				});
-	}
-	
-	@Cached
-	Rule forLeftAssociativeBinaryExpression0(Rule operator, Rule nextHigher) {
-		return firstOf(
-				sequence(
-						parenGrouping().label("head"),
-						operator.label("operator"),
-						group.basics.optWS(),
-						forLeftAssociativeBinaryExpression0(operator, nextHigher).label("tail"),
-						new Action<Node>() {
-							@Override public boolean run(Context<Node> context) {
-								setContext(context);
-								return SET(actions.padBinaryExpressionChain(NODE("tail"), TEXT("operator"), NODE("operator"), NODE("head")));
-							}
-						}),
-				sequence(
-						nextHigher.label("head"),
-						optional(sequence(
-								operator.label("operator"),
-								group.basics.optWS(),
-								forLeftAssociativeBinaryExpression0(operator, nextHigher).label("tail"),
-								new Action<Node>() {
-									@Override public boolean run(Context<Node> context) {
-										setContext(context.getParent().getParent());
-										org.parboiled.Node<Node> head = NODE("head");
-										setContext(context);
-										return SET(actions.padBinaryExpressionChain(NODE("tail"), TEXT("operator"), NODE("operator"), head));
-									}
-								}))));
+				},
+				group.basics.optWS());
 	}
 	
 	Rule solitarySymbol(char c) {
