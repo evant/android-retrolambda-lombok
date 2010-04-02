@@ -1,10 +1,11 @@
 package lombok.ast.grammar;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import lombok.ast.grammar.JcTreeBuilderTest.TestJavaFileObject;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
@@ -32,10 +33,14 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 	private static final double MAX_FACTOR = 10;
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
-		return Arrays.asList(
-				DirDescriptor.of(new File("test/resources/idempotency"), true),
-				DirDescriptor.of(new File("test/resources/alias"), true),
-				DirDescriptor.of(new File("test/resources/special"), true));
+		List<DirDescriptor> descriptors = new ArrayList<DirDescriptor>();
+		descriptors.add(DirDescriptor.of(new File("test/resources/idempotency"), true));
+		descriptors.add(DirDescriptor.of(new File("test/resources/alias"), true));
+		descriptors.add(DirDescriptor.of(new File("test/resources/special"), true));
+		if (VERBOSE) {
+			descriptors.add(DirDescriptor.of(new File("test/resources/performance"), true));
+		}
+		return descriptors;
 	}
 	
 	@Test
