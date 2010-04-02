@@ -390,7 +390,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 								assignmentExpressionChaining().label("tail1"),
 								ch(':').label("operator2"),
 								group.basics.optWS(),
-								assignmentExpressionChaining().label("tail2")
+								inlineIfExpressionChaining().label("tail2")
 								)),
 				SET(actions.createInlineIfExpression(VALUE("head"),
 						NODE("optional/sequence/operator1"), NODE("optional/sequence/operator2"),
@@ -406,10 +406,16 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26
 	 */
 	Rule assignmentExpressionChaining() {
-		return firstOf(
-				assignmentExpression(),
-				inlineIfExpressionChaining());
+		return sequence(
+				inlineIfExpressionChaining(), SET(),
+				optional(sequence(
+						assignmentOperator().label("operator"),
+						group.basics.optWS(),
+						assignmentExpressionChaining().label("RHS"))).label("assignment"),
+				SET(actions.createAssignmentExpression(VALUE(), TEXT("assignment/sequence/operator"), VALUE("assignment"))));
 	}
+	
+	// TODO add checks to see if an LHS that isn't valid for assignment shows up as a syntax error of some sort, e.g. a.b() = 2;
 	
 	Rule assignmentExpression() {
 		return sequence(
