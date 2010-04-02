@@ -376,12 +376,12 @@ public class TemplateProcessor extends AbstractProcessor {
 					out.write(data.getName());
 					out.write(");\n");
 				} else {
-					out.write("\tresult.addAll(this.");
+					out.write("\t\tresult.addAll(this.");
 					out.write(data.getName());
 					out.write(");\n");
 				}
 			}
-			out.write("\treturn result;\n\t}\n\t\n");
+			out.write("\t\treturn result;\n\t}\n\t\n");
 		}
 		
 		/* detach */ {
