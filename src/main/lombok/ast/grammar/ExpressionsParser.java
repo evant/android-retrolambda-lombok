@@ -254,8 +254,12 @@ public class ExpressionsParser extends BaseParser<Node> {
 								solitarySymbol('+'), solitarySymbol('-'),
 								sequence(
 										ch('('), group.basics.optWS(),
-										group.types.type(),
-										ch(')')).label("cast")
+										group.types.type().label("type"),
+										ch(')'),
+										testNot(sequence(
+												actions.typeIsAlsoLegalAsExpression(UP(UP(VALUE("type")))),
+												group.basics.optWS(),
+												firstOf(solitarySymbol('+'), solitarySymbol('-'))))).label("cast")
 								).label("operator"),
 						group.basics.optWS(),
 						level2ExpressionChaining().label("operand"), SET(),

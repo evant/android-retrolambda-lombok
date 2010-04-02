@@ -41,6 +41,7 @@ import lombok.ast.Position;
 import lombok.ast.Select;
 import lombok.ast.Super;
 import lombok.ast.This;
+import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
@@ -341,5 +342,22 @@ public class ExpressionsActions extends SourceActions {
 	
 	public boolean checkIfMethodOrConstructorInvocation(Node node) {
 		return node instanceof MethodInvocation || node instanceof ConstructorInvocation;
+	}
+	
+	public boolean typeIsAlsoLegalAsExpression(Node type) {
+		if (!(type instanceof TypeReference)) return true;
+		TypeReference tr = (TypeReference)type;
+		if (tr.getArrayDimensions() > 0) return false;
+		if (tr.isPrimitive() || tr.isVoid()) return false;
+		for (Node part : tr.rawParts()) {
+			if (part instanceof TypeReferencePart) {
+				Node rta = ((TypeReferencePart)part).getRawTypeArguments();
+				if (rta instanceof TypeArguments) {
+					if (((TypeArguments)rta).rawGenerics().size() > 0) return false;
+				}
+			}
+		}
+		
+		return true;
 	}
 }
