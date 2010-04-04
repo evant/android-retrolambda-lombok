@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,7 +39,9 @@ import java.util.regex.Pattern;
 import lombok.Data;
 
 import org.apache.commons.io.FileUtils;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.Test.None;
 import org.junit.runner.Description;
@@ -125,6 +128,8 @@ public class RunForEachFileInDirRunner extends Runner {
 	private final Map<String, RunData> tests = new TreeMap<String, RunData>(stringComparator);
 	private final Throwable failure;
 	private final Class<?> testClass;
+	private List<Method> beforeClassMethods = new ArrayList<Method>();
+	private List<Method> afterClassMethods = new ArrayList<Method>();
 	
 	public RunForEachFileInDirRunner(Class<?> testClass) {
 		this.testClass = testClass;
@@ -150,6 +155,21 @@ public class RunForEachFileInDirRunner extends Runner {
 		Collections.sort(descriptors);
 		
 		File commonRoot = findCommonRoots(descriptors);
+		
+		for (Method m : testClass.getDeclaredMethods()) {
+			if (m.getAnnotation(BeforeClass.class) != null) {
+				if (m.getParameterTypes().length != 0) {
+					System.err.println("Skipping @BeforeClass method: " + m.getName() + " - it should not have any parameters.");
+				}
+				beforeClassMethods.add(m);
+			}
+			if (m.getAnnotation(AfterClass.class) != null) {
+				if (m.getParameterTypes().length != 0) {
+					System.err.println("Skipping @AfterClass method: " + m.getName() + " - it should not have any parameters.");
+				}
+				afterClassMethods.add(m);
+			}
+		}
 		
 		for (DirDescriptor descriptor : descriptors) {
 			File directory = descriptor.getDirectory();
@@ -278,6 +298,10 @@ public class RunForEachFileInDirRunner extends Runner {
 			return;
 		}
 		
+		for (Method m : beforeClassMethods) {
+			runClassMethod(m);
+		}
+		
 		for (Map.Entry<String, RunData> entry : tests.entrySet()) {
 			RunData data = entry.getValue();
 			Map<Method, Description> methodList = data.getMethods();
@@ -315,6 +339,24 @@ public class RunForEachFileInDirRunner extends Runner {
 				}
 				notifier.fireTestFinished(testDescription);
 			}
+		}
+		
+		for (Method m : afterClassMethods) {
+			runClassMethod(m);
+		}
+	}
+	
+	private void runClassMethod(Method m) {
+		try {
+			if (Modifier.isStatic(m.getModifiers())) {
+				m.invoke(null);
+			} else {
+				m.invoke(testClass.newInstance());
+			}
+		} catch (InvocationTargetException e) {
+			e.getCause().printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	
