@@ -273,7 +273,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17
 	 */
 	Rule multiplicativeExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(firstOf(ch('*'), solitarySymbol('/'), ch('%')), level2ExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprMultiplicative", firstOf(ch('*'), solitarySymbol('/'), ch('%')), level2ExpressionChaining());
 	}
 	
 	/**
@@ -282,7 +282,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18
 	 */
 	Rule additiveExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(firstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprAdditive", firstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeExpressionChaining());
 	}
 	
 	/**
@@ -291,7 +291,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19
 	 */
 	Rule shiftExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), additiveExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprShift", firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), additiveExpressionChaining());
 	}
 	
 	/**
@@ -306,12 +306,12 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 */
 	Rule relationalExpressionChaining() {
 		return sequence(
-				forLeftAssociativeBinaryExpression(firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftExpressionChaining()),
+				forLeftAssociativeBinaryExpression("exprRelational", firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftExpressionChaining()),
 				SET(),
 				optional(sequence(
 						sequence(string("instanceof"), group.basics.testLexBreak(), group.basics.optWS()),
-						group.types.type().label("type")).label("typeCt")),
-				SET(actions.createInstanceOfExpression(VALUE(), VALUE("optional/typeCt/type"))));
+						group.types.type().label("type")).label("typeCt")).label("instanceof"),
+				SET(actions.createInstanceOfExpression(VALUE(), VALUE("instanceof/typeCt/type"))));
 	}
 	
 	/**
@@ -320,7 +320,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21
 	 */
 	Rule equalityExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(firstOf(string("==="), string("!=="), string("=="), string("!=")), relationalExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprEquality", firstOf(string("==="), string("!=="), string("=="), string("!=")), relationalExpressionChaining());
 	}
 	
 	/**
@@ -329,7 +329,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
 	Rule bitwiseAndExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(solitarySymbol('&'), equalityExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprBitwiseAnd", solitarySymbol('&'), equalityExpressionChaining());
 	}
 	
 	/**
@@ -338,7 +338,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
 	Rule bitwiseXorExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(solitarySymbol('^'), bitwiseAndExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprBitwiseXor", solitarySymbol('^'), bitwiseAndExpressionChaining());
 	}
 	
 	/**
@@ -347,7 +347,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
 	 */
 	Rule bitwiseOrExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(solitarySymbol('|'), bitwiseXorExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprBitwiseOr", solitarySymbol('|'), bitwiseXorExpressionChaining());
 	}
 	
 	/**
@@ -356,7 +356,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23
 	 */
 	Rule conditionalAndExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(string("&&"), bitwiseOrExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprLogicalAnd", string("&&"), bitwiseOrExpressionChaining());
 	}
 	
 	/**
@@ -366,7 +366,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * It also has no other sensible meaning, so we will parse it and flag it as a syntax error in AST phase.
 	 */
 	Rule conditionalXorExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(string("^^"), conditionalAndExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprLogicalXor", string("^^"), conditionalAndExpressionChaining());
 	}
 	
 	/**
@@ -375,7 +375,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24
 	 */
 	Rule conditionalOrExpressionChaining() {
-		return forLeftAssociativeBinaryExpression(string("||"), conditionalXorExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprLogicalOr", string("||"), conditionalXorExpressionChaining());
 	}
 	
 	/**
@@ -449,7 +449,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @param operator Careful; operator has to match _ONLY_ the operator, not any whitespace around it (otherwise we'd have to remove comments from it, which isn't feasible).
 	 */
 	@Cached
-	Rule forLeftAssociativeBinaryExpression(Rule operator, Rule nextHigher) {
+	Rule forLeftAssociativeBinaryExpression(String labelName, Rule operator, Rule nextHigher) {
 		return sequence(
 				nextHigher.label("head"), new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
@@ -472,7 +472,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 								NODES("zeroOrMore/sequence/tail")));
 					}
 				},
-				group.basics.optWS());
+				group.basics.optWS()).label(labelName);
 	}
 	
 	Rule solitarySymbol(char c) {
