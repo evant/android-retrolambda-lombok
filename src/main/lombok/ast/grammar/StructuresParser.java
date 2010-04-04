@@ -25,6 +25,7 @@ import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.Rule;
+import org.parboiled.support.Leaf;
 
 public class StructuresParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -355,10 +356,10 @@ public class StructuresParser extends BaseParser<Node> {
 				group.expressions.inlineIfExpressionChaining());
 	}
 	
+	@Leaf
 	Rule anyKeyword() {
 		return firstOf("final", "strictfp", "abstract", "transient", "volatile",
 				"public", "protected", "private", "synchronized", "static", "native");
-
 	}
 	
 	public Rule keywordModifier() {

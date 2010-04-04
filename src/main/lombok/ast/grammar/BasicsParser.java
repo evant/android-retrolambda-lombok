@@ -163,6 +163,7 @@ public class BasicsParser extends BaseParser<Node> {
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.4
 	 */
+	@Leaf
 	Rule whitespaceChar() {
 		return firstOf(ch(' '), ch('\t'), ch('\f'), lineTerminator());
 	}
@@ -170,7 +171,8 @@ public class BasicsParser extends BaseParser<Node> {
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.6
 	 */
+	@Leaf
 	public Rule lineTerminator() {
-		return firstOf(string("\r\n"), ch('\r'), ch('\n'));
+		return firstOf(string("\r\n").label("\\r\\n"), ch('\r').label("\\r"), ch('\n').label("\\n"));
 	}
 }

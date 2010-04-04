@@ -25,6 +25,7 @@ import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.Rule;
+import org.parboiled.support.Leaf;
 
 public class TypesParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -56,18 +57,16 @@ public class TypesParser extends BaseParser<Node> {
 	 */
 	public Rule primitiveType() {
 		return sequence(
-				firstOf(
-						sequence(string("boolean"), group.basics.testLexBreak()),
-						sequence(string("int"), group.basics.testLexBreak()),
-						sequence(string("long"), group.basics.testLexBreak()),
-						sequence(string("double"), group.basics.testLexBreak()),
-						sequence(string("float"), group.basics.testLexBreak()),
-						sequence(string("short"), group.basics.testLexBreak()),
-						sequence(string("char"), group.basics.testLexBreak()),
-						sequence(string("byte"), group.basics.testLexBreak()),
-						sequence(string("void"), group.basics.testLexBreak())),
-				SET(actions.createPrimitiveType(TEXT("firstOf/sequence"))),
+				rawPrimitiveType(),
+				SET(actions.createPrimitiveType(LAST_TEXT())),
 				group.basics.optWS());
+	}
+	
+	@Leaf
+	Rule rawPrimitiveType() {
+		return sequence(
+				firstOf("boolean", "int", "long", "double", "float", "short", "char", "byte", "void"),
+				group.basics.testLexBreak());
 	}
 	
 	/**
