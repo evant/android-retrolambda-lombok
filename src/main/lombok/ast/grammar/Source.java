@@ -91,18 +91,29 @@ public class Source {
 		cachedSourceStructures = null;
 	}
 	
-	public String profileParse() {
+	public String getOverviewProfileInformation() {
 		clear();
 		preProcess();
 		ParserGroup group = new ParserGroup(this);
 		ProfilerParseRunner<Node> runner = new ProfilerParseRunner<Node>(group.structures.compilationUnitEoi(), preprocessed);
 		this.parsingResult = runner.run();
 		StringBuilder out = new StringBuilder();
-		out.append(" ================ " + getName() + " ===================");
-		out.append(runner.getReport(true));
-		out.append(" ==================================");
+		out.append(runner.getOverviewReport());
 		postProcess();
 		return out.toString();
+	}
+	
+	public List<String> getDetailedProfileInformation(int top) {
+		clear();
+		preProcess();
+		ParserGroup group = new ParserGroup(this);
+		ProfilerParseRunner<Node> runner = new ProfilerParseRunner<Node>(group.structures.compilationUnitEoi(), preprocessed);
+		this.parsingResult = runner.run();
+		List<String> result = new ArrayList<String>();
+		result.add(runner.getOverviewReport());
+		result.addAll(runner.getExtendedReport(top));
+		postProcess();
+		return result;
 	}
 	
 	public void parseCompilationUnit() {

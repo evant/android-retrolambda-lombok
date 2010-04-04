@@ -11,7 +11,6 @@ import org.parboiled.BasicParseRunner;
 import org.parboiled.MatchHandler;
 import org.parboiled.MatcherContext;
 import org.parboiled.Rule;
-import org.parboiled.support.MatcherPath;
 
 /**
  * Like the {@code BasicParseRunner} but will also track statistics on the parse run which you can retrieve by calling {@see #getReport(boolean)} after
@@ -39,28 +38,62 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 	
 	/**
 	 * Returns a string describing, in order of 'expensiveness', the top-level failed rule chains in the parse run.
-	 * 
-	 * @param countInner also counts up how many child rules, succeeded or failed, were part of calculating a listed run.
 	 */
-	public String getReport(boolean countInner) {
+	public String getOverviewReport() {
 		TreeSet<ReportEntry<V>> topLevelFailed = new TreeSet<ReportEntry<V>>();
 		fillReport(topLevelFailed, rootReport);
 		StringBuilder out = new StringBuilder();
 		for (ReportEntry<V> entry : topLevelFailed) {
-			if (countInner) {
-				out.append(String.format("[%07d][%07d] %s\n", entry.getTimeTaken(), countInnerNodes(entry), entry.getPath()));
-			} else {
-				out.append(String.format("[%07d] %s\n", entry.getTimeTaken(), entry.getPath()));
-			}
+			if (entry.getSubSteps() < 100) break;
+			out.append(formatReport(entry, false));
 		}
 		
 		return out.toString();
 	}
 	
-	private int countInnerNodes(ReportEntry<V> entry) {
+	/**
+	 * Lists the work done by the most expensive failed rules.
+	 * 
+	 * First all failed rules are sorted according to how long they took, then, for each such rule,
+	 * a string is produced listing it and all its child rules. These are returned.
+	 * 
+	 * @param topEntries Produce reports for the top {@code topEntries} most expensive failed rules.
+	 *     a negative number means: All of them.
+	 */
+	public List<String> getExtendedReport(int topEntries) {
+		TreeSet<ReportEntry<V>> topLevelFailed = new TreeSet<ReportEntry<V>>();
+		fillReport(topLevelFailed, rootReport);
+		int count = topEntries;
+		List<String> result = new ArrayList<String>();
+		StringBuilder out = new StringBuilder();
+		for (ReportEntry<V> entry : topLevelFailed) {
+			if (count-- == 0) return result;
+			out.setLength(0);
+			fillExtendedReport(out, 0, entry);
+			result.add(out.toString());
+		}
+		
+		return result;
+	}
+	
+	private static int countInnerNodes(ReportEntry<?> entry) {
 		int count = 1;
-		for (ReportEntry<V> child : entry.getChildren()) count += countInnerNodes(child);
+		for (ReportEntry<?> child : entry.getChildren()) count += countInnerNodes(child);
 		return count;
+	}
+	
+	private void fillExtendedReport(StringBuilder out, int spaces, ReportEntry<V> report) {
+		for (int i = 0; i < spaces; i++) out.append(" ");
+		out.append(formatReport(report, true));
+		for (ReportEntry<V> child : report.getChildren()) {
+			fillExtendedReport(out, spaces + 1, child);
+		}
+	}
+	
+	private static String formatReport(ReportEntry<?> report, boolean withSuccess) {
+		return String.format("%s[%07d] %s\n",
+				withSuccess ? (report.isSucceeded() ? "!" : " ") : "",
+				report.getSubSteps(), report.getPath());
 	}
 	
 	private void fillReport(Collection<ReportEntry<V>> failed, ReportEntry<V> report) {
@@ -75,19 +108,14 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 	
 	@Data
 	private static class ReportEntry<V> implements Comparable<ReportEntry<V>> {
-		private final long start;
-		private final MatcherPath<V> path;
-		private long end;
+		private final String path;
 		private boolean succeeded;
 		private final List<ReportEntry<V>> children = new ArrayList<ReportEntry<V>>();
-		
-		long getTimeTaken() {
-			return getEnd() - getStart();
-		}
+		private int subSteps = 0;
 		
 		@Override public int compareTo(ReportEntry<V> o) {
-			if (o.getTimeTaken() < getTimeTaken()) return -1;
-			else if (o.getTimeTaken() > getTimeTaken()) return +1;
+			if (o.getSubSteps() < getSubSteps()) return -1;
+			else if (o.getSubSteps() > getSubSteps()) return +1;
 			
 			if (System.identityHashCode(o) < System.identityHashCode(this)) return -1;
 			if (System.identityHashCode(o) > System.identityHashCode(this)) return +1;
@@ -103,14 +131,19 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 		}
 		
 		public boolean match(MatcherContext<V> context) {
-			ReportEntry<V> report = new ReportEntry<V>(System.currentTimeMillis(), context.getPath());
+			String path = stack.isEmpty() ? "" : stack.get(stack.size() - 1).getPath();
+			path += String.format("/%s[%d]", context.getMatcher().getLabel(), context.getCurrentLocation().getIndex());
+			ReportEntry<V> report = new ReportEntry<V>(path);
 			stack.add(report);
 			boolean result = context.getMatcher().match(context);
-			report.setEnd(System.currentTimeMillis());
 			report.setSucceeded(result);
 			stack.remove(stack.size() -1);
 			if (stack.isEmpty()) rootReport = report;
-			else stack.get(stack.size() -1).getChildren().add(report);
+			else {
+				ReportEntry<V> parent = stack.get(stack.size() - 1);
+				parent.getChildren().add(report);
+				parent.setSubSteps(parent.getSubSteps() + 1 + report.getSubSteps());
+			}
 			return result;
 		}
 	}

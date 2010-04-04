@@ -2,11 +2,17 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.fail;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import lombok.Cleanup;
 import lombok.ast.grammar.JcTreeBuilderTest.TestJavaFileObject;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
@@ -18,6 +24,8 @@ import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.compiler.parser.Parser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.parboiled.Parboiled;
@@ -31,6 +39,27 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 	private static final int REPS = 50;
 	private static final boolean VERBOSE = System.getProperty("lombok.ast.test.verbose") != null;
 	private static final double MAX_FACTOR = 10;
+	private static long javacTotal, lombokTotal, ecjTotal, parboiledTotal;
+	
+	@BeforeClass
+	public void init() {
+		if (VERBOSE) {
+			System.out.printf("[%20s / %30s] Per entry: time in millis for %d reps [lombok takes X longer than ~ : ~ takes X longer than javac]\n",
+					"path", "file", REPS);
+		}
+	}
+	
+	@AfterClass
+	public void summary() {
+		if (VERBOSE) {
+			System.out.printf("[%20s / %30s] l.ast: %5d [  1.00 : %6.02f] jc: %5d [%6.02f :   1.00] ecj: %5d [%6.02f : %6.02f] pb: %5d [%6.02f : %6.02f]\n",
+					"", "*** TOTALS ***",
+					lombokTotal, (double)lombokTotal / javacTotal,
+					javacTotal, (double)lombokTotal / javacTotal,
+					ecjTotal, (double)lombokTotal / ecjTotal, (double)ecjTotal / javacTotal,
+					parboiledTotal, (double)lombokTotal / parboiledTotal, (double)parboiledTotal / javacTotal);
+		}
+	}
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
 		List<DirDescriptor> descriptors = new ArrayList<DirDescriptor>();
@@ -51,6 +80,7 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 			parseWithJavac(source);
 		}
 		takenByJavac = System.currentTimeMillis() - takenByJavac;
+		javacTotal += takenByJavac;
 		
 		parseWithEcj(source);
 		long takenByEcj = System.currentTimeMillis();
@@ -58,6 +88,7 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 			parseWithEcj(source);
 		}
 		takenByEcj = System.currentTimeMillis() - takenByEcj;
+		ecjTotal += takenByEcj;
 		
 		source.parseCompilationUnit();
 		long takenByLombok = System.currentTimeMillis();
@@ -66,6 +97,7 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 			source.parseCompilationUnit();
 		}
 		takenByLombok = System.currentTimeMillis() - takenByLombok;
+		lombokTotal += takenByLombok;
 		
 		parseWithParboiled(source);
 		long takenByParboiled = System.currentTimeMillis();
@@ -73,16 +105,17 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 			parseWithParboiled(source);
 		}
 		takenByParboiled = System.currentTimeMillis() - takenByParboiled;
+		parboiledTotal += takenByParboiled;
 		
 		String fn = source.getName();
-		String fnPrefix, fnSuffix; {
+		String fnPrefix, fnSuffix, fileName; {
 			int sep = fn.lastIndexOf('/');
 			if (sep == -1) {
 				fnPrefix = "";
-				fnSuffix = fn;
+				fileName = fnSuffix = fn;
 			} else {
 				fnPrefix = fn.substring(0, sep);
-				fnSuffix = fn.substring(sep + 1);
+				fileName = fnSuffix = fn.substring(sep + 1);
 			}
 			if (fnSuffix.endsWith(".java")) fnSuffix = fnSuffix.substring(0, fnSuffix.length() - ".java".length());
 			if (fnPrefix.length() > 20) fnPrefix = "\u2026" + fnPrefix.substring(fnPrefix.length() - 19);
@@ -90,7 +123,6 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 		}
 		
 		if (VERBOSE) {
-			printHeader();
 			System.out.printf("[%20s / %30s] l.ast: %5d [  1.00 : %6.02f] jc: %5d [%6.02f :   1.00] ecj: %5d [%6.02f : %6.02f] pb: %5d [%6.02f : %6.02f]\n",
 					fnPrefix, fnSuffix,
 					takenByLombok, (double)takenByLombok / takenByJavac,
@@ -101,17 +133,28 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 		
 		double factorVsJavac = (double)takenByLombok / takenByJavac;
 		if (factorVsJavac > MAX_FACTOR) {
+			if (VERBOSE) {
+				try {
+					File reportFile = new File("test/reports/" + fileName + ".report");
+					reportFile.getParentFile().mkdirs();
+					@Cleanup FileOutputStream rawOut = new FileOutputStream(reportFile);
+					Writer out = new BufferedWriter(new OutputStreamWriter(rawOut, "UTF-8"));
+					out.write(String.format("Parse Profile for: %s which is slower than javac by a factor of %.02f\n", source.getName(), factorVsJavac));
+					for (String report : source.getDetailedProfileInformation(25)) {
+						out.write(report);
+						out.write("===================================");
+						out.write("\n");
+					}
+					out.close();
+					rawOut.close();
+					System.out.println("Profile report written to: " + reportFile.getCanonicalPath());
+				} catch (IOException e) {
+					System.err.println("I/O error writing profile report on " + source.getName() + "; Possibly ./test/reports is not writable?");
+					e.printStackTrace();
+				}
+			}
 			fail(String.format("Performance is slower than javac by factor %d on %s", (int)factorVsJavac, source.getName()));
 		}
-	}
-	
-	private static boolean headerPrinted = false;
-	
-	private void printHeader() {
-		if (headerPrinted) return;
-		headerPrinted = true;
-		System.out.printf("[%20s / %30s] Per entry: time in millis for %d reps [lombok takes X longer than ~ : ~ takes X longer than javac]\n",
-				"path", "file", REPS);
 	}
 	
 	private void parseWithParboiled(Source source) {
