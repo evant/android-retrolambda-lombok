@@ -79,11 +79,13 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule anyTypeDeclaration() {
-		return firstOf(
-				classOrInterfaceDeclaration(),
-				enumDeclaration(),
-				annotationDeclaration(),
-				emptyDeclaration());
+		return sequence(
+				testNot(firstOf(eoi(), ch('}'))),
+				firstOf(
+						classOrInterfaceDeclaration(),
+						enumDeclaration(),
+						annotationDeclaration(),
+						emptyDeclaration()));
 	}
 	
 	public Rule classOrInterfaceDeclaration() {
@@ -372,24 +374,28 @@ public class StructuresParser extends BaseParser<Node> {
 	
 	public Rule typeDeclarationModifiers() {
 		return sequence(
+				testNot(ch('}')),
 				zeroOrMore(anyModifier().label("modifier")),
 				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
 	}
 	
 	public Rule methodDeclarationModifiers() {
 		return sequence(
+				testNot(ch('}')),
 				zeroOrMore(anyModifier().label("modifier")),
 				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
 	}
 	
 	public Rule fieldDeclarationModifiers() {
 		return sequence(
+				testNot(ch('}')),
 				zeroOrMore(anyModifier().label("modifier")),
 				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
 	}
 	
 	public Rule variableDefinitionModifiers() {
 		return sequence(
+				testNot(ch('}')),
 				zeroOrMore(anyModifier().label("modifier")),
 				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
 	}

@@ -36,7 +36,9 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	public Rule anyStatement() {
-		return labelledStatement();
+		return sequence(
+				testNot(ch('}')),
+				labelledStatement());
 	}
 	
 	/**
