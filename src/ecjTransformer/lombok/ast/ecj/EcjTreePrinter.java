@@ -117,15 +117,24 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	private final StringBuilder output = new StringBuilder();
 	private int indent;
 	private String rel;
+	private final boolean includePositions;
+	
+	public EcjTreePrinter(boolean includePositions) {
+		this.includePositions = includePositions;
+	}
 	
 	@Override
 	public String toString() {
 		return output.toString();
 	}
 	
-	
 	private void printNode(ASTNode node) {
-		printNode(node == null ? "NULL" : node.getClass().getSimpleName());
+		if (includePositions) {
+			printNode(node == null ? "NULL" :
+				String.format("%s (%d-%d", node.getClass().getSimpleName(), node.sourceStart, node.sourceEnd));
+		} else {
+			printNode(node == null ? "NULL" : node.getClass().getSimpleName());
+		}
 		if (node != null) {
 			property("bits", node.bits);
 			if (node instanceof Expression) {
