@@ -131,7 +131,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	private void printNode(ASTNode node) {
 		if (includePositions) {
 			printNode(node == null ? "NULL" :
-				String.format("%s (%d-%d", node.getClass().getSimpleName(), node.sourceStart, node.sourceEnd));
+				String.format("%s (%d-%d)", node.getClass().getSimpleName(), node.sourceStart, node.sourceEnd));
 		} else {
 			printNode(node == null ? "NULL" : node.getClass().getSimpleName());
 		}

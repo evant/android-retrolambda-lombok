@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Locale;
 
 import lombok.ast.BinaryOperator;
+import lombok.ast.Position;
+import lombok.ast.RawListAccessor;
 import lombok.ast.UnaryOperator;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
@@ -377,13 +379,30 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitPackageDeclaration(lombok.ast.PackageDeclaration node) {
 		//TODO handle annotations.
-		return set(node, new ImportReference(chain(node.parts()), new long[node.parts().size()], true, ClassFileConstants.AccDefault));
+		long[] pos = partsToPosArray(node.rawParts());
+		return set(node, new ImportReference(chain(node.parts()), pos, true, ClassFileConstants.AccDefault));
 	}
 	
 	@Override
 	public boolean visitImportDeclaration(lombok.ast.ImportDeclaration node) {
 		int staticFlag = node.isStaticImport() ? ClassFileConstants.AccStatic : ClassFileConstants.AccDefault;
-		return set(node, new ImportReference(chain(node.parts()), new long[node.parts().size()], node.isStarImport(), staticFlag));
+		long[] pos = partsToPosArray(node.rawParts());
+		return set(node, new ImportReference(chain(node.parts()), pos, node.isStarImport(), staticFlag));
+	}
+	
+	private long[] partsToPosArray(RawListAccessor<?, ?> parts) {
+		long[] pos = new long[parts.size()];
+		int idx = 0;
+		for (lombok.ast.Node n : parts) {
+			pos[idx++] = pos(n);
+		}
+		return pos;
+	}
+	
+	private static long pos(lombok.ast.Node n) {
+		Position p = n != null ? n.getPosition() : null;
+		if (p == null || p.isUnplaced()) return 0L;
+		return (((long)p.getStart()) << 32) | ((-1L + p.getEnd()) & 0xFFFFFFFF);
 	}
 	
 	@Override

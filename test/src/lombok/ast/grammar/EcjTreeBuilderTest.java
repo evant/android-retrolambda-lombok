@@ -59,7 +59,7 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 	}
 	
 	protected String convertToString(ASTNode tree) {
-		EcjTreePrinter printer = new EcjTreePrinter(false);
+		EcjTreePrinter printer = new EcjTreePrinter(true);
 		printer.visitEcjNode(tree);
 		String string = printer.toString();
 		return string;
