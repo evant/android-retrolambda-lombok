@@ -1170,6 +1170,8 @@ class ConstructorDeclarationTemplate {
 	List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
 	@NonNull Block body;
+	
+	//TODO test if our syntax checkers flag misnamed constructors.
 }
 
 @GenerateAstNode(implementing=TypeMember.class)
