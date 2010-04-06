@@ -50,13 +50,22 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	private static final List<String> POSITION_FIELDNAMES = ImmutableList.of(
 			"sourceStart",
 			"sourceEnd",
+			"originalSourceEnd",
 			"bodyStart",
 			"bodyEnd",
+			"blockStart",
 			"declarationSourceStart",
 			"declarationSourceEnd",
 			"declarationEnd",
+			"endPart1Position",
+			"endPart2Position",
+			"valuePositions",
 			"sourcePositions",
-			"statementEnd"
+			"modifiersSourceStart",
+			"typeArgumentsSourceStart",
+			"statementEnd",
+			"labelEnd",
+			"nameSourcePosition"
 			);
 	
 	private final Printer printer;
