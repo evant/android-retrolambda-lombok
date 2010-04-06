@@ -23,8 +23,8 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.List;
 
@@ -105,7 +105,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 		private final String content;
 		
 		protected TestJavaFileObject(String name, String content) {
-			super(URI.create(name), Kind.SOURCE);
+			super(new File(name).toURI(), Kind.SOURCE);
 			this.content = content;
 		}
 		

@@ -25,14 +25,12 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import javax.tools.JavaCompiler;
-import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 import javax.tools.JavaCompiler.CompilationTask;
 
@@ -56,7 +54,7 @@ public class JavaCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedT
 		File tempDir = getTempDir();
 		tempDir.mkdirs();
 		List<String> options = Arrays.asList("-proc:none", "-d", tempDir.getAbsolutePath());
-		CompilationTask task = compiler.getTask(null, null, null, options, null, Collections.singleton(new TestJavaFileObject(source.getName(), source.getRawInput())));
+		CompilationTask task = compiler.getTask(null, null, null, options, null, Collections.singleton(new JcTreeBuilderTest.TestJavaFileObject(source.getName(), source.getRawInput())));
 		assertTrue(task.call());
 	}
 	
@@ -75,19 +73,5 @@ public class JavaCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedT
 		}
 		
 		return new File(getDirDescriptors().iterator().next().getDirectory(), "tmp");
-	}
-	
-	private static class TestJavaFileObject extends SimpleJavaFileObject {
-		private final String content;
-
-		protected TestJavaFileObject(String name, String content) {
-			super(URI.create(name), Kind.SOURCE);
-			this.content = content;
-		}
-		
-		@Override
-		public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
-			return content;
-		}
 	}
 }
