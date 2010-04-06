@@ -38,6 +38,8 @@ import org.junit.runner.RunWith;
 
 @RunWith(RunForEachFileInDirRunner.class)
 public class EcjCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
+	private static final boolean EXTENDED = System.getProperty("lombok.ast.test.extended") != null;
+	
 	@Override
 	protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(
@@ -55,7 +57,8 @@ public class EcjCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 	}
 	
 	@Test
-	public void testEcjCompiler(File file) throws IOException {
+	public boolean testEcjCompiler(File file) throws IOException {
+		if (!EXTENDED) return false;
 		org.eclipse.jdt.internal.compiler.batch.Main main =
 			new org.eclipse.jdt.internal.compiler.batch.Main(
 					new PrintWriter(System.out), new PrintWriter(System.err),
@@ -71,6 +74,7 @@ public class EcjCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 		};
 		main.compile(argv);
 		assertEquals("Errors occurred while compiling this file with ecj", 0, main.globalErrorsCount);
+		return true;
 	}
 	
 	private File getTempDir() {

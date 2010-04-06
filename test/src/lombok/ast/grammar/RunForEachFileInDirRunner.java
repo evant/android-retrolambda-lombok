@@ -404,7 +404,7 @@ public class RunForEachFileInDirRunner extends Runner {
 		if (t != null && t.expected() != None.class) {
 			try {
 				Object executed = method.invoke(instance, params);
-				if (executed instanceof Boolean && !(Boolean)executed) return false; 
+				if (executed instanceof Boolean && !(Boolean)executed) return false;
 				Assert.fail("Expected exception: " + t.expected().getName());
 			} catch (InvocationTargetException e) {
 				if (t.expected().isInstance(e.getCause())) return true;
@@ -413,7 +413,7 @@ public class RunForEachFileInDirRunner extends Runner {
 		} else {
 			try {
 				Object executed = method.invoke(instance, params);
-				if (executed instanceof Boolean && !(Boolean)executed) return false; 
+				if (executed instanceof Boolean && !(Boolean)executed) return false;
 			} catch (InvocationTargetException e) {
 				throw e.getCause();
 			}

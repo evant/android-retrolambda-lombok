@@ -59,7 +59,8 @@ import com.sun.tools.javac.util.Context;
 public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
 	private static final int REPS = 50;
 	private static final boolean VERBOSE = System.getProperty("lombok.ast.test.verbose") != null;
-	private static final double MAX_FACTOR = 10;
+	private static final boolean EXTENDED = System.getProperty("lombok.ast.test.extended") != null;
+	private static final double MAX_FACTOR = 15;
 	private static long javacTotal, lombokTotal, ecjTotal, parboiledTotal;
 	
 	@BeforeClass
@@ -94,7 +95,8 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 	}
 	
 	@Test
-	public void testPerformance(Source source) {
+	public boolean testPerformance(Source source) {
+		if (!EXTENDED) return false;
 		parseWithJavac(source);
 		long takenByJavac = System.currentTimeMillis();
 		for (int i = 0; i < REPS; i++) {
@@ -176,6 +178,8 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 			}
 			fail(String.format("Performance is slower than javac by factor %d on %s", (int)factorVsJavac, source.getName()));
 		}
+		
+		return true;
 	}
 	
 	private void parseWithParboiled(Source source) {
