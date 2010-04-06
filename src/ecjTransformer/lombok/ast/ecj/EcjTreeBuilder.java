@@ -334,7 +334,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	private boolean set(lombok.ast.Node node, List<? extends ASTNode> values) {
 		if (values.isEmpty()) System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
-
+		
 		if (result != null) throw new IllegalStateException("result is already set");
 		result = values;
 		return true;
@@ -361,7 +361,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			TypeDeclaration decl = new TypeDeclaration(compilationResult);
 			decl.name = PACKAGE_INFO.clone();
 			decl.modifiers = ClassFileConstants.AccDefault | ClassFileConstants.AccInterface;
-
+			
 			if (node.getPackageDeclaration() != null) {
 				// TODO annotations and javadoc on package
 			}
@@ -378,9 +378,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitPackageDeclaration(lombok.ast.PackageDeclaration node) {
-		//TODO handle annotations.
 		long[] pos = partsToPosArray(node.rawParts());
-		return set(node, new ImportReference(chain(node.parts()), pos, true, ClassFileConstants.AccDefault));
+		ImportReference pkg = new ImportReference(chain(node.parts()), pos, true, ClassFileConstants.AccDefault);
+		pkg.annotations = toArray(Annotation.class, node.annotations());
+		return set(node, pkg);
 	}
 	
 	@Override
