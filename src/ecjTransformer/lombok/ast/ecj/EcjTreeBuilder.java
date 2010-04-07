@@ -24,16 +24,19 @@ package lombok.ast.ecj;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import lombok.ast.BinaryOperator;
-import lombok.ast.Position;
+import lombok.ast.Node;
 import lombok.ast.RawListAccessor;
 import lombok.ast.UnaryOperator;
+import lombok.ast.grammar.SourceStructure;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
@@ -145,6 +148,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	private static final int VISIBILITY_MASK = 7;
 	private static final char[] PACKAGE_INFO = "package-info".toCharArray();
 	
+	private final Map<Node, Collection<SourceStructure>> sourceStructures;
 	private List<? extends ASTNode> result = null;
 	private final lombok.ast.grammar.Source source;
 	private final ProblemReporter reporter;
@@ -205,6 +209,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	public EcjTreeBuilder(lombok.ast.grammar.Source source, CompilerOptions options) {
 		this.options = options;
+		this.sourceStructures = source.getSourceStructures();
 		IErrorHandlingPolicy policy = new IErrorHandlingPolicy() {
 			public boolean proceedOnErrors() {
 				return true;
@@ -225,6 +230,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		this.reporter = parent.reporter;
 		this.options = parent.options;
 		this.compilationResult = parent.compilationResult;
+		this.sourceStructures = parent.sourceStructures;
 	}
 	
 	private EcjTreeBuilder create() {
@@ -381,6 +387,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		long[] pos = partsToPosArray(node.rawParts());
 		ImportReference pkg = new ImportReference(chain(node.parts()), pos, true, ClassFileConstants.AccDefault);
 		pkg.annotations = toArray(Annotation.class, node.annotations());
+		pkg.declarationSourceStart = start(node);
+		pkg.declarationSourceEnd = pkg.declarationEnd = end(node);
+		
 		return set(node, pkg);
 	}
 	
@@ -388,7 +397,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitImportDeclaration(lombok.ast.ImportDeclaration node) {
 		int staticFlag = node.isStaticImport() ? ClassFileConstants.AccStatic : ClassFileConstants.AccDefault;
 		long[] pos = partsToPosArray(node.rawParts());
-		return set(node, new ImportReference(chain(node.parts()), pos, node.isStarImport(), staticFlag));
+		ImportReference imp = new ImportReference(chain(node.parts()), pos, node.isStarImport(), staticFlag);
+		imp.declarationSourceStart = start(node);
+		imp.declarationSourceEnd = imp.declarationEnd = end(node);
+		return set(node, imp);
 	}
 	
 	private long[] partsToPosArray(RawListAccessor<?, ?> parts) {
@@ -400,18 +412,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		return pos;
 	}
 	
-	private static long pos(lombok.ast.Node n) {
-		Position p = n != null ? n.getPosition() : null;
-		if (p == null || p.isUnplaced()) return 0L;
-		return (((long)p.getStart()) << 32) | ((-1L + p.getEnd()) & 0xFFFFFFFF);
-	}
-	
 	@Override
 	public boolean visitClassDeclaration(lombok.ast.ClassDeclaration node) {
-		// the modifiers must be set before the TypeDeclaration
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), node.getName(), toModifiers(node.getModifiers()));
+		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, true, 0);
 		
-//		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.superclass = (TypeReference) toTree(node.getExtending());
 		decl.superInterfaces = toArray(TypeReference.class, node.implementing());
@@ -467,9 +471,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitInterfaceDeclaration(lombok.ast.InterfaceDeclaration node) {
-		// the modifiers must be set before the TypeDeclaration
-		int modifiers = toModifiers(node.getModifiers()) | ClassFileConstants.AccInterface;
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), null, modifiers);
+		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, false, ClassFileConstants.AccInterface);
 		
 //		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
@@ -493,11 +495,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (node.getBody() != null) {
 			fields = toArray(FieldDeclaration.class, node.getBody().constants());
 		}
-		// the modifiers must be set before the TypeDeclaration
-		int modifiers = toModifiers(node.getModifiers()) | ClassFileConstants.AccEnum;
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), node.getName(), modifiers, fields);
+		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, true, ClassFileConstants.AccEnum, fields);
 		
-//		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.superInterfaces = toArray(TypeReference.class, node.implementing());
 		
@@ -530,7 +529,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			init = new AllocationExpression();
 			init.enumConstant = decl;
 		} else {
-			TypeDeclaration type = createTypeBody(node.getBody().members(), null, 0);
+			TypeDeclaration type = createTypeBody(node.getBody().members(), null, false, 0);
 			type.name = CharOperation.NO_CHAR;
 			type.bits &= ~ASTNode.IsMemberType;
 			decl.bits |= ASTNode.HasLocalType;
@@ -550,9 +549,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitAnnotationDeclaration(lombok.ast.AnnotationDeclaration node) {
-		int modifiers = toModifiers(node.getModifiers()) | ClassFileConstants.AccAnnotation | ClassFileConstants.AccInterface;
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), null, modifiers);
-//		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
+		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, false,
+				ClassFileConstants.AccAnnotation | ClassFileConstants.AccInterface);
 		decl.name = toName(node.getName());
 		updateTypeBits(node.getParent(), decl, false);
 		return set(node, decl);
@@ -629,7 +627,6 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (node.getDefaultValue() != null) {
 			decl.modifiers |= ClassFileConstants.AccAnnotationDefault;
 		}
-//		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.defaultValue = toExpression(node.getDefaultValue());
 		decl.selector = toName(node.getMethodName());
@@ -641,10 +638,20 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		return set(node, decl);
 	}
 	
-	private TypeDeclaration createTypeBody(lombok.ast.StrictListAccessor<lombok.ast.TypeMember, ?> members, lombok.ast.Identifier defaultConstructorName, int modifiers, FieldDeclaration... initialFields) {
+	private TypeDeclaration createTypeBody(lombok.ast.StrictListAccessor<lombok.ast.TypeMember, ?> members, lombok.ast.TypeDeclaration type, boolean canHaveConstructor, int extraModifiers, FieldDeclaration... initialFields) {
 		TypeDeclaration decl = new TypeDeclaration(compilationResult);
-		decl.modifiers = modifiers;
+		decl.modifiers = (type == null ? 0 : toModifiers(type.getModifiers())) | extraModifiers;
 		if (members.isEmpty() && isUndocumented(members.owner())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
+		
+		if (type != null) {
+			decl.sourceStart = start(type.getName());
+			decl.sourceEnd = end(type.getName());
+			decl.declarationSourceStart = start(type);
+			decl.declarationSourceEnd = end(type);
+			decl.modifiersSourceStart = start(type.getModifiers());
+			decl.bodyStart = start(members.owner()) + 1;
+			decl.bodyEnd = end(members.owner());
+		}
 		
 		boolean hasExplicitConstructor = false;
 		List<AbstractMethodDeclaration> methods = new ArrayList<AbstractMethodDeclaration>();
@@ -705,12 +712,19 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			
 		}
 		
-		if (!hasExplicitConstructor && defaultConstructorName != null) {
+		if (!hasExplicitConstructor && canHaveConstructor) {
 			ConstructorDeclaration defaultConstructor = new ConstructorDeclaration(compilationResult);
 			defaultConstructor.bits |= ASTNode.IsDefaultConstructor;
 			defaultConstructor.constructorCall = new ExplicitConstructorCall(ExplicitConstructorCall.ImplicitSuper);
 			defaultConstructor.modifiers = decl.modifiers & VISIBILITY_MASK;
-			defaultConstructor.selector = toName(defaultConstructorName);
+			defaultConstructor.selector = toName(type.getName());
+			defaultConstructor.sourceStart = defaultConstructor.declarationSourceStart =
+					defaultConstructor.constructorCall.sourceStart =
+					start(type.getName());
+			defaultConstructor.sourceEnd = defaultConstructor.bodyEnd =
+					defaultConstructor.constructorCall.sourceEnd =
+					defaultConstructor.declarationSourceEnd =
+					end(type.getName());
 			methods.add(0, defaultConstructor);
 		}
 		
@@ -744,7 +758,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		AllocationExpression inv;
 		if (node.getQualifier() != null || node.getAnonymousClassBody() != null) {
 			if (node.getAnonymousClassBody() != null) {
-				TypeDeclaration decl = createTypeBody(node.getAnonymousClassBody().members(), null, 0);
+				TypeDeclaration decl = createTypeBody(node.getAnonymousClassBody().members(), null, false, 0);
 				decl.name = CharOperation.NO_CHAR;
 				decl.bits |= ASTNode.IsAnonymousType | ASTNode.IsLocalType;
 				bubblingFlags.add(BubblingFlags.LOCALTYPE);
@@ -1091,7 +1105,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitStaticInitializer(lombok.ast.StaticInitializer node) {
-		return set(node, new Initializer((Block) toTree(node.getBody()), ClassFileConstants.AccStatic));
+		Initializer init = new Initializer((Block) toTree(node.getBody()), ClassFileConstants.AccStatic);
+		init.declarationSourceStart = start(node);
+		init.sourceStart = start(node.getBody());
+		init.sourceEnd = init.declarationSourceEnd = end(node);
+		init.bodyStart = init.sourceStart + 1;
+		init.bodyEnd = init.sourceEnd - 1;
+		return set(node, init);
 	}
 
 	@Override
@@ -1100,6 +1120,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
 			init.bits |= ASTNode.HasLocalType;
 		}
+		init.sourceStart = init.declarationSourceStart = start(node);
+		init.sourceEnd = init.declarationSourceEnd = end(node);
+		init.bodyStart = init.sourceStart + 1;
+		init.bodyEnd = init.sourceEnd - 1;
 		return set(node, init);
 	}
 	
@@ -1156,6 +1180,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			block.explicitDeclarations = 0;
 			for (lombok.ast.Statement s : node.contents()) if (s instanceof lombok.ast.VariableDeclaration) block.explicitDeclarations++;
 		}
+		block.sourceStart = start(node);
+		block.sourceEnd = end(node);
 		return set(node, block);
 	}
 	
@@ -1536,5 +1562,34 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			commentParse();
 			return docComment;
 		}
+	}
+	
+	private static int start(lombok.ast.Node node) {
+		if (node == null || node.getPosition().isUnplaced()) return 0;
+		return node.getPosition().getStart();
+	}
+	
+	private static int end(lombok.ast.Node node) {
+		if (node == null || node.getPosition().isUnplaced()) return 0;
+		return node.getPosition().getEnd() - 1;
+	}
+	
+	private static long pos(lombok.ast.Node n) {
+		return (((long)start(n)) << 32) | end(n);
+	}
+	
+	private int posOfStructure(Node node, String structure, int idx, boolean atStart) {
+		int start = node.getPosition().getStart();
+		
+		if (sourceStructures != null && sourceStructures.containsKey(node)) {
+			for (SourceStructure struct : sourceStructures.get(node)) {
+				if (structure.equals(struct.getContent())) {
+					start = atStart ? struct.getPosition().getStart() : struct.getPosition().getEnd();
+					if (idx-- <= 0) break;
+				}
+			}
+		}
+		
+		return start;
 	}
 }
