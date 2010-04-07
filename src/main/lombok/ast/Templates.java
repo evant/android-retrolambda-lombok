@@ -1228,6 +1228,16 @@ class EmptyDeclarationTemplate {
 			return null;
 		}
 	}
+	
+	@CopyMethod
+	static Identifier getName(EmptyDeclaration self) {
+		return null;
+	}
+	
+	@CopyMethod
+	static Node getRawName(EmptyDeclaration self) {
+		return null;
+	}
 }
 
 @GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class, JavadocContainer.class})
