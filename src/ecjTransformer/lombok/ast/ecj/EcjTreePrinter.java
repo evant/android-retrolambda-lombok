@@ -301,7 +301,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 			boolean posField = isPositionField();
 			
 			if (!printer.printPositions && posField) return;
-			if (isDefault(value)) return;
+			if (!posField && isDefault(value)) return;
 			
 			unroll(printer, visitor, value, 0, field.getName(), posField);
 		}
