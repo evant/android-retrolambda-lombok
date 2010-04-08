@@ -22,6 +22,7 @@
 package lombok.ast.ecj;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,7 +37,6 @@ import lombok.ast.BinaryOperator;
 import lombok.ast.Node;
 import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
-import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryOperator;
 import lombok.ast.grammar.SourceStructure;
 
@@ -611,7 +611,6 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		{
 			int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
 			if (postDims > decl.sourceEnd) {
-				//((ArrayTypeReference)ref).originalSourceEnd = ref.sourceEnd;
 				decl.sourceEnd = postDims;
 				setOriginalPosOnType = true;
 			}
@@ -780,7 +779,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitExpressionStatement(lombok.ast.ExpressionStatement node) {
-		return set(node, toStatement(node.getExpression()));
+		Statement statement = toStatement(node.getExpression());
+		try {
+			Field f = statement.getClass().getField("statementEnd");
+			f.set(statement, end(node));
+		} catch (Exception ignore) {
+			// Not all these classes may have a statementEnd.
+		}
+		return set(node, statement);
 	}
 	
 	@Override
@@ -876,10 +882,16 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			if (node.getOperand() instanceof lombok.ast.IntegralLiteral && node.getOperand().getParens() == 0) {
 				lombok.ast.IntegralLiteral lit = (lombok.ast.IntegralLiteral)node.getOperand();
 				if (!lit.isMarkedAsLong() && lit.intValue() == Integer.MIN_VALUE) {
-					return set(node, new IntLiteralMinValue());
+					IntLiteralMinValue minLiteral = new IntLiteralMinValue();
+					minLiteral.sourceStart = start(node);
+					minLiteral.sourceEnd = end(node);
+					return set(node, minLiteral);
 				}
 				if (lit.isMarkedAsLong() && lit.longValue() == Long.MIN_VALUE) {
-					return set(node, new LongLiteralMinValue());
+					LongLiteralMinValue minLiteral = new LongLiteralMinValue();
+					minLiteral.sourceStart = start(node);
+					minLiteral.sourceEnd = end(node);
+					return set(node, minLiteral);
 				}
 			}
 		}
@@ -1118,6 +1130,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 					ref = new ArrayTypeReference(singleName, dims, 0L);
 					ref.sourceStart = start(node);
 					ref.sourceEnd = end(node);
+					((ArrayTypeReference)ref).originalSourceEnd = end(node.rawParts().last());
 				}
 			} else {
 				ref = new ParameterizedSingleTypeReference(singleName, params[0], dims, partsToPosArray(node.rawParts())[0]);
@@ -1261,6 +1274,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitArrayInitializer(lombok.ast.ArrayInitializer node) {
 		ArrayInitializer init = new ArrayInitializer();
+		init.sourceStart = start(node);
+		init.sourceEnd = end(node);
 		init.expressions = toArray(Expression.class, node.expressions());
 		
 		return set(node, init);
@@ -1269,6 +1284,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitArrayCreation(lombok.ast.ArrayCreation node) {
 		ArrayAllocationExpression aae = new ArrayAllocationExpression();
+		aae.sourceStart = start(node);
+		aae.sourceEnd = end(node);
 		aae.type = (TypeReference) toTree(node.getComponentTypeReference());
 		// TODO uncompilable parser test: new Type<Generics>[]...
 		// TODO uncompilable parser test: new Type[][expr][][expr]...
@@ -1292,19 +1309,21 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitThis(lombok.ast.This node) {
 		if (node.getQualifier() == null) {
-			return set(node, new ThisReference(0, 0));
+			return set(node, new ThisReference(start(node), end(node)));
 		}
-		return set(node, new QualifiedThisReference((TypeReference) toTree(node.getQualifier()), 0, 0));
+		return set(node, new QualifiedThisReference((TypeReference) toTree(node.getQualifier()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitClassLiteral(lombok.ast.ClassLiteral node) {
-		return set(node, new ClassLiteralAccess(0, (TypeReference) toTree(node.getTypeReference())));
+		return set(node, new ClassLiteralAccess(end(node), (TypeReference) toTree(node.getTypeReference())));
 	}
 	
 	@Override
 	public boolean visitArrayAccess(lombok.ast.ArrayAccess node) {
-		return set(node, new ArrayReference(toExpression(node.getOperand()), toExpression(node.getIndexExpression())));
+		ArrayReference ref = new ArrayReference(toExpression(node.getOperand()), toExpression(node.getIndexExpression()));
+		ref.sourceEnd = end(node);
+		return set(node, ref);
 	}
 	
 	@Override
@@ -1312,29 +1331,30 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		//TODO check the flags after more test have been added: asserts in constructors, methods etc.
 		bubblingFlags.add(BubblingFlags.ASSERT);
 		if (node.getMessage() == null) {
-			return set(node, new AssertStatement(toExpression(node.getAssertion()), 0));
+			return set(node, new AssertStatement(toExpression(node.getAssertion()), start(node)));
 		}
-		return set(node, new AssertStatement(toExpression(node.getMessage()), toExpression(node.getAssertion()), 0));
+		return set(node, new AssertStatement(toExpression(node.getMessage()), toExpression(node.getAssertion()), start(node)));
 	}
 	
 	@Override
 	public boolean visitDoWhile(lombok.ast.DoWhile node) {
-		return set(node, new DoStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), 0, 0));
+		return set(node, new DoStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitContinue(lombok.ast.Continue node) {
-		return set(node, new ContinueStatement(toName(node.getLabel()), 0, 0));
+		return set(node, new ContinueStatement(toName(node.getLabel()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitBreak(lombok.ast.Break node) {
-		return set(node, new BreakStatement(toName(node.getLabel()), 0, 0));
+		return set(node, new BreakStatement(toName(node.getLabel()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitForEach(lombok.ast.ForEach node) {
-		ForeachStatement forEach = new ForeachStatement((LocalDeclaration) toTree(node.getVariable()), 0);
+		ForeachStatement forEach = new ForeachStatement((LocalDeclaration) toTree(node.getVariable()), start(node));
+		forEach.sourceEnd = end(node);
 		forEach.collection = toExpression(node.getIterable());
 		forEach.action = toStatement(node.getStatement());
 		return set(node, forEach);
@@ -1363,7 +1383,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			} else if (entry.getArrayDimensions() > 0 || node.isVarargs()) {
 				decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 				decl.type.sourceStart = base.sourceStart;
-				if (kind == VariableKind.LOCAL && base.dimensions() > 0) {
+				if (kind == VariableKind.LOCAL && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
 					decl.type.sourceEnd = posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1;
 				} else decl.type.sourceEnd = base.sourceEnd;
 				if (node.isVarargs()) {
@@ -1397,7 +1417,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.sourceStart = start(entry.getName());
 				decl.sourceEnd = end(entry.getName());
 				decl.declarationSourceStart = start(node);
-				decl.declarationSourceEnd = decl.declarationEnd = end(node.getParent());
+				int end;
+				if (node.getParent() instanceof lombok.ast.VariableDeclaration) end = end(node.getParent());
+				else {
+					if (entry.getRawInitializer() != null) end = end(entry.getRawInitializer());
+					else end = end(entry.getName());
+				}
+				decl.declarationSourceEnd = decl.declarationEnd = end;
 				break;
 			case ARGUMENT:
 				decl.sourceStart = start(entry.getName());
@@ -1415,14 +1441,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitIf(lombok.ast.If node) {
 		if (node.getElseStatement() == null) {
-			return set(node, new IfStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), 0, 0));
+			return set(node, new IfStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), start(node), end(node)));
 		}
-		return set(node, new IfStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), toStatement(node.getElseStatement()), 0, 0));
+		return set(node, new IfStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), toStatement(node.getElseStatement()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitLabelledStatement(lombok.ast.LabelledStatement node) {
-		return set(node, new LabeledStatement(toName(node.getLabel()), toStatement(node.getStatement()), 0, 0));
+		return set(node, new LabeledStatement(toName(node.getLabel()), toStatement(node.getStatement()), pos(node.getRawLabel()), end(node)));
 	}
 	
 	@Override
@@ -1430,14 +1456,25 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		//TODO make test for modifiers on variable declarations
 		//TODO make test for empty for/foreach etc.
 		if(node.isVariableDeclarationBased()) {
-			return set(node, new ForStatement(toArray(Statement.class, node.getVariableDeclaration()), toExpression(node.getCondition()), toArray(Statement.class, node.updates()), toStatement(node.getStatement()), true, 0, 0));
+			return set(node, new ForStatement(toArray(Statement.class, node.getVariableDeclaration()),
+					toExpression(node.getCondition()),
+					toArray(Statement.class, node.updates()),
+					toStatement(node.getStatement()),
+					true, start(node), end(node)));
 		}
-		return set(node, new ForStatement(toArray(Statement.class, node.expressionInits()), toExpression(node.getCondition()), toArray(Statement.class, node.updates()), toStatement(node.getStatement()), false, 0, 0));
+		return set(node, new ForStatement(toArray(Statement.class, node.expressionInits()),
+				toExpression(node.getCondition()),
+				toArray(Statement.class, node.updates()),
+				toStatement(node.getStatement()),
+				false, start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitSwitch(lombok.ast.Switch node) {
 		SwitchStatement value = new SwitchStatement();
+		value.sourceStart = start(node);
+		value.sourceEnd = end(node);
+		value.blockStart = start(node.getRawBody());
 		value.expression = toExpression(node.getCondition());
 		value.statements = toArray(Statement.class, node.getBody().contents());
 		if (value.statements == null) {
@@ -1454,12 +1491,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitSynchronized(lombok.ast.Synchronized node) {
-		return set(node, new SynchronizedStatement(toExpression(node.getLock()), (Block) toTree(node.getBody()), 0, 0));
+		return set(node, new SynchronizedStatement(toExpression(node.getLock()), (Block) toTree(node.getBody()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitTry(lombok.ast.Try node) {
 		TryStatement tryStatement = new TryStatement();
+		tryStatement.sourceStart = start(node);
+		tryStatement.sourceEnd = end(node);
 		
 		tryStatement.tryBlock = (Block) toTree(node.getBody());
 		int catchSize = node.catches().size();
@@ -1479,12 +1518,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitThrow(lombok.ast.Throw node) {
-		return set(node, new ThrowStatement(toExpression(node.getThrowable()), 0, 0));
+		return set(node, new ThrowStatement(toExpression(node.getThrowable()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitWhile(lombok.ast.While node) {
-		return set(node, new WhileStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), 0, 0));
+		return set(node, new WhileStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), start(node), end(node)));
 	}
 	
 	@Override
@@ -1525,12 +1564,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitCase(lombok.ast.Case node) {
-		return set(node, new CaseStatement(toExpression(node.getCondition()), 0, 0));
+		return set(node, new CaseStatement(toExpression(node.getCondition()), end(node.getRawCondition()), posOfStructure(node, "case", 0, true)));
 	}
 	
 	@Override
 	public boolean visitDefault(lombok.ast.Default node) {
-		return set(node, new CaseStatement(null, 0, 0));
+		//These are switched around because the eclipse API designer at the time was possibly drunk. It's intentional.
+		return set(node, new CaseStatement(null, posOfStructure(node, "default", 0, false) - 1, start(node)));
 	}
 	
 	@Override
@@ -1543,7 +1583,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitEmptyStatement(lombok.ast.EmptyStatement node) {
-		return set(node, new EmptyStatement(0, 0));
+		return set(node, new EmptyStatement(start(node), end(node)));
 	}
 	
 	@Override
@@ -1684,7 +1724,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		long[] pos = new long[parts.size()];
 		int idx = 0;
 		for (lombok.ast.Node n : parts) {
-			if (n instanceof TypeReferencePart) pos[idx++] = pos(((TypeReferencePart)n).getRawIdentifier());
+			if (n instanceof lombok.ast.TypeReferencePart) pos[idx++] = pos(((lombok.ast.TypeReferencePart)n).getRawIdentifier());
 			else pos[idx++] = pos(n);
 		}
 		return pos;

@@ -34,6 +34,7 @@ import java.util.Map;
 import lombok.SneakyThrows;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
+import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
 import org.eclipse.jdt.internal.compiler.impl.Constant;
 import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 
@@ -87,7 +88,14 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 	public void visitAny(ASTNode node) {
 		Collection<ComponentField> fields = findFields(node);
 		for (ComponentField f : fields) {
-			Object value = readField(f.field, node);
+			Object value;
+			
+			if ("originalSourceEnd".equals(f.field.getName()) && node instanceof ArrayTypeReference) {
+				//workaround for eclipse arbitrarily skipping this field and setting it.
+				value = -2;
+			} else {
+				value = readField(f.field, node);
+			}
 			if (value == null) {
 				continue;
 			}
