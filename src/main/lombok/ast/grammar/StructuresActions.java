@@ -71,16 +71,18 @@ public class StructuresActions extends SourceActions {
 	public Node createMethodDeclaration(Node modifiers, Node typeParameters, Node resultType, Node name,
 			Node params, List<org.parboiled.Node<Node>> dims, Node throwsHead, List<Node> throwsTail, Node body) {
 		
-		MethodDeclaration decl;
+		MethodDeclaration decl = new MethodDeclaration();
 		
-		if (params instanceof MethodDeclaration) {
-			decl = (MethodDeclaration)params;
+		if (params instanceof TemporaryNode.MethodParameters) {
+			for (Node param : ((TemporaryNode.MethodParameters)params).parameters) {
+				decl.rawParameters().addToEnd(param);
+			}
 		} else {
-			decl = new MethodDeclaration();
 			if (params != null) {
 				//TODO report dangling node
 			}
 		}
+		
 		decl.setRawMethodName(name).setRawBody(body);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		int extraDims = dims == null ? 0 : dims.size();
@@ -114,12 +116,14 @@ public class StructuresActions extends SourceActions {
 		if (modifiers != null) decl.setRawModifiers(modifiers);
 		if (typeParameters instanceof TemporaryNode.OrphanedTypeVariables) {
 			for (Node typeParameter : ((TemporaryNode.OrphanedTypeVariables)typeParameters).variables) {
-				if (typeParameter != null) decl.rawTypeVariables().addToEnd(typeParameter);
+				decl.rawTypeVariables().addToEnd(typeParameter);
 			}
 		}
 		
-		if (params instanceof MethodDeclaration) {
-			decl.rawParameters().migrateAllFrom(((MethodDeclaration)params).rawParameters());
+		if (params instanceof TemporaryNode.MethodParameters) {
+			for (Node param : ((TemporaryNode.MethodParameters)params).parameters) {
+				decl.rawParameters().addToEnd(param);
+			}
 		} else {
 			if (params != null) {
 				//TODO report dangling node
@@ -372,13 +376,13 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createMethodParameters(Node head, List<Node> tail) {
-		MethodDeclaration decl = new MethodDeclaration();
-		if (head != null) decl.rawParameters().addToEnd(head);
-		if (tail != null) for (Node n : tail) if (n != null) decl.rawParameters().addToEnd(n);
+		TemporaryNode.MethodParameters params = new TemporaryNode.MethodParameters();
+		if (head != null) params.parameters.add(head);
+		if (tail != null) for (Node n : tail) if (n != null) params.parameters.add(n);
 		
-		return decl;
+		return params;
 	}
-
+	
 	public Node createEmptyDeclaration() {
 		return posify(new EmptyDeclaration());
 	}

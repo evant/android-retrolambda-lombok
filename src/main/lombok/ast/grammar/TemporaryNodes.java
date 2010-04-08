@@ -48,6 +48,16 @@ abstract class TemporaryNode implements Node {
 		return this;
 	}
 	
+	static class MethodParameters extends TemporaryNode {
+		List<Node> parameters = new ArrayList<Node>();
+		
+		@Override public MethodParameters copy() {
+			MethodParameters result = new MethodParameters();
+			for (Node n : parameters) result.parameters.add(n == null ? null : n.copy());
+			return result;
+		}
+	}
+	
 	static class MethodArguments extends TemporaryNode {
 		List<Node> arguments = new ArrayList<Node>();
 		
