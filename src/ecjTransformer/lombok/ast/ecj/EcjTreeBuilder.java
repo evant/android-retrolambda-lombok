@@ -34,6 +34,7 @@ import java.util.Map;
 
 import lombok.ast.BinaryOperator;
 import lombok.ast.Node;
+import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryOperator;
@@ -323,12 +324,26 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		return result;
 	}
 	
+	private static <T extends ASTNode> T posParen(T in, lombok.ast.Node node) {
+		if (in == null) return null;
+		if (node instanceof lombok.ast.Expression) {
+			List<Position> parensPositions = ((lombok.ast.Expression)node).getParensPositions();
+			if (!parensPositions.isEmpty()) {
+				in.sourceStart = parensPositions.get(parensPositions.size() - 1).getStart();
+				in.sourceEnd = parensPositions.get(parensPositions.size() - 1).getEnd() - 1;
+			}
+		}
+		
+		return in;
+	}
+	
 	private boolean set(lombok.ast.Node node, ASTNode value) {
 		if (result != null) throw new IllegalStateException("result is already set");
 		
 		if (node instanceof lombok.ast.Expression) {
 			int parens = ((lombok.ast.Expression)node).getIntendedParens();
 			value.bits |= (parens << ASTNode.ParenthesizedSHIFT) & ASTNode.ParenthesizedMASK;
+			posParen(value, node);
 		}
 		if (value instanceof NameReference) {
 			updateRestrictionFlags(node, (NameReference)value);
@@ -586,9 +601,32 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitMethodDeclaration(lombok.ast.MethodDeclaration node) {
 		MethodDeclaration decl = new MethodDeclaration(compilationResult);
+		decl.bodyStart = start(node.getRawBody()) + 1;
+		decl.bodyEnd = end(node.getRawBody()) - 1;
+		decl.declarationSourceStart = start(node);
+		decl.declarationSourceEnd = end(node);
+		decl.sourceStart = start(node.getRawMethodName());
+		decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
+		boolean setOriginalPosOnType = false;
+		{
+			int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
+			if (postDims > decl.sourceEnd) {
+				//((ArrayTypeReference)ref).originalSourceEnd = ref.sourceEnd;
+				decl.sourceEnd = postDims;
+				setOriginalPosOnType = true;
+			}
+		}
+		if (!node.rawThrownTypeReferences().isEmpty()) {
+			decl.sourceEnd = end(node.rawThrownTypeReferences().last());
+		}
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.modifiers = toModifiers(node.getModifiers());
 		decl.returnType = (TypeReference) toTree(node.getReturnTypeReference());
+		if (setOriginalPosOnType) {
+			if (decl.returnType instanceof ArrayTypeReference) {
+				((ArrayTypeReference)decl.returnType).originalSourceEnd = end(node.getRawReturnTypeReference());
+			}
+		}
 		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
 		decl.arguments = toArray(Argument.class, node.parameters());
 		decl.selector = toName(node.getMethodName());
@@ -772,6 +810,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		}
 		inv.type = (TypeReference) toTree(node.getTypeReference());
 		inv.arguments = toArray(Expression.class, node.arguments());
+		inv.sourceStart = start(node);
+		inv.sourceEnd = end(node);
 		return set(node, inv);
 	}
 	
@@ -803,6 +843,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitMethodInvocation(lombok.ast.MethodInvocation node) {
 		MessageSend inv = new MessageSend();
+		inv.sourceStart = start(node);
+		inv.sourceEnd = end(node);
+		inv.nameSourcePosition = pos(node.getRawName());
 		
 		inv.arguments = toArray(Expression.class, node.arguments());
 		inv.receiver = toExpression(node.getOperand());
@@ -847,15 +890,18 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		switch (node.getOperator()) {
 		case PREFIX_INCREMENT:
 		case PREFIX_DECREMENT:
-			return set(node, new PrefixExpression(operand, IntLiteral.One, ecjOperator, 0));
+			return set(node, new PrefixExpression(operand, IntLiteral.One, ecjOperator, start(node)));
 		case POSTFIX_INCREMENT:
 		case POSTFIX_DECREMENT:
-			return set(node, new PostfixExpression(operand, IntLiteral.One, ecjOperator, 0));
+			return set(node, new PostfixExpression(operand, IntLiteral.One, ecjOperator, end(node)));
 		default:
-			return set(node, new UnaryExpression(toExpression(node.getOperand()), ecjOperator));
+			UnaryExpression expr = new UnaryExpression(toExpression(node.getOperand()), ecjOperator);
+			expr.sourceStart = start(node);
+			expr.sourceEnd = end(node);
+			return set(node, expr);
 		}
 	}
-
+	
 	@Override
 	public boolean visitBinaryExpression(lombok.ast.BinaryExpression node) {
 		Expression base = visitBinaryExpression0(node);
@@ -892,26 +938,26 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		Expression rhs = toExpression(node.getRight());
 		
 		if (node.getOperator() == BinaryOperator.ASSIGN) {
-			return new Assignment(lhs, rhs, 0);
+			return posParen(new Assignment(lhs, rhs, end(node)), node);
 		}
 		
 		//TODO add a test with 1 + 2 + 3 + "" + 4 + 5 + 6 + "foo"; as well as 5 + 2 + 3 - 5 - 8 -7 - 8 * 10 + 20;
 		
 		int ecjOperator = BINARY_OPERATORS.get(node.getOperator());
 		if (node.getOperator().isAssignment()) {
-			return new CompoundAssignment(lhs, rhs, ecjOperator, 0);
+			return posParen(new CompoundAssignment(lhs, rhs, ecjOperator, end(node)), node);
 		} else if (node.getOperator() == BinaryOperator.EQUALS || node.getOperator() == BinaryOperator.NOT_EQUALS) {
-			return new EqualExpression(lhs, rhs, ecjOperator);
+			return posParen(new EqualExpression(lhs, rhs, ecjOperator), node);
 		} else if (node.getOperator() == BinaryOperator.LOGICAL_AND) {
-			return new AND_AND_Expression(lhs, rhs, ecjOperator);
+			return posParen(new AND_AND_Expression(lhs, rhs, ecjOperator), node);
 		} else if (node.getOperator() == BinaryOperator.LOGICAL_OR) {
-			return new OR_OR_Expression(lhs, rhs, ecjOperator);
+			return posParen(new OR_OR_Expression(lhs, rhs, ecjOperator), node);
 		} else if (node.getOperator() == BinaryOperator.PLUS && node.getLeft().getParens() == 0) {
-			Expression stringConcatExpr = tryStringConcat(lhs, rhs);
+			Expression stringConcatExpr = posParen(tryStringConcat(lhs, rhs), node);
 			if (stringConcatExpr != null) return stringConcatExpr;
 		}
 		
-		return new BinaryExpression(lhs, rhs, ecjOperator);
+		return posParen(new BinaryExpression(lhs, rhs, ecjOperator), node);
 	}
 	
 	private Expression tryStringConcat(Expression lhs, Expression rhs) {
@@ -961,7 +1007,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			typeRef = new QualifiedNameReference(qtr.tokens, qtr.sourcePositions, qtr.sourceStart, qtr.sourceEnd);
 			typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
 		}
-		return set(node, new CastExpression(toExpression(node.getOperand()), typeRef));
+		CastExpression expr = new CastExpression(toExpression(node.getOperand()), typeRef);
+		typeRef.sourceStart = posOfStructure(node, "(", 0, true) + 1;
+		typeRef.sourceEnd = posOfStructure(node, ")", 0, true) - 1;
+		expr.sourceStart = start(node);
+		expr.sourceEnd = end(node);
+		return set(node, expr);
 	}
 	
 	@Override
@@ -979,15 +1030,20 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		//TODO for something like ("" + "").foo.bar;
 		/* try chain-of-identifiers */ {
 			List<lombok.ast.Identifier> selects = new ArrayList<lombok.ast.Identifier>();
+			List<Long> pos = new ArrayList<Long>();
 			lombok.ast.Select current = node;
 			while (true) {
 				selects.add(current.getIdentifier());
+				pos.add(pos(current.getRawIdentifier()));
 				if (current.getOperand() instanceof lombok.ast.Select) current = (lombok.ast.Select) current.getOperand();
 				else if (current.getOperand() instanceof lombok.ast.Identifier) {
 					selects.add((lombok.ast.Identifier) current.getOperand());
+					pos.add(pos(current.getRawOperand()));
 					Collections.reverse(selects);
+					long[] posArray = new long[pos.size()];
+					for (int i = 0; i < posArray.length; i++) posArray[i] = pos.get(posArray.length - i - 1);
 					char[][] tokens = chain(selects, selects.size());
-					QualifiedNameReference ref = new QualifiedNameReference(tokens, new long[tokens.length], 0, 0);
+					QualifiedNameReference ref = new QualifiedNameReference(tokens, posArray, start(node), end(node));
 					return set(node, ref);
 				} else {
 					break;
@@ -1147,43 +1203,43 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitIntegralLiteral(lombok.ast.IntegralLiteral node) {
 		if (node.isMarkedAsLong()) {
-			return set(node, new LongLiteral(node.getRawValue().toCharArray(), 0, 0));
+			return set(node, new LongLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
 		}
-		return set(node, new IntLiteral(node.getRawValue().toCharArray(), 0, 0));
+		return set(node, new IntLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitFloatingPointLiteral(lombok.ast.FloatingPointLiteral node) {
 		if (node.isMarkedAsFloat()) {
-			return set(node, new FloatLiteral(node.getRawValue().toCharArray(), 0, 0));
+			return set(node, new FloatLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
 		}
-		return set(node, new DoubleLiteral(node.getRawValue().toCharArray(), 0, 0));
+		return set(node, new DoubleLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitBooleanLiteral(lombok.ast.BooleanLiteral node) {
-		return set(node, node.getValue() ? new TrueLiteral(0, 0) : new FalseLiteral(0, 0));
+		return set(node, node.getValue() ? new TrueLiteral(start(node), end(node)) : new FalseLiteral(start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitNullLiteral(lombok.ast.NullLiteral node) {
-		return set(node, new NullLiteral(0, 0));
+		return set(node, new NullLiteral(start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitIdentifier(lombok.ast.Identifier node) {
-		SingleNameReference ref = new SingleNameReference(toName(node), 0L);
+		SingleNameReference ref = new SingleNameReference(toName(node), pos(node));
 		return set(node, ref);
 	}
 	
 	@Override
 	public boolean visitCharLiteral(lombok.ast.CharLiteral node) {
-		return set(node, new CharLiteral(node.getRawValue().toCharArray(), 0, 0));
+		return set(node, new CharLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitStringLiteral(lombok.ast.StringLiteral node) {
-		return set(node, new StringLiteral(node.getValue().toCharArray(), 0, 0, 0));
+		return set(node, new StringLiteral(node.getValue().toCharArray(), start(node), end(node), 0));
 	}
 	
 	@Override
@@ -1304,15 +1360,24 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			decl.name = toName(entry.getName());
 			if (entry.getArrayDimensions() == 0 && !node.isVarargs()) {
 				decl.type = base;
-			} else if (entry.getArrayDimensions() > 0) {
+			} else if (entry.getArrayDimensions() > 0 || node.isVarargs()) {
 				decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 				decl.type.sourceStart = base.sourceStart;
-				decl.type.sourceEnd = base.dimensions() > 0 ? posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1 : base.sourceEnd;
-				if (decl.type instanceof ArrayTypeReference) {
-					((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
-				}
-				if (decl.type instanceof ArrayQualifiedTypeReference) {
-					((ArrayQualifiedTypeReference)decl.type).sourcePositions = ((QualifiedTypeReference)base).sourcePositions.clone();
+				if (kind == VariableKind.LOCAL && base.dimensions() > 0) {
+					decl.type.sourceEnd = posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1;
+				} else decl.type.sourceEnd = base.sourceEnd;
+				if (node.isVarargs()) {
+					if (decl.type instanceof ArrayTypeReference) {
+						((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
+					}
+					decl.type.sourceEnd = posOfStructure(node, "...", Integer.MAX_VALUE, false) - 1;
+				} else {
+					if (decl.type instanceof ArrayTypeReference) {
+						((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
+					}
+					if (decl.type instanceof ArrayQualifiedTypeReference) {
+						((ArrayQualifiedTypeReference)decl.type).sourcePositions = ((QualifiedTypeReference)base).sourcePositions.clone();
+					}
 				}
 			}
 			//TODO handle varargs positions.
@@ -1333,6 +1398,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.sourceEnd = end(entry.getName());
 				decl.declarationSourceStart = start(node);
 				decl.declarationSourceEnd = decl.declarationEnd = end(node.getParent());
+				break;
+			case ARGUMENT:
+				decl.sourceStart = start(entry.getName());
+				decl.sourceEnd = end(entry.getName());
+				decl.declarationSourceStart = start(node);
+				decl.declarationSourceEnd = decl.declarationEnd = end(node);
+				break;
 			}
 			values.add(decl);
 		}
@@ -1417,7 +1489,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitReturn(lombok.ast.Return node) {
-		return set(node, new ReturnStatement(toExpression(node.getValue()), 0, 0));
+		return set(node, new ReturnStatement(toExpression(node.getValue()), start(node), end(node)));
 	}
 	
 	@Override
