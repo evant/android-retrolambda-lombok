@@ -103,8 +103,10 @@ public class StatementsActions extends SourceActions {
 		return posify(new Case().setRawCondition(condition));
 	}
 	
-	public Node createDefaultStatement() {
-		return posify(new Default());
+	public Node createDefaultStatement(org.parboiled.Node<Node> defaultStatement) {
+		Default node = new Default();
+		source.registerStructure(node, defaultStatement);
+		return posify(node);
 	}
 	
 	public Node createWhileStatement(Node condition, Node statement) {

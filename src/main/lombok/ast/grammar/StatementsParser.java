@@ -214,9 +214,9 @@ public class StatementsParser extends BaseParser<Node> {
 	 */
 	public Rule defaultStatement() {
 		return sequence(
-				string("default"), group.basics.testLexBreak(), group.basics.optWS(),
+				string("default").label("defaultKeyword"), group.basics.testLexBreak(), group.basics.optWS(),
 				ch(':'), group.basics.optWS(),
-				SET(actions.createDefaultStatement()));
+				SET(actions.createDefaultStatement(NODE("defaultKeyword"))));
 	}
 	
 	/**
