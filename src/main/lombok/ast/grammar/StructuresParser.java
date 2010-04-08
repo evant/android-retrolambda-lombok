@@ -232,7 +232,7 @@ public class StructuresParser extends BaseParser<Node> {
 						sequence(ch(';'), group.basics.optWS()),
 						group.statements.blockStatement()).label("body"),
 				SET(actions.createMethodDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("resultType"), VALUE("methodName"), VALUE("params"), 
-						TEXTS("dims/dim"), VALUE("throwsClause/sequence/throwsHead"), VALUES("throwsClause/sequence/zeroOrMore/throwsTail"),
+						NODES("dims/dim"), VALUE("throwsClause/sequence/throwsHead"), VALUES("throwsClause/sequence/zeroOrMore/throwsTail"),
 						VALUE("body"))));
 	}
 	

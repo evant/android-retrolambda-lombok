@@ -69,7 +69,7 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createMethodDeclaration(Node modifiers, Node typeParameters, Node resultType, Node name,
-			Node params, List<String> dims, Node throwsHead, List<Node> throwsTail, Node body) {
+			Node params, List<org.parboiled.Node<Node>> dims, Node throwsHead, List<Node> throwsTail, Node body) {
 		
 		MethodDeclaration decl;
 		
@@ -93,6 +93,12 @@ public class StructuresActions extends SourceActions {
 			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)typeParameters;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
 				if (typeParameter != null) decl.rawTypeVariables().addToEnd(typeParameter);
+			}
+		}
+		
+		for (org.parboiled.Node<Node> dim : dims) {
+			for (org.parboiled.Node<Node> dimSub : dim.getChildren()) {
+				source.registerStructure(decl, dimSub);
 			}
 		}
 		
