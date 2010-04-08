@@ -566,6 +566,18 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitConstructorDeclaration(lombok.ast.ConstructorDeclaration node) {
 		ConstructorDeclaration decl = new ConstructorDeclaration(compilationResult);
+		decl.bodyStart = start(node.getRawBody()) + 1;
+		decl.bodyEnd = end(node.getRawBody()) - 1;
+		decl.declarationSourceStart = start(node);
+		decl.declarationSourceEnd = end(node);
+		decl.sourceStart = start(node.getRawTypeName());
+		/* set sourceEnd */ {
+			decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
+			
+			if (!node.rawThrownTypeReferences().isEmpty()) {
+				decl.sourceEnd = end(node.rawThrownTypeReferences().last());
+			}
+		}
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.modifiers = toModifiers(node.getModifiers());
 		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
@@ -573,50 +585,57 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		decl.thrownExceptions = toArray(TypeReference.class, node.thrownTypeReferences());
 		decl.statements = toArray(Statement.class, node.getBody().contents());
 		decl.selector = toName(node.getTypeName());
-		if (decl.statements == null) {
+		
+		if (decl.statements == null || decl.statements.length == 0 || !(decl.statements[0] instanceof ExplicitConstructorCall)) {
 			decl.constructorCall = new ExplicitConstructorCall(ExplicitConstructorCall.ImplicitSuper);
+			decl.constructorCall.sourceStart = decl.sourceStart;
+			decl.constructorCall.sourceEnd = decl.sourceEnd;
 		} else {
-			if (decl.statements.length > 0) {
-				//TODO check how super() and this() work
-				Statement first = decl.statements[0];
-				if (first instanceof ExplicitConstructorCall) {
-					decl.constructorCall = (ExplicitConstructorCall)decl.statements[0];
-					Statement[] newStatements = new Statement[decl.statements.length - 1];
-					System.arraycopy(decl.statements, 1, newStatements, 0, newStatements.length);
-					decl.statements = newStatements;
-				} else {
-					decl.constructorCall = new ExplicitConstructorCall(ExplicitConstructorCall.ImplicitSuper);
-				}
+			//TODO check how super() and this() work
+			decl.constructorCall = (ExplicitConstructorCall)decl.statements[0];
+			if (decl.statements.length > 1) {
+				Statement[] newStatements = new Statement[decl.statements.length - 1];
+				System.arraycopy(decl.statements, 1, newStatements, 0, newStatements.length);
+				decl.statements = newStatements;
+			} else {
+				decl.statements = null;
 			}
-			for (Statement s : decl.statements) {
-				if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
-			}
+		}
+		
+		if (decl.statements != null) for (Statement s : decl.statements) {
+			if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
 		}
 		
 		if (isUndocumented(node.getBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
 		
 		return set(node, decl);
 	}
-
+	
 	@Override
 	public boolean visitMethodDeclaration(lombok.ast.MethodDeclaration node) {
 		MethodDeclaration decl = new MethodDeclaration(compilationResult);
-		decl.bodyStart = start(node.getRawBody()) + 1;
-		decl.bodyEnd = end(node.getRawBody()) - 1;
 		decl.declarationSourceStart = start(node);
 		decl.declarationSourceEnd = end(node);
 		decl.sourceStart = start(node.getRawMethodName());
-		decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
 		boolean setOriginalPosOnType = false;
-		{
+		/* set sourceEnd */ {
+			decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
 			int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
 			if (postDims > decl.sourceEnd) {
 				decl.sourceEnd = postDims;
 				setOriginalPosOnType = true;
 			}
+			
+			if (!node.rawThrownTypeReferences().isEmpty()) {
+				decl.sourceEnd = end(node.rawThrownTypeReferences().last());
+			}
 		}
-		if (!node.rawThrownTypeReferences().isEmpty()) {
-			decl.sourceEnd = end(node.rawThrownTypeReferences().last());
+		if (node.getRawBody() == null) {
+			decl.bodyStart = decl.sourceEnd + 1;
+			decl.bodyEnd = end(node) - 1;
+		} else {
+			decl.bodyStart = start(node.getRawBody()) + 1;
+			decl.bodyEnd = end(node.getRawBody()) - 1;
 		}
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.modifiers = toModifiers(node.getModifiers());
@@ -1383,7 +1402,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			} else if (entry.getArrayDimensions() > 0 || node.isVarargs()) {
 				decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 				decl.type.sourceStart = base.sourceStart;
-				if (kind == VariableKind.LOCAL && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
+				if ((base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
 					decl.type.sourceEnd = posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1;
 				} else decl.type.sourceEnd = base.sourceEnd;
 				if (node.isVarargs()) {
@@ -1400,14 +1419,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 					}
 				}
 			}
-			//TODO handle varargs positions.
 			if (node.isVarargs()) {
 				decl.type.bits |= ASTNode.IsVarArgs;
 			}
 			if (decl instanceof FieldDeclaration) {
-//				if (node.getParent() instanceof lombok.ast.VariableDeclaration) {
-//					((FieldDeclaration)decl).javadoc = (Javadoc) toTree(((lombok.ast.VariableDeclaration)node.getParent()).getJavadoc());
-//				}
 				if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
 					decl.bits |= ASTNode.HasLocalType;
 				}
@@ -1429,7 +1444,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.sourceStart = start(entry.getName());
 				decl.sourceEnd = end(entry.getName());
 				decl.declarationSourceStart = start(node);
-				decl.declarationSourceEnd = decl.declarationEnd = end(node);
+				decl.declarationSourceEnd = decl.declarationEnd = end(entry.getRawName());
 				break;
 			}
 			values.add(decl);
@@ -1564,7 +1579,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitCase(lombok.ast.Case node) {
-		return set(node, new CaseStatement(toExpression(node.getCondition()), end(node.getRawCondition()), posOfStructure(node, "case", 0, true)));
+		return set(node, new CaseStatement(toExpression(node.getCondition()), end(node.getRawCondition()), start(node)));
 	}
 	
 	@Override
