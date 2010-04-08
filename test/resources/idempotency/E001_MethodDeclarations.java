@@ -1,4 +1,4 @@
-abstract class E001_MethodDeclatations {
+abstract class E001_MethodDeclarations {
     void method() {
     }
     
