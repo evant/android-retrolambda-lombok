@@ -35,6 +35,7 @@ import lombok.SneakyThrows;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
+import org.eclipse.jdt.internal.compiler.ast.ConditionalExpression;
 import org.eclipse.jdt.internal.compiler.impl.Constant;
 import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 
@@ -90,6 +91,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 		for (ComponentField f : fields) {
 			Object value;
 			
+			if (node instanceof ConditionalExpression) ((ConditionalExpression)node).valueIfTrue.sourceEnd = -2;
 			if ("originalSourceEnd".equals(f.field.getName()) && node instanceof ArrayTypeReference) {
 				//workaround for eclipse arbitrarily skipping this field and setting it.
 				value = -2;
