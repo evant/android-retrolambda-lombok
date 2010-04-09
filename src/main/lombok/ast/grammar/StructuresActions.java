@@ -345,9 +345,15 @@ public class StructuresActions extends SourceActions {
 		return posify(decl);
 	}
 	
-	public Node createAnnotationMethodDeclaration(Node modifiers, Node typeReference, Node name, Node defaultValue) {
-		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration().setRawMethodName(name).setRawDefaultValue(defaultValue).setRawReturnTypeReference(typeReference);
+	public Node createAnnotationMethodDeclaration(Node modifiers, Node typeReference, Node name, List<org.parboiled.Node<Node>> dims, Node defaultValue) {
+		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration().setRawMethodName(name).setRawDefaultValue(defaultValue);
 		if (modifiers != null) decl.setRawModifiers(modifiers);
+		int extraDims = dims == null ? 0 : dims.size();
+		Node returnType = typeReference;
+		if (extraDims > 0 && returnType instanceof TypeReference) {
+			((TypeReference)returnType).setArrayDimensions(((TypeReference)returnType).getArrayDimensions() + extraDims);
+		}
+		decl.setRawReturnTypeReference(returnType);
 		return posify(decl);
 	}
 	
