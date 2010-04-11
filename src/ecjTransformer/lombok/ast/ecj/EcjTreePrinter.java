@@ -67,7 +67,9 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 			"typeArgumentsSourceStart",
 			"statementEnd",
 			"labelEnd",
-			"nameSourcePosition"
+			"nameSourcePosition",
+			"tagSourceStart",
+			"tagSourceEnd"
 			);
 	
 	private final Printer printer;
@@ -174,7 +176,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 			if (posField) {
 				if (value instanceof Long) {
 					long longValue = (Long)value;
-					stringValue = String.format("(%d, %d)", longValue >> 32, longValue & 0xFFFFFFFFL);
+					stringValue = String.format("(%d, %d)", (int)(longValue >> 32), (int)(longValue & 0xFFFFFFFFL));
 				} else {
 					stringValue = String.valueOf(value);
 				}
@@ -182,7 +184,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 				stringValue = formatBits((Integer)value);
 			} else if (value instanceof Long) {
 				long longValue = ((Long)value).longValue();
-				stringValue = String.format("0x%1$016x (%1$d)  %2$d<<32 | %3$d", value, longValue>>32, (longValue & 0xFFFFFFFFL));
+				stringValue = String.format("0x%1$016x (%1$d)  %2$d<<32 | %3$d", value, (int)(longValue>>32), (int)(longValue & 0xFFFFFFFFL));
 			} else if (value instanceof Integer) {
 				stringValue = String.format("0x%1$08x (%1$d)", value);
 			} else if (value instanceof char[]) {
