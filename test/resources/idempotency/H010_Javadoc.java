@@ -22,7 +22,9 @@ class H010_Javadoc {
     enum D {
     }
     
-    /** jdoc7 */
+    /** jdoc7
+      * @throws NumberFormatException foo
+     */
     void test() {
     }
 }
