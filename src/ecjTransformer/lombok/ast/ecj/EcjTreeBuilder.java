@@ -35,10 +35,11 @@ import java.util.Map;
 
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.BinaryOperator;
-import lombok.ast.Node;
+import lombok.ast.JavadocContainer;
 import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
 import lombok.ast.UnaryOperator;
+import lombok.ast.grammar.Source;
 import lombok.ast.grammar.SourceStructure;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
@@ -151,7 +152,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	private static final int VISIBILITY_MASK = 7;
 	private static final char[] PACKAGE_INFO = "package-info".toCharArray();
 	
-	private final Map<Node, Collection<SourceStructure>> sourceStructures;
+	private final Map<lombok.ast.Node, Collection<SourceStructure>> sourceStructures;
 	private List<? extends ASTNode> result = null;
 	private final lombok.ast.grammar.Source source;
 	private final ProblemReporter reporter;
@@ -404,11 +405,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		long[] pos = partsToPosArray(node.rawParts());
 		ImportReference pkg = new ImportReference(chain(node.parts()), pos, true, ClassFileConstants.AccDefault);
 		pkg.annotations = toArray(Annotation.class, node.annotations());
-		pkg.declarationSourceStart = start(node);
+		pkg.declarationSourceStart = jstart(node);
 		pkg.declarationSourceEnd = pkg.declarationEnd = end(node);
 		
 		return set(node, pkg);
 	}
+	
+	//TODO Create a test file with a whole bunch of comments. Possibly in a separate non-idempotency subdir, as printing comments idempotently is a rough nut to crack.
 	
 	@Override
 	public boolean visitImportDeclaration(lombok.ast.ImportDeclaration node) {
@@ -529,7 +532,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		decl.sourceStart = start(node.getRawName());
 		decl.sourceEnd = end(node.getRawName());
-		decl.declarationSourceStart = decl.modifiersSourceStart = start(node);
+		decl.declarationSourceStart = decl.modifiersSourceStart = jstart(node);
 		decl.declarationSourceEnd = decl.declarationEnd = end(node);
 		
 		char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
@@ -578,7 +581,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		ConstructorDeclaration decl = new ConstructorDeclaration(compilationResult);
 		decl.bodyStart = start(node.getRawBody()) + 1;
 		decl.bodyEnd = end(node.getRawBody()) - 1;
-		decl.declarationSourceStart = start(node);
+		decl.declarationSourceStart = jstart(node);
 		decl.declarationSourceEnd = end(node);
 		decl.sourceStart = start(node.getRawTypeName());
 		/* set sourceEnd */ {
@@ -624,7 +627,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitMethodDeclaration(lombok.ast.MethodDeclaration node) {
 		MethodDeclaration decl = new MethodDeclaration(compilationResult);
-		decl.declarationSourceStart = start(node);
+		decl.declarationSourceStart = jstart(node);
 		decl.declarationSourceEnd = end(node);
 		decl.sourceStart = start(node.getRawMethodName());
 		boolean setOriginalPosOnType = false;
@@ -682,7 +685,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitAnnotationMethodDeclaration(lombok.ast.AnnotationMethodDeclaration node) {
 		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration(compilationResult);
 		decl.modifiers = toModifiers(node.getModifiers()) + ExtraCompilerModifiers.AccSemicolonBody;
-		decl.declarationSourceStart = start(node);
+		decl.declarationSourceStart = jstart(node);
 		decl.declarationSourceEnd = end(node);
 		decl.sourceStart = start(node.getRawMethodName());
 		boolean setOriginalPosOnType = false;
@@ -724,9 +727,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (type != null) {
 			decl.sourceStart = start(type.getName());
 			decl.sourceEnd = end(type.getName());
-			decl.declarationSourceStart = start(type);
+			decl.declarationSourceStart = jstart(type);
 			decl.declarationSourceEnd = end(type);
-			if (!(type instanceof AnnotationDeclaration) || !type.getModifiers().isEmpty()) decl.modifiersSourceStart = start(type.getModifiers());
+			if (!(type instanceof AnnotationDeclaration) || !type.getModifiers().isEmpty() ||
+					(type instanceof JavadocContainer && ((JavadocContainer)type).getRawJavadoc() != null)) decl.modifiersSourceStart = jstart(type.getModifiers());
 			else decl.modifiersSourceStart = -1;
 		}
 		decl.bodyStart = start(members.owner()) + 1;
@@ -1479,7 +1483,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			
 			decl.sourceStart = start(entry.getName());
 			decl.sourceEnd = end(entry.getName());
-			decl.declarationSourceStart = start(node);
+			decl.declarationSourceStart = jstart(node);
 			switch (kind) {
 			case LOCAL:
 				int end;
@@ -1653,7 +1657,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (!node.isJavadoc()) {
 			throw new RuntimeException("Only javadoc expected here");
 		}
-		return set(node, new JustJavadocParser().parse(node.getContent()));
+		return set(node, new JustJavadocParser().parse(source, node.getPosition().getStart(), node.getPosition().getEnd()));
 	}
 	
 	@Override
@@ -1764,21 +1768,42 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		BINARY_OPERATORS.put(BinaryOperator.REMAINDER, OperatorIds.REMAINDER);
 	}
 	
-	static class JustJavadocParser extends JavadocParser {
+	private static class JustJavadocParser extends JavadocParser {
 		JustJavadocParser() {
 			super(null);
 		}
 		
-		Javadoc parse(String content) {
-			scanner.setSource(content.toCharArray());
-			source = content.toCharArray();
-			javadocStart = 0;
-			javadocEnd = content.length();
-			firstTagPosition = 0;
-			docComment = new Javadoc(this.javadocStart, this.javadocEnd);
+		Javadoc parse(Source source, int from, int to) {
+			char[] rawContent = new char[to];
+			Arrays.fill(rawContent, 0, from, ' ');
+			System.arraycopy(source.getRawInput().substring(from, to).toCharArray(), 0, rawContent, from, to - from);
+			this.scanner.setSource(rawContent);
+			this.source = rawContent;
+			this.javadocStart = from;
+			this.javadocEnd = to;
+			this.docComment = new Javadoc(this.javadocStart, this.javadocEnd);
 			commentParse();
+			this.docComment.valuePositions = -1;
+			this.docComment.sourceEnd--;
 			return docComment;
 		}
+	}
+	
+	private static int jstart(lombok.ast.Node node) {
+		if (node == null) return 0;
+		if (node instanceof lombok.ast.JavadocContainer) {
+			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node).getRawJavadoc();
+			if (javadoc != null) return start(javadoc);
+		}
+		if (node instanceof lombok.ast.VariableDefinition && node.getParent() instanceof lombok.ast.VariableDeclaration) {
+			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).getRawJavadoc();
+			if (javadoc != null) return start(javadoc);
+		}
+		if (node instanceof lombok.ast.Modifiers && node.getParent() instanceof JavadocContainer) {
+			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).getRawJavadoc();
+			if (javadoc != null) return start(javadoc);
+		}
+		return start(node);
 	}
 	
 	private static int start(lombok.ast.Node node) {
@@ -1805,7 +1830,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		return pos;
 	}
 	
-	private int countStructure(Node node, String structure) {
+	private int countStructure(lombok.ast.Node node, String structure) {
 		int result = 0;
 		if (sourceStructures != null && sourceStructures.containsKey(node)) {
 			for (SourceStructure struct : sourceStructures.get(node)) {
@@ -1816,7 +1841,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		return result;
 	}
 	
-	private int posOfStructure(Node node, String structure, int idx, boolean atStart) {
+	private int posOfStructure(lombok.ast.Node node, String structure, int idx, boolean atStart) {
 		int start = node.getPosition().getStart();
 		
 		if (sourceStructures != null && sourceStructures.containsKey(node)) {
