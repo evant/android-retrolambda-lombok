@@ -23,7 +23,6 @@ package lombok.ast.ecj;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -143,6 +142,7 @@ import org.eclipse.jdt.internal.compiler.parser.JavadocParser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
@@ -281,7 +281,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	private <T extends ASTNode> T[] toArray(Class<T> type, lombok.ast.StrictListAccessor<?, ?> accessor) {
-		List<T> list = new ArrayList<T>();
+		List<T> list = Lists.newArrayList();
 		for (lombok.ast.Node node : accessor) {
 			EcjTreeBuilder visitor = create();
 			node.accept(visitor);
@@ -303,13 +303,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	private <T extends ASTNode> List<T> toList(Class<T> type, lombok.ast.Node node) {
-		if (node == null) return new ArrayList<T>();
+		if (node == null) return Lists.newArrayList();
 		EcjTreeBuilder visitor = create();
 		node.accept(visitor);
 		bubblingFlags.addAll(visitor.bubblingFlags);
 		@SuppressWarnings("unchecked")
 		List<T> all = (List<T>)visitor.getAll();
-		return new ArrayList<T>(all);
+		return Lists.newArrayList(all);
 	}
 	
 	public ASTNode get() {
@@ -350,7 +350,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (value instanceof NameReference) {
 			updateRestrictionFlags(node, (NameReference)value);
 		}
-		List<ASTNode> result = new ArrayList<ASTNode>();
+		List<ASTNode> result = Lists.newArrayList();
 		if (value != null) result.add(value);
 		this.result = result;
 		return true;
@@ -737,9 +737,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		decl.bodyEnd = end(members.owner());
 		
 		boolean hasExplicitConstructor = false;
-		List<AbstractMethodDeclaration> methods = new ArrayList<AbstractMethodDeclaration>();
-		List<FieldDeclaration> fields = new ArrayList<FieldDeclaration>();
-		List<TypeDeclaration> types = new ArrayList<TypeDeclaration>();
+		List<AbstractMethodDeclaration> methods = Lists.newArrayList();
+		List<FieldDeclaration> fields = Lists.newArrayList();
+		List<TypeDeclaration> types = Lists.newArrayList();
 		
 		if (initialFields != null) fields.addAll(Arrays.asList(initialFields));
 		
@@ -1105,8 +1105,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitSelect(lombok.ast.Select node) {
 		//TODO for something like ("" + "").foo.bar;
 		/* try chain-of-identifiers */ {
-			List<lombok.ast.Identifier> selects = new ArrayList<lombok.ast.Identifier>();
-			List<Long> pos = new ArrayList<Long>();
+			List<lombok.ast.Identifier> selects = Lists.newArrayList();
+			List<Long> pos = Lists.newArrayList();
 			lombok.ast.Select current = node;
 			while (true) {
 				selects.add(current.getIdentifier());
@@ -1166,7 +1166,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (!qualified) {
 			singleName = toName(node.parts().first().getIdentifier());
 		} else {
-			List<lombok.ast.Identifier> identifiers = new ArrayList<lombok.ast.Identifier>();
+			List<lombok.ast.Identifier> identifiers = Lists.newArrayList();
 			for (lombok.ast.TypeReferencePart part : node.parts()) identifiers.add(part.getIdentifier());
 			qualifiedName = chain(identifiers, identifiers.size());
 		}
@@ -1432,7 +1432,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitVariableDefinition(lombok.ast.VariableDefinition node) {
-		List<AbstractVariableDeclaration> values = new ArrayList<AbstractVariableDeclaration>();
+		List<AbstractVariableDeclaration> values = Lists.newArrayList();
 		Annotation[] annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		int modifiers = toModifiers(node.getModifiers());
 		TypeReference base = (TypeReference) toTree(node.getTypeReference());

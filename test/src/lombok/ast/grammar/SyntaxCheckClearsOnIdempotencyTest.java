@@ -21,11 +21,10 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -37,6 +36,8 @@ import lombok.ast.syntaxChecks.SyntacticValidityVisitor;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import com.google.common.collect.Lists;
 
 @RunWith(RunForEachFileInDirRunner.class)
 public class SyntaxCheckClearsOnIdempotencyTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
@@ -56,7 +57,7 @@ public class SyntaxCheckClearsOnIdempotencyTest extends RunForEachFileInDirRunne
 		}
 		
 		Node node = source.getNodes().get(0);
-		List<SyntaxProblem> problems = new ArrayList<SyntaxProblem>();
+		List<SyntaxProblem> problems = Lists.newArrayList();
 		node.accept(new SyntacticValidityVisitor(problems, true));
 		if (problems.size() > 0) {
 			fail("On source: " + source.getName() + ": " + problems);

@@ -21,11 +21,11 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationMethodDeclaration;
@@ -57,7 +57,7 @@ public class KeywordChecks {
 	}
 	
 	public void duplicateKeywordModifierCheck(Modifiers modifiers) {
-		List<String> keywords = new ArrayList<String>();
+		List<String> keywords = Lists.newArrayList();
 		
 		for (Node n : modifiers.rawKeywords()) {
 			if (n instanceof KeywordModifier) {

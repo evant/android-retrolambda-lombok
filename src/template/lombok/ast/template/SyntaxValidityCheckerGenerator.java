@@ -25,8 +25,6 @@ import static java.util.Collections.emptyList;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +38,9 @@ import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 import lombok.Data;
 import lombok.Getter;
 import lombok.ast.template.TemplateProcessor.FieldData;
@@ -52,8 +53,8 @@ public class SyntaxValidityCheckerGenerator {
 		private final String methodName;
 	}
 	
-	private Map<String, List<MethodData>> checkMethods = new HashMap<String, List<MethodData>>();
-	private Map<String, List<FieldData>> types = new HashMap<String, List<FieldData>>();
+	private Map<String, List<MethodData>> checkMethods = Maps.newHashMap();
+	private Map<String, List<FieldData>> types = Maps.newHashMap();
 	private final ProcessingEnvironment env;
 	@Getter private boolean finished;
 	
@@ -64,7 +65,7 @@ public class SyntaxValidityCheckerGenerator {
 	
 	private static <K, V> List<V> getForMultiMap(Map<K,List<V>> map, K key) {
 		List<V> list = map.get(key);
-		if (list == null) map.put(key, list = new ArrayList<V>());
+		if (list == null) map.put(key, list = Lists.newArrayList());
 		return list;
 	}
 	

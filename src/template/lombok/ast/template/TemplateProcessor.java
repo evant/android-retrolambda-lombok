@@ -23,11 +23,8 @@ package lombok.ast.template;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +49,10 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import lombok.Data;
 
@@ -185,13 +186,13 @@ public class TemplateProcessor extends AbstractProcessor {
 				continue;
 			}
 			
-			List<FieldData> fields = new ArrayList<FieldData>();
-			List<ExecutableElement> methodsToCopy = new ArrayList<ExecutableElement>();
+			List<FieldData> fields = Lists.newArrayList();
+			List<ExecutableElement> methodsToCopy = Lists.newArrayList();
 			
 			String className;
 			String extending = null;
-			List<String> implementing = new ArrayList<String>();
-			List<TypeElement> bases = new ArrayList<TypeElement>();
+			List<String> implementing = Lists.newArrayList();
+			List<TypeElement> bases = Lists.newArrayList();
 			
 			TypeElement annotated;
 			/* Calculate file and class name of the source file we need to generate */ {
@@ -231,7 +232,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 			
 			/* Analyze all fields of template class and mixins */ {
-				Set<String> covered = new HashSet<String>();
+				Set<String> covered = Sets.newHashSet();
 				for (TypeElement base : bases) {
 					for (Element enclosed : base.getEnclosedElements()) {
 						if (enclosed.getKind() != ElementKind.FIELD) continue;
@@ -244,7 +245,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 			
 			/* Analyze all methods of template class and mixins */ {
-				Set<String> covered = new HashSet<String>();
+				Set<String> covered = Sets.newHashSet();
 				for (TypeElement base : bases) {
 					for (Element enclosed : base.getEnclosedElements()) {
 						if (enclosed.getKind() != ElementKind.METHOD) continue;
@@ -679,7 +680,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private static final Map<String, String> DEFAULT_VALUES; static {
-		Map<String, String> m = new HashMap<String, String>();
+		Map<String, String> m = Maps.newHashMap();
 		m.put("boolean", "false");
 		m.put("byte", "0");
 		m.put("short", "0");

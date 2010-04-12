@@ -22,12 +22,13 @@
 package lombok.ast;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 import lombok.NonNull;
 import lombok.ast.template.CopyMethod;
@@ -223,7 +224,7 @@ class AnnotationElementTemplate {
 	static List<Node> getValues(AnnotationElement self) {
 		if (self.getRawValue() == null) return Collections.emptyList();
 		if (self.getRawValue() instanceof ArrayInitializer) {
-			List<Node> result = new ArrayList<Node>();
+			List<Node> result = Lists.newArrayList();
 			for (Node n : ((ArrayInitializer)self.getRawValue()).rawExpressions()) if (n != null) result.add(n);
 			return result;
 		}
@@ -794,23 +795,20 @@ class ClassLiteralTemplate {
 
 @GenerateAstNode(implementing=DescribedNode.class)
 class KeywordModifierTemplate {
-	private static final Map<String, Integer> REFLECT_MODIFIERS;
-	static {
-		Map<String, Integer> reflectModifiers = new HashMap<String, Integer>();
-		reflectModifiers.put("public", Modifier.PUBLIC);
-		reflectModifiers.put("private", Modifier.PRIVATE);
-		reflectModifiers.put("protected", Modifier.PROTECTED);
-		reflectModifiers.put("static", Modifier.STATIC);
-		reflectModifiers.put("final", Modifier.FINAL);
-		reflectModifiers.put("synchronized", Modifier.SYNCHRONIZED);
-		reflectModifiers.put("volatile", Modifier.VOLATILE);
-		reflectModifiers.put("transient", Modifier.TRANSIENT);
-		reflectModifiers.put("native", Modifier.NATIVE);
-		reflectModifiers.put("interface", Modifier.INTERFACE);
-		reflectModifiers.put("abstract", Modifier.ABSTRACT);
-		reflectModifiers.put("strictfp", Modifier.STRICT);
-		REFLECT_MODIFIERS = reflectModifiers;
-	}
+	private static final Map<String, Integer> REFLECT_MODIFIERS = ImmutableMap.<String, Integer>builder()
+		.put("public", Modifier.PUBLIC)
+		.put("private", Modifier.PRIVATE)
+		.put("protected", Modifier.PROTECTED)
+		.put("static", Modifier.STATIC)
+		.put("final", Modifier.FINAL)
+		.put("synchronized", Modifier.SYNCHRONIZED)
+		.put("volatile", Modifier.VOLATILE)
+		.put("transient", Modifier.TRANSIENT)
+		.put("native", Modifier.NATIVE)
+		.put("interface", Modifier.INTERFACE)
+		.put("abstract", Modifier.ABSTRACT)
+		.put("strictfp", Modifier.STRICT)
+		.build();
 	
 	@NotChildOfNode
 	@NonNull String name;

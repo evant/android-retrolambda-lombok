@@ -22,7 +22,6 @@
 package lombok.ast.ecj;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
@@ -30,6 +29,8 @@ import org.eclipse.jdt.internal.compiler.ast.CombinedBinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.IntLiteralMinValue;
 import org.eclipse.jdt.internal.compiler.ast.Javadoc;
 import org.eclipse.jdt.internal.compiler.ast.LongLiteralMinValue;
+
+import com.google.common.collect.Lists;
 
 /**
  * This class generates the EcjAstVisitor that we use, because Eclipse's own visitor sucks,
@@ -79,7 +80,7 @@ class GenerateEcjTreeVisitorCode {
 	};
 	
 	static List<Class<?>> findVisits() {
-		List<Class<?>> visits = new ArrayList<Class<?>>();
+		List<Class<?>> visits = Lists.newArrayList();
 		for (Method m : ASTVisitor.class.getMethods()) {
 			if (m.getName().equals("visit") && m.getParameterTypes().length > 0) {
 				Class<?> t = m.getParameterTypes()[0];

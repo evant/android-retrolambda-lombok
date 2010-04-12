@@ -21,7 +21,6 @@
  */
 package lombok.ast.printer;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
@@ -30,12 +29,13 @@ import lombok.ast.Node;
 import lombok.ast.grammar.Source;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 public class TextFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
 	@Getter private final Source source;
 	private final StringBuilder sb = new StringBuilder();
-	private final List<String> errors = new ArrayList<String>();
+	private final List<String> errors = Lists.newArrayList();
 	private int indent;
 	private boolean suppress, newline;
 	

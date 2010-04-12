@@ -21,7 +21,6 @@
  */
 package lombok.ast.grammar;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.TreeSet;
@@ -32,6 +31,8 @@ import org.parboiled.BasicParseRunner;
 import org.parboiled.MatchHandler;
 import org.parboiled.MatcherContext;
 import org.parboiled.Rule;
+
+import com.google.common.collect.Lists;
 
 /**
  * Like the {@code BasicParseRunner} but will also track statistics on the parse run which you can retrieve by calling {@see #getReport(boolean)} after
@@ -85,7 +86,7 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 		TreeSet<ReportEntry<V>> topLevelFailed = new TreeSet<ReportEntry<V>>();
 		fillReport(topLevelFailed, rootReport);
 		int count = topEntries;
-		List<String> result = new ArrayList<String>();
+		List<String> result = Lists.newArrayList();
 		StringBuilder out = new StringBuilder();
 		for (ReportEntry<V> entry : topLevelFailed) {
 			if (count-- == 0) return result;
@@ -131,7 +132,7 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 	private static class ReportEntry<V> implements Comparable<ReportEntry<V>> {
 		private final String path;
 		private boolean succeeded;
-		private final List<ReportEntry<V>> children = new ArrayList<ReportEntry<V>>();
+		private final List<ReportEntry<V>> children = Lists.newArrayList();
 		private int subSteps = 0;
 		
 		@Override public int compareTo(ReportEntry<V> o) {
@@ -145,7 +146,7 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 	}
 	
 	public final class Handler implements MatchHandler<V> {
-		private final List<ReportEntry<V>> stack = new ArrayList<ReportEntry<V>>();
+		private final List<ReportEntry<V>> stack = Lists.newArrayList();
 		
 		public boolean matchRoot(MatcherContext<V> rootContext) {
 			return rootContext.runMatcher();

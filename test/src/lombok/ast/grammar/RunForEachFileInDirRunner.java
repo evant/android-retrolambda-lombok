@@ -26,14 +26,12 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import lombok.Data;
@@ -50,6 +48,7 @@ import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 public class RunForEachFileInDirRunner extends Runner {
 	@Data
@@ -125,11 +124,11 @@ public class RunForEachFileInDirRunner extends Runner {
 	};
 	
 	private final Description description;
-	private final Map<String, RunData> tests = new TreeMap<String, RunData>(stringComparator);
+	private final Map<String, RunData> tests = Maps.newTreeMap(stringComparator);
 	private final Throwable failure;
 	private final Class<?> testClass;
-	private List<Method> beforeClassMethods = new ArrayList<Method>();
-	private List<Method> afterClassMethods = new ArrayList<Method>();
+	private List<Method> beforeClassMethods = Lists.newArrayList();
+	private List<Method> afterClassMethods = Lists.newArrayList();
 	
 	public RunForEachFileInDirRunner(Class<?> testClass) {
 		this.testClass = testClass;
@@ -151,7 +150,7 @@ public class RunForEachFileInDirRunner extends Runner {
 		
 		SourceFileBasedTester tester = (SourceFileBasedTester) testClass.newInstance();
 		
-		List<DirDescriptor> descriptors = new ArrayList<DirDescriptor>(tester.getDirDescriptors());
+		List<DirDescriptor> descriptors = Lists.newArrayList(tester.getDirDescriptors());
 		Collections.sort(descriptors);
 		
 		File commonRoot = findCommonRoots(descriptors);
@@ -178,13 +177,13 @@ public class RunForEachFileInDirRunner extends Runner {
 			File root = mirrorDirectory == null ? directory : mirrorDirectory;
 			List<File> files = listFiles(root, descriptor.isRecurse());
 			
-			Map<Method, Description> noFileNeededMap = new TreeMap<Method, Description>(methodComparator);
+			Map<Method, Description> noFileNeededMap = Maps.newTreeMap(methodComparator);
 			
 			for (File file : files) {
 				if (descriptor.getInclusionPattern() != null && !descriptor.getInclusionPattern().matcher(file.getCanonicalPath()).matches()) continue;
 				if (descriptor.getExclusionPattern() != null && descriptor.getExclusionPattern().matcher(file.getCanonicalPath()).matches()) continue;
 				
-				Map<Method, Description> methodToDescMap = new TreeMap<Method, Description>(methodComparator);
+				Map<Method, Description> methodToDescMap = Maps.newTreeMap(methodComparator);
 				
 				String fileName = commonRoot == null ? file.getCanonicalPath() : commonRoot.toURI().relativize(file.toURI()).toString();
 				String relativePath = root.toURI().relativize(file.toURI()).toString();
@@ -213,7 +212,7 @@ public class RunForEachFileInDirRunner extends Runner {
 	}
 	
 	private static File findCommonRoots(Collection<DirDescriptor> dirDescriptors) throws IOException {
-		List<File> dirs = new ArrayList<File>();
+		List<File> dirs = Lists.newArrayList();
 		for (DirDescriptor d : dirDescriptors) dirs.add(d.getMirrorDirectory() == null ? d.getDirectory() : d.getMirrorDirectory());
 		
 		File common = dirs == null ? null : dirs.get(0).getCanonicalFile();
@@ -224,8 +223,8 @@ public class RunForEachFileInDirRunner extends Runner {
 	private static File commonality(File a, File b) throws IOException {
 		if (a == null || b == null) return null;
 		
-		List<File> pa = new ArrayList<File>();
-		List<File> pb = new ArrayList<File>();
+		List<File> pa = Lists.newArrayList();
+		List<File> pb = Lists.newArrayList();
 		
 		a = a.getCanonicalFile();
 		b = b.getCanonicalFile();

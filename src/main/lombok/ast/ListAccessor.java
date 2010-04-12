@@ -21,10 +21,11 @@
  */
 package lombok.ast;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import com.google.common.collect.Lists;
 
 class ListAccessor<T extends Node, P extends Node> {
 	private final List<AbstractNode> list;
@@ -233,7 +234,7 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public Iterator<Node> iterator() {
-			return new ArrayList<Node>(list).iterator();
+			return Lists.<Node>newArrayList(list).iterator();
 		}
 	};
 	
@@ -341,7 +342,7 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public Iterator<T> iterator() {
-			List<T> out = new ArrayList<T>(list.size());
+			List<T> out = Lists.newArrayList();
 			
 			for (Object o : list) {
 				if (!tClass.isInstance(o)) throw new AstException(parent, String.format(

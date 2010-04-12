@@ -21,11 +21,9 @@
  */
 package lombok.ast.javac;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 
 import lombok.ast.AlternateConstructorInvocation;
@@ -116,6 +114,7 @@ import lombok.ast.grammar.Source;
 import lombok.ast.grammar.SourceStructure;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.Flags;
@@ -158,7 +157,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	private List<? extends JCTree> result = null;
 	
 	public JcTreeBuilder(Source source, Context context) {
-		this(source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context), new HashMap<JCTree, Integer>());
+		this(source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context), Maps.<JCTree, Integer>newHashMap());
 	}
 	
 	private JcTreeBuilder(Map<Node, Collection<SourceStructure>> structures, TreeMaker treeMaker, Table table, Map<JCTree, Integer> endPosTable) {
@@ -618,7 +617,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			return false;
 		}
 		
-		java.util.List<String> buffer = new ArrayList<String>();
+		java.util.List<String> buffer = Lists.newArrayList();
 		BinaryExpression current = node;
 		int start = Integer.MAX_VALUE;
 		while (true) {
@@ -704,7 +703,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitArrayCreation(ArrayCreation node) {
-		java.util.List<Integer> typeTrees = new ArrayList<Integer>();
+		java.util.List<Integer> typeTrees = Lists.newArrayList();
 		int endPosOfTypeTree = 0;
 		List<JCExpression> dims = List.nil();
 		for (ArrayDimension dim : node.dimensions()) {

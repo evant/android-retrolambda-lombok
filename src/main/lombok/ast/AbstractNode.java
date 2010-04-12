@@ -23,8 +23,9 @@ package lombok.ast;
 
 import static java.util.Collections.emptyList;
 
-import java.util.ArrayList;
 import java.util.List;
+
+import com.google.common.collect.Lists;
 
 import lombok.Getter;
 import lombok.ast.printer.SourcePrinter;
@@ -140,7 +141,7 @@ abstract class AbstractNode implements Node {
 	}
 	
 	abstract static class WithParens extends AbstractNode implements Expression {
-		private List<Position> parensPositions = new ArrayList<Position>();
+		private List<Position> parensPositions = Lists.newArrayList();
 		
 		@Override
 		public boolean needsParentheses() {

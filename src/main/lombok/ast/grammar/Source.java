@@ -21,7 +21,6 @@
  */
 package lombok.ast.grammar;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -44,28 +43,29 @@ import org.parboiled.support.ParsingResult;
 
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 
 public class Source {
 	@Getter private final String name;
 	@Getter private final String rawInput;
-	private List<Node> nodes = new ArrayList<Node>();
-	private List<ParseProblem> problems = new ArrayList<ParseProblem>();
-	private List<Comment> comments = new ArrayList<Comment>();
+	private List<Node> nodes;
+	private List<ParseProblem> problems;
+	private List<Comment> comments;
 	private boolean parsed;
 	private ParsingResult<Node> parsingResult;
 	
-	private TreeMap<Integer, Integer> positionDeltas = new TreeMap<Integer, Integer>();
-	private Map<org.parboiled.Node<Node>, Node> registeredStructures =
-			new MapMaker().weakKeys().makeMap();
-	private Map<org.parboiled.Node<Node>, List<Comment>> registeredComments =
-		new MapMaker().weakKeys().makeMap();
+	private TreeMap<Integer, Integer> positionDeltas;
+	private Map<org.parboiled.Node<Node>, Node> registeredStructures;
+	private Map<org.parboiled.Node<Node>, List<Comment>> registeredComments;
 	private String preprocessed;
 	private Map<Node, Collection<SourceStructure>> cachedSourceStructures;
 	
 	public Source(String rawInput, String name) {
 		this.rawInput = rawInput;
 		this.name = name;
+		clear();
 	}
 	
 	public List<Node> getNodes() {
@@ -80,12 +80,12 @@ public class Source {
 	}
 	
 	public void clear() {
-		nodes = new ArrayList<Node>();
-		problems = new ArrayList<ParseProblem>();
-		comments = new ArrayList<Comment>();
+		nodes = Lists.newArrayList();
+		problems = Lists.newArrayList();
+		comments = Lists.newArrayList();
 		parsed = false;
 		parsingResult = null;
-		positionDeltas = new TreeMap<Integer, Integer>();
+		positionDeltas = Maps.newTreeMap();
 		registeredComments = new MapMaker().weakKeys().makeMap();
 		registeredStructures = new MapMaker().weakKeys().makeMap();
 		cachedSourceStructures = null;
@@ -109,7 +109,7 @@ public class Source {
 		ParserGroup group = new ParserGroup(this);
 		ProfilerParseRunner<Node> runner = new ProfilerParseRunner<Node>(group.structures.compilationUnitEoi(), preprocessed);
 		this.parsingResult = runner.run();
-		List<String> result = new ArrayList<String>();
+		List<String> result = Lists.newArrayList();
 		result.add(runner.getOverviewReport());
 		result.addAll(runner.getExtendedReport(top));
 		postProcess();
@@ -291,7 +291,7 @@ public class Source {
 	 * Associates comments that are javadocs to the node they belong to, by checking if the node that immediately follows a javadoc node is a JavadocContainer.
 	 */
 	private void associateJavadoc(List<Comment> comments, List<Node> nodes) {
-		final TreeMap<Integer, Node> startPosMap = new TreeMap<Integer, Node>();
+		final TreeMap<Integer, Node> startPosMap = Maps.newTreeMap();
 		for (Node node : nodes) node.accept(new ForwardingAstVisitor() {
 			@Override public boolean visitNode(Node node) {
 				if (node.isGenerated()) return false;
@@ -322,7 +322,7 @@ public class Source {
 	void registerComment(Context<Node> context, Comment c) {
 		List<Comment> list = registeredComments.get(context);
 		if (list == null) {
-			list = new ArrayList<Comment>();
+			list = Lists.newArrayList();
 			registeredComments.put(context.getSubNodes().get(0), list);
 		}
 		list.add(c);

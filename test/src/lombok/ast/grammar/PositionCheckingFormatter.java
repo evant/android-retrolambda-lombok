@@ -21,9 +21,10 @@
  */
 package lombok.ast.grammar;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+
+import com.google.common.collect.Lists;
 
 import lombok.ast.AstException;
 import lombok.ast.Node;
@@ -32,14 +33,14 @@ import lombok.ast.printer.TextFormatter;
 
 public class PositionCheckingFormatter extends TextFormatter {
 	private Stack<Node> nodeStack = new Stack<Node>();
-	private List<AstException> problems = new ArrayList<AstException>();
+	private List<AstException> problems = Lists.newArrayList();
 	
 	public PositionCheckingFormatter(Source source) {
 		super(source);
 	}
 	
 	public List<AstException> getProblems() {
-		List<AstException> p = new ArrayList<AstException>(problems);
+		List<AstException> p = Lists.newArrayList(problems);
 		if (!nodeStack.isEmpty()) p.add(new AstException(nodeStack.peek(), "This node was never closed"));
 		return p;
 	}

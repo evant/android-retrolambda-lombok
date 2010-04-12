@@ -29,7 +29,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -52,6 +51,7 @@ import org.junit.runner.RunWith;
 import org.parboiled.Parboiled;
 import org.parboiled.ReportingParseRunner;
 
+import com.google.common.collect.Lists;
 import com.sun.tools.javac.main.JavaCompiler;
 import com.sun.tools.javac.util.Context;
 
@@ -84,7 +84,7 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 	}
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
-		List<DirDescriptor> descriptors = new ArrayList<DirDescriptor>();
+		List<DirDescriptor> descriptors = Lists.newArrayList();
 		descriptors.add(DirDescriptor.of(new File("test/resources/idempotency"), true));
 		descriptors.add(DirDescriptor.of(new File("test/resources/alias"), true));
 		descriptors.add(DirDescriptor.of(new File("test/resources/special"), true));

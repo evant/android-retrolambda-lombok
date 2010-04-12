@@ -21,9 +21,10 @@
  */
 package lombok.ast.grammar;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.google.common.collect.Lists;
 
 import lombok.ast.AstVisitor;
 import lombok.ast.Node;
@@ -49,7 +50,7 @@ abstract class TemporaryNode implements Node {
 	}
 	
 	static class MethodParameters extends TemporaryNode {
-		List<Node> parameters = new ArrayList<Node>();
+		List<Node> parameters = Lists.newArrayList();
 		
 		@Override public MethodParameters copy() {
 			MethodParameters result = new MethodParameters();
@@ -59,7 +60,7 @@ abstract class TemporaryNode implements Node {
 	}
 	
 	static class MethodArguments extends TemporaryNode {
-		List<Node> arguments = new ArrayList<Node>();
+		List<Node> arguments = Lists.newArrayList();
 		
 		@Override public MethodArguments copy() {
 			MethodArguments result = new MethodArguments();
@@ -69,7 +70,7 @@ abstract class TemporaryNode implements Node {
 	}
 	
 	static class OrphanedTypeVariables extends TemporaryNode {
-		List<Node> variables = new ArrayList<Node>();
+		List<Node> variables = Lists.newArrayList();
 		
 		@Override public OrphanedTypeVariables copy() {
 			OrphanedTypeVariables result = new OrphanedTypeVariables();
@@ -79,7 +80,7 @@ abstract class TemporaryNode implements Node {
 	}
 	
 	static class StatementExpressionList extends TemporaryNode {
-		List<Node> expressions = new ArrayList<Node>();
+		List<Node> expressions = Lists.newArrayList();
 		
 		@Override public StatementExpressionList copy() {
 			StatementExpressionList result = new StatementExpressionList();
@@ -89,7 +90,7 @@ abstract class TemporaryNode implements Node {
 	}
 	
 	static class ExtendsClause extends TemporaryNode {
-		List<Node> superTypes = new ArrayList<Node>();
+		List<Node> superTypes = Lists.newArrayList();
 		
 		@Override public ExtendsClause copy() {
 			ExtendsClause result = new ExtendsClause();
@@ -99,7 +100,7 @@ abstract class TemporaryNode implements Node {
 	}
 	
 	static class ImplementsClause extends TemporaryNode {
-		List<Node> superInterfaces = new ArrayList<Node>();
+		List<Node> superInterfaces = Lists.newArrayList();
 		
 		@Override public ImplementsClause copy() {
 			ImplementsClause result = new ImplementsClause();

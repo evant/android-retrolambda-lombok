@@ -21,9 +21,10 @@
  */
 package lombok.ast.grammar;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.google.common.collect.Lists;
 
 import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Assert;
@@ -74,7 +75,7 @@ public class StatementsActions extends SourceActions {
 	public Node createLabelledStatement(List<Node> labelNames, Node statement) {
 		Node current = statement;
 		if (labelNames != null) {
-			labelNames = new ArrayList<Node>(labelNames);
+			labelNames = Lists.newArrayList(labelNames);
 			Collections.reverse(labelNames);
 			for (Node n : labelNames) {
 				if (n != null) {

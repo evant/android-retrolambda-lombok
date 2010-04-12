@@ -24,8 +24,6 @@ package lombok.ast.printer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -39,11 +37,13 @@ import lombok.ast.Node;
 import org.apache.commons.io.IOUtils;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class HtmlFormatter implements SourceFormatter {
 	private final StringBuilder sb = new StringBuilder();
 	private final String rawSource;
-	private final List<String> errors = new ArrayList<String>();
+	private final List<String> errors = Lists.newArrayList();
 	private String nextElementName;
 	
 	private static String escapeHtml(String in) {
@@ -133,7 +133,7 @@ public class HtmlFormatter implements SourceFormatter {
 	}
 	
 	private void generateOpenTag(Node node, String tagName) {
-		Set<String> classes = new HashSet<String>();
+		Set<String> classes = Sets.newHashSet();
 		AtomicReference<String> kind = new AtomicReference<String>();
 		findHtmlClassSignificantNodes(classes, kind, node == null ? null : node.getClass());
 		String description = node instanceof DescribedNode ? ((DescribedNode)node).getDescription() : null;

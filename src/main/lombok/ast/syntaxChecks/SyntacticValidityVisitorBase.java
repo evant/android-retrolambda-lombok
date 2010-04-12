@@ -21,9 +21,10 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.google.common.collect.Maps;
 
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
@@ -34,7 +35,7 @@ import lombok.ast.SyntaxProblem;
  * the generated {@code SyntacticValidityVisitor}.
  */
 public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
-	final Map<Class<?>, Object> checkerObjectStore = new HashMap<Class<?>, Object>();
+	final Map<Class<?>, Object> checkerObjectStore = Maps.newHashMap();
 	final boolean recursing;
 	final List<SyntaxProblem> problems;
 	
