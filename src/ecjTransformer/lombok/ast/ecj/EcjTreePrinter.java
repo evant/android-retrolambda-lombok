@@ -194,7 +194,7 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 					if (sb.length() != 0) {
 						sb.append(", ");
 					}
-					sb.append(new lombok.ast.StringLiteral().setValue(new String((char[])single)).getRawValue());
+					sb.append(new lombok.ast.StringLiteral().setValue(new String(single)).getRawValue());
 				}
 				stringValue = "{" + sb.toString() + "}";
 			} else if ("compilationResult".equals(name)) {

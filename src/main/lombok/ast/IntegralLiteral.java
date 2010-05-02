@@ -91,7 +91,7 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 	
 	
 	public IntegralLiteral setIntValue(int value) {
-		this.value = ((long)value) & 0xFFFFFFFFL;	//Suppress sign extension.
+		this.value = value & 0xFFFFFFFFL;	//Suppress sign extension.
 		this.rawValue = "" + value;
 		this.errorReasonForValue = null;
 		this.markedAsLong = false;
