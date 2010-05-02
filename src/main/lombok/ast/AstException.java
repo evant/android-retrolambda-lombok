@@ -26,9 +26,11 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper=false)
 public class AstException extends RuntimeException {
 	private final Node problemNode;
+	private final String message;
 	
 	public AstException(Node problemNode, String message) {
 		super(message);
+		this.message = message;
 		this.problemNode = problemNode;
 	}
 	

@@ -41,6 +41,7 @@ import org.parboiled.RecoveringParseRunner;
 import org.parboiled.errors.ParseError;
 import org.parboiled.support.ParsingResult;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -61,6 +62,7 @@ public class Source {
 	private Map<org.parboiled.Node<Node>, List<Comment>> registeredComments;
 	private String preprocessed;
 	private Map<Node, Collection<SourceStructure>> cachedSourceStructures;
+	private List<Integer> lineEndings;
 	
 	public Source(String rawInput, String name) {
 		this.rawInput = rawInput;
@@ -83,6 +85,7 @@ public class Source {
 		nodes = Lists.newArrayList();
 		problems = Lists.newArrayList();
 		comments = Lists.newArrayList();
+		lineEndings = ImmutableList.of();
 		parsed = false;
 		parsingResult = null;
 		positionDeltas = Maps.newTreeMap();
@@ -114,6 +117,19 @@ public class Source {
 		result.addAll(runner.getExtendedReport(top));
 		postProcess();
 		return result;
+	}
+	
+	private List<Integer> calculateLineEndings() {
+		ImmutableList.Builder<Integer> builder = ImmutableList.builder();
+		
+		boolean atCR = false;
+		for (int i = 0; i < rawInput.length(); i++) {
+			char c = rawInput.charAt(i);
+			if (c == '\n' && !atCR) builder.add(i);
+			atCR = c == '\r';
+			if (atCR) builder.add(i);
+		}
+		return builder.build();
 	}
 	
 	public void parseCompilationUnit() {
@@ -352,6 +368,24 @@ public class Source {
 		positionDeltas.put(position, i + delta);
 	}
 	
+	public List<Integer> getLineEndingsTable() {
+		return lineEndings;
+	}
+	
+	public long lineColumn(int index) {
+		//Possible efficiency improvement: Store in a list the index into the line table with the first line that's over 500, 1000, 1500, ... chars.
+		//Or just binary search.
+		int oldIdx = 0;
+		int line = 0;
+		
+		for (; line < lineEndings.size(); line++) {
+			int pos = lineEndings.get(line);
+			if (pos > index) break;
+			oldIdx = pos;
+		}
+		return ((long) line << 32 | index - oldIdx);
+	}
+	
 	/**
 	 * Maps a position in the {@code preprocessed} string to the equivalent character in the {@code rawInput}.
 	 * 
@@ -367,6 +401,7 @@ public class Source {
 	
 	private String preProcess() {
 		preprocessed = rawInput;
+		this.lineEndings = calculateLineEndings();
 		applyBackslashU();
 //		applyBraceMatching();
 		return preprocessed;
