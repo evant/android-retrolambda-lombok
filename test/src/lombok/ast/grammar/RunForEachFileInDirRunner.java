@@ -96,6 +96,12 @@ public class RunForEachFileInDirRunner extends Runner {
 		}
 	}
 	
+	public static String fixLineEndings(String in) {
+		String plaf = System.getProperty("line.separator", "\n");
+		if (plaf.equals("\n")) return in;
+		return in.replace(plaf, "\n");
+	}
+	
 	@Data
 	private static final class RunData {
 		private final File main, alias;

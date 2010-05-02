@@ -22,6 +22,7 @@
 package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
+import static lombok.ast.grammar.RunForEachFileInDirRunner.fixLineEndings;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,6 +56,7 @@ public class AliasTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
 		TextFormatter formatter = new TextFormatter(actual);
 		node.accept(new SourcePrinter(formatter));
 		String actualString = formatter.finish();
-		assertEquals(expected, actualString);
+		
+		assertEquals(fixLineEndings(expected), fixLineEndings(actualString));
 	}
 }

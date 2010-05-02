@@ -22,6 +22,7 @@
 package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
+import static lombok.ast.grammar.RunForEachFileInDirRunner.fixLineEndings;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,12 +55,13 @@ public class IdempotencyTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 		Node node = source.getNodes().get(0);
 		TextFormatter formatter = new TextFormatter(source);
 		node.accept(new SourcePrinter(formatter));
-		String actual = formatter.finish();
+		String actual = fixLineEndings(formatter.finish());
+		String original = fixLineEndings(source.getRawInput());
 		try {
-			assertEquals(source.getRawInput(), actual);
+			assertEquals(original, actual);
 		} catch (AssertionError e) {
 			System.out.println("------------------RAW:");
-			System.out.println(source.getRawInput());
+			System.out.println(original);
 			System.out.println("-------PARSED-PRINTED:");
 			System.out.println(actual);
 			System.out.println("----------------------");

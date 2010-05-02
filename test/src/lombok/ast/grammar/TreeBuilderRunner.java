@@ -22,6 +22,7 @@
 package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
+import static lombok.ast.grammar.RunForEachFileInDirRunner.fixLineEndings;
 
 import java.io.File;
 import java.util.Arrays;
@@ -61,7 +62,7 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		
 		String lombokString;
 		try {
-			lombokString = convertToString(parseWithLombok(source));
+			lombokString = fixLineEndings(convertToString(parseWithLombok(source)));
 		} catch (Exception e) {
 			printDebugInformation(source, targetString, null);
 			throw e;
@@ -80,12 +81,12 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		return true;
 	}
 	
-	protected void printDebugInformation(Source source, String ecjString, String lombokString) {
+	protected void printDebugInformation(Source source, String targetString, String lombokString) {
 		String name = source.getName();
 		System.out.printf("==== Processing %s ====\n", name);
-		System.out.println(source.getRawInput());
+		System.out.println(fixLineEndings(source.getRawInput()));
 		System.out.println("=========== Expected ============");
-		System.out.println(ecjString);
+		System.out.println(targetString);
 		if (lombokString != null) {
 			System.out.println("============ Actual =============");
 			System.out.println(lombokString);
