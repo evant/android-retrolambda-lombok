@@ -34,6 +34,7 @@ import java.util.Map;
 
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.BinaryOperator;
+import lombok.ast.Comment;
 import lombok.ast.JavadocContainer;
 import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
@@ -212,9 +213,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	public EcjTreeBuilder(lombok.ast.grammar.Source source, CompilerOptions options) {
-		this.options = options;
-		this.sourceStructures = source.getSourceStructures();
-		IErrorHandlingPolicy policy = new IErrorHandlingPolicy() {
+		this(source, new ProblemReporter(new IErrorHandlingPolicy() {
 			public boolean proceedOnErrors() {
 				return true;
 			}
@@ -222,11 +221,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			public boolean stopOnFirstError() {
 				return false;
 			}
-		};
-		
+		}, options, new DefaultProblemFactory(Locale.ENGLISH)), new CompilationResult(source.getName().toCharArray(), 0, 0, 0));
+	}
+	
+	public EcjTreeBuilder(lombok.ast.grammar.Source source, ProblemReporter reporter, CompilationResult compilationResult) {
+		this.options = reporter.options;
+		this.sourceStructures = source.getSourceStructures();
 		this.source = source;
-		this.reporter = new ProblemReporter(policy, options, new DefaultProblemFactory(Locale.ENGLISH));
-		this.compilationResult = new CompilationResult(source.getName().toCharArray(), 0, 0, 0);
+		this.reporter = reporter;
+		this.compilationResult = compilationResult;
 	}
 	
 	private EcjTreeBuilder(EcjTreeBuilder parent) {
@@ -386,9 +389,6 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			decl.name = PACKAGE_INFO.clone();
 			decl.modifiers = ClassFileConstants.AccDefault | ClassFileConstants.AccInterface;
 			
-			if (node.getPackageDeclaration() != null) {
-				// TODO annotations and javadoc on package
-			}
 			newTypes[0] = decl;
 			cud.types = newTypes;
 		}
@@ -439,6 +439,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		updateTypeBits(node.getParent(), decl, false);
 		
+		setupJavadoc(decl, node);
+		
 		//TODO test inner types. Give em everything - (abstract) methods, initializers, static initializers, MULTIPLE initializers.
 		return set(node, decl);
 	}
@@ -484,20 +486,20 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitInterfaceDeclaration(lombok.ast.InterfaceDeclaration node) {
 		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, false, ClassFileConstants.AccInterface);
 		
-//		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
 		decl.superInterfaces = toArray(TypeReference.class, node.extending());
-
+		
 		markTypeReferenceIsSuperType(decl);
-
+		
 		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
 		decl.name = toName(node.getName());
 		
 		updateTypeBits(node.getParent(), decl, false);
 		
+		setupJavadoc(decl, node);
+		
 		return set(node, decl);
 	}	
-	
 	
 	@Override
 	public boolean visitEnumDeclaration(lombok.ast.EnumDeclaration node) {
@@ -517,6 +519,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		updateTypeBits(node.getParent(), decl, true);
 		
+		setupJavadoc(decl, node);
+		
 		return set(node, decl);
 	}
 	
@@ -524,9 +528,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitEnumConstant(lombok.ast.EnumConstant node) {
 		//TODO check where the javadoc and annotations go: the field or the type
 		
-		//[javadoc][annotations] *static *final [ENUMTYPE] [name] = new [ENUMTYPE.name] ([arguments]) [body]
 		FieldDeclaration decl = new FieldDeclaration();
-		decl.javadoc = (Javadoc) toTree(node.getJavadoc());
 		decl.annotations = toArray(Annotation.class, node.annotations());
 		decl.name = toName(node.getName());
 		
@@ -564,6 +566,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			decl.bits |= ASTNode.HasLocalType;
 		}
 		
+		setupJavadoc(decl, node);
+		
 		return set(node, decl);
 	}
 	
@@ -573,7 +577,33 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				ClassFileConstants.AccAnnotation | ClassFileConstants.AccInterface);
 		decl.name = toName(node.getName());
 		updateTypeBits(node.getParent(), decl, false);
+		
+		setupJavadoc(decl, node);
+		
 		return set(node, decl);
+	}
+	
+	private void setupJavadoc(ASTNode node, lombok.ast.JavadocContainer container) {
+		if (container != null && container.getRawJavadoc() instanceof lombok.ast.Comment) {
+			lombok.ast.Comment javadoc = (Comment) container.getRawJavadoc();
+			boolean markDep = javadoc.isMarkedDeprecated();
+			
+			if (node instanceof AbstractMethodDeclaration) {
+				AbstractMethodDeclaration decl = (AbstractMethodDeclaration) node;
+				decl.javadoc = (Javadoc) toTree(javadoc);
+				if (markDep) decl.modifiers |= ClassFileConstants.AccDeprecated;
+			}
+			if (node instanceof FieldDeclaration) {
+				FieldDeclaration decl = (FieldDeclaration) node;
+				decl.javadoc = (Javadoc) toTree(javadoc);
+				if (markDep) decl.modifiers |= ClassFileConstants.AccDeprecated;
+			}
+			if (node instanceof TypeDeclaration) {
+				TypeDeclaration decl = (TypeDeclaration) node;
+				decl.javadoc = (Javadoc) toTree(javadoc);
+				if (markDep) decl.modifiers |= ClassFileConstants.AccDeprecated;
+			}
+		}
 	}
 	
 	@Override
@@ -599,6 +629,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		decl.statements = toArray(Statement.class, node.getBody().contents());
 		decl.selector = toName(node.getTypeName());
 		
+		setupJavadoc(decl, node);
+		
 		if (decl.statements == null || decl.statements.length == 0 || !(decl.statements[0] instanceof ExplicitConstructorCall)) {
 			decl.constructorCall = new ExplicitConstructorCall(ExplicitConstructorCall.ImplicitSuper);
 			decl.constructorCall.sourceStart = decl.sourceStart;
@@ -620,6 +652,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		}
 		
 		if (isUndocumented(node.getBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
+		
+		setupJavadoc(decl, node);
 		
 		return set(node, decl);
 	}
@@ -677,6 +711,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			bubblingFlags.add(BubblingFlags.ABSTRACT_METHOD);
 		}
 		if (isUndocumented(node.getBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
+		
+		setupJavadoc(decl, node);
 		
 		return set(node, decl);
 	}
@@ -744,37 +780,17 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (initialFields != null) fields.addAll(Arrays.asList(initialFields));
 		
 		for (lombok.ast.TypeMember member : members) {
-			Javadoc javadoc = null;
-			boolean markDeprecated = false;
-			if (member instanceof lombok.ast.JavadocContainer) {
-				lombok.ast.Comment javadocNode = ((lombok.ast.JavadocContainer)member).getJavadoc();
-				javadoc = (Javadoc) toTree(javadocNode);
-				markDeprecated = (javadoc != null && javadocNode.isMarkedDeprecated());
-			}
-			
 			if (member instanceof lombok.ast.ConstructorDeclaration) {
 				hasExplicitConstructor = true;
 				AbstractMethodDeclaration method =(AbstractMethodDeclaration)toTree(member);
 				methods.add(method);
-				method.javadoc = javadoc;
-				if (markDeprecated) {
-					method.modifiers |= ClassFileConstants.AccDeprecated;
-				}
 			} else if (member instanceof lombok.ast.MethodDeclaration ||
 					member instanceof lombok.ast.AnnotationMethodDeclaration) {
 				AbstractMethodDeclaration method =(AbstractMethodDeclaration)toTree(member);
 				methods.add(method);
-				method.javadoc = javadoc;
-				if (markDeprecated) {
-					method.modifiers |= ClassFileConstants.AccDeprecated;
-				}
 			} else if (member instanceof lombok.ast.VariableDeclaration) {
 				for (FieldDeclaration field : toList(FieldDeclaration.class, member)) {
 					fields.add(field);
-					field.javadoc = javadoc;
-					if (markDeprecated) {
-						field.modifiers |= ClassFileConstants.AccDeprecated;
-					}
 				}
 			} else if (member instanceof lombok.ast.StaticInitializer) {
 				fields.add((FieldDeclaration) toTree(member));
@@ -818,13 +834,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (bubblingFlags.remove(BubblingFlags.ABSTRACT_METHOD)) {
 			decl.bits |= ASTNode.HasAbstractMethods;
 		}
-		if (members.owner().getParent() instanceof lombok.ast.JavadocContainer) {
-			lombok.ast.Comment javadoc = ((lombok.ast.JavadocContainer)members.owner().getParent()).getJavadoc();
-			decl.javadoc = (Javadoc) toTree(javadoc);
-			if (javadoc != null && javadoc.isMarkedDeprecated()) {
-				decl.modifiers |= ClassFileConstants.AccDeprecated;
-			}
-		}
+		
 		decl.addClinit();
 		return decl;
 	}
@@ -1219,8 +1229,6 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 		}
 		
-		if (ref == null) throw new RuntimeException("typeref fail.");
-		
 		if (wildcard != null) {
 			wildcard.bound = ref;
 			ref = wildcard;
@@ -1427,7 +1435,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitVariableDeclaration(lombok.ast.VariableDeclaration node) {
-		return set(node, toList(AbstractVariableDeclaration.class, node.getDefinition()));
+		List<AbstractVariableDeclaration> list = toList(AbstractVariableDeclaration.class, node.getDefinition());
+		if (list.size() > 0) setupJavadoc(list.get(0), node);
+		return set(node, list);
 	}
 	
 	@Override
@@ -1774,9 +1784,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		}
 		
 		Javadoc parse(Source source, int from, int to) {
-			char[] rawContent = new char[to];
+			// Eclipse crashes if there's no character following the javadoc.
+			char[] rawContent = new char[to + 1];
 			Arrays.fill(rawContent, 0, from, ' ');
 			System.arraycopy(source.getRawInput().substring(from, to).toCharArray(), 0, rawContent, from, to - from);
+			rawContent[to] = ' ';
+			this.sourceLevel = ClassFileConstants.JDK1_6;
 			this.scanner.setSource(rawContent);
 			this.source = rawContent;
 			this.javadocStart = from;
