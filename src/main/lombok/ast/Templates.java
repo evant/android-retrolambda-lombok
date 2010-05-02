@@ -383,6 +383,13 @@ class VariableDefinitionEntryTemplate {
 		TypeReference typeRef = parent.getTypeReference().copy();
 		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getArrayDimensions() + (parent.isVarargs() ? 1 : 0));
 	}
+	
+	@CopyMethod
+	static Modifiers getModifiersOfParent(VariableDefinitionEntry self) {
+		Modifiers m = null;
+		if (self.getParent() instanceof VariableDefinition) m = ((VariableDefinition)self.getParent()).getModifiers();
+		return m == null ? new Modifiers() : m;
+	}
 }
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
@@ -409,6 +416,11 @@ class IdentifierTemplate {
 	@CopyMethod
 	static String getDescription(Identifier self) {
 		return self.getName();
+	}
+	
+	@CopyMethod(isStatic=true)
+	static Identifier of(String name) {
+		return new Identifier().setName(name);
 	}
 }
 
@@ -567,6 +579,11 @@ class TypeReferenceTemplate {
 	}
 	
 	private static final String PRIMITIVE_NAMES = " int long float double char short byte boolean ";
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference VOID() {
+		return new TypeReference().parts().addToEnd(new TypeReferencePart().setIdentifier(Identifier.of("void")));
+	}
 	
 	@CopyMethod
 	static boolean isPrimitive(TypeReference t) {
@@ -822,6 +839,26 @@ class KeywordModifierTemplate {
 	static int asReflectModifiers(KeywordModifier self) {
 		Integer value = REFLECT_MODIFIERS.get(self.getName());
 		return value == null ? 0 : value;
+	}
+	
+	@CopyMethod(isStatic=true)
+	static KeywordModifier STATIC() {
+		return new KeywordModifier().setName("static");
+	}
+	
+	@CopyMethod(isStatic=true)
+	static KeywordModifier PUBLIC() {
+		return new KeywordModifier().setName("public");
+	}
+	
+	@CopyMethod(isStatic=true)
+	static KeywordModifier PROTECTED() {
+		return new KeywordModifier().setName("protected");
+	}
+	
+	@CopyMethod(isStatic=true)
+	static KeywordModifier PRIVATE() {
+		return new KeywordModifier().setName("private");
 	}
 }
 
@@ -1349,6 +1386,19 @@ class ImportDeclarationTemplate {
 	
 	@NotChildOfNode
 	boolean starImport;
+	
+	@CopyMethod
+	static String asFullyQualifiedName(ImportDeclaration self) {
+		boolean first = true;
+		StringBuilder sb = new StringBuilder();
+		for (Identifier i : self.parts()) {
+			if (!first) sb.append('.');
+			first = false;
+			sb.append(i.getName());
+		}
+		if (self.isStarImport()) sb.append(".*");
+		return sb.toString();
+	}
 }
 
 @GenerateAstNode
