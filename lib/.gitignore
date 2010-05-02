@@ -1,4 +1,5 @@
 build
 runtime
 test
-ivy.jar
+contrib
+ivyplusplus.jar

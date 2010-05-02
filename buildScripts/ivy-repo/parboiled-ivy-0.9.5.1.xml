@@ -7,8 +7,10 @@
 	<configurations>
 		<conf name="build" />
 		<conf name="runtime" />
+		<conf name="sources" />
 	</configurations>
 	<publications>
 		<artifact conf="build, runtime" url="http://cloud.github.com/downloads/sirthias/parboiled/parboiled-0.9.5.1.jar" />
+		<artifact conf="sources" url="http://github.com/sirthias/parboiled/downloads/parboiled-0.9.5.1-src.jar" />
 	</publications>
 </ivy-module>

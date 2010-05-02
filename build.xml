@@ -19,8 +19,20 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
 -->
-<project name="lombok.ast" default="compile" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="lombok.ast" default="dist" xmlns:ivy="antlib:com.zwitserloot.ivyplusplus">
 	<property name="build.compiler" value="javac1.6" />
+	<property name="ivy.retrieve.pattern" value="lib/[conf]/[artifact].[ext]" />
+	<available file="lib/ivyplusplus.jar" property="ivyplusplus.available" />
+	<available file="doc/jls/j3TOC.html" property="jls-available" />
+	
+	<target name="download-ipp" unless="ivyplusplus.available">
+		<mkdir dir="lib" />
+		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" usetimestamp="true" />
+	</target>
+	
+	<target name="ensure-ipp" depends="download-ipp">
+		<taskdef classpath="lib/ivyplusplus.jar" resource="com/zwitserloot/ivyplusplus/antlib.xml" uri="antlib:com.zwitserloot.ivyplusplus" />
+	</target>
 	
 	<path id="build.path">
 		<fileset dir="lib/build">
@@ -40,6 +52,18 @@
 		</fileset>
 	</path>
 	
+	<target name="version" depends="ensure-ipp" description="Shows the version number.">
+		<mkdir dir="build/lombok.ast" />
+		<ivy:compile destdir="build/lombok.ast" srcdir="src/main" includes="lombok/ast/Version.java" />
+		<java
+			classname="lombok.ast.Version"
+			classpath="build/lombok.ast"
+			failonerror="true"
+			output="build/version.txt" />
+		<ivy:loadversion property="lombok.ast.version" file="build/version.txt" />
+		<echo level="info">Lombok ast version: ${lombok.ast.version}</echo>
+	</target>
+	
 	<target name="clean" description="Deletes build artefacts (but does not delete downloaded dependencies)">
 		<delete dir="build" quiet="true" />
 	</target>
@@ -47,15 +71,15 @@
 	<target name="distclean" depends="clean" description="Deletes everything that this build script has ever generated.">
 		<delete file="lib/ivy.jar" quiet="true" />
 		<delete dir="lib/build" quiet="true" />
+		<delete file=".project" quiet="true" />
+		<delete file=".classpath" quiet="true" />
+		<delete dir=".settings" quiet="true" />
 	</target>
 	
-	<target name="templateProcessor" depends="ensureBuildDeps" description="Compiles the Template Processor, which produces the AST API classes">
-		<mkdir dir="build/templateProcessor" />
-		<javac destdir="build/templateProcessor" debug="true" target="1.6" source="1.6">
-			<compilerarg value="-Xlint:unchecked" />
+	<target name="templateProcessor" depends="ensureBuildDeps">
+		<ivy:compile destdir="build/templateProcessor" srcdir="src/template">
 			<classpath refid="build.path" />
-			<src path="src/template" />
-		</javac>
+		</ivy:compile>
 		<mkdir dir="build/templateProcessor/META-INF" />
 		<mkdir dir="build/templateProcessor/META-INF/services" />
 		<echo file="build/templateProcessor/META-INF/services/javax.annotation.processing.Processor">lombok.ast.template.TemplateProcessor</echo>
@@ -64,49 +88,42 @@
 	
 	<target name="generateSource" depends="ensureBuildDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
 		<mkdir dir="build/lombok.ast_generatedSource" />
-		<javac destdir="build/lombok.ast_generatedSource" debug="true" target="1.6" source="1.6" encoding="UTF-8">
-			<compilerarg value="-Xlint:unchecked" />
+		<ivy:compile destdir="build/lombok.ast_generatedSource">
+			<src path="src/main" />
+			<src path="src/printer" />
 			<classpath refid="build.path" />
 			<classpath location="build/templateProcessor.jar" />
-			<src path="src/main" />
 			<compilerarg value="-proc:only" />
 			<compilerarg value="-s" />
 			<compilerarg path="build/lombok.ast_generatedSource" />
-		</javac>
+		</ivy:compile>
+		<echo>NOTE: If you see a wash of errors above this line, ignore them. Compilation succeeded; this is a javac bug.</echo>
 	</target>
 	
 	<target name="compile" depends="ensureBuildDeps, templateProcessor" description="Compiles all code for lombok.ast">
-		<mkdir dir="build/lombok.ast" />
-		<mkdir dir="build/lombok.ast_generatedSource" />
-		<javac destdir="build/lombok.ast" debug="true" target="1.6" source="1.6" encoding="UTF-8">
-			<compilerarg value="-Xlint:unchecked" />
-			<classpath refid="build.path" />
-			<classpath location="build/templateProcessor.jar" />
+		<ivy:compile destdir="build/lombok.ast">
 			<src path="src/main" />
 			<src path="src/printer" />
 			<src path="src/javacTransformer" />
 			<src path="src/ecjTransformer" />
+			<classpath location="build/templateProcessor.jar" />
+			<classpath refid="build.path" />
 			<compilerarg value="-s" />
 			<compilerarg path="build/lombok.ast_generatedSource" />
-		</javac>
-		<echo>NOTE: If you see a wash of errors above this line, ignore them. Compilation succeeded; this is a javac bug.</echo>
+		</ivy:compile>
 	</target>
 	
-	<target name="testParser" depends="compile, ensureRuntimeDeps" description="Runs the testRules parse target, and will parse standard input, line by line.">
-		<java classname="lombok.ast.grammar.ParseSomething" fork="true">
-			<classpath location="build/lombok.ast" />
-			<classpath refid="runtime.path" />
-		</java>
+	<target name="-test.quiet">
+		<property name="tests.quiet" value="true" />
 	</target>
 	
 	<target name="test" depends="compile, ensureTestDeps" description="Runs unit tests.">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
 		<mkdir dir="build/tests" />
-		<javac destdir="build/tests" debug="true" target="1.6" source="1.6" encoding="UTF-8">
+		<ivy:compile destdir="build/tests" srcdir="test/src">
 			<classpath refid="test.path" />
 			<classpath location="build/lombok.ast" />
-			<src path="test/src" />
-		</javac>
+		</ivy:compile>
 		<junit haltonfailure="yes" fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
 			<jvmarg value="-Xbootclasspath/p:lib/test/javac.jar" />
@@ -122,40 +139,86 @@
 		<echo level="info">All tests successful.</echo>
 	</target>
 	
-	<target name="ensure-ivy">
-		<ant antfile="buildScripts/ivy.ant.xml" target="init-ivy" dir="." />
-		<taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpath="lib/ivy.jar" />
-	</target>
-	
-	<target name="config-ivy" depends="ensure-ivy">
+	<target name="config-ivy" depends="ensure-ipp">
 		<ivy:configure file="buildScripts/ivysettings.xml" />
 	</target>
 	
-	<target name="showDependencyReport" depends="config-ivy" description="Generates dependency report as HTML file.">
-		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
-		<ant antfile="buildScripts/ivy.ant.xml" target="showDependencyReport" dir=".">
-			<property name="build.report" value="build/report" />
-		</ant>
+	<target name="show-dep-report" depends="ensureRuntimeDeps" description="Displays a dependencies report">
+		<ivy:show-dep-report />
 	</target>
 	
 	<target name="deps" depends="ensureBuildDeps, ensureRuntimeDeps, ensureTestDeps" />
 	
 	<target name="ensureBuildDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="build" />
-		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+		<ivy:retrieve />
 	</target>
 	
 	<target name="ensureRuntimeDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="runtime" />
-		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+		<ivy:retrieve />
 	</target>
 	
 	<target name="ensureTestDeps" depends="config-ivy">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
-		<ivy:retrieve pattern="lib/[conf]/[artifact].[ext]" />
+		<ivy:retrieve />
 	</target>
 	
-	<target name="contrib" description="Downloads various non-crucial documentation, sources, etc that are useful when developing lombok.ast.">
-		<ant antfile="buildScripts/contrib.ant.xml" target="contrib" dir="." />
+	<target name="fetchJLS" unless="jls-available">
+		<mkdir dir="doc/jls" />
+		<get src="http://java.sun.com/docs/books/jls/third_edition/download/langspec-3.0.zip" dest="doc/jls/langspec-3.0.zip" verbose="on" />
+		<unzip src="doc/jls/langspec-3.0.zip" dest="doc/jls" />
+		<delete file="doc/jls/langspec-3.0.zip" />
+	</target>
+	
+	<target name="contrib" depends="config-ivy, fetchJLS" description="Downloads and builds useful but optional extras, such as sources to used libraries.">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="contrib" />
+		<ivy:retrieve />
+	</target>
+	
+	<target name="unpackLibs" depends="ensureRuntimeDeps">
+		<unjar dest="build/lombok.ast">
+			<path refid="runtime.path" />
+		</unjar>
+	</target>
+	
+	<target name="dist" depends="compile, version, unpackLibs, -test.quiet, test" description="Creates distributable.">
+		<mkdir dir="dist" />
+		<jar basedir="build/lombok.ast" destfile="dist/lombok.ast-${lombok.ast.version}.jar" />
+		<copy file="dist/lombok.ast-${lombok.ast.version}.jar" tofile="dist/lombok.ast.jar" />
+	</target>
+	
+	<target name="publish" depends="dist" description="Creates distributable and uploads to projectlombok.org">
+		<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
+		<taskdef name="sshexec" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.SSHExec" classpathref="build.path" />
+		<available file="libertad-upload.key" property="libertad.key.available" />
+		<fail unless="libertad.key.available">You don't have the libertad-upload.key; you'll need it to get write access to the server.</fail>
+		<scp
+			localFile="dist/lombok.ast-${lombok.ast.version}.jar"
+			todir="lombokup@projectlombok.org:web/downloads"
+			keyfile="libertad-upload.key" passphrase=""
+			sftp="true" verbose="true" trust="true" />
+			<sshexec
+				host="projectlombok.org"
+				username="lombokup"
+				keyfile="libertad-upload.key" passphrase=""
+				trust="true" command="./deployLombokAst '${lombok.ast.version}'" />
+	</target>
+	
+	<target name="eclipse" depends="deps, contrib, templateProcessor" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">
+		<ivy:eclipsegen>
+			<srcdir dir="src/main" />
+			<srcdir dir="src/printer" />
+			<srcdir dir="src/template" />
+			<srcdir dir="src/javacTransformer" />
+			<srcdir dir="src/ecjTransformer" />
+			<srcdir dir="test/src" />
+			<apt location="build/templateProcessor.jar" />
+			<conf name="build" sources="contrib" />
+			<conf name="test" sources="contrib" />
+			<settings>
+				<url url="http://projectlombok.org/downloads/lombok.eclipse.settings" />
+			</settings>
+		</ivy:eclipsegen>
 	</target>
 </project>
