@@ -37,6 +37,9 @@ public class PositionCheckingFormatter extends TextFormatter {
 	
 	public PositionCheckingFormatter(Source source) {
 		super(source);
+		if ("\r\n".equals(System.getProperty("line.separator", "\n")) && source.getRawInput().contains("\r\n")) {
+			setNewlineText("\r\n");
+		}
 	}
 	
 	public List<AstException> getProblems() {

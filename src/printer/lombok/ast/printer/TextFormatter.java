@@ -33,6 +33,7 @@ import com.google.common.collect.Lists;
 
 public class TextFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
+	private String newlineText = "\n";
 	@Getter private final Source source;
 	private final StringBuilder sb = new StringBuilder();
 	private final List<String> errors = Lists.newArrayList();
@@ -41,6 +42,10 @@ public class TextFormatter implements SourceFormatter {
 	
 	public TextFormatter(Source source) {
 		this.source = source;
+	}
+	
+	protected void setNewlineText(String newlineText) {
+		this.newlineText = newlineText;
 	}
 	
 	private TextFormatter a(String text) {
@@ -54,7 +59,7 @@ public class TextFormatter implements SourceFormatter {
 	protected int getCurrentPosition(boolean accountForNewline) {
 		int len = sb.length();
 		if (accountForNewline && newline) {
-			if (len > 0) len++;	//actual \n character.
+			if (len > 0) len += newlineText.length();	//actual \n character.
 			len += INDENT.length() * indent;
 		}
 		return len;
@@ -112,7 +117,7 @@ public class TextFormatter implements SourceFormatter {
 	}
 	
 	private void printIndent() {
-		if (sb.length() > 0) sb.append("\n");
+		if (sb.length() > 0) sb.append(newlineText);
 		for (int i = 0; i < indent; i++) sb.append(INDENT);
 	}
 	
@@ -141,8 +146,8 @@ public class TextFormatter implements SourceFormatter {
 	
 	@Override public String finish() {
 		if (!errors.isEmpty()) {
-			a("\n\n\nERRORS: \n");
-			a(Joiner.on('\n').join(errors));
+			a(newlineText).a(newlineText).a(newlineText).a("ERRORS: ").a(newlineText);
+			a(Joiner.on(newlineText).join(errors));
 			errors.clear();
 		}
 		return sb.toString();
