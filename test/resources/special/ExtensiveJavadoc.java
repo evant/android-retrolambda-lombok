@@ -14,6 +14,9 @@ public class ExtensiveJavadoc<T> {
      */
     private int test;
     
+    /** Javadoc on a compound field declaration. */
+    private int a, b;
+    
     /**
      * Some javadoc containing links and some light html.
      * to {@link #test} a local field. <br/>
@@ -21,8 +24,12 @@ public class ExtensiveJavadoc<T> {
      * to {@link java.lang.String#CASE_INSENSITIVE_ORDER} a remote field. <br/>
      * to {@link java.lang.String} a remote class. <br/>
      * to {@link java.lang.String#toUpperCase()} a remote method. <br/>
+     *
+     *
+     * @return foo
      */
-    public void bar() {
+    public int bar() {
+	return 0;
     }
     
     /**

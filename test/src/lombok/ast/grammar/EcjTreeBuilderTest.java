@@ -23,11 +23,15 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreePrinter;
 import lombok.ast.ecj.EcjTreeBuilder;
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
@@ -45,8 +49,16 @@ import org.junit.runner.RunWith;
 @RunWith(RunForEachFileInDirRunner.class)
 public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 	@Test
-	public boolean testEcjCompiler(Source source) throws Exception {
+	public boolean testEcjTreeBuilder(Source source) throws Exception {
 		return testCompiler(source);
+	}
+	
+	@Override
+	protected Collection<DirDescriptor> getDirDescriptors() {
+		return Arrays.asList(
+//				DirDescriptor.of(new File("test/resources/alias"), true),
+//				DirDescriptor.of(new File("test/resources/idempotency"), true),
+				DirDescriptor.of(new File("test/resources/special"), true));
 	}
 	
 	protected CompilerOptions ecjCompilerOptions() {
@@ -55,11 +67,12 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 		options.sourceLevel = ClassFileConstants.JDK1_6;
 		options.targetJDK = ClassFileConstants.JDK1_6;
 		options.parseLiteralExpressionsAsConstants = true;
+		System.out.println(options);
 		return options;
 	}
 	
 	protected String convertToString(ASTNode tree) {
-		EcjTreePrinter printer = new EcjTreePrinter(false);
+		EcjTreePrinter printer = new EcjTreePrinter(true);
 		printer.visitEcjNode(tree);
 		String string = printer.toString();
 		return string;
