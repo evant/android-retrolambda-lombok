@@ -106,6 +106,13 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 		}
 	}
 	
+	//TODO all the javadocy nodes need to be as methods in EcjTreeVisitor.
+	
+	@Override
+	public void visitOther(ASTNode node) {
+		visitAny(node);
+	}
+	
 	@SneakyThrows(IllegalAccessException.class)
 	private Object readField(Field field, ASTNode node) {
 		return field.get(node);

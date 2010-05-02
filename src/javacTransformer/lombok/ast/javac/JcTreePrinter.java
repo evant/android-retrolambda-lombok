@@ -98,6 +98,9 @@ public class JcTreePrinter extends JCTree.Visitor {
 	private static final Method GET_TAG_METHOD;
 	private static final Field TAG_FIELD;
 	
+	//TODO Adopt the reflective printer principle used in the EcjTreePrinter. For example, we don't currently know if the type ref is shared or unique amongst
+	// JCVarDecls that all come from the same line: int[] x, y;
+	
 	static {
 		Method m = null;
 		Field f = null;
