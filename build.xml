@@ -198,11 +198,11 @@
 			todir="lombokup@projectlombok.org:web/downloads"
 			keyfile="libertad-upload.key" passphrase=""
 			sftp="true" verbose="true" trust="true" />
-			<sshexec
-				host="projectlombok.org"
-				username="lombokup"
-				keyfile="libertad-upload.key" passphrase=""
-				trust="true" command="./deployLombokAst '${lombok.ast.version}'" />
+		<sshexec
+			host="projectlombok.org"
+			username="lombokup"
+			keyfile="libertad-upload.key" passphrase=""
+			trust="true" command="./deployLombokAst '${lombok.ast.version}'" />
 	</target>
 	
 	<target name="eclipse" depends="deps, contrib, templateProcessor" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">

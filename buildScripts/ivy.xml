@@ -14,5 +14,6 @@
 		<dependency org="projectlombok.org" name="junit" rev="4.8.1" conf="test" />
 		<dependency org="projectlombok.org" name="javac" rev="1.6.0.18" conf="build->runtime; runtime; contrib->sources" />
 		<dependency org="eclipse.org" name="ecj" rev="3.5.2" conf="build->runtime; runtime; contrib->sources" />
+		<dependency org="net.sourceforge.cobertura" name="cobertura" rev="1.9.4.1" conf="build->master" />
 	</dependencies>
 </ivy-module>
