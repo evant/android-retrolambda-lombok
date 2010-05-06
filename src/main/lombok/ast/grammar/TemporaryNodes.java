@@ -69,6 +69,16 @@ abstract class TemporaryNode implements Node {
 		}
 	}
 	
+	static class TypeArguments extends TemporaryNode {
+		List<Node> arguments = Lists.newArrayList();
+		
+		@Override public TypeArguments copy() {
+			TypeArguments result = new TypeArguments();
+			for (Node n : arguments) result.arguments.add(n == null ? null : n.copy());
+			return result;
+		}
+	}
+	
 	static class OrphanedTypeVariables extends TemporaryNode {
 		List<Node> variables = Lists.newArrayList();
 		

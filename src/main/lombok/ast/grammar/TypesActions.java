@@ -26,7 +26,6 @@ import java.util.List;
 import lombok.ast.Identifier;
 import lombok.ast.Node;
 import lombok.ast.Position;
-import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
@@ -38,20 +37,21 @@ public class TypesActions extends SourceActions {
 	}
 	
 	public Node createPrimitiveType(String text) {
-		Identifier identifier = posify(new Identifier().setName(text));
-		int endPos = identifier.getPosition().getEnd();
-		TypeArguments emptyTypeArguments = new TypeArguments();
-		emptyTypeArguments.setPosition(new Position(endPos, endPos));
+		Identifier identifier = posify(new Identifier().astName(text));
 		TypeReferencePart typeReferencePart = posify(new TypeReferencePart()
-				.setRawTypeArguments(emptyTypeArguments)
-				.setRawIdentifier(identifier));
+				.rawIdentifier(identifier));
 		return posify(new TypeReference().rawParts().addToStart(typeReferencePart));
 	}
 	
 	public Node createTypeReferencePart(org.parboiled.Node<Node> identifier, Node typeArguments) {
-		Node emptyArgs = null;
-		if (typeArguments == null) emptyArgs = new TypeArguments().setPosition(new Position(currentPos(), currentPos()));
-		TypeReferencePart result = new TypeReferencePart().setRawIdentifier(identifier.getValue()).setRawTypeArguments(typeArguments == null ? emptyArgs : typeArguments);
+		TypeReferencePart result = new TypeReferencePart().rawIdentifier(identifier.getValue());
+		
+		if (typeArguments instanceof TemporaryNode.TypeArguments) {
+			for (Node arg : ((TemporaryNode.TypeArguments)typeArguments).arguments) {
+				result.rawTypeArguments().addToEnd(arg);
+			}
+		}
+		
 		posify(result); //We only care about the end position here.
 		return result.setPosition(new Position(identifier.getStartLocation().getIndex(), result.getPosition().getEnd()));
 	}
@@ -73,7 +73,7 @@ public class TypesActions extends SourceActions {
 			ref = (TypeReference)type;
 		}
 		
-		ref.setWildcard(wildcard);
+		ref.astWildcard(wildcard);
 		source.registerStructure(ref, qmark);
 		for (org.parboiled.Node<Node> childPNode : boundType.getChildren()) {
 			if (childPNode != null) source.registerStructure(ref, childPNode);
@@ -82,16 +82,16 @@ public class TypesActions extends SourceActions {
 	}
 	
 	public Node createUnboundedWildcardType(org.parboiled.Node<Node> qmark) {
-		TypeReference ref = new TypeReference().setWildcard(WildcardKind.UNBOUND);
+		TypeReference ref = new TypeReference().astWildcard(WildcardKind.UNBOUND);
 		source.registerStructure(ref, qmark);
 		return posify(ref);
 	}
 	
 	public Node createTypeArguments(Node head, List<Node> tail) {
-		TypeArguments ta = new TypeArguments();
-		if (head != null) ta.rawGenerics().addToEnd(head);
+		TemporaryNode.TypeArguments ta = new TemporaryNode.TypeArguments();
+		if (head != null) ta.arguments.add(head);
 		if (tail != null) for (Node n : tail) {
-			if (n != null) ta.rawGenerics().addToEnd(n);
+			if (n != null) ta.arguments.add(n);
 		}
 		
 		return posify(ta);
@@ -112,17 +112,17 @@ public class TypesActions extends SourceActions {
 		int arrayDims = bracketPairs == null ? 0 : bracketPairs.size();
 		if (arrayDims == 0) return value;
 		
-		TypeReference ref = new TypeReference().setArrayDimensions(arrayDims);
+		TypeReference ref = new TypeReference().astArrayDimensions(arrayDims);
 		if (value instanceof TypeReference) {
 			TypeReference orig = (TypeReference)value;
-			ref.setWildcard(orig.getWildcard());
+			ref.astWildcard(orig.astWildcard());
 			ref.rawParts().migrateAllFrom(orig.rawParts());
 		}
 		return posify(ref);
 	}
 	
 	public Node createTypeVariable(Node name, Node head, List<Node> tail) {
-		TypeVariable tv = new TypeVariable().setRawName(name);
+		TypeVariable tv = new TypeVariable().rawName(name);
 		
 		if (head != null) tv.rawExtending().addToEnd(head);
 		if (tail != null) for (Node t : tail) if (t != null) tv.rawExtending().addToEnd(t);

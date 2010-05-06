@@ -269,7 +269,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (node == null) {
 			return null;
 		}
-		return node.getName().toCharArray();
+		return node.astName().toCharArray();
 	}
 	
 	private <T extends ASTNode> T[] toArray(Class<T> type, List<T> list) {
@@ -332,7 +332,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	private static <T extends ASTNode> T posParen(T in, lombok.ast.Node node) {
 		if (in == null) return null;
 		if (node instanceof lombok.ast.Expression) {
-			List<Position> parensPositions = ((lombok.ast.Expression)node).getParensPositions();
+			List<Position> parensPositions = ((lombok.ast.Expression)node).astParensPositions();
 			if (!parensPositions.isEmpty()) {
 				in.sourceStart = parensPositions.get(parensPositions.size() - 1).getStart();
 				in.sourceEnd = parensPositions.get(parensPositions.size() - 1).getEnd() - 1;
@@ -373,9 +373,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		CompilationUnitDeclaration cud = new CompilationUnitDeclaration(this.reporter, compilationResult, sourceLength);
 		cud.bits |= ASTNode.HasAllMethodBodies;
 		
-		cud.currentPackage = (ImportReference) toTree(node.getPackageDeclaration());
-		cud.imports = toArray(ImportReference.class, node.importDeclarations());
-		cud.types = toArray(TypeDeclaration.class, node.typeDeclarations());
+		cud.currentPackage = (ImportReference) toTree(node.astPackageDeclaration());
+		cud.imports = toArray(ImportReference.class, node.astImportDeclarations());
+		cud.types = toArray(TypeDeclaration.class, node.astTypeDeclarations());
 		
 		if (CharOperation.equals(PACKAGE_INFO, cud.getMainTypeName())) {
 			TypeDeclaration[] newTypes;;
@@ -403,8 +403,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitPackageDeclaration(lombok.ast.PackageDeclaration node) {
 		long[] pos = partsToPosArray(node.rawParts());
-		ImportReference pkg = new ImportReference(chain(node.parts()), pos, true, ClassFileConstants.AccDefault);
-		pkg.annotations = toArray(Annotation.class, node.annotations());
+		ImportReference pkg = new ImportReference(chain(node.astParts()), pos, true, ClassFileConstants.AccDefault);
+		pkg.annotations = toArray(Annotation.class, node.astAnnotations());
 		pkg.declarationSourceStart = jstart(node);
 		pkg.declarationSourceEnd = pkg.declarationEnd = end(node);
 		
@@ -415,9 +415,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitImportDeclaration(lombok.ast.ImportDeclaration node) {
-		int staticFlag = node.isStaticImport() ? ClassFileConstants.AccStatic : ClassFileConstants.AccDefault;
+		int staticFlag = node.astStaticImport() ? ClassFileConstants.AccStatic : ClassFileConstants.AccDefault;
 		long[] pos = partsToPosArray(node.rawParts());
-		ImportReference imp = new ImportReference(chain(node.parts()), pos, node.isStarImport(), staticFlag);
+		ImportReference imp = new ImportReference(chain(node.astParts()), pos, node.astStarImport(), staticFlag);
 		imp.declarationSourceStart = start(node);
 		imp.declarationSourceEnd = imp.declarationEnd = end(node);
 		return set(node, imp);
@@ -425,17 +425,17 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitClassDeclaration(lombok.ast.ClassDeclaration node) {
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, true, 0);
+		TypeDeclaration decl = createTypeBody(node.astBody().astMembers(), node, true, 0);
 		
-		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
-		decl.superclass = (TypeReference) toTree(node.getExtending());
-		decl.superInterfaces = toArray(TypeReference.class, node.implementing());
+		decl.annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
+		decl.superclass = (TypeReference) toTree(node.astExtending());
+		decl.superInterfaces = toArray(TypeReference.class, node.astImplementing());
 		
 		markTypeReferenceIsSuperType(decl);
 		
-		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
+		decl.typeParameters = toArray(TypeParameter.class, node.astTypeVariables());
 		
-		decl.name = toName(node.getName());
+		decl.name = toName(node.astName());
 		
 		updateTypeBits(node.getParent(), decl, false);
 		
@@ -484,15 +484,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitInterfaceDeclaration(lombok.ast.InterfaceDeclaration node) {
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, false, ClassFileConstants.AccInterface);
+		TypeDeclaration decl = createTypeBody(node.astBody().astMembers(), node, false, ClassFileConstants.AccInterface);
 		
-		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
-		decl.superInterfaces = toArray(TypeReference.class, node.extending());
+		decl.annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
+		decl.superInterfaces = toArray(TypeReference.class, node.astExtending());
 		
 		markTypeReferenceIsSuperType(decl);
 		
-		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
-		decl.name = toName(node.getName());
+		decl.typeParameters = toArray(TypeParameter.class, node.astTypeVariables());
+		decl.name = toName(node.astName());
 		
 		updateTypeBits(node.getParent(), decl, false);
 		
@@ -505,17 +505,17 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitEnumDeclaration(lombok.ast.EnumDeclaration node) {
 		FieldDeclaration[] fields = null;
 		
-		if (node.getBody() != null) {
-			fields = toArray(FieldDeclaration.class, node.getBody().constants());
+		if (node.astBody() != null) {
+			fields = toArray(FieldDeclaration.class, node.astBody().astConstants());
 		}
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, true, ClassFileConstants.AccEnum, fields);
+		TypeDeclaration decl = createTypeBody(node.astBody().astMembers(), node, true, ClassFileConstants.AccEnum, fields);
 		
-		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
-		decl.superInterfaces = toArray(TypeReference.class, node.implementing());
+		decl.annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
+		decl.superInterfaces = toArray(TypeReference.class, node.astImplementing());
 		
 		markTypeReferenceIsSuperType(decl);
 		
-		decl.name = toName(node.getName());
+		decl.name = toName(node.astName());
 		
 		updateTypeBits(node.getParent(), decl, true);
 		
@@ -529,11 +529,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		//TODO check where the javadoc and annotations go: the field or the type
 		
 		FieldDeclaration decl = new FieldDeclaration();
-		decl.annotations = toArray(Annotation.class, node.annotations());
-		decl.name = toName(node.getName());
+		decl.annotations = toArray(Annotation.class, node.astAnnotations());
+		decl.name = toName(node.astName());
 		
-		decl.sourceStart = start(node.getRawName());
-		decl.sourceEnd = end(node.getRawName());
+		decl.sourceStart = start(node.rawName());
+		decl.sourceEnd = end(node.rawName());
 		decl.declarationSourceStart = decl.modifiersSourceStart = jstart(node);
 		decl.declarationSourceEnd = decl.declarationEnd = end(node);
 		
@@ -543,12 +543,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		}
 		
 		AllocationExpression init;
-		if (node.getBody() == null) {
+		if (node.astBody() == null) {
 			init = new AllocationExpression();
 			init.enumConstant = decl;
 		} else {
-			TypeDeclaration type = createTypeBody(node.getBody().members(), null, false, 0);
-			type.sourceStart = type.sourceEnd = start(node.getBody());
+			TypeDeclaration type = createTypeBody(node.astBody().astMembers(), null, false, 0);
+			type.sourceStart = type.sourceEnd = start(node.astBody());
 			type.bodyEnd--;
 			type.declarationSourceStart = type.sourceStart;
 			type.declarationSourceEnd = end(node);
@@ -559,7 +559,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			init = new QualifiedAllocationExpression(type);
 			init.enumConstant = decl;
 		}
-		init.arguments = toArray(Expression.class, node.arguments());
+		init.arguments = toArray(Expression.class, node.astArguments());
 		decl.initialization = init;
 		
 		if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
@@ -573,9 +573,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitAnnotationDeclaration(lombok.ast.AnnotationDeclaration node) {
-		TypeDeclaration decl = createTypeBody(node.getBody().members(), node, false,
+		TypeDeclaration decl = createTypeBody(node.astBody().astMembers(), node, false,
 				ClassFileConstants.AccAnnotation | ClassFileConstants.AccInterface);
-		decl.name = toName(node.getName());
+		decl.name = toName(node.astName());
 		updateTypeBits(node.getParent(), decl, false);
 		
 		setupJavadoc(decl, node);
@@ -584,8 +584,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	private void setupJavadoc(ASTNode node, lombok.ast.JavadocContainer container) {
-		if (container != null && container.getRawJavadoc() instanceof lombok.ast.Comment) {
-			lombok.ast.Comment javadoc = (Comment) container.getRawJavadoc();
+		if (container != null && container.rawJavadoc() instanceof lombok.ast.Comment) {
+			lombok.ast.Comment javadoc = (Comment) container.rawJavadoc();
 			boolean markDep = javadoc.isMarkedDeprecated();
 			
 			if (node instanceof AbstractMethodDeclaration) {
@@ -609,11 +609,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitConstructorDeclaration(lombok.ast.ConstructorDeclaration node) {
 		ConstructorDeclaration decl = new ConstructorDeclaration(compilationResult);
-		decl.bodyStart = start(node.getRawBody()) + 1;
-		decl.bodyEnd = end(node.getRawBody()) - 1;
+		decl.bodyStart = start(node.rawBody()) + 1;
+		decl.bodyEnd = end(node.rawBody()) - 1;
 		decl.declarationSourceStart = jstart(node);
 		decl.declarationSourceEnd = end(node);
-		decl.sourceStart = start(node.getRawTypeName());
+		decl.sourceStart = start(node.rawTypeName());
 		/* set sourceEnd */ {
 			decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
 			
@@ -621,13 +621,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.sourceEnd = end(node.rawThrownTypeReferences().last());
 			}
 		}
-		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
-		decl.modifiers = toModifiers(node.getModifiers());
-		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
-		decl.arguments = toArray(Argument.class, node.parameters());
-		decl.thrownExceptions = toArray(TypeReference.class, node.thrownTypeReferences());
-		decl.statements = toArray(Statement.class, node.getBody().contents());
-		decl.selector = toName(node.getTypeName());
+		decl.annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
+		decl.modifiers = toModifiers(node.astModifiers());
+		decl.typeParameters = toArray(TypeParameter.class, node.astTypeVariables());
+		decl.arguments = toArray(Argument.class, node.astParameters());
+		decl.thrownExceptions = toArray(TypeReference.class, node.astThrownTypeReferences());
+		decl.statements = toArray(Statement.class, node.astBody().astContents());
+		decl.selector = toName(node.astTypeName());
 		
 		setupJavadoc(decl, node);
 		
@@ -651,7 +651,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
 		}
 		
-		if (isUndocumented(node.getBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
+		if (isUndocumented(node.astBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
 		
 		setupJavadoc(decl, node);
 		
@@ -663,7 +663,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		MethodDeclaration decl = new MethodDeclaration(compilationResult);
 		decl.declarationSourceStart = jstart(node);
 		decl.declarationSourceEnd = end(node);
-		decl.sourceStart = start(node.getRawMethodName());
+		decl.sourceStart = start(node.rawMethodName());
 		boolean setOriginalPosOnType = false;
 		/* set sourceEnd */ {
 			decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
@@ -677,29 +677,29 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.sourceEnd = end(node.rawThrownTypeReferences().last());
 			}
 		}
-		if (node.getRawBody() == null) {
+		if (node.rawBody() == null) {
 			decl.bodyStart = decl.sourceEnd + 1;
 			decl.bodyEnd = end(node) - 1;
 		} else {
-			decl.bodyStart = start(node.getRawBody()) + 1;
-			decl.bodyEnd = end(node.getRawBody()) - 1;
+			decl.bodyStart = start(node.rawBody()) + 1;
+			decl.bodyEnd = end(node.rawBody()) - 1;
 		}
-		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
-		decl.modifiers = toModifiers(node.getModifiers());
-		decl.returnType = (TypeReference) toTree(node.getReturnTypeReference());
+		decl.annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
+		decl.modifiers = toModifiers(node.astModifiers());
+		decl.returnType = (TypeReference) toTree(node.astReturnTypeReference());
 		if (setOriginalPosOnType) {
 			if (decl.returnType instanceof ArrayTypeReference) {
-				((ArrayTypeReference)decl.returnType).originalSourceEnd = end(node.getRawReturnTypeReference());
+				((ArrayTypeReference)decl.returnType).originalSourceEnd = end(node.rawReturnTypeReference());
 			}
 		}
-		decl.typeParameters = toArray(TypeParameter.class, node.typeVariables());
-		decl.arguments = toArray(Argument.class, node.parameters());
-		decl.selector = toName(node.getMethodName());
-		decl.thrownExceptions = toArray(TypeReference.class, node.thrownTypeReferences());
-		if (node.getBody() == null) {
+		decl.typeParameters = toArray(TypeParameter.class, node.astTypeVariables());
+		decl.arguments = toArray(Argument.class, node.astParameters());
+		decl.selector = toName(node.astMethodName());
+		decl.thrownExceptions = toArray(TypeReference.class, node.astThrownTypeReferences());
+		if (node.astBody() == null) {
 			decl.modifiers |= ExtraCompilerModifiers.AccSemicolonBody;
 		} else {
-			decl.statements = toArray(Statement.class, node.getBody().contents());
+			decl.statements = toArray(Statement.class, node.astBody().astContents());
 			if (decl.statements != null) {
 				for (Statement s : decl.statements) {
 					if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
@@ -707,10 +707,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 		}
 		
-		if (node.getModifiers().isAbstract()) {
+		if (node.astModifiers().isAbstract()) {
 			bubblingFlags.add(BubblingFlags.ABSTRACT_METHOD);
 		}
-		if (isUndocumented(node.getBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
+		if (isUndocumented(node.astBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
 		
 		setupJavadoc(decl, node);
 		
@@ -720,10 +720,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitAnnotationMethodDeclaration(lombok.ast.AnnotationMethodDeclaration node) {
 		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration(compilationResult);
-		decl.modifiers = toModifiers(node.getModifiers()) + ExtraCompilerModifiers.AccSemicolonBody;
+		decl.modifiers = toModifiers(node.astModifiers()) + ExtraCompilerModifiers.AccSemicolonBody;
 		decl.declarationSourceStart = jstart(node);
 		decl.declarationSourceEnd = end(node);
-		decl.sourceStart = start(node.getRawMethodName());
+		decl.sourceStart = start(node.rawMethodName());
 		boolean setOriginalPosOnType = false;
 		/* set sourceEnd */ {
 			decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
@@ -736,20 +736,20 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		}
 		decl.bodyStart = end(node);
 		decl.bodyEnd = end(node);
-		if (node.getDefaultValue() != null) {
+		if (node.astDefaultValue() != null) {
 			decl.modifiers |= ClassFileConstants.AccAnnotationDefault;
 		}
-		decl.annotations = toArray(Annotation.class, node.getModifiers().annotations());
-		decl.defaultValue = toExpression(node.getDefaultValue());
-		decl.selector = toName(node.getMethodName());
-		decl.returnType = (TypeReference) toTree(node.getReturnTypeReference());
+		decl.annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
+		decl.defaultValue = toExpression(node.astDefaultValue());
+		decl.selector = toName(node.astMethodName());
+		decl.returnType = (TypeReference) toTree(node.astReturnTypeReference());
 		if (setOriginalPosOnType) {
 			if (decl.returnType instanceof ArrayTypeReference) {
-				((ArrayTypeReference)decl.returnType).originalSourceEnd = end(node.getRawReturnTypeReference());
+				((ArrayTypeReference)decl.returnType).originalSourceEnd = end(node.rawReturnTypeReference());
 			}
 		}
 		
-		if (node.getModifiers().isAbstract()) {
+		if (node.astModifiers().isAbstract()) {
 			bubblingFlags.add(BubblingFlags.ABSTRACT_METHOD);
 		}
 		return set(node, decl);
@@ -757,16 +757,16 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	private TypeDeclaration createTypeBody(lombok.ast.StrictListAccessor<lombok.ast.TypeMember, ?> members, lombok.ast.TypeDeclaration type, boolean canHaveConstructor, int extraModifiers, FieldDeclaration... initialFields) {
 		TypeDeclaration decl = new TypeDeclaration(compilationResult);
-		decl.modifiers = (type == null ? 0 : toModifiers(type.getModifiers())) | extraModifiers;
+		decl.modifiers = (type == null ? 0 : toModifiers(type.astModifiers())) | extraModifiers;
 		if (members.isEmpty() && isUndocumented(members.owner())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
 		
 		if (type != null) {
-			decl.sourceStart = start(type.getName());
-			decl.sourceEnd = end(type.getName());
+			decl.sourceStart = start(type.astName());
+			decl.sourceEnd = end(type.astName());
 			decl.declarationSourceStart = jstart(type);
 			decl.declarationSourceEnd = end(type);
-			if (!(type instanceof AnnotationDeclaration) || !type.getModifiers().isEmpty() ||
-					(type instanceof JavadocContainer && ((JavadocContainer)type).getRawJavadoc() != null)) decl.modifiersSourceStart = jstart(type.getModifiers());
+			if (!(type instanceof AnnotationDeclaration) || !type.astModifiers().isEmpty() ||
+					(type instanceof JavadocContainer && ((JavadocContainer)type).rawJavadoc() != null)) decl.modifiersSourceStart = jstart(type.astModifiers());
 			else decl.modifiersSourceStart = -1;
 		}
 		decl.bodyStart = start(members.owner()) + 1;
@@ -814,14 +814,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			defaultConstructor.bits |= ASTNode.IsDefaultConstructor;
 			defaultConstructor.constructorCall = new ExplicitConstructorCall(ExplicitConstructorCall.ImplicitSuper);
 			defaultConstructor.modifiers = decl.modifiers & VISIBILITY_MASK;
-			defaultConstructor.selector = toName(type.getName());
+			defaultConstructor.selector = toName(type.astName());
 			defaultConstructor.sourceStart = defaultConstructor.declarationSourceStart =
 					defaultConstructor.constructorCall.sourceStart =
-					start(type.getName());
+					start(type.astName());
 			defaultConstructor.sourceEnd = defaultConstructor.bodyEnd =
 					defaultConstructor.constructorCall.sourceEnd =
 					defaultConstructor.declarationSourceEnd =
-					end(type.getName());
+					end(type.astName());
 			methods.add(0, defaultConstructor);
 		}
 		
@@ -841,7 +841,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitExpressionStatement(lombok.ast.ExpressionStatement node) {
-		Statement statement = toStatement(node.getExpression());
+		Statement statement = toStatement(node.astExpression());
 		try {
 			Field f = statement.getClass().getField("statementEnd");
 			f.set(statement, end(node));
@@ -854,10 +854,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitConstructorInvocation(lombok.ast.ConstructorInvocation node) {
 		AllocationExpression inv;
-		if (node.getQualifier() != null || node.getAnonymousClassBody() != null) {
-			if (node.getAnonymousClassBody() != null) {
-				TypeDeclaration decl = createTypeBody(node.getAnonymousClassBody().members(), null, false, 0);
-				decl.sourceStart = start(node.getRawTypeReference());
+		if (node.astQualifier() != null || node.astAnonymousClassBody() != null) {
+			if (node.astAnonymousClassBody() != null) {
+				TypeDeclaration decl = createTypeBody(node.astAnonymousClassBody().astMembers(), null, false, 0);
+				decl.sourceStart = start(node.rawTypeReference());
 				decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1;
 				decl.declarationSourceStart = decl.sourceStart;
 				decl.declarationSourceEnd = end(node);
@@ -868,20 +868,19 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			} else {
 				inv = new QualifiedAllocationExpression();
 			}
-			if (node.getQualifier() != null) {
-				((QualifiedAllocationExpression)inv).enclosingInstance = toExpression(node.getQualifier());
+			if (node.astQualifier() != null) {
+				((QualifiedAllocationExpression)inv).enclosingInstance = toExpression(node.astQualifier());
 			}
 			
 		} else {
 			inv = new AllocationExpression();
 		}
 		
-		//TODO investigate if this thing should perhaps never be null.
-		if (node.getConstructorTypeArguments() != null) {
-			inv.typeArguments = toArray(TypeReference.class, node.getConstructorTypeArguments().generics());
+		if (!node.astConstructorTypeArguments().isEmpty()) {
+			inv.typeArguments = toArray(TypeReference.class, node.astConstructorTypeArguments());
 		}
-		inv.type = (TypeReference) toTree(node.getTypeReference());
-		inv.arguments = toArray(Expression.class, node.arguments());
+		inv.type = (TypeReference) toTree(node.astTypeReference());
+		inv.arguments = toArray(Expression.class, node.astArguments());
 		inv.sourceStart = start(node);
 		inv.sourceEnd = end(node);
 		return set(node, inv);
@@ -893,12 +892,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		inv.sourceStart = posOfStructure(node, "this", 0, true);
 		inv.sourceEnd = end(node);
 //		inv.modifiers = decl.modifiers & VISIBILITY_MASK;
-		//TODO investigate if this thing should perhaps never be null.
-		if (node.getConstructorTypeArguments() != null) {
-			inv.typeArguments = toArray(TypeReference.class, node.getConstructorTypeArguments().generics());
-			inv.typeArgumentsSourceStart = start(node.getConstructorTypeArguments());
+		if (!node.astConstructorTypeArguments().isEmpty()) {
+			inv.typeArguments = toArray(TypeReference.class, node.astConstructorTypeArguments());
+			inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
 		}
-		inv.arguments = toArray(Expression.class, node.arguments());
+		inv.arguments = toArray(Expression.class, node.astArguments());
 		return set(node, inv);
 	}
 	
@@ -908,13 +906,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		inv.sourceStart = start(node);
 		inv.sourceEnd = end(node);
 //		inv.modifiers = decl.modifiers & VISIBILITY_MASK;
-		//TODO investigate if this thing should perhaps never be null.
-		if (node.getConstructorTypeArguments() != null) {
-			inv.typeArguments = toArray(TypeReference.class, node.getConstructorTypeArguments().generics());
-			inv.typeArgumentsSourceStart = start(node.getConstructorTypeArguments());
+		if (!node.astConstructorTypeArguments().isEmpty()) {
+			inv.typeArguments = toArray(TypeReference.class, node.astConstructorTypeArguments());
+			inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
 		}
-		inv.arguments = toArray(Expression.class, node.arguments());
-		inv.qualification = toExpression(node.getQualifier());
+		inv.arguments = toArray(Expression.class, node.astArguments());
+		inv.qualification = toExpression(node.astQualifier());
 		return set(node, inv);
 	}
 
@@ -923,10 +920,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		MessageSend inv = new MessageSend();
 		inv.sourceStart = start(node);
 		inv.sourceEnd = end(node);
-		inv.nameSourcePosition = pos(node.getRawName());
+		inv.nameSourcePosition = pos(node.rawName());
 		
-		inv.arguments = toArray(Expression.class, node.arguments());
-		inv.receiver = toExpression(node.getOperand());
+		inv.arguments = toArray(Expression.class, node.astArguments());
+		inv.receiver = toExpression(node.astOperand());
 		if (inv.receiver instanceof NameReference) {
 			inv.receiver.bits |= Binding.TYPE;
 		}
@@ -936,32 +933,31 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			inv.receiver = new ThisReference(0, 0);
 			inv.receiver.bits |= ASTNode.IsImplicitThis;
 		}
-		//TODO check if getMethodTypeArguments() should perhaps be never null.
-		if (node.getMethodTypeArguments() != null) inv.typeArguments = toArray(TypeReference.class, node.getMethodTypeArguments().generics());
-		inv.selector = toName(node.getName());
+		if (!node.astMethodTypeArguments().isEmpty()) inv.typeArguments = toArray(TypeReference.class, node.astMethodTypeArguments());
+		inv.selector = toName(node.astName());
 		return set(node, inv);
 	}
 	
 	@Override
 	public boolean visitSuper(lombok.ast.Super node) {
-		if (node.getQualifier() == null) {
+		if (node.astQualifier() == null) {
 			return set(node, new SuperReference(start(node), end(node)));
 		}
-		return set(node, new QualifiedSuperReference((TypeReference) toTree(node.getQualifier()), start(node), end(node)));
+		return set(node, new QualifiedSuperReference((TypeReference) toTree(node.astQualifier()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitUnaryExpression(lombok.ast.UnaryExpression node) {
-		if (node.getOperator() == UnaryOperator.UNARY_MINUS) {
-			if (node.getOperand() instanceof lombok.ast.IntegralLiteral && node.getOperand().getParens() == 0) {
-				lombok.ast.IntegralLiteral lit = (lombok.ast.IntegralLiteral)node.getOperand();
-				if (!lit.isMarkedAsLong() && lit.intValue() == Integer.MIN_VALUE) {
+		if (node.astOperator() == UnaryOperator.UNARY_MINUS) {
+			if (node.astOperand() instanceof lombok.ast.IntegralLiteral && node.astOperand().getParens() == 0) {
+				lombok.ast.IntegralLiteral lit = (lombok.ast.IntegralLiteral)node.astOperand();
+				if (!lit.isMarkedAsLong() && lit.astIntValue() == Integer.MIN_VALUE) {
 					IntLiteralMinValue minLiteral = new IntLiteralMinValue();
 					minLiteral.sourceStart = start(node);
 					minLiteral.sourceEnd = end(node);
 					return set(node, minLiteral);
 				}
-				if (lit.isMarkedAsLong() && lit.longValue() == Long.MIN_VALUE) {
+				if (lit.isMarkedAsLong() && lit.astLongValue() == Long.MIN_VALUE) {
 					LongLiteralMinValue minLiteral = new LongLiteralMinValue();
 					minLiteral.sourceStart = start(node);
 					minLiteral.sourceEnd = end(node);
@@ -970,10 +966,10 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 		}
 		
-		Expression operand = toExpression(node.getOperand());
-		int ecjOperator = UNARY_OPERATORS.get(node.getOperator());
+		Expression operand = toExpression(node.astOperand());
+		int ecjOperator = UNARY_OPERATORS.get(node.astOperator());
 		
-		switch (node.getOperator()) {
+		switch (node.astOperator()) {
 		case PREFIX_INCREMENT:
 		case PREFIX_DECREMENT:
 			return set(node, new PrefixExpression(operand, IntLiteral.One, ecjOperator, start(node)));
@@ -981,7 +977,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		case POSTFIX_DECREMENT:
 			return set(node, new PostfixExpression(operand, IntLiteral.One, ecjOperator, end(node)));
 		default:
-			UnaryExpression expr = new UnaryExpression(toExpression(node.getOperand()), ecjOperator);
+			UnaryExpression expr = new UnaryExpression(toExpression(node.astOperand()), ecjOperator);
 			expr.sourceStart = start(node);
 			expr.sourceEnd = end(node);
 			return set(node, expr);
@@ -1020,25 +1016,25 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	}
 	
 	private Expression visitBinaryExpression0(lombok.ast.BinaryExpression node) {
-		Expression lhs = toExpression(node.getLeft());
-		Expression rhs = toExpression(node.getRight());
+		Expression lhs = toExpression(node.astLeft());
+		Expression rhs = toExpression(node.astRight());
 		
-		if (node.getOperator() == BinaryOperator.ASSIGN) {
+		if (node.astOperator() == BinaryOperator.ASSIGN) {
 			return posParen(new Assignment(lhs, rhs, end(node)), node);
 		}
 		
 		//TODO add a test with 1 + 2 + 3 + "" + 4 + 5 + 6 + "foo"; as well as 5 + 2 + 3 - 5 - 8 -7 - 8 * 10 + 20;
 		
-		int ecjOperator = BINARY_OPERATORS.get(node.getOperator());
-		if (node.getOperator().isAssignment()) {
+		int ecjOperator = BINARY_OPERATORS.get(node.astOperator());
+		if (node.astOperator().isAssignment()) {
 			return posParen(new CompoundAssignment(lhs, rhs, ecjOperator, end(node)), node);
-		} else if (node.getOperator() == BinaryOperator.EQUALS || node.getOperator() == BinaryOperator.NOT_EQUALS) {
+		} else if (node.astOperator() == BinaryOperator.EQUALS || node.astOperator() == BinaryOperator.NOT_EQUALS) {
 			return posParen(new EqualExpression(lhs, rhs, ecjOperator), node);
-		} else if (node.getOperator() == BinaryOperator.LOGICAL_AND) {
+		} else if (node.astOperator() == BinaryOperator.LOGICAL_AND) {
 			return posParen(new AND_AND_Expression(lhs, rhs, ecjOperator), node);
-		} else if (node.getOperator() == BinaryOperator.LOGICAL_OR) {
+		} else if (node.astOperator() == BinaryOperator.LOGICAL_OR) {
 			return posParen(new OR_OR_Expression(lhs, rhs, ecjOperator), node);
-		} else if (node.getOperator() == BinaryOperator.PLUS && node.getLeft().getParens() == 0) {
+		} else if (node.astOperator() == BinaryOperator.PLUS && node.astLeft().getParens() == 0) {
 			Expression stringConcatExpr = posParen(tryStringConcat(lhs, rhs), node);
 			if (stringConcatExpr != null) return stringConcatExpr;
 		}
@@ -1079,8 +1075,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitCast(lombok.ast.Cast node) {
 		//TODO try stuffing every possible eclipsian type style in a cast, because the stupid thing treats it as a name reference. D'oh.
-		Expression typeRef = toExpression(node.getTypeReference());
-		if (typeRef.getClass() == SingleTypeReference.class && !node.getTypeReference().isPrimitive()) {
+		Expression typeRef = toExpression(node.astTypeReference());
+		if (typeRef.getClass() == SingleTypeReference.class && !node.astTypeReference().isPrimitive()) {
 			SingleTypeReference str = (SingleTypeReference) typeRef;
 			//Why you ask? I don't know. It seems dumb. Ask the ecj guys.
 			typeRef = new SingleNameReference(str.token, 0);
@@ -1093,7 +1089,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			typeRef = new QualifiedNameReference(qtr.tokens, qtr.sourcePositions, qtr.sourceStart, qtr.sourceEnd);
 			typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
 		}
-		CastExpression expr = new CastExpression(toExpression(node.getOperand()), typeRef);
+		CastExpression expr = new CastExpression(toExpression(node.astOperand()), typeRef);
 		typeRef.sourceStart = posOfStructure(node, "(", 0, true) + 1;
 		typeRef.sourceEnd = posOfStructure(node, ")", 0, true) - 1;
 		expr.sourceStart = start(node);
@@ -1103,12 +1099,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitInstanceOf(lombok.ast.InstanceOf node) {
-		return set(node, new InstanceOfExpression(toExpression(node.getObjectReference()), (TypeReference) toTree(node.getTypeReference())));
+		return set(node, new InstanceOfExpression(toExpression(node.astObjectReference()), (TypeReference) toTree(node.astTypeReference())));
 	}
 	
 	@Override
 	public boolean visitInlineIfExpression(lombok.ast.InlineIfExpression node) {
-		return set(node, new ConditionalExpression(toExpression(node.getCondition()), toExpression(node.getIfTrue()), toExpression(node.getIfFalse())));
+		return set(node, new ConditionalExpression(toExpression(node.astCondition()), toExpression(node.astIfTrue()), toExpression(node.astIfFalse())));
 	}
 	
 	@Override
@@ -1119,12 +1115,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			List<Long> pos = Lists.newArrayList();
 			lombok.ast.Select current = node;
 			while (true) {
-				selects.add(current.getIdentifier());
-				pos.add(pos(current.getRawIdentifier()));
-				if (current.getOperand() instanceof lombok.ast.Select) current = (lombok.ast.Select) current.getOperand();
-				else if (current.getOperand() instanceof lombok.ast.Identifier) {
-					selects.add((lombok.ast.Identifier) current.getOperand());
-					pos.add(pos(current.getRawOperand()));
+				selects.add(current.astIdentifier());
+				pos.add(pos(current.rawIdentifier()));
+				if (current.astOperand() instanceof lombok.ast.Select) current = (lombok.ast.Select) current.astOperand();
+				else if (current.astOperand() instanceof lombok.ast.Identifier) {
+					selects.add((lombok.ast.Identifier) current.astOperand());
+					pos.add(pos(current.rawOperand()));
 					Collections.reverse(selects);
 					long[] posArray = new long[pos.size()];
 					for (int i = 0; i < posArray.length; i++) posArray[i] = pos.get(posArray.length - i - 1);
@@ -1137,9 +1133,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 		}
 		
-		FieldReference ref = new FieldReference(toName(node.getIdentifier()), pos(node));
-		ref.nameSourcePosition = pos(node.getIdentifier());
-		ref.receiver = toExpression(node.getOperand());
+		FieldReference ref = new FieldReference(toName(node.astIdentifier()), pos(node));
+		ref.nameSourcePosition = pos(node.astIdentifier());
+		ref.receiver = toExpression(node.astOperand());
 		
 		//TODO ("" + 10).a.b = ... DONT forget to doublecheck var/type restriction flags
 		return set(node, ref);
@@ -1152,7 +1148,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		Wildcard wildcard = null;
 		TypeReference ref = null;
 		
-		switch (node.getWildcard()) {
+		switch (node.astWildcard()) {
 		case UNBOUND:
 			wildcard = new Wildcard(Wildcard.UNBOUND);
 			wildcard.sourceStart = start(node);
@@ -1168,26 +1164,26 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		char[][] qualifiedName = null;
 		char[] singleName = null;
-		boolean qualified = node.parts().size() != 1;
-		int dims = node.getArrayDimensions();
-		TypeReference[][] params = new TypeReference[node.parts().size()][];
+		boolean qualified = node.astParts().size() != 1;
+		int dims = node.astArrayDimensions();
+		TypeReference[][] params = new TypeReference[node.astParts().size()][];
 		boolean hasGenerics = false;
 		
 		if (!qualified) {
-			singleName = toName(node.parts().first().getIdentifier());
+			singleName = toName(node.astParts().first().astIdentifier());
 		} else {
 			List<lombok.ast.Identifier> identifiers = Lists.newArrayList();
-			for (lombok.ast.TypeReferencePart part : node.parts()) identifiers.add(part.getIdentifier());
+			for (lombok.ast.TypeReferencePart part : node.astParts()) identifiers.add(part.astIdentifier());
 			qualifiedName = chain(identifiers, identifiers.size());
 		}
 		
 		{
 			int ctr = 0;
-			for (lombok.ast.TypeReferencePart part : node.parts()) {
-				params[ctr] = new TypeReference[part.generics().size()];
+			for (lombok.ast.TypeReferencePart part : node.astParts()) {
+				params[ctr] = new TypeReference[part.astTypeArguments().size()];
 				int ctr2 = 0;
 				boolean partHasGenerics = false;
-				for (lombok.ast.TypeReference x : part.generics()) {
+				for (lombok.ast.TypeReference x : part.astTypeArguments()) {
 					hasGenerics = true;
 					partHasGenerics = true;
 					params[ctr][ctr2++] = (TypeReference) toTree(x);
@@ -1245,11 +1241,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		TypeParameter param = new TypeParameter();
 		param.declarationSourceStart = start(node);
 		param.declarationSourceEnd = end(node);
-		param.sourceStart = start(node.getRawName());
-		param.sourceEnd = end(node.getRawName());
-		param.name = toName(node.getName());
-		if (!node.extending().isEmpty()) {
-			TypeReference[] p = toArray(TypeReference.class, node.extending());
+		param.sourceStart = start(node.rawName());
+		param.sourceEnd = end(node.rawName());
+		param.name = toName(node.astName());
+		if (!node.astExtending().isEmpty()) {
+			TypeReference[] p = toArray(TypeReference.class, node.astExtending());
 			for (TypeReference t : p) t.bits |= ASTNode.IsSuperType;
 			param.type = p[0];
 			if (p.length > 1) {
@@ -1264,9 +1260,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitStaticInitializer(lombok.ast.StaticInitializer node) {
-		Initializer init = new Initializer((Block) toTree(node.getBody()), ClassFileConstants.AccStatic);
+		Initializer init = new Initializer((Block) toTree(node.astBody()), ClassFileConstants.AccStatic);
 		init.declarationSourceStart = start(node);
-		init.sourceStart = start(node.getBody());
+		init.sourceStart = start(node.astBody());
 		init.sourceEnd = init.declarationSourceEnd = end(node);
 		init.bodyStart = init.sourceStart + 1;
 		init.bodyEnd = init.sourceEnd - 1;
@@ -1275,7 +1271,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 
 	@Override
 	public boolean visitInstanceInitializer(lombok.ast.InstanceInitializer node) {
-		Initializer init = new Initializer((Block) toTree(node.getBody()), 0);
+		Initializer init = new Initializer((Block) toTree(node.astBody()), 0);
 		if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
 			init.bits |= ASTNode.HasLocalType;
 		}
@@ -1289,22 +1285,22 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitIntegralLiteral(lombok.ast.IntegralLiteral node) {
 		if (node.isMarkedAsLong()) {
-			return set(node, new LongLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
+			return set(node, new LongLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 		}
-		return set(node, new IntLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
+		return set(node, new IntLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitFloatingPointLiteral(lombok.ast.FloatingPointLiteral node) {
 		if (node.isMarkedAsFloat()) {
-			return set(node, new FloatLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
+			return set(node, new FloatLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 		}
-		return set(node, new DoubleLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
+		return set(node, new DoubleLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitBooleanLiteral(lombok.ast.BooleanLiteral node) {
-		return set(node, node.getValue() ? new TrueLiteral(start(node), end(node)) : new FalseLiteral(start(node), end(node)));
+		return set(node, node.astValue() ? new TrueLiteral(start(node), end(node)) : new FalseLiteral(start(node), end(node)));
 	}
 	
 	@Override
@@ -1320,24 +1316,24 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitCharLiteral(lombok.ast.CharLiteral node) {
-		return set(node, new CharLiteral(node.getRawValue().toCharArray(), start(node), end(node)));
+		return set(node, new CharLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitStringLiteral(lombok.ast.StringLiteral node) {
-		return set(node, new StringLiteral(node.getValue().toCharArray(), start(node), end(node), 0));
+		return set(node, new StringLiteral(node.astValue().toCharArray(), start(node), end(node), 0));
 	}
 	
 	@Override
 	public boolean visitBlock(lombok.ast.Block node) {
 		Block block = new Block(0);
-		block.statements = toArray(Statement.class, node.contents());
+		block.statements = toArray(Statement.class, node.astContents());
 		if (block.statements == null) {
 			if (isUndocumented(node)) block.bits |= ASTNode.UndocumentedEmptyBlock;
 		} else {
 			//TODO test what happens with vardecls in catch blocks and for each loops, as well as for inner blocks.
 			block.explicitDeclarations = 0;
-			for (lombok.ast.Statement s : node.contents()) if (s instanceof lombok.ast.VariableDeclaration) block.explicitDeclarations++;
+			for (lombok.ast.Statement s : node.astContents()) if (s instanceof lombok.ast.VariableDeclaration) block.explicitDeclarations++;
 		}
 		block.sourceStart = start(node);
 		block.sourceEnd = end(node);
@@ -1349,7 +1345,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		ArrayInitializer init = new ArrayInitializer();
 		init.sourceStart = start(node);
 		init.sourceEnd = end(node);
-		init.expressions = toArray(Expression.class, node.expressions());
+		init.expressions = toArray(Expression.class, node.astExpressions());
 		
 		return set(node, init);
 	}
@@ -1359,42 +1355,42 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		ArrayAllocationExpression aae = new ArrayAllocationExpression();
 		aae.sourceStart = start(node);
 		aae.sourceEnd = end(node);
-		aae.type = (TypeReference) toTree(node.getComponentTypeReference());
+		aae.type = (TypeReference) toTree(node.astComponentTypeReference());
 		// TODO uncompilable parser test: new Type<Generics>[]...
 		// TODO uncompilable parser test: new Type[][expr][][expr]...
 		aae.type.bits |= ASTNode.IgnoreRawTypeCheck;
 		
 		int i = 0;
-		Expression[] dimensions = new Expression[node.dimensions().size()];
-		for (lombok.ast.ArrayDimension dim : node.dimensions()) {
-			dimensions[i++] = (Expression) toTree(dim.getDimension());
+		Expression[] dimensions = new Expression[node.astDimensions().size()];
+		for (lombok.ast.ArrayDimension dim : node.astDimensions()) {
+			dimensions[i++] = (Expression) toTree(dim.astDimension());
 		}
 		aae.dimensions = dimensions;
-		aae.initializer = (ArrayInitializer) toTree(node.getInitializer());
+		aae.initializer = (ArrayInitializer) toTree(node.astInitializer());
 		return set(node, aae);
 	}
 	
 	@Override
 	public boolean visitArrayDimension(lombok.ast.ArrayDimension node) {
-		return set(node, toExpression(node.getDimension()));
+		return set(node, toExpression(node.astDimension()));
 	}
 	
 	@Override
 	public boolean visitThis(lombok.ast.This node) {
-		if (node.getQualifier() == null) {
+		if (node.astQualifier() == null) {
 			return set(node, new ThisReference(start(node), end(node)));
 		}
-		return set(node, new QualifiedThisReference((TypeReference) toTree(node.getQualifier()), start(node), end(node)));
+		return set(node, new QualifiedThisReference((TypeReference) toTree(node.astQualifier()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitClassLiteral(lombok.ast.ClassLiteral node) {
-		return set(node, new ClassLiteralAccess(end(node), (TypeReference) toTree(node.getTypeReference())));
+		return set(node, new ClassLiteralAccess(end(node), (TypeReference) toTree(node.astTypeReference())));
 	}
 	
 	@Override
 	public boolean visitArrayAccess(lombok.ast.ArrayAccess node) {
-		ArrayReference ref = new ArrayReference(toExpression(node.getOperand()), toExpression(node.getIndexExpression()));
+		ArrayReference ref = new ArrayReference(toExpression(node.astOperand()), toExpression(node.astIndexExpression()));
 		ref.sourceEnd = end(node);
 		return set(node, ref);
 	}
@@ -1403,39 +1399,39 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	public boolean visitAssert(lombok.ast.Assert node) {
 		//TODO check the flags after more test have been added: asserts in constructors, methods etc.
 		bubblingFlags.add(BubblingFlags.ASSERT);
-		if (node.getMessage() == null) {
-			return set(node, new AssertStatement(toExpression(node.getAssertion()), start(node)));
+		if (node.astMessage() == null) {
+			return set(node, new AssertStatement(toExpression(node.astAssertion()), start(node)));
 		}
-		return set(node, new AssertStatement(toExpression(node.getMessage()), toExpression(node.getAssertion()), start(node)));
+		return set(node, new AssertStatement(toExpression(node.astMessage()), toExpression(node.astAssertion()), start(node)));
 	}
 	
 	@Override
 	public boolean visitDoWhile(lombok.ast.DoWhile node) {
-		return set(node, new DoStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), start(node), end(node)));
+		return set(node, new DoStatement(toExpression(node.astCondition()), toStatement(node.astStatement()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitContinue(lombok.ast.Continue node) {
-		return set(node, new ContinueStatement(toName(node.getLabel()), start(node), end(node)));
+		return set(node, new ContinueStatement(toName(node.astLabel()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitBreak(lombok.ast.Break node) {
-		return set(node, new BreakStatement(toName(node.getLabel()), start(node), end(node)));
+		return set(node, new BreakStatement(toName(node.astLabel()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitForEach(lombok.ast.ForEach node) {
-		ForeachStatement forEach = new ForeachStatement((LocalDeclaration) toTree(node.getVariable()), start(node));
+		ForeachStatement forEach = new ForeachStatement((LocalDeclaration) toTree(node.astVariable()), start(node));
 		forEach.sourceEnd = end(node);
-		forEach.collection = toExpression(node.getIterable());
-		forEach.action = toStatement(node.getStatement());
+		forEach.collection = toExpression(node.astIterable());
+		forEach.action = toStatement(node.astStatement());
 		return set(node, forEach);
 	}
 	
 	@Override
 	public boolean visitVariableDeclaration(lombok.ast.VariableDeclaration node) {
-		List<AbstractVariableDeclaration> list = toList(AbstractVariableDeclaration.class, node.getDefinition());
+		List<AbstractVariableDeclaration> list = toList(AbstractVariableDeclaration.class, node.astDefinition());
 		if (list.size() > 0) setupJavadoc(list.get(0), node);
 		return set(node, list);
 	}
@@ -1443,20 +1439,20 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitVariableDefinition(lombok.ast.VariableDefinition node) {
 		List<AbstractVariableDeclaration> values = Lists.newArrayList();
-		Annotation[] annotations = toArray(Annotation.class, node.getModifiers().annotations());
-		int modifiers = toModifiers(node.getModifiers());
-		TypeReference base = (TypeReference) toTree(node.getTypeReference());
+		Annotation[] annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
+		int modifiers = toModifiers(node.astModifiers());
+		TypeReference base = (TypeReference) toTree(node.astTypeReference());
 		AbstractVariableDeclaration prevDecl = null;
-		for (lombok.ast.VariableDefinitionEntry entry : node.variables()) {
+		for (lombok.ast.VariableDefinitionEntry entry : node.astVariables()) {
 			VariableKind kind = VariableKind.kind(node);
 			AbstractVariableDeclaration decl = kind.create();
 			decl.annotations = annotations;
-			decl.initialization = toExpression(entry.getInitializer());
+			decl.initialization = toExpression(entry.astInitializer());
 			decl.modifiers = modifiers;
-			decl.name = toName(entry.getName());
-			if (entry.getArrayDimensions() == 0 && !node.isVarargs()) {
+			decl.name = toName(entry.astName());
+			if (entry.astArrayDimensions() == 0 && !node.astVarargs()) {
 				decl.type = base;
-			} else if (entry.getArrayDimensions() > 0 || node.isVarargs()) {
+			} else if (entry.astArrayDimensions() > 0 || node.astVarargs()) {
 				decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 				decl.type.sourceStart = base.sourceStart;
 				// This makes no sense whatsoever but eclipse wants it this way.
@@ -1468,7 +1464,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 					long[] poss = ((ArrayQualifiedTypeReference)base).sourcePositions;
 					decl.type.sourceEnd = (int) poss[poss.length - 1];
 				}
-				if (node.isVarargs()) {
+				if (node.astVarargs()) {
 					if (decl.type instanceof ArrayTypeReference) {
 						((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
 					}
@@ -1482,7 +1478,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 					}
 				}
 			}
-			if (node.isVarargs()) {
+			if (node.astVarargs()) {
 				decl.type.bits |= ASTNode.IsVarArgs;
 			}
 			if (decl instanceof FieldDeclaration) {
@@ -1491,25 +1487,25 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				}
 			}
 			
-			decl.sourceStart = start(entry.getName());
-			decl.sourceEnd = end(entry.getName());
+			decl.sourceStart = start(entry.astName());
+			decl.sourceEnd = end(entry.astName());
 			decl.declarationSourceStart = jstart(node);
 			switch (kind) {
 			case LOCAL:
 				int end;
 				if (node.getParent() instanceof lombok.ast.VariableDeclaration) end = end(node.getParent());
 				else {
-					if (entry.getRawInitializer() != null) end = end(entry.getRawInitializer());
-					else end = end(entry.getName());
+					if (entry.rawInitializer() != null) end = end(entry.rawInitializer());
+					else end = end(entry.astName());
 				}
 				decl.declarationSourceEnd = decl.declarationEnd = end;
 				break;
 			case ARGUMENT:
-				decl.declarationSourceEnd = decl.declarationEnd = end(entry.getRawName());
+				decl.declarationSourceEnd = decl.declarationEnd = end(entry.rawName());
 				break;
 			case FIELD:
 				decl.declarationSourceEnd = decl.declarationEnd = end(node.getParent());
-				((FieldDeclaration)decl).endPart1Position = end(node.getRawTypeReference()) + 1;
+				((FieldDeclaration)decl).endPart1Position = end(node.rawTypeReference()) + 1;
 				((FieldDeclaration)decl).endPart2Position = end(node.getParent());
 				if (prevDecl instanceof FieldDeclaration) {
 					((FieldDeclaration)prevDecl).endPart2Position = start(entry) - 1;
@@ -1525,15 +1521,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitIf(lombok.ast.If node) {
-		if (node.getElseStatement() == null) {
-			return set(node, new IfStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), start(node), end(node)));
+		if (node.astElseStatement() == null) {
+			return set(node, new IfStatement(toExpression(node.astCondition()), toStatement(node.astStatement()), start(node), end(node)));
 		}
-		return set(node, new IfStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), toStatement(node.getElseStatement()), start(node), end(node)));
+		return set(node, new IfStatement(toExpression(node.astCondition()), toStatement(node.astStatement()), toStatement(node.astElseStatement()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitLabelledStatement(lombok.ast.LabelledStatement node) {
-		return set(node, new LabeledStatement(toName(node.getLabel()), toStatement(node.getStatement()), pos(node.getRawLabel()), end(node)));
+		return set(node, new LabeledStatement(toName(node.astLabel()), toStatement(node.astStatement()), pos(node.rawLabel()), end(node)));
 	}
 	
 	@Override
@@ -1541,16 +1537,16 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		//TODO make test for modifiers on variable declarations
 		//TODO make test for empty for/foreach etc.
 		if(node.isVariableDeclarationBased()) {
-			return set(node, new ForStatement(toArray(Statement.class, node.getVariableDeclaration()),
-					toExpression(node.getCondition()),
-					toArray(Statement.class, node.updates()),
-					toStatement(node.getStatement()),
+			return set(node, new ForStatement(toArray(Statement.class, node.astVariableDeclaration()),
+					toExpression(node.astCondition()),
+					toArray(Statement.class, node.astUpdates()),
+					toStatement(node.astStatement()),
 					true, start(node), end(node)));
 		}
-		return set(node, new ForStatement(toArray(Statement.class, node.expressionInits()),
-				toExpression(node.getCondition()),
-				toArray(Statement.class, node.updates()),
-				toStatement(node.getStatement()),
+		return set(node, new ForStatement(toArray(Statement.class, node.astExpressionInits()),
+				toExpression(node.astCondition()),
+				toArray(Statement.class, node.astUpdates()),
+				toStatement(node.astStatement()),
 				false, start(node), end(node)));
 	}
 	
@@ -1559,11 +1555,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		SwitchStatement value = new SwitchStatement();
 		value.sourceStart = start(node);
 		value.sourceEnd = end(node);
-		value.blockStart = start(node.getRawBody());
-		value.expression = toExpression(node.getCondition());
-		value.statements = toArray(Statement.class, node.getBody().contents());
+		value.blockStart = start(node.rawBody());
+		value.expression = toExpression(node.astCondition());
+		value.statements = toArray(Statement.class, node.astBody().astContents());
 		if (value.statements == null) {
-			if (isUndocumented(node.getBody())) value.bits |= ASTNode.UndocumentedEmptyBlock;
+			if (isUndocumented(node.astBody())) value.bits |= ASTNode.UndocumentedEmptyBlock;
 		} else {
 			for (Statement s : value.statements) {
 				if (s instanceof LocalDeclaration) {
@@ -1576,7 +1572,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitSynchronized(lombok.ast.Synchronized node) {
-		return set(node, new SynchronizedStatement(toExpression(node.getLock()), (Block) toTree(node.getBody()), start(node), end(node)));
+		return set(node, new SynchronizedStatement(toExpression(node.astLock()), (Block) toTree(node.astBody()), start(node), end(node)));
 	}
 	
 	@Override
@@ -1585,47 +1581,47 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		tryStatement.sourceStart = start(node);
 		tryStatement.sourceEnd = end(node);
 		
-		tryStatement.tryBlock = (Block) toTree(node.getBody());
-		int catchSize = node.catches().size();
+		tryStatement.tryBlock = (Block) toTree(node.astBody());
+		int catchSize = node.astCatches().size();
 		if (catchSize > 0) {
 			tryStatement.catchArguments = new Argument[catchSize];
 			tryStatement.catchBlocks = new Block[catchSize];
 			int i = 0;
-			for (lombok.ast.Catch c : node.catches()) {
-				tryStatement.catchArguments[i] = (Argument)toTree(c.getExceptionDeclaration());
-				tryStatement.catchBlocks[i] = (Block) toTree(c.getBody());
+			for (lombok.ast.Catch c : node.astCatches()) {
+				tryStatement.catchArguments[i] = (Argument)toTree(c.astExceptionDeclaration());
+				tryStatement.catchBlocks[i] = (Block) toTree(c.astBody());
 				i++;
 			}
 		}
-		tryStatement.finallyBlock = (Block) toTree(node.getFinally());
+		tryStatement.finallyBlock = (Block) toTree(node.astFinally());
 		return set(node, tryStatement);
 	}
 	
 	@Override
 	public boolean visitThrow(lombok.ast.Throw node) {
-		return set(node, new ThrowStatement(toExpression(node.getThrowable()), start(node), end(node)));
+		return set(node, new ThrowStatement(toExpression(node.astThrowable()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitWhile(lombok.ast.While node) {
-		return set(node, new WhileStatement(toExpression(node.getCondition()), toStatement(node.getStatement()), start(node), end(node)));
+		return set(node, new WhileStatement(toExpression(node.astCondition()), toStatement(node.astStatement()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitReturn(lombok.ast.Return node) {
-		return set(node, new ReturnStatement(toExpression(node.getValue()), start(node), end(node)));
+		return set(node, new ReturnStatement(toExpression(node.astValue()), start(node), end(node)));
 	}
 	
 	@Override
 	public boolean visitAnnotation(lombok.ast.Annotation node) {
 		//TODO add test where the value is the result of string concatenation
-		TypeReference type = (TypeReference) toTree(node.getAnnotationTypeReference());
-		if (node.elements().isEmpty() && countStructure(node, "(") == 0) {
+		TypeReference type = (TypeReference) toTree(node.astAnnotationTypeReference());
+		if (node.astElements().isEmpty() && countStructure(node, "(") == 0) {
 			MarkerAnnotation ann = new MarkerAnnotation(type, start(node));
 			ann.declarationSourceEnd = end(node);
 			return set(node, ann);
 		}
-		MemberValuePair[] values = toArray(MemberValuePair.class, node.elements());
+		MemberValuePair[] values = toArray(MemberValuePair.class, node.astElements());
 		if (values != null && (values.length == 1 && values[0].name == null)) {
 			SingleMemberAnnotation ann = new SingleMemberAnnotation(type, start(node));
 			ann.declarationSourceEnd = end(node);
@@ -1641,9 +1637,9 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitAnnotationElement(lombok.ast.AnnotationElement node) {
 		//TODO make a test where the array initializer is the default value
-		MemberValuePair pair = new MemberValuePair(toName(node.getName()), start(node), end(node.getRawName()), null);
+		MemberValuePair pair = new MemberValuePair(toName(node.astName()), start(node), end(node.rawName()), null);
 		// giving the value to the constructor will set the ASTNode.IsAnnotationDefaultValue flag
-		pair.value = toExpression(node.getValue());
+		pair.value = toExpression(node.astValue());
 		if (pair.name != null && pair.value instanceof ArrayInitializer) {
 			pair.value.bits |= ASTNode.IsAnnotationDefaultValue;
 		}
@@ -1653,7 +1649,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitCase(lombok.ast.Case node) {
-		return set(node, new CaseStatement(toExpression(node.getCondition()), end(node.getRawCondition()), start(node)));
+		return set(node, new CaseStatement(toExpression(node.astCondition()), end(node.rawCondition()), start(node)));
 	}
 	
 	@Override
@@ -1697,7 +1693,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		char[][] c = new char[size][];
 		int i = 0;
 		for (lombok.ast.Identifier part : parts) {
-			c[i++] = part.getName().toCharArray();
+			c[i++] = part.astName().toCharArray();
 		}
 		return c;
 	}
@@ -1707,13 +1703,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		ref.bits |= Binding.VARIABLE;
 		
 		if (node.getParent() instanceof lombok.ast.MethodInvocation) {
-			if (((lombok.ast.MethodInvocation)node.getParent()).getOperand() == node) {
+			if (((lombok.ast.MethodInvocation)node.getParent()).astOperand() == node) {
 				ref.bits |= Binding.TYPE;
 			}
 		}
 		
 		if (node.getParent() instanceof lombok.ast.Select) {
-			if (((lombok.ast.Select)node.getParent()).getOperand() == node) {
+			if (((lombok.ast.Select)node.getParent()).astOperand() == node) {
 				ref.bits |= Binding.TYPE;
 			}
 		}
@@ -1805,15 +1801,15 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	private static int jstart(lombok.ast.Node node) {
 		if (node == null) return 0;
 		if (node instanceof lombok.ast.JavadocContainer) {
-			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node).getRawJavadoc();
+			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node).rawJavadoc();
 			if (javadoc != null) return start(javadoc);
 		}
 		if (node instanceof lombok.ast.VariableDefinition && node.getParent() instanceof lombok.ast.VariableDeclaration) {
-			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).getRawJavadoc();
+			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).rawJavadoc();
 			if (javadoc != null) return start(javadoc);
 		}
 		if (node instanceof lombok.ast.Modifiers && node.getParent() instanceof JavadocContainer) {
-			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).getRawJavadoc();
+			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).rawJavadoc();
 			if (javadoc != null) return start(javadoc);
 		}
 		return start(node);
@@ -1837,7 +1833,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		long[] pos = new long[parts.size()];
 		int idx = 0;
 		for (lombok.ast.Node n : parts) {
-			if (n instanceof lombok.ast.TypeReferencePart) pos[idx++] = pos(((lombok.ast.TypeReferencePart)n).getRawIdentifier());
+			if (n instanceof lombok.ast.TypeReferencePart) pos[idx++] = pos(((lombok.ast.TypeReferencePart)n).rawIdentifier());
 			else pos[idx++] = pos(n);
 		}
 		return pos;

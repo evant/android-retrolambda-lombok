@@ -22,8 +22,8 @@
 package lombok.ast;
 
 public interface JavadocContainer {
-	Comment getJavadoc();
-	Node getRawJavadoc();
-	Node setJavadoc(Comment javadoc);
-	Node setRawJavadoc(Node javadoc);
+	Comment astJavadoc();
+	Node rawJavadoc();
+	Node astJavadoc(Comment javadoc);
+	Node rawJavadoc(Node javadoc);
 }

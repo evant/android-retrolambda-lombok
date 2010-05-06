@@ -39,7 +39,7 @@ public class BasicChecks {
 	}
 	
 	public void checkNameOfIdentifier(Identifier identifier) {
-		String n = identifier.getName();
+		String n = identifier.astName();
 		if (n == null || n.length() == 0) {
 			problems.add(new SyntaxProblem(identifier, "Empty identifier"));
 			return;
@@ -72,7 +72,7 @@ public class BasicChecks {
 		
 		Node varDefEntry = ((VariableDefinition)rawVarDef).rawVariables().first();
 		if (varDefEntry instanceof VariableDefinitionEntry) {
-			if (((VariableDefinitionEntry)varDefEntry).getRawInitializer() != null) {
+			if (((VariableDefinitionEntry)varDefEntry).rawInitializer() != null) {
 				problems.add(new SyntaxProblem(node, desc + " can not declare a value for their " + desc2 + " declaration."));
 			}
 		}

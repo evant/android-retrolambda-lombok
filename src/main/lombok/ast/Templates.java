@@ -30,21 +30,21 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
-import lombok.NonNull;
 import lombok.ast.template.CopyMethod;
 import lombok.ast.template.GenerateAstNode;
 import lombok.ast.template.InitialValue;
+import lombok.ast.template.Mandatory;
 import lombok.ast.template.NotChildOfNode;
 
 class ExpressionMixin {
 	@NotChildOfNode(suppressSetter=true, codeToCopy="new java.util.ArrayList<lombok.ast.Position>(this.parensPositions)")
-	@NonNull
+	@Mandatory
 	@InitialValue("new java.util.ArrayList<lombok.ast.Position>()")
 	List<Position> parensPositions;
 	
 	@CopyMethod
 	static int getParens(Expression self) {
-		return self.getParensPositions() == null ? 0 : self.getParensPositions().size();
+		return self.astParensPositions() == null ? 0 : self.astParensPositions().size();
 	}
 	
 	@CopyMethod
@@ -63,14 +63,14 @@ class ExpressionMixin {
 		if (self instanceof ConstructorInvocation) return true;
 		if (self instanceof BinaryExpression) {
 			try {
-				return ((BinaryExpression)self).getOperator().isAssignment();
+				return ((BinaryExpression)self).astOperator().isAssignment();
 			} catch (Exception e) {
 				return false;
 			}
 		}
 		if (self instanceof UnaryExpression) {
 			try {
-				switch (((UnaryExpression)self).getOperator()) {
+				switch (((UnaryExpression)self).astOperator()) {
 				case POSTFIX_DECREMENT:
 				case POSTFIX_INCREMENT:
 				case PREFIX_DECREMENT:
@@ -91,20 +91,20 @@ class ExpressionMixin {
 
 @GenerateAstNode(implementing=Statement.class)
 class AssertTemplate {
-	@NonNull Expression assertion;
+	@Mandatory Expression assertion;
 	Expression message;
 }
 
 @GenerateAstNode(implementing={Statement.class, DescribedNode.class})
 class CatchTemplate {
-	@NonNull VariableDefinition exceptionDeclaration;
-	@NonNull Block body;
+	@Mandatory VariableDefinition exceptionDeclaration;
+	@Mandatory Block body;
 	
 	@CopyMethod
 	static String getDescription(Catch self) {
 		try {
-			return self.getExceptionDeclaration().getTypeReference().getDescription();
-		} catch (Exception e) {
+			return self.astExceptionDeclaration().astTypeReference().getDescription();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -117,14 +117,14 @@ class BlockTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class DoWhileTemplate {
-	@NonNull Expression condition;
-	@NonNull Statement statement;
+	@Mandatory Expression condition;
+	@Mandatory Statement statement;
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class WhileTemplate {
-	@NonNull Expression condition;
-	@NonNull Statement statement;
+	@Mandatory Expression condition;
+	@Mandatory Statement statement;
 }
 
 @GenerateAstNode(implementing=Statement.class)
@@ -133,56 +133,56 @@ class ForTemplate {
 	VariableDefinition variableDeclaration;
 	Expression condition;
 	List<Expression> updates;
-	@NonNull Statement statement;
+	@Mandatory Statement statement;
 	
 	@CopyMethod
 	static boolean isVariableDeclarationBased(For self) {
-		return self.getRawVariableDeclaration() != null && self.rawExpressionInits().isEmpty();
+		return self.rawVariableDeclaration() != null && self.rawExpressionInits().isEmpty();
 	}
 	
 	@CopyMethod
 	static boolean isStatementExpressionsBased(For self) {
-		return self.getRawVariableDeclaration() == null;
+		return self.rawVariableDeclaration() == null;
 	}
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class ForEachTemplate {
-	@NonNull VariableDefinition variable;
-	@NonNull Expression iterable;
-	@NonNull Statement statement;
+	@Mandatory VariableDefinition variable;
+	@Mandatory Expression iterable;
+	@Mandatory Statement statement;
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class IfTemplate {
-	@NonNull Expression condition;
-	@NonNull Statement statement;
+	@Mandatory Expression condition;
+	@Mandatory Statement statement;
 	Statement elseStatement;
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class SynchronizedTemplate {
-	@NonNull Expression lock;
-	@NonNull Block body;
+	@Mandatory Expression lock;
+	@Mandatory Block body;
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class TryTemplate {
-	@NonNull Block body;
+	@Mandatory Block body;
 	List<Catch> catches;
 	Block finally_;
 }
 
 @GenerateAstNode(implementing=DescribedNode.class)
 class AnnotationTemplate {
-	@NonNull TypeReference annotationTypeReference;
+	@Mandatory TypeReference annotationTypeReference;
 	List<AnnotationElement> elements;
 	
 	@CopyMethod
 	static String getDescription(Annotation self) {
 		try {
-			return self.getAnnotationTypeReference().getDescription();
-		} catch (Exception e) {
+			return self.astAnnotationTypeReference().getDescription();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -195,10 +195,10 @@ class AnnotationTemplate {
 	
 	@CopyMethod
 	static List<Node> getValues(Annotation self, String key) {
-		for (AnnotationElement elem : self.elements()) {
-			if (key == null && elem.getRawName() == null) return elem.getValues();
-			if (elem.getRawName() instanceof Identifier) {
-				if (key != null && key.equals(elem.getName().getName())) return elem.getValues();
+		for (AnnotationElement elem : self.astElements()) {
+			if (key == null && elem.rawName() == null) return elem.getValues();
+			if (elem.rawName() instanceof Identifier) {
+				if (key != null && key.equals(elem.astName().astName())) return elem.getValues();
 			}
 		}
 		
@@ -209,26 +209,26 @@ class AnnotationTemplate {
 @GenerateAstNode(implementing={DescribedNode.class})
 class AnnotationElementTemplate {
 	Identifier name;
-	@NonNull Expression value;
+	@Mandatory Expression value;
 	
 	@CopyMethod
 	static String getDescription(AnnotationElement self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
 	
 	@CopyMethod
 	static List<Node> getValues(AnnotationElement self) {
-		if (self.getRawValue() == null) return Collections.emptyList();
-		if (self.getRawValue() instanceof ArrayInitializer) {
+		if (self.rawValue() == null) return Collections.emptyList();
+		if (self.rawValue() instanceof ArrayInitializer) {
 			List<Node> result = Lists.newArrayList();
-			for (Node n : ((ArrayInitializer)self.getRawValue()).rawExpressions()) if (n != null) result.add(n);
+			for (Node n : ((ArrayInitializer)self.rawValue()).rawExpressions()) if (n != null) result.add(n);
 			return result;
 		}
-		return Collections.singletonList(self.getRawValue());
+		return Collections.singletonList(self.rawValue());
 	}
 }
 
@@ -352,14 +352,14 @@ class ModifiersTemplate {
 @GenerateAstNode(implementing={Statement.class, TypeMember.class, JavadocContainer.class})
 class VariableDeclarationTemplate {
 	Comment javadoc;
-	@NonNull VariableDefinition definition;
+	@Mandatory VariableDefinition definition;
 }
 
 @GenerateAstNode
 class VariableDefinitionTemplate {
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
-	@NonNull TypeReference typeReference;
+	@Mandatory Modifiers modifiers;
+	@Mandatory TypeReference typeReference;
 	List<VariableDefinitionEntry> variables;
 	
 	@NotChildOfNode
@@ -368,35 +368,34 @@ class VariableDefinitionTemplate {
 
 @GenerateAstNode
 class VariableDefinitionEntryTemplate {
-	@NonNull Identifier name;
+	@Mandatory Identifier name;
 	@NotChildOfNode int arrayDimensions;
 	Expression initializer;
 	
 	@CopyMethod
 	static TypeReference getEffectiveTypeReference(VariableDefinitionEntry self) {
-		if (!(self.getParent() instanceof VariableDefinition)) throw new AstException(
+		VariableDefinition parent = Ast.up(self, VariableDefinition.class);
+		if (parent == null) throw new AstException(
 				self, "Cannot calculate type reference of a VariableDefinitionEntry without a VariableDefinition as parent");
 		
-		
-		VariableDefinition parent = (VariableDefinition) self.getParent();
-		
-		TypeReference typeRef = parent.getTypeReference().copy();
-		return typeRef.setArrayDimensions(typeRef.getArrayDimensions() + self.getArrayDimensions() + (parent.isVarargs() ? 1 : 0));
+		TypeReference typeRef = parent.astTypeReference().copy();
+		return typeRef.astArrayDimensions(typeRef.astArrayDimensions() + self.astArrayDimensions() + (parent.astVarargs() ? 1 : 0));
 	}
 	
 	@CopyMethod
 	static Modifiers getModifiersOfParent(VariableDefinitionEntry self) {
+		VariableDefinition parent = Ast.up(self, VariableDefinition.class);
 		Modifiers m = null;
-		if (self.getParent() instanceof VariableDefinition) m = ((VariableDefinition)self.getParent()).getModifiers();
+		if (parent != null) m = parent.astModifiers();
 		return m == null ? new Modifiers() : m;
 	}
 }
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class InlineIfExpressionTemplate {
-	@NonNull Expression condition;
-	@NonNull Expression ifTrue;
-	@NonNull Expression ifFalse;
+	@Mandatory Expression condition;
+	@Mandatory Expression ifTrue;
+	@Mandatory Expression ifFalse;
 	
 	@CopyMethod
 	static boolean needsParentheses(Expression self) {
@@ -411,32 +410,32 @@ class InlineIfExpressionTemplate {
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class IdentifierTemplate {
 	@NotChildOfNode
-	@NonNull String name;
+	@Mandatory String name;
 	
 	@CopyMethod
 	static String getDescription(Identifier self) {
-		return self.getName();
+		return self.astName();
 	}
 	
 	@CopyMethod(isStatic=true)
 	static Identifier of(String name) {
-		return new Identifier().setName(name);
+		return new Identifier().astName(name);
 	}
 }
 
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class BinaryExpressionTemplate {
-	@NonNull Expression left;
-	@NonNull Expression right;
+	@Mandatory Expression left;
+	@Mandatory Expression right;
 	@NotChildOfNode(rawFormParser="parseOperator", rawFormGenerator="generateOperator")
-	@NonNull BinaryOperator operator;
+	@Mandatory BinaryOperator operator;
 	
 	@CopyMethod
 	static String getDescription(BinaryExpression self) {
 		try {
-			return self.getOperator().getSymbol();
+			return self.astOperator().getSymbol();
 		} catch (Exception e) {
-			return self.getRawOperator();
+			return self.rawOperator();
 		}
 	}
 	
@@ -454,7 +453,7 @@ class BinaryExpressionTemplate {
 	@CopyMethod
 	static boolean needsParentheses(Expression self) {
 		try {
-			return needsParentheses(self, ((BinaryExpression)self).getOperator().pLevel());
+			return needsParentheses(self, ((BinaryExpression)self).astOperator().pLevel());
 		} catch (Throwable ignore) {
 			return true;
 		}
@@ -467,11 +466,12 @@ class BinaryExpressionTemplate {
 			if (!(self instanceof InlineIfExpression)) {
 				return pLevel >= BinaryOperator.ASSIGN.pLevel();
 			}
-			return ((InlineIfExpression)parent).getRawIfFalse() != self;
+			return ((InlineIfExpression)parent).rawIfFalse() != self;
 		}
 		
 		if (parent instanceof UnaryExpression || parent instanceof Cast || parent instanceof ConstructorInvocation) {
-			if (parent instanceof ConstructorInvocation && ((ConstructorInvocation)parent).getRawQualifier() != self) return false;
+			//If we're the child of a ConstructorInvocation, are we its parameter (definitely no parens needed) or its qualifier?
+			if (parent instanceof ConstructorInvocation && ((ConstructorInvocation)parent).rawQualifier() != self) return false;
 			final int otherPLevel = 1;
 			if (otherPLevel > pLevel) return false;
 			if (otherPLevel < pLevel) return true;
@@ -481,34 +481,34 @@ class BinaryExpressionTemplate {
 			
 			try {
 				if (parent instanceof ConstructorInvocation) otherIsPostfix = true;
-				else otherIsPostfix = ((UnaryExpression)parent).getOperator().isPostfix();
+				else otherIsPostfix = ((UnaryExpression)parent).astOperator().isPostfix();
 			} catch (Throwable ignore) {}
 			try {
 				if (self instanceof ConstructorInvocation) selfIsPostfix = true;
-				else selfIsPostfix = ((UnaryExpression)self).getOperator().isPostfix();
+				else selfIsPostfix = ((UnaryExpression)self).astOperator().isPostfix();
 			} catch (Throwable ignore) {}
 			return (!selfIsPostfix && otherIsPostfix);
 		}
 		
-		if (parent instanceof ConstructorInvocation) return self == ((ConstructorInvocation)parent).getRawQualifier();
-		if (parent instanceof MethodInvocation) return self == ((MethodInvocation)parent).getRawOperand();
-		if (parent instanceof ArrayAccess) return self == ((ArrayAccess)parent).getRawOperand();
-		if (parent instanceof Select) return self == ((Select)parent).getRawOperand();
+		if (parent instanceof ConstructorInvocation) return self == ((ConstructorInvocation)parent).rawQualifier();
+		if (parent instanceof MethodInvocation) return self == ((MethodInvocation)parent).rawOperand();
+		if (parent instanceof ArrayAccess) return self == ((ArrayAccess)parent).rawOperand();
+		if (parent instanceof Select) return self == ((Select)parent).rawOperand();
 		if (parent instanceof InstanceOf) return pLevel > BinaryOperator.LESS.pLevel();
 		if (parent instanceof BinaryExpression) {
 			BinaryExpression be = (BinaryExpression)parent;
 			int otherPLevel;
 			try {
-				otherPLevel = be.getOperator().pLevel();
+				otherPLevel = be.astOperator().pLevel();
 			} catch (Throwable ignore) {
 				return true;
 			}
 			if (otherPLevel > pLevel) return false;
 			if (otherPLevel < pLevel) return true;
-			if (be.getRawLeft() == self) {
+			if (be.rawLeft() == self) {
 				return pLevel == BinaryOperator.ASSIGN.pLevel();
 			}
-			if (be.getRawRight() == self) {
+			if (be.rawRight() == self) {
 				return pLevel != BinaryOperator.ASSIGN.pLevel();
 			}
 			return true;
@@ -520,15 +520,15 @@ class BinaryExpressionTemplate {
 
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class UnaryExpressionTemplate {
-	@NonNull Expression operand;
+	@Mandatory Expression operand;
 	@NotChildOfNode
-	@NonNull UnaryOperator operator;
+	@Mandatory UnaryOperator operator;
 	
 	@CopyMethod
 	static String getDescription(UnaryExpression self) {
 		try {
-			return String.format("%s%s%s", self.getOperator().isPostfix() ? "X" : "", self.getOperator().getSymbol(), self.getOperator().isPostfix() ? "" : "X");
-		} catch (Exception e) {
+			return String.format("%s%s%s", self.astOperator().isPostfix() ? "X" : "", self.astOperator().getSymbol(), self.astOperator().isPostfix() ? "" : "X");
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -545,14 +545,14 @@ class UnaryExpressionTemplate {
 
 @GenerateAstNode(implementing=DescribedNode.class)
 class TypeVariableTemplate {
-	@NonNull Identifier name;
+	@Mandatory Identifier name;
 	List<TypeReference> extending;
 	
 	@CopyMethod
 	static String getDescription(TypeVariable self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -562,7 +562,7 @@ class TypeVariableTemplate {
 class TypeReferenceTemplate {
 	@NotChildOfNode
 	@InitialValue("lombok.ast.WildcardKind.NONE")
-	@NonNull WildcardKind wildcard;
+	@Mandatory WildcardKind wildcard;
 	
 	@NotChildOfNode
 	int arrayDimensions;
@@ -582,77 +582,77 @@ class TypeReferenceTemplate {
 	
 	@CopyMethod(isStatic = true)
 	static TypeReference VOID() {
-		return new TypeReference().parts().addToEnd(new TypeReferencePart().setIdentifier(Identifier.of("void")));
+		return new TypeReference().astParts().addToEnd(new TypeReferencePart().astIdentifier(Identifier.of("void")));
 	}
 	
 	@CopyMethod
-	static boolean isPrimitive(TypeReference t) {
-		if (t.getArrayDimensions() > 0 || t.rawParts().size() != 1) return false;
-		Node part = t.rawParts().first();
-		if (part instanceof TypeReferencePart) {
-			String name = ((TypeReferencePart)part).getIdentifier().getName();
+	static boolean isPrimitive(TypeReference self) {
+		if (self.astArrayDimensions() > 0 || self.rawParts().size() != 1) return false;
+		try {
+			String name = self.astParts().first().astIdentifier().astName();
 			return name.indexOf(' ') == -1 && PRIMITIVE_NAMES.contains(" " + name + " ");
+		} catch (NullPointerException e) {
+			return false;
 		}
-		return false;
 	}
 	
 	@CopyMethod
-	static boolean isVoid(TypeReference t) {
-		if (t.rawParts().size() != 1) return false;
-		Node part = t.rawParts().first();
-		if (part instanceof TypeReferencePart) {
-			String name = ((TypeReferencePart)part).getIdentifier().getName();
-			return "void".equals(name);
+	static boolean isVoid(TypeReference self) {
+		if (self.rawParts().size() != 1) return false;
+		try {
+			String name = self.astParts().first().astIdentifier().astName();
+			return name.equals("void");
+		} catch (NullPointerException e) {
+			return false;
 		}
-		return false;
 	}
 	
 	@CopyMethod
-	static String getTypeName(TypeReference t) {
+	static String getTypeName(TypeReference self) {
 		StringBuilder out = new StringBuilder();
-		for (TypeReferencePart p : t.parts()) {
+		for (TypeReferencePart p : self.astParts()) {
 			if (out.length() > 0) out.append(".");
 			out.append(p.getTypeName());
 		}
 		
-		for (int i = 0; i < t.getArrayDimensions(); i++) out.append("[]");
+		for (int i = 0; i < self.astArrayDimensions(); i++) out.append("[]");
 		
 		return out.toString();
 	}
 	
 	@CopyMethod
-	static boolean hasGenerics(TypeReference t) {
-		return generics(t).isEmpty();
+	static boolean hasGenerics(TypeReference self) {
+		return getGenerics(self).isEmpty();
 	}
 	
 	@CopyMethod
-	static StrictListAccessor<TypeReference, TypeReference> generics(TypeReference t) {
-		return t.parts().last().getTypeArguments().genericsAccessor.wrap(t).asStrict();
+	static StrictListAccessor<TypeReference, TypeReference> getGenerics(TypeReference self) {
+		try {
+			return self.astParts().last().typeArgumentsAccessor.wrap(self).asStrict();
+		} catch (Exception e) {
+			return ListAccessor.emptyStrict("generics", self);
+		}
 	}
 }
 
 @GenerateAstNode
 class TypeReferencePartTemplate {
-	@NonNull Identifier identifier;
-	@InitialValue("adopt(new lombok.ast.TypeArguments())")
-	@NonNull TypeArguments typeArguments;
+	@Mandatory Identifier identifier;
+	List<TypeReference> typeArguments;
 	
 	@CopyMethod
-	static StrictListAccessor<TypeReference, TypeReferencePart> generics(TypeReferencePart self) {
-		return self.getTypeArguments().genericsAccessor.wrap(self).asStrict();
-	}
-	
-	@CopyMethod
-	static String getTypeName(TypeReferencePart p) {
-		if (p.generics().isEmpty()) return p.getIdentifier().getName();
+	static String getTypeName(TypeReferencePart self) {
+		String name = self.astIdentifier() == null ? "" : self.astIdentifier().astName();
+		
+		if (self.astTypeArguments().isEmpty()) return name;
 		
 		StringBuilder out = new StringBuilder();
-		out.append(p.getIdentifier().getName()).append("<");
+		out.append(name).append("<");
 		boolean first = true;
-		for (TypeReference t : p.generics()) {
+		for (TypeReference t : self.astTypeArguments()) {
 			if (!first) out.append(", ");
 			first = false;
-			switch (t.getWildcard()) {
+			switch (t.astWildcard()) {
 			case EXTENDS:
 				out.append("? extends ");
 				out.append(t.getTypeName());
@@ -674,15 +674,10 @@ class TypeReferencePartTemplate {
 	}
 }
 
-@GenerateAstNode
-class TypeArgumentsTemplate {
-	List<TypeReference> generics;
-}
-
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class CastTemplate {
-	@NonNull TypeReference typeReference;
-	@NonNull Expression operand;
+	@Mandatory TypeReference typeReference;
+	@Mandatory Expression operand;
 	
 	@CopyMethod
 	static boolean needsParentheses(Expression self) {
@@ -696,8 +691,8 @@ class CastTemplate {
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class InstanceOfTemplate {
-	@NonNull Expression objectReference;
-	@NonNull TypeReference typeReference;
+	@Mandatory Expression objectReference;
+	@Mandatory TypeReference typeReference;
 	
 	@CopyMethod
 	static boolean needsParentheses(Expression self) {
@@ -712,16 +707,16 @@ class InstanceOfTemplate {
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class ConstructorInvocationTemplate {
 	Expression qualifier;
-	TypeArguments constructorTypeArguments;
-	@NonNull TypeReference typeReference;
+	List<TypeReference> constructorTypeArguments;
+	@Mandatory TypeReference typeReference;
 	List<Expression> arguments;
 	TypeBody anonymousClassBody;
 	
 	@CopyMethod
 	static String getDescription(ConstructorInvocation self) {
 		try {
-			return self.getTypeReference().getDescription();
-		} catch (Exception e) {
+			return self.astTypeReference().getDescription();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -729,29 +724,29 @@ class ConstructorInvocationTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class AlternateConstructorInvocationTemplate {
-	TypeArguments constructorTypeArguments;
+	List<TypeReference> constructorTypeArguments;
 	List<Expression> arguments;
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class SuperConstructorInvocationTemplate {
 	Expression qualifier;
-	TypeArguments constructorTypeArguments;
+	List<TypeReference> constructorTypeArguments;
 	List<Expression> arguments;
 }
 
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class MethodInvocationTemplate {
 	Expression operand;
-	TypeArguments methodTypeArguments;
-	@NonNull Identifier name;
+	List<TypeReference> methodTypeArguments;
+	@Mandatory Identifier name;
 	List<Expression> arguments;
 	
 	@CopyMethod
 	static String getDescription(MethodInvocation self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -759,19 +754,19 @@ class MethodInvocationTemplate {
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class SelectTemplate {
-	@NonNull Expression operand;
-	@NonNull Identifier identifier;
+	@Mandatory Expression operand;
+	@Mandatory Identifier identifier;
 }
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class ArrayAccessTemplate {
-	@NonNull Expression operand;
-	@NonNull Expression indexExpression;
+	@Mandatory Expression operand;
+	@Mandatory Expression indexExpression;
 }
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class ArrayCreationTemplate {
-	@NonNull TypeReference componentTypeReference;
+	@Mandatory TypeReference componentTypeReference;
 	List<ArrayDimension> dimensions;
 	ArrayInitializer initializer;
 }
@@ -798,13 +793,13 @@ class SuperTemplate {
 
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class ClassLiteralTemplate {
-	@NonNull TypeReference typeReference;
+	@Mandatory TypeReference typeReference;
 	
 	@CopyMethod
 	static String getDescription(ClassLiteral self) {
 		try {
-			return self.getTypeReference().getDescription();
-		} catch (Exception e) {
+			return self.astTypeReference().getDescription();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -828,37 +823,37 @@ class KeywordModifierTemplate {
 		.build();
 	
 	@NotChildOfNode
-	@NonNull String name;
+	@Mandatory String name;
 	
 	@CopyMethod
 	static String getDescription(KeywordModifier self) {
-		return self.getName();
+		return self.astName();
 	}
 	
 	@CopyMethod
 	static int asReflectModifiers(KeywordModifier self) {
-		Integer value = REFLECT_MODIFIERS.get(self.getName());
+		Integer value = REFLECT_MODIFIERS.get(self.astName());
 		return value == null ? 0 : value;
 	}
 	
 	@CopyMethod(isStatic=true)
 	static KeywordModifier STATIC() {
-		return new KeywordModifier().setName("static");
+		return new KeywordModifier().astName("static");
 	}
 	
 	@CopyMethod(isStatic=true)
 	static KeywordModifier PUBLIC() {
-		return new KeywordModifier().setName("public");
+		return new KeywordModifier().astName("public");
 	}
 	
 	@CopyMethod(isStatic=true)
 	static KeywordModifier PROTECTED() {
-		return new KeywordModifier().setName("protected");
+		return new KeywordModifier().astName("protected");
 	}
 	
 	@CopyMethod(isStatic=true)
 	static KeywordModifier PRIVATE() {
-		return new KeywordModifier().setName("private");
+		return new KeywordModifier().astName("private");
 	}
 }
 
@@ -867,14 +862,14 @@ class EmptyStatementTemplate {}
 
 @GenerateAstNode(implementing={Statement.class, DescribedNode.class})
 class LabelledStatementTemplate {
-	@NonNull Identifier label;
-	@NonNull Statement statement;
+	@Mandatory Identifier label;
+	@Mandatory Statement statement;
 	
 	@CopyMethod
 	static String getDescription(LabelledStatement self) {
 		try {
-			return self.getLabel().getName();
-		} catch (Exception e) {
+			return self.astLabel().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -882,13 +877,13 @@ class LabelledStatementTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class SwitchTemplate {
-	@NonNull Expression condition;
-	@NonNull Block body;
+	@Mandatory Expression condition;
+	@Mandatory Block body;
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class CaseTemplate {
-	@NonNull Expression condition;
+	@Mandatory Expression condition;
 }
 
 @GenerateAstNode(implementing=Statement.class)
@@ -898,7 +893,7 @@ class DefaultTemplate {
 @GenerateAstNode(implementing={Literal.class, Expression.class}, mixin=ExpressionMixin.class)
 class BooleanLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseBoolean", rawFormGenerator="generateBoolean")
-	@NonNull Boolean value;
+	@Mandatory Boolean value;
 	
 	static String generateBoolean(Boolean bool) {
 		return String.valueOf(bool);
@@ -916,11 +911,11 @@ class BooleanLiteralTemplate {
 @GenerateAstNode(implementing={Expression.class, Literal.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class CharLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseChar", rawFormGenerator="generateChar")
-	@NonNull Character value;
+	@Mandatory Character value;
 	
 	@CopyMethod
 	static String getDescription(CharLiteral self) {
-		return self.getValue() != null ? String.valueOf(self.getValue()) : null;
+		return self.astValue() != null ? String.valueOf(self.astValue()) : null;
 	}
 	
 	static String toEscape(char c, boolean forCharLiteral, char next) {
@@ -1001,12 +996,12 @@ class CharLiteralTemplate {
 @GenerateAstNode(implementing={Literal.class, Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class StringLiteralTemplate {
 	@NotChildOfNode(rawFormParser="parseString", rawFormGenerator="generateString")
-	@NonNull String value;
+	@Mandatory String value;
 	
 	@CopyMethod
 	static String getDescription(StringLiteral self) {
-		if (self.getValue() == null) return null;
-		String v = self.getValue();
+		String v = self.astValue();
+		if (v == null) return null;
 		if (v.length() > 17) return v.substring(0, 8) + "\u2026" + v.substring(v.length() - 8);
 		return v;
 	}
@@ -1103,7 +1098,7 @@ class BreakTemplate {
 	
 	@CopyMethod
 	static boolean hasLabel(Break self) {
-		return self.getRawLabel() != null;
+		return self.astLabel() != null;
 	}
 }
 
@@ -1113,7 +1108,7 @@ class ContinueTemplate {
 	
 	@CopyMethod
 	static boolean hasLabel(Continue self) {
-		return self.getRawLabel() != null;
+		return self.astLabel() != null;
 	}
 }
 
@@ -1124,7 +1119,7 @@ class ReturnTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class ThrowTemplate {
-	@NonNull Expression throwable;
+	@Mandatory Expression throwable;
 }
 
 @GenerateAstNode
@@ -1139,12 +1134,12 @@ class CommentTemplate {
 	
 	@CopyMethod
 	static boolean isJavadoc(Comment self) {
-		return self.isBlockComment() && self.getContent().startsWith("*");
+		return self.astBlockComment() && self.astContent().startsWith("*");
 	}
 	
 	@CopyMethod
 	static boolean isMarkedDeprecated(Comment self) {
-		return isJavadoc(self) && DEPRECATED_DETECTOR.matcher(self.getContent()).matches();
+		return isJavadoc(self) && DEPRECATED_DETECTOR.matcher(self.astContent()).matches();
 	}
 }
 
@@ -1153,17 +1148,17 @@ class AnnotationMethodDeclarationTemplate {
 	Comment javadoc;
 	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 	
-	@NonNull TypeReference returnTypeReference;
-	@NonNull Identifier methodName;
+	@Mandatory TypeReference returnTypeReference;
+	@Mandatory Identifier methodName;
 	Expression defaultValue;
 	
 	@CopyMethod
 	static String getDescription(AnnotationMethodDeclaration self) {
 		try {
-			return self.getMethodName().getName();
-		} catch (Exception e) {
+			return self.astMethodName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -1174,11 +1169,11 @@ class MethodDeclarationTemplate {
 	Comment javadoc;
 	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
-	@NonNull TypeReference returnTypeReference;
-	@NonNull Identifier methodName;
+	@Mandatory TypeReference returnTypeReference;
+	@Mandatory Identifier methodName;
 	List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
 	Block body;
@@ -1186,8 +1181,8 @@ class MethodDeclarationTemplate {
 	@CopyMethod
 	static String getDescription(MethodDeclaration self) {
 		try {
-			return self.getMethodName().getName();
-		} catch (Exception e) {
+			return self.astMethodName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -1198,25 +1193,25 @@ class ConstructorDeclarationTemplate {
 	Comment javadoc;
 	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
-	@NonNull Identifier typeName;
+	@Mandatory Identifier typeName;
 	List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
-	@NonNull Block body;
+	@Mandatory Block body;
 	
 	//TODO test if our syntax checkers flag misnamed constructors.
 }
 
 @GenerateAstNode(implementing=TypeMember.class)
 class InstanceInitializerTemplate {
-	@NonNull Block body;
+	@Mandatory Block body;
 }
 
 @GenerateAstNode(implementing=TypeMember.class)
 class StaticInitializerTemplate {
-	@NonNull Block body;
+	@Mandatory Block body;
 }
 
 @GenerateAstNode
@@ -1235,16 +1230,16 @@ class AnnotationDeclarationTemplate {
 	Comment javadoc;
 	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 	
-	@NonNull Identifier name;
-	@NonNull TypeBody body;
+	@Mandatory Identifier name;
+	@Mandatory TypeBody body;
 	
 	@CopyMethod
 	static String getDescription(AnnotationDeclaration self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -1253,7 +1248,7 @@ class AnnotationDeclarationTemplate {
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class EmptyDeclarationTemplate {
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 
 	@CopyMethod
 	static String getDescription(EmptyDeclaration self) {
@@ -1265,13 +1260,24 @@ class EmptyDeclarationTemplate {
 	}
 	
 	@CopyMethod
-	static Identifier getName(EmptyDeclaration self) {
+	static Identifier astName(EmptyDeclaration self) {
 		return null;
 	}
 	
 	@CopyMethod
-	static Node getRawName(EmptyDeclaration self) {
+	static EmptyDeclaration astName(EmptyDeclaration self, Identifier name) {
+		if (name != null) throw new AstException(self, "EmptyDeclarations cannot be named");
+		return self;
+	}
+	
+	@CopyMethod
+	static Node rawName(EmptyDeclaration self) {
 		return null;
+	}
+	
+	@CopyMethod
+	static EmptyDeclaration rawName(EmptyDeclaration self, Node name) {
+		return self;
 	}
 }
 
@@ -1280,10 +1286,10 @@ class ClassDeclarationTemplate {
 	Comment javadoc;
 	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 	
-	@NonNull Identifier name;
-	@NonNull TypeBody body;
+	@Mandatory Identifier name;
+	@Mandatory TypeBody body;
 	List<TypeVariable> typeVariables;
 	TypeReference extending;
 	List<TypeReference> implementing;
@@ -1291,8 +1297,8 @@ class ClassDeclarationTemplate {
 	@CopyMethod
 	static String getDescription(ClassDeclaration self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -1303,18 +1309,18 @@ class InterfaceDeclarationTemplate {
 	Comment javadoc;
 	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 	
-	@NonNull Identifier name;
-	@NonNull TypeBody body;
+	@Mandatory Identifier name;
+	@Mandatory TypeBody body;
 	List<TypeVariable> typeVariables;
 	List<TypeReference> extending;
 	
 	@CopyMethod
 	static String getDescription(InterfaceDeclaration self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -1324,15 +1330,15 @@ class InterfaceDeclarationTemplate {
 class EnumConstantTemplate {
 	Comment javadoc;
 	TypeBody body;
-	@NonNull Identifier name;
+	@Mandatory Identifier name;
 	List<Annotation> annotations;
 	List<Expression> arguments;
 	
 	@CopyMethod
 	static String getDescription(EnumConstant self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -1343,17 +1349,17 @@ class EnumDeclarationTemplate {
 	Comment javadoc;
 	
 	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@NonNull Modifiers modifiers;
+	@Mandatory Modifiers modifiers;
 	
-	@NonNull Identifier name;
-	@NonNull EnumTypeBody body;
+	@Mandatory Identifier name;
+	@Mandatory EnumTypeBody body;
 	List<TypeReference> implementing;
 	
 	@CopyMethod
 	static String getDescription(EnumDeclaration self) {
 		try {
-			return self.getName().getName();
-		} catch (Exception e) {
+			return self.astName().astName();
+		} catch (NullPointerException e) {
 			return null;
 		}
 	}
@@ -1367,11 +1373,9 @@ class PackageDeclarationTemplate {
 	@CopyMethod
 	static String getPackageName(PackageDeclaration node) {
 		StringBuilder result = new StringBuilder();
-		for (Identifier part : node.parts()) {
-			if (result.length() != 0) {
-				result.append(".");
-			}
-			result.append(part.getName());
+		for (Identifier part : node.astParts()) {
+			if (result.length() != 0) result.append(".");
+			result.append(part.astName());
 		}
 		return result.toString();
 	}
@@ -1389,15 +1393,13 @@ class ImportDeclarationTemplate {
 	
 	@CopyMethod
 	static String asFullyQualifiedName(ImportDeclaration self) {
-		boolean first = true;
-		StringBuilder sb = new StringBuilder();
-		for (Identifier i : self.parts()) {
-			if (!first) sb.append('.');
-			first = false;
-			sb.append(i.getName());
+		StringBuilder result = new StringBuilder();
+		for (Identifier part : self.astParts()) {
+			if (result.length() != 0) result.append(".");
+			result.append(part.astName());
 		}
-		if (self.isStarImport()) sb.append(".*");
-		return sb.toString();
+		if (self.astStarImport()) result.append(".*");
+		return result.toString();
 	}
 }
 
@@ -1410,6 +1412,5 @@ class CompilationUnitTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class ExpressionStatementTemplate {
-	@NonNull Expression expression;
+	@Mandatory Expression expression;
 }
-

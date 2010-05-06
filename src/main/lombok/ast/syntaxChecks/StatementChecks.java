@@ -50,30 +50,30 @@ public class StatementChecks {
 	}
 	
 	public void checkNotLoneTry(Try node) {
-		if (node.rawCatches().size() == 0 && node.getRawFinally() == null) {
+		if (node.rawCatches().size() == 0 && node.rawFinally() == null) {
 			problems.add(new SyntaxProblem(node, "try statement with no catches and no finally"));
 		}
 	}
 	
 	public void checkDeclarationsAsDirectChildWhile(While node) {
-		checkDeclarationsAsDirectChild(node, node.getRawStatement());
+		checkDeclarationsAsDirectChild(node, node.rawStatement());
 	}
 	
 	public void checkDeclarationsAsDirectChildDo(DoWhile node) {
-		checkDeclarationsAsDirectChild(node, node.getRawStatement());
+		checkDeclarationsAsDirectChild(node, node.rawStatement());
 	}
 	
 	public void checkDeclarationsAsDirectChildForEach(ForEach node) {
-		checkDeclarationsAsDirectChild(node, node.getRawStatement());
+		checkDeclarationsAsDirectChild(node, node.rawStatement());
 	}
 	
 	public void checkDeclarationsAsDirectChildIf(If node) {
-		checkDeclarationsAsDirectChild(node, node.getRawStatement());
-		checkDeclarationsAsDirectChild(node, node.getRawElseStatement());
+		checkDeclarationsAsDirectChild(node, node.rawStatement());
+		checkDeclarationsAsDirectChild(node, node.rawElseStatement());
 	}
 	
 	public void checkDeclarationsAsDirectChildFor(For node) {
-		checkDeclarationsAsDirectChild(node, node.getRawStatement());
+		checkDeclarationsAsDirectChild(node, node.rawStatement());
 	}
 	
 	private void checkDeclarationsAsDirectChild(Node n, Node c) {
@@ -87,11 +87,11 @@ public class StatementChecks {
 	}
 	
 	public void checkVarDefOfCatch(Catch node) {
-		BasicChecks.checkVarDefIsSimple(problems, node, node.getRawExceptionDeclaration(), "catch blocks", "exception");
+		BasicChecks.checkVarDefIsSimple(problems, node, node.rawExceptionDeclaration(), "catch blocks", "exception");
 	}
 	
 	public void checkVarDefOfForEach(ForEach node) {
-		BasicChecks.checkVarDefIsSimple(problems, node, node.getRawVariable(), "for-each statements", "loop");
+		BasicChecks.checkVarDefIsSimple(problems, node, node.rawVariable(), "for-each statements", "loop");
 	}
 	
 	public void checkCaseChildOfSwitch(Case node) {
@@ -118,9 +118,9 @@ public class StatementChecks {
 	}
 	
 	public void checkSwitchStartsWithDefaultOrCase(Switch node) {
-		Node rawBody = node.getRawBody();
-		if (rawBody instanceof Block) {
-			Node first = ((Block)rawBody).rawContents().first();
+		Block body = node.astBody();
+		if (body != null) {
+			Node first = body.astContents().first();
 			if (first != null && !(first instanceof Case) && !(first instanceof Default)) {
 				problems.add(new SyntaxProblem(node, "switch statements should start with a default or case statement."));
 			}

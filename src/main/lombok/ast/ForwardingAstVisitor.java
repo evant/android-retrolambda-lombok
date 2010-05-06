@@ -84,7 +84,6 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	@Override public boolean visitVariableDeclaration(VariableDeclaration node) {return visitNode(node);}
 	@Override public boolean visitVariableDefinition(VariableDefinition node) {return visitNode(node);}
 	@Override public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {return visitNode(node);}
-	@Override public boolean visitTypeArguments(TypeArguments node) {return visitNode(node);}
 	@Override public boolean visitTypeVariable(TypeVariable node) {return visitNode(node);}
 	@Override public boolean visitKeywordModifier(KeywordModifier node) {return visitNode(node);}
 	@Override public boolean visitModifiers(Modifiers node) {return visitNode(node);}

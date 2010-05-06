@@ -86,7 +86,6 @@ public abstract class AstVisitor {
 	public abstract boolean visitVariableDeclaration(VariableDeclaration node);
 	public abstract boolean visitVariableDefinition(VariableDefinition node);
 	public abstract boolean visitVariableDefinitionEntry(VariableDefinitionEntry node);
-	public abstract boolean visitTypeArguments(TypeArguments node);
 	public abstract boolean visitTypeVariable(TypeVariable node);
 	public abstract boolean visitKeywordModifier(KeywordModifier node);
 	public abstract boolean visitModifiers(Modifiers node);

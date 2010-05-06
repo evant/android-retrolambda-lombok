@@ -194,14 +194,14 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 			} else if (value instanceof Integer) {
 				stringValue = String.format("0x%1$08x (%1$d)", value);
 			} else if (value instanceof char[]) {
-				stringValue = new lombok.ast.StringLiteral().setValue(new String((char[])value)).getRawValue();
+				stringValue = new lombok.ast.StringLiteral().astValue(new String((char[])value)).rawValue();
 			} else if (value instanceof char[][]) {
 				StringBuilder sb = new StringBuilder();
 				for (char[] single : ((char[][])value)) {
 					if (sb.length() != 0) {
 						sb.append(", ");
 					}
-					sb.append(new lombok.ast.StringLiteral().setValue(new String(single)).getRawValue());
+					sb.append(new lombok.ast.StringLiteral().astValue(new String(single)).rawValue());
 				}
 				stringValue = "{" + sb.toString() + "}";
 			} else if ("compilationResult".equals(name)) {

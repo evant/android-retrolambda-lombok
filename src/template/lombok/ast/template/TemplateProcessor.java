@@ -50,6 +50,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
@@ -62,16 +63,31 @@ public class TemplateProcessor extends AbstractProcessor {
 	
 	@Data
 	static class FieldData {
+		/** Name of the field */
 		private final String name;
+		/** If {@code true} then this field would always contain a non-null value in a legal AST. */
 		private final boolean mandatory;
+		/** Terminals such as string literals may have their own internal parser. If so, this field contains name of method that goes from raw to value. */
 		private final String rawFormParser;
+		/** Reverse of {@code rawFormParer} - contains method that goes from value to raw. If this is set, {@code rawFormParser} is set and vice versa. */
 		private final String rawFormGenerator;
+		/** The java code that forms the expression that assigns the initial value of this field. Always set. */
 		private final String initialValue;
+		/** The javax.model mirror class representing this field. */
 		private final VariableElement element;
+		/** If {@code true}, this field's type is an AST Node type, and thus assignments to it should update children array, etcetera. */
 		private final boolean astNode;
+		/** If {@code true}, no setter should be generated, probably because the template has its own. */
 		private final boolean suppressSetter;
+		/**
+		 * Never set if {@code astNode} is {@code true}, but may be set otherwise. Contains the expression required to create a copy of the field.
+		 * @see NotChildOfNode#codeToCopy()
+		 */
 		private final String codeToCopy;
 		
+		/**
+		 * Returns the type of this field in a way that you can legally put into the generated java file. For Lists of X, returns X.
+		 */
 		public String getType() {
 			String result = element.asType().toString();
 			
@@ -102,7 +118,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			this.name = String.valueOf(field.getSimpleName());
 			boolean isMandatory = false; {
 				for (AnnotationMirror ann :field.getAnnotationMirrors()) {
-					if (ann.getAnnotationType().toString().equals("lombok.NonNull")) {
+					if (ann.getAnnotationType().toString().equals("lombok.ast.template.Mandatory")) {
 						isMandatory = true;
 						break;
 					}
@@ -116,7 +132,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			this.rawFormGenerator = astNode ? "" : ncon.rawFormGenerator();
 			/* grab initial value */ {
 				InitialValue iv = field.getAnnotation(InitialValue.class);
-				this.initialValue = iv == null ? "" : iv.value();
+				this.initialValue = iv == null ? defaultInitialValueFor(field.asType()) : iv.value();
 			}
 			this.suppressSetter = ncon != null && ncon.suppressSetter();
 			if (ncon != null) {
@@ -126,12 +142,20 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 		}
 		
+		private String defaultInitialValueFor(TypeMirror asType) {
+			String defaultValue = getDefaultValueForType(asType.toString());
+			return defaultValue == null ? "null" : defaultValue;
+		}
+		
 		String titleCasedName() {
 			String n = name.replace("_", "");
 			return n.isEmpty() ? "" : Character.toTitleCase(n.charAt(0)) + n.substring(1);
 		}
 	}
 	
+	/**
+	 * Turns "X.class" into just "X", otherwise just calls toString().
+	 */
 	private static String getClassName(Object type) {
 		String c = type.toString();
 		return c.endsWith(".class") ? c.substring(0, c.length() - ".class".length()) : c;
@@ -149,6 +173,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		return true;
 	}
 	
+	/** Searches for methods and classes annotated with @SyntaxCheck and adds them to the appropriate list. */
 	private void handleSyntaxCheck(RoundEnvironment roundEnv) {
 		int added = 0;
 		for (Element element : roundEnv.getElementsAnnotatedWith(SyntaxCheck.class)) {
@@ -469,7 +494,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				} else {
 					out.write("\t\tif (this.");
 					out.write(field.getName());
-					out.write(" != null) result.setRaw");
+					out.write(" != null) result.raw");
 					out.write(field.titleCasedName());
 					out.write("(this.");
 					out.write(field.getName());
@@ -579,27 +604,23 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateFairWeatherGetter(Writer out, FieldData field, boolean generateCheck) throws IOException {
 		out.write("\tpublic ");
 		out.write(field.getType());
-		out.write(field.getType().equals("boolean") ? " is" : " get");
+		out.write(" ast");
 		out.write(field.titleCasedName());
 		out.write("() {\n");
 		if (!field.getRawFormParser().isEmpty()) {
 			out.write("\t\tif (this.errorReasonFor");
 			out.write(field.titleCasedName());
-			out.write(" != null) throw new lombok.ast.AstException(this, this.errorReasonFor");
-			out.write(field.titleCasedName());
-			out.write(");\n");
+			out.write(" != null) return ");
+			out.write(field.getInitialValue());
+			out.write(";\n");
 		}
 		
 		if (generateCheck) {
-			out.write("\t\tassertChildType(");
+			out.write("\t\tif (!(this.");
 			out.write(field.getName());
-			out.write(", \"");
-			out.write(field.getName());
-			out.write("\", ");
-			out.write("" + field.isMandatory());
-			out.write(", ");
+			out.write(" instanceof ");
 			out.write(field.getType());
-			out.write(".class);\n");
+			out.write(")) return null;\n");
 		}
 		out.write("\t\treturn ");
 		if (generateCheck) {
@@ -615,7 +636,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateRawGetter(Writer out, FieldData field, boolean basic) throws IOException {
 		out.write("\tpublic ");
 		out.write(basic ? "java.lang.String" : "lombok.ast.Node");
-		out.write(" getRaw");
+		out.write(" raw");
 		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		if (basic) {
@@ -644,7 +665,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		};
 		
 		out.write(String.format(
-				"\tpublic %1$s setRaw%2$s(lombok.ast.Node %3$s) {\n" +
+				"\tpublic %1$s raw%2$s(lombok.ast.Node %3$s) {\n" +
 				"\t\tif (%3$s == this.%3$s) return this;\n" +
 				"\t\tif (%3$s != null) this.adopt((lombok.ast.AbstractNode)%3$s);\n" +
 				"\t\tif (this.%3$s != null) this.disown(this.%3$s);\n" +
@@ -663,7 +684,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				field.getRawFormParser()
 		};
 		out.write(String.format(
-				"\tpublic %1$s setRaw%2$s(java.lang.String %3$s) {\n" +
+				"\tpublic %1$s raw%2$s(java.lang.String %3$s) {\n" +
 				"\t\tthis.raw%2$s = %3$s;\n" +
 				"\t\tthis.%3$s = %4$s;\n" +
 				"\t\tthis.errorReasonFor%2$s = null;\n" +
@@ -698,7 +719,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateFairWeatherSetter(Writer out, String className, FieldData field) throws IOException {
 		out.write("\tpublic ");
 		out.write(className);
-		out.write(" set");
+		out.write(" ast");
 		out.write(field.titleCasedName());
 		out.write("(");
 		out.write(field.getType());
@@ -713,7 +734,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write(" is mandatory\");\n");
 		}
 		if (field.isAstNode()) {
-			out.write("\t\treturn this.setRaw");
+			out.write("\t\treturn this.raw");
 			out.write(field.titleCasedName());
 			out.write("(");
 			out.write(field.getName());
@@ -732,7 +753,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateFairWeatherSetterForRawBasics(Writer out, String className, FieldData field) throws IOException {
 		out.write("\tpublic ");
 		out.write(className);
-		out.write(" set");
+		out.write(" ast");
 		out.write(field.titleCasedName());
 		out.write("(");
 		out.write(field.getType());
@@ -806,8 +827,8 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.getType());
 		out.write(", ");
 		out.write(className);
-		out.write("> ");
-		out.write(field.getName());
+		out.write("> ast");
+		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
 		out.write("Accessor.asStrict();\n\t}\n\t\n");

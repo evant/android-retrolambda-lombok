@@ -29,7 +29,6 @@ public interface RawListAccessor<T extends Node, P extends Node> extends Iterabl
 	int size();
 	Node first();
 	Node last();
-	Node get(int idx);
 	boolean contains(Node source);
 	P migrateAllFrom(RawListAccessor<?, ?> otherList);
 	P addToStart(Node... node);

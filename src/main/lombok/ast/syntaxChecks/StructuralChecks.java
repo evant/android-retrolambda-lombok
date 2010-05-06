@@ -24,6 +24,7 @@ package lombok.ast.syntaxChecks;
 import java.util.List;
 
 import lombok.ast.AlternateConstructorInvocation;
+import lombok.ast.Ast;
 import lombok.ast.Block;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.InstanceInitializer;
@@ -50,13 +51,13 @@ public class StructuralChecks {
 	}
 	
 	public void checkAbstractMembersOnlyInAbstractTypes(MethodDeclaration md) {
-		Node rawModifiers = md.getRawModifiers();
-		if (!(rawModifiers instanceof Modifiers)) return;
-		if (!((Modifiers)rawModifiers).isAbstract()) return;
-		if (md.getParent() instanceof TypeDeclaration) {
-			Node rawModifiersOfParent = ((TypeDeclaration)md.getParent()).getRawModifiers();
-			if (!(rawModifiersOfParent instanceof Modifiers)) return;
-			if (((Modifiers)rawModifiers).isAbstract()) return;
+		Modifiers modifiers = md.astModifiers();
+		if (modifiers == null) return;
+		if (!modifiers.isAbstract()) return;
+		TypeDeclaration parent = Ast.up(md, TypeDeclaration.class);
+		if (parent != null) {
+			Modifiers modifiersOfParent = parent.astModifiers();
+			if (modifiersOfParent != null && modifiersOfParent.isAbstract()) return;
 			problems.add(new SyntaxProblem(md, "Abstract methods are only allowed in interfaces and abstract classes"));
 		}
 	}
@@ -73,11 +74,11 @@ public class StructuralChecks {
 	}
 	
 	public void initializersMustNotContainThrowsDirectlyStatic(StaticInitializer node) {
-		initializersMustNotContainThrowsDirectly(node.getRawBody());
+		initializersMustNotContainThrowsDirectly(node.rawBody());
 	}
 	
 	public void initializersMustNotContainThrowsDirectlyInstance(InstanceInitializer node) {
-		initializersMustNotContainThrowsDirectly(node.getRawBody());
+		initializersMustNotContainThrowsDirectly(node.rawBody());
 	}
 	
 	private void initializersMustNotContainThrowsDirectly(Node rawBlock) {
@@ -90,7 +91,7 @@ public class StructuralChecks {
 	}
 	
 	public void returnValueVsVoidReturnType(Return node) {
-		boolean shouldBeVoid = node.getRawValue() == null;
+		boolean shouldBeVoid = node.rawValue() == null;
 		Node parent = node;
 		while (parent != null) {
 			if (parent instanceof ConstructorDeclaration) {
@@ -100,7 +101,7 @@ public class StructuralChecks {
 				return;
 			}
 			if (parent instanceof MethodDeclaration) {
-				Node rawTR = ((MethodDeclaration)parent).getRawReturnTypeReference();
+				Node rawTR = ((MethodDeclaration)parent).rawReturnTypeReference();
 				if (rawTR instanceof TypeReference) {
 					if (((TypeReference)rawTR).isVoid()) {
 						if (!shouldBeVoid) {
@@ -144,7 +145,7 @@ public class StructuralChecks {
 		Node parent = node;
 		while (parent != null) {
 			if (parent instanceof ConstructorDeclaration) {
-				Node rawBlock = ((ConstructorDeclaration)parent).getRawBody();
+				Node rawBlock = ((ConstructorDeclaration)parent).rawBody();
 				if (rawBlock instanceof Block) {
 					Node n = ((Block)rawBlock).rawContents().first();
 					if (n != node) {
@@ -160,13 +161,13 @@ public class StructuralChecks {
 	}
 	
 	public void varDefOfZero(VariableDefinition node) {
-		if (node.variables().isEmpty()) {
+		if (node.astVariables().isEmpty()) {
 			problems.add(new SyntaxProblem(node, "Empty variable declaration."));
 		}
 	}
 	
 	public void varargsOnlyLegalOnMethods(VariableDefinition node) {
-		if (!node.isVarargs()) return;
+		if (!node.astVarargs()) return;
 		Node p = node.getParent();
 		if (p == null) return;
 		Node last = null;
@@ -180,9 +181,9 @@ public class StructuralChecks {
 	}
 	
 	public void varargsAndExtendedDimsDontMix(VariableDefinitionEntry node) {
-		if (node.getArrayDimensions() > 0) {
+		if (node.astArrayDimensions() > 0) {
 			if (node.getParent() instanceof VariableDefinition) {
-				if (((VariableDefinition)node.getParent()).isVarargs()) {
+				if (((VariableDefinition)node.getParent()).astVarargs()) {
 					problems.add(new SyntaxProblem(node, "Extended dimensions are not legal on a varargs declaration."));
 				}
 			}

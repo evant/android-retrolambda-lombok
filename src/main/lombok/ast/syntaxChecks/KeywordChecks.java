@@ -59,15 +59,13 @@ public class KeywordChecks {
 	public void duplicateKeywordModifierCheck(Modifiers modifiers) {
 		List<String> keywords = Lists.newArrayList();
 		
-		for (Node n : modifiers.rawKeywords()) {
-			if (n instanceof KeywordModifier) {
-				String k = ((KeywordModifier)n).getName();
-				if (k != null && !k.isEmpty() ) {
-					if (keywords.contains(k)) {
-						problems.add(new SyntaxProblem(n, "Duplicate modifier: " + k));
-					} else {
-						keywords.add(k);
-					}
+		for (KeywordModifier n : modifiers.astKeywords()) {
+			String k = n.astName();
+			if (k != null && !k.isEmpty() ) {
+				if (keywords.contains(k)) {
+					problems.add(new SyntaxProblem(n, "Duplicate modifier: " + k));
+				} else {
+					keywords.add(k);
 				}
 			}
 		}
@@ -136,23 +134,23 @@ public class KeywordChecks {
 		K_PRIVATE | K_PROTECTED | K_PUBLIC | K_STATIC | K_FINAL | K_ABSTRACT | K_STRICTFP;
 	
 	public void methodModifiersCheck(MethodDeclaration md) {
-		modifiersCheck(md.getRawModifiers(),
+		modifiersCheck(md.rawModifiers(),
 				METHOD_MODIFIERS_EXCLUSIVITY, METHOD_MODIFIERS_LEGAL, "method declarations");
-		checkStaticChain(md.getRawModifiers());
+		checkStaticChain(md.rawModifiers());
 	}
 	
 	public void annotationMethodModifiersCheck(AnnotationMethodDeclaration md) {
-		modifiersCheck(md.getRawModifiers(),
+		modifiersCheck(md.rawModifiers(),
 				METHOD_MODIFIERS_EXCLUSIVITY, METHOD_MODIFIERS_LEGAL & ~K_STRICTFP,
 				"annotation method declarations");
-		checkStaticChain(md.getRawModifiers());
+		checkStaticChain(md.rawModifiers());
 	}
 	
 	public void fieldModifiersCheck(VariableDeclaration vd) {
 		if (!(vd.getParent() instanceof TypeDeclaration)) return;
-		Node rawDefinition = vd.getRawDefinition();
+		Node rawDefinition = vd.rawDefinition();
 		if (rawDefinition instanceof VariableDefinition) {
-			Node rawModifiers = ((VariableDefinition)rawDefinition).getRawModifiers();
+			Node rawModifiers = ((VariableDefinition)rawDefinition).rawModifiers();
 			modifiersCheck(rawModifiers, FIELD_MODIFIERS_EXCLUSIVITY, FIELD_MODIFIERS_LEGAL, "field declarations");
 			//Skipping static chain check - compile time constants *ARE* legal even without a static chain,
 			//but to figure out if some field is a compile time constant, we need resolution.
@@ -161,11 +159,11 @@ public class KeywordChecks {
 	
 	public void localVariableModifiersCheck(VariableDefinition vd) {
 		boolean applies = vd.getParent() instanceof VariableDeclaration && vd.getParent().getParent() instanceof Block;
-		if (!applies) applies = vd.getParent() instanceof ForEach && ((ForEach)vd.getParent()).getRawVariable() == vd;
-		if (!applies) applies = vd.getParent() instanceof For && ((For)vd.getParent()).getRawVariableDeclaration() == vd;
+		if (!applies) applies = vd.getParent() instanceof ForEach && ((ForEach)vd.getParent()).rawVariable() == vd;
+		if (!applies) applies = vd.getParent() instanceof For && ((For)vd.getParent()).rawVariableDeclaration() == vd;
 		if (!applies) return;
 		
-		modifiersCheck(vd.getRawModifiers(), new int[0], K_FINAL, "local variable declarations");
+		modifiersCheck(vd.rawModifiers(), new int[0], K_FINAL, "local variable declarations");
 	}
 	
 	public void classDeclarationModifiersCheck(ClassDeclaration cd) {
@@ -174,41 +172,41 @@ public class KeywordChecks {
 	
 	public void interfaceDeclarationModifiersCheck(InterfaceDeclaration id) {
 		int flags = typeModifiersCheck(id, "interface declarations");
-		generateNotAllowedKeywordError(id.getRawModifiers(), flags, K_FINAL, "final", "Interfaces cannot be final");
+		generateNotAllowedKeywordError(id.rawModifiers(), flags, K_FINAL, "final", "Interfaces cannot be final");
 	}
 	
 	public void annotationDeclarationModifiersCheck(AnnotationDeclaration ad) {
 		int flags = typeModifiersCheck(ad, "annotation declarations");
-		generateNotAllowedKeywordError(ad.getRawModifiers(), flags, K_FINAL, "final", "Annotations cannot be final");
+		generateNotAllowedKeywordError(ad.rawModifiers(), flags, K_FINAL, "final", "Annotations cannot be final");
 	}
 	
 	public void enumDeclarationModifiersCheck(EnumDeclaration ad) {
 		int flags = typeModifiersCheck(ad, "enum declarations");
-		generateNotAllowedKeywordError(ad.getRawModifiers(), flags, K_FINAL, "final", "Enums cannot be marked final");
+		generateNotAllowedKeywordError(ad.rawModifiers(), flags, K_FINAL, "final", "Enums cannot be marked final");
 	}
 	
 	private int typeModifiersCheck(TypeDeclaration td, String desc) {
-		int flags = modifiersCheck(td.getRawModifiers(),
+		int flags = modifiersCheck(td.rawModifiers(),
 				TYPE_MODIFIERS_EXCLUSIVITY, TYPE_MODIFIERS_LEGAL, desc);
 		boolean staticWarningEmitted = false;
 		if (td.getParent() instanceof CompilationUnit) {
-			generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_PRIVATE, "private", "Top-level types cannot be private.");
-			staticWarningEmitted |= generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_STATIC, "static", "Top-level types cannot be static.");
+			generateNotAllowedKeywordError(td.rawModifiers(), flags, K_PRIVATE, "private", "Top-level types cannot be private.");
+			staticWarningEmitted |= generateNotAllowedKeywordError(td.rawModifiers(), flags, K_STATIC, "static", "Top-level types cannot be static.");
 		} else if (td.getParent() instanceof Block) {
-			generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_PRIVATE, "private", "Method-local types cannot be private.");
-			generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_PROTECTED, "protected", "Method-local types cannot be protected.");
-			generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_PUBLIC, "public", "Method-local types cannot be public.");
-			staticWarningEmitted |= generateNotAllowedKeywordError(td.getRawModifiers(), flags, K_STATIC, "static", "Method-local types cannot be static.");
+			generateNotAllowedKeywordError(td.rawModifiers(), flags, K_PRIVATE, "private", "Method-local types cannot be private.");
+			generateNotAllowedKeywordError(td.rawModifiers(), flags, K_PROTECTED, "protected", "Method-local types cannot be protected.");
+			generateNotAllowedKeywordError(td.rawModifiers(), flags, K_PUBLIC, "public", "Method-local types cannot be public.");
+			staticWarningEmitted |= generateNotAllowedKeywordError(td.rawModifiers(), flags, K_STATIC, "static", "Method-local types cannot be static.");
 		}
 		
-		if (!staticWarningEmitted) checkStaticChain(td.getRawModifiers());
+		if (!staticWarningEmitted) checkStaticChain(td.rawModifiers());
 		
 		return flags;
 	}
 	
 	public void checkStaticInitializerInNonStaticType(StaticInitializer node) {
 		if (node.getParent() instanceof TypeDeclaration) {
-			Node pMods = ((TypeDeclaration)node.getParent()).getRawModifiers();
+			Node pMods = ((TypeDeclaration)node.getParent()).rawModifiers();
 			if (pMods instanceof Modifiers && !((Modifiers)pMods).isStatic()) {
 				problems.add(new SyntaxProblem(node,
 						"static initializers are only allowed in top-level or static types declarations."));
@@ -224,7 +222,7 @@ public class KeywordChecks {
 		while (p != null) {
 			if (p instanceof CompilationUnit) return;
 			if (p instanceof TypeDeclaration) {
-				Node pMods = ((TypeDeclaration)p).getRawModifiers();
+				Node pMods = ((TypeDeclaration)p).rawModifiers();
 				if (pMods instanceof Modifiers && !((Modifiers)pMods).isStatic()) {
 					problems.add(new SyntaxProblem(rawModifiers.getParent(),
 							"This declaration is (effectively) static; static declarations or only legal in top-level and static declarations."));
@@ -242,7 +240,7 @@ public class KeywordChecks {
 		
 		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 			if (n instanceof KeywordModifier) {
-				String k = ((KeywordModifier)n).getName();
+				String k = ((KeywordModifier)n).astName();
 				if (k == null || k.isEmpty()) {
 					problems.add(new SyntaxProblem(n, "Empty/null modifier."));
 				}
@@ -278,7 +276,7 @@ public class KeywordChecks {
 		
 		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 			if (n instanceof KeywordModifier) {
-				if (keyword.equals(((KeywordModifier)n).getName())) {
+				if (keyword.equals(((KeywordModifier)n).astName())) {
 					problems.add(new SyntaxProblem(n, error));
 					return true;
 				}
@@ -289,11 +287,11 @@ public class KeywordChecks {
 	}
 	
 	public void emptyDeclarationMustHaveNoModifiers(EmptyDeclaration node) {
-		Node rawModifiers = node.getRawModifiers();
+		Node rawModifiers = node.rawModifiers();
 		if (!(rawModifiers instanceof Modifiers)) return;
 		Modifiers modifiers = (Modifiers)rawModifiers;
 		
-		if (!modifiers.keywords().isEmpty() || !modifiers.annotations().isEmpty()) {
+		if (!modifiers.astKeywords().isEmpty() || !modifiers.astAnnotations().isEmpty()) {
 			problems.add(new SyntaxProblem(node, "Empty Declarations cannot have modifiers."));
 		}
 	}
@@ -313,7 +311,7 @@ public class KeywordChecks {
 			
 			for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 				if (n instanceof KeywordModifier) {
-					String k = ((KeywordModifier)n).getName();
+					String k = ((KeywordModifier)n).astName();
 					if (!TO_FLAG_MAP.containsKey(k)) continue;
 					int f = TO_FLAG_MAP.get(k);
 					if ((f & exclusive) == 0) continue;
@@ -325,7 +323,7 @@ public class KeywordChecks {
 		} else {
 			for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
 				if (n instanceof KeywordModifier) {
-					String k = ((KeywordModifier)n).getName();
+					String k = ((KeywordModifier)n).astName();
 					if (!TO_FLAG_MAP.containsKey(k)) continue;
 					int f = TO_FLAG_MAP.get(k);
 					if ((f & exclusive) == 0) continue;

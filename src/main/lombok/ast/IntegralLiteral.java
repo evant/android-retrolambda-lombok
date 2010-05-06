@@ -67,7 +67,7 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 	
 	private boolean containedInUnaryMinus() {
 		return getParens() == 0 && getParent() instanceof UnaryExpression &&
-				((UnaryExpression)getParent()).getOperator() == UnaryOperator.UNARY_MINUS;
+				((UnaryExpression)getParent()).astOperator() == UnaryOperator.UNARY_MINUS;
 	}
 	
 	public IntegralLiteral setLiteralType(LiteralType type) {
@@ -90,7 +90,7 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 	}
 	
 	
-	public IntegralLiteral setIntValue(int value) {
+	public IntegralLiteral astIntValue(int value) {
 		this.value = value & 0xFFFFFFFFL;	//Suppress sign extension.
 		this.rawValue = "" + value;
 		this.errorReasonForValue = null;
@@ -99,7 +99,7 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 		return this;
 	}
 	
-	public IntegralLiteral setLongValue(long value) {
+	public IntegralLiteral astLongValue(long value) {
 		this.value = value;
 		this.rawValue = "" + value + "L";
 		this.errorReasonForValue = null;
@@ -166,7 +166,7 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 		}
 	}
 	
-	public IntegralLiteral setRawValue(String raw) {
+	public IntegralLiteral rawValue(String raw) {
 		if (raw == null) {
 			this.rawValue = null;
 			this.value = null;
@@ -247,23 +247,17 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 		}
 	}
 	
-	public long longValue() throws AstException {
-		checkValueExists();
-		return value;
+	public long astLongValue() throws AstException {
+		return value == null ? 0L : value.longValue();
 	}
 	
-	public int intValue() throws AstException {
-		checkValueExists();
-		return value.intValue();
+	public int astIntValue() throws AstException {
+		return value == null ? 0 : value.intValue();
 	}
 	
 	@Override
-	public String getRawValue() {
+	public String rawValue() {
 		return rawValue;
-	}
-	
-	private void checkValueExists() throws AstException {
-		if (value == null) throw new AstException(this, String.format("misformed integral literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
 	@Override

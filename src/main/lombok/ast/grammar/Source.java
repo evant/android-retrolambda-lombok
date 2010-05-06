@@ -286,7 +286,7 @@ public class Source {
 					node.setPosition(new Position(mapPosition(p.getStart()), mapPosition(p.getEnd())));
 				}
 				if (node instanceof Expression) {
-					List<Position> list = ((Expression)node).getParensPositions();
+					List<Position> list = ((Expression)node).astParensPositions();
 					if (list != null) {
 						ListIterator<Position> li = list.listIterator();
 						while (li.hasNext()) {
@@ -328,10 +328,10 @@ public class Source {
 			Node assoc = tailMap.values().iterator().next();
 			if (!(assoc instanceof JavadocContainer)) continue;
 			JavadocContainer jc = (JavadocContainer) assoc;
-			if (jc.getRawJavadoc() != null) {
-				if (jc.getRawJavadoc().getPosition().getEnd() >= comment.getPosition().getEnd()) continue;
+			if (jc.rawJavadoc() != null) {
+				if (jc.rawJavadoc().getPosition().getEnd() >= comment.getPosition().getEnd()) continue;
 			}
-			jc.setRawJavadoc(comment);
+			jc.rawJavadoc(comment);
 		}
 	}
 	

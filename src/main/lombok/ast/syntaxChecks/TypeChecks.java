@@ -27,7 +27,6 @@ import lombok.ast.ClassLiteral;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.Node;
 import lombok.ast.SyntaxProblem;
-import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeVariable;
 import lombok.ast.template.SyntaxCheck;
@@ -40,15 +39,16 @@ public class TypeChecks {
 		this.problems = problems;
 	}
 	
-	public void checkNoPrimitivesInGenerics(TypeArguments node) {
-		for (Node n : node.rawGenerics()) {
-			if (n instanceof TypeReference) {
-				if (((TypeReference)n).isPrimitive()) {
-					problems.add(new SyntaxProblem(node, "Primitive types aren't allowed in type arguments."));
-				}
-			}
-		}
-	}
+	//TODO - enable 'selecting' either list accessors or create an "HasTypeArguments" interface and allow 'selecting' on interfaces.
+//	public void checkNoPrimitivesInGenerics(TypeArguments node) {
+//		for (Node n : node.rawGenerics()) {
+//			if (n instanceof TypeReference) {
+//				if (((TypeReference)n).isPrimitive()) {
+//					problems.add(new SyntaxProblem(node, "Primitive types aren't allowed in type arguments."));
+//				}
+//			}
+//		}
+//	}
 	
 	public void checkNoPrimitivesInGenerics(TypeVariable node) {
 		for (Node n : node.rawExtending()) {
@@ -62,16 +62,16 @@ public class TypeChecks {
 	
 	public void checkVoidNotLegalJustAboutEverywhere(TypeReference node) {
 		if (!node.isVoid()) return;
-		if (node.getArrayDimensions() > 0) {
+		if (node.astArrayDimensions() > 0) {
 			problems.add(new SyntaxProblem(node, "array of void type is not legal"));
 			return;
 		}
 		if (node.getParent() instanceof MethodDeclaration) {
-			if (node == ((MethodDeclaration)node.getParent()).getRawReturnTypeReference()) return;
+			if (node == ((MethodDeclaration)node.getParent()).rawReturnTypeReference()) return;
 		}
 		
 		if (node.getParent() instanceof ClassLiteral) {
-			if (node == ((ClassLiteral)node.getParent()).getRawTypeReference()) return;
+			if (node == ((ClassLiteral)node.getParent()).rawTypeReference()) return;
 		}
 		
 		problems.add(new SyntaxProblem(node, "The void type is not legal here"));

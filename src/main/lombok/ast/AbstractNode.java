@@ -149,7 +149,7 @@ abstract class AbstractNode implements Node {
 		}
 		
 		@Override
-		public List<Position> getParensPositions() {
+		public List<Position> astParensPositions() {
 			return parensPositions;
 		}
 		
