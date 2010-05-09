@@ -47,4 +47,12 @@ public interface Node {
 	Node getParent();
 	
 	Position getPosition();
+	
+	Node addDanglingPrefixNode(Node unbound);
+	
+	Node addDanglingPostfixNode(Node unbound);
+	
+	List<Node> getDanglingPrefixNodes();
+	
+	List<Node> getDanglingPostfixNodes();
 }
