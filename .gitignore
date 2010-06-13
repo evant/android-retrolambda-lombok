@@ -4,5 +4,6 @@
 .factorypath
 bin
 build
+report
 .apt_generated
 *.class

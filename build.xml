@@ -66,6 +66,7 @@
 	
 	<target name="clean" description="Deletes build artefacts (but does not delete downloaded dependencies)">
 		<delete dir="build" quiet="true" />
+		<delete dir="report" quiet="true" />
 	</target>
 	
 	<target name="distclean" depends="clean" description="Deletes everything that this build script has ever generated.">
@@ -117,17 +118,13 @@
 		<property name="tests.quiet" value="true" />
 	</target>
 	
-	<target name="test" depends="compile, ensureTestDeps" description="Runs unit tests.">
+	<target name="test" depends="compile, ensureTestDeps, compiletests" description="Runs unit tests.">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
-		<mkdir dir="build/tests" />
-		<ivy:compile destdir="build/tests" srcdir="test/src">
-			<classpath refid="test.path" />
-			<classpath location="build/lombok.ast" />
-		</ivy:compile>
 		<junit haltonfailure="yes" fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
 			<jvmarg value="-Xbootclasspath/p:lib/test/javac.jar" />
 			<classpath refid="test.path" />
+			<classpath path="build/instrumented/lombok.ast" />
 			<classpath path="build/lombok.ast" />
 			<classpath path="build/tests" />
 			<batchtest>
@@ -137,6 +134,36 @@
 			</batchtest>
 		</junit>
 		<echo level="info">All tests successful.</echo>
+	</target>
+	
+	<target name="compiletests" depends="compile, ensureTestDeps" description="compiles test code">
+		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
+		<mkdir dir="build/tests" />
+		<ivy:compile destdir="build/tests" srcdir="test/src">
+			<classpath refid="test.path" />
+			<classpath location="build/lombok.ast" />
+		</ivy:compile>
+	</target>
+	
+	<target name="build-cobertura-instrumentation" depends="compile, ensureTestDeps" description="adds the instrumentation to the classes">
+		<taskdef name="cobertura-instrument" classname="net.sourceforge.cobertura.ant.InstrumentTask" classpathref="test.path" />
+		
+		<mkdir dir="instrumented/lombok.ast" />
+		<cobertura-instrument todir="build/instrumented/lombok.ast" datafile="build/cobertura.ser">		 
+			<fileset dir="build/lombok.ast">
+				<include name="**/ast/printer/*.class"/>
+			</fileset>
+		</cobertura-instrument>
+	</target>
+	
+	<target name="build-cobertura-report" depends="ensureTestDeps">
+		<taskdef name="cobertura-report" classname="net.sourceforge.cobertura.ant.ReportTask" classpathref="test.path" />
+		<mkdir dir="report/cobertura" />	
+		<cobertura-report format="html" destdir="report/cobertura" datafile="build/cobertura.ser">
+			<fileset dir="src/printer">
+				<include name="**/*.java" />
+			</fileset>
+		</cobertura-report>
 	</target>
 	
 	<target name="config-ivy" depends="ensure-ipp">
