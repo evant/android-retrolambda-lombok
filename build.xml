@@ -67,6 +67,7 @@
 	<target name="clean" description="Deletes build artefacts (but does not delete downloaded dependencies)">
 		<delete dir="build" quiet="true" />
 		<delete dir="report" quiet="true" />
+		<delete file="cobertura.ser" quiet="true" />
 	</target>
 	
 	<target name="distclean" depends="clean" description="Deletes everything that this build script has ever generated.">
@@ -120,7 +121,7 @@
 	
 	<target name="test" depends="compile, ensureTestDeps, compiletests" description="Runs unit tests.">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
-		<junit haltonfailure="yes" fork="on">
+		<junit haltonfailure="no" fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
 			<jvmarg value="-Xbootclasspath/p:lib/test/javac.jar" />
 			<classpath refid="test.path" />
@@ -149,23 +150,25 @@
 		<taskdef name="cobertura-instrument" classname="net.sourceforge.cobertura.ant.InstrumentTask" classpathref="test.path" />
 		
 		<mkdir dir="instrumented/lombok.ast" />
-		<cobertura-instrument todir="build/instrumented/lombok.ast" datafile="build/cobertura.ser">		 
+		<cobertura-instrument todir="build/instrumented/lombok.ast">		 
 			<fileset dir="build/lombok.ast">
 				<include name="**/ast/printer/*.class"/>
 			</fileset>
 		</cobertura-instrument>
 	</target>
 	
-	<target name="build-cobertura-report" depends="ensureTestDeps">
+	<target name="build-current-cobertura-report" depends="ensureTestDeps">
 		<taskdef name="cobertura-report" classname="net.sourceforge.cobertura.ant.ReportTask" classpathref="test.path" />
 		<mkdir dir="report/cobertura" />	
-		<cobertura-report format="html" destdir="report/cobertura" datafile="build/cobertura.ser">
+		<cobertura-report format="html" destdir="report/cobertura">
 			<fileset dir="src/printer">
 				<include name="**/*.java" />
 			</fileset>
 		</cobertura-report>
 	</target>
 	
+	<target name="build-cobertura-report" depends="clean, generateSource, compile, build-cobertura-instrumentation, test, build-current-cobertura-report" />
+		
 	<target name="config-ivy" depends="ensure-ipp">
 		<ivy:configure file="buildScripts/ivysettings.xml" />
 	</target>

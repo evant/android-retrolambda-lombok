@@ -26,7 +26,7 @@ import java.io.IOException;
 import lombok.ast.Node;
 
 public interface SourceFormatter {
-	char FAIL = '‽';
+	String FAIL = "?!?";
 	
 	/**
 	 * The AST is not valid; it applies to the current level.
