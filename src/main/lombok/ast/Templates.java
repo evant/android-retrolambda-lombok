@@ -22,24 +22,23 @@
 package lombok.ast;
 
 import java.lang.reflect.Modifier;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-
 import lombok.ast.template.CopyMethod;
+import lombok.ast.template.ForcedType;
 import lombok.ast.template.GenerateAstNode;
-import lombok.ast.template.InitialValue;
 import lombok.ast.template.Mandatory;
 import lombok.ast.template.NotChildOfNode;
+import lombok.ast.template.ParentAccessor;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 class ExpressionMixin {
 	@NotChildOfNode(suppressSetter=true, codeToCopy="new java.util.ArrayList<lombok.ast.Position>(this.parensPositions)")
-	@Mandatory
-	@InitialValue("new java.util.ArrayList<lombok.ast.Position>()")
+	@Mandatory("new java.util.ArrayList<lombok.ast.Position>()")
 	List<Position> parensPositions;
 	
 	@CopyMethod
@@ -95,10 +94,10 @@ class AssertTemplate {
 	Expression message;
 }
 
-@GenerateAstNode(implementing={Statement.class, DescribedNode.class})
+@GenerateAstNode(implementing=DescribedNode.class)
 class CatchTemplate {
-	@Mandatory VariableDefinition exceptionDeclaration;
-	@Mandatory Block body;
+	@ParentAccessor @Mandatory VariableDefinition exceptionDeclaration;
+	@ParentAccessor @Mandatory Block body;
 	
 	@CopyMethod
 	static String getDescription(Catch self) {
@@ -112,7 +111,7 @@ class CatchTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class BlockTemplate {
-	List<Statement> contents;
+	@ParentAccessor List<Statement> contents;
 }
 
 @GenerateAstNode(implementing=Statement.class)
@@ -130,7 +129,7 @@ class WhileTemplate {
 @GenerateAstNode(implementing=Statement.class)
 class ForTemplate {
 	List<Expression> expressionInits;
-	VariableDefinition variableDeclaration;
+	@ParentAccessor VariableDefinition variableDeclaration;
 	Expression condition;
 	List<Expression> updates;
 	@Mandatory Statement statement;
@@ -148,7 +147,7 @@ class ForTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class ForEachTemplate {
-	@Mandatory VariableDefinition variable;
+	@ParentAccessor @Mandatory VariableDefinition variable;
 	@Mandatory Expression iterable;
 	@Mandatory Statement statement;
 }
@@ -163,20 +162,20 @@ class IfTemplate {
 @GenerateAstNode(implementing=Statement.class)
 class SynchronizedTemplate {
 	@Mandatory Expression lock;
-	@Mandatory Block body;
+	@ParentAccessor @Mandatory Block body;
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class TryTemplate {
-	@Mandatory Block body;
-	List<Catch> catches;
-	Block finally_;
+	@ParentAccessor("TryBody") @Mandatory Block body;
+	@ParentAccessor List<Catch> catches;
+	@ParentAccessor("Finally") Block finally_;
 }
 
-@GenerateAstNode(implementing=DescribedNode.class)
+@GenerateAstNode(implementing={DescribedNode.class, AnnotationValue.class})
 class AnnotationTemplate {
 	@Mandatory TypeReference annotationTypeReference;
-	List<AnnotationElement> elements;
+	@ParentAccessor List<AnnotationElement> elements;
 	
 	@CopyMethod
 	static String getDescription(Annotation self) {
@@ -196,25 +195,25 @@ class AnnotationTemplate {
 	@CopyMethod
 	static List<Node> getValues(Annotation self, String key) {
 		for (AnnotationElement elem : self.astElements()) {
-			if (key == null && elem.rawName() == null) return elem.getValues();
-			if (elem.rawName() instanceof Identifier) {
-				if (key != null && key.equals(elem.astName().astName())) return elem.getValues();
-			}
+			if (key == null && elem.astName() == null) return elem.getValues();
+			if (key != null && elem.astName() != null && elem.astName().astValue().equals(key)) return elem.getValues();
 		}
 		
-		return Collections.emptyList();
+		return ImmutableList.of();
 	}
 }
 
+// TODO add unit test to see if annotations-in-annotations actually works.
+
 @GenerateAstNode(implementing={DescribedNode.class})
 class AnnotationElementTemplate {
-	Identifier name;
-	@Mandatory Expression value;
+	@ForcedType Identifier name;
+	@Mandatory AnnotationValue value;
 	
 	@CopyMethod
 	static String getDescription(AnnotationElement self) {
 		try {
-			return self.astName().astName();
+			return self.astName().astValue();
 		} catch (NullPointerException e) {
 			return null;
 		}
@@ -222,19 +221,24 @@ class AnnotationElementTemplate {
 	
 	@CopyMethod
 	static List<Node> getValues(AnnotationElement self) {
-		if (self.rawValue() == null) return Collections.emptyList();
-		if (self.rawValue() instanceof ArrayInitializer) {
-			List<Node> result = Lists.newArrayList();
-			for (Node n : ((ArrayInitializer)self.rawValue()).rawExpressions()) if (n != null) result.add(n);
-			return result;
+		if (self.rawValue() == null) return ImmutableList.of();
+		if (self.rawValue() instanceof AnnotationValueArray) {
+			ImmutableList.Builder<Node> result = ImmutableList.builder();
+			for (Node n : ((AnnotationValueArray)self.rawValue()).rawValues()) result.add(n);
+			return result.build();
 		}
-		return Collections.singletonList(self.rawValue());
+		return ImmutableList.of(self.rawValue());
 	}
+}
+
+@GenerateAstNode(implementing=AnnotationValue.class)
+class AnnotationValueArrayTemplate {
+	List<AnnotationValue> values;
 }
 
 @GenerateAstNode
 class ModifiersTemplate {
-	List<KeywordModifier> keywords;
+	@ParentAccessor List<KeywordModifier> keywords;
 	List<Annotation> annotations;
 	
 	/**
@@ -246,12 +250,7 @@ class ModifiersTemplate {
 	@CopyMethod
 	static int getExplicitModifierFlags(Modifiers m) {
 		int out = 0;
-		for (Node n : m.rawKeywords()) {
-			if (n instanceof KeywordModifier) {
-				out |= ((KeywordModifier)n).asReflectModifiers();
-			}
-		}
-		
+		for (KeywordModifier n : m.astKeywords()) out |= n.asReflectModifiers();
 		return out;
 	}
 	
@@ -265,41 +264,41 @@ class ModifiersTemplate {
 	static int getEffectiveModifierFlags(Modifiers m) {
 		int explicit = getExplicitModifierFlags(m);
 		int out = explicit;
-		Node container = m.getParent();
-		Node parent = container == null ? null : container.getParent();
+		Node declaration = m.getParent();
+		Node container = declaration == null ? null : declaration.getParent();
 		
 		// Interfaces and Enums can only be static by their very nature.
-		if (container instanceof TypeDeclaration && !(container instanceof ClassDeclaration)) {
+		if (declaration instanceof TypeDeclaration && !(declaration instanceof ClassDeclaration)) {
 			out |= Modifier.STATIC;
 		}
 		
 		// We consider top-level types as static, because semantically that makes sense.
-		if (container instanceof ClassDeclaration && parent instanceof CompilationUnit) {
+		if (declaration instanceof ClassDeclaration && container instanceof CompilationUnit) {
 			out |= Modifier.STATIC;
 		}
 		
+		boolean declarationIsInterface = declaration instanceof InterfaceDeclaration ||
+				declaration instanceof AnnotationDeclaration;
 		boolean containerIsInterface = container instanceof InterfaceDeclaration ||
 				container instanceof AnnotationDeclaration;
-		boolean parentIsInterface = parent instanceof InterfaceDeclaration ||
-				parent instanceof AnnotationDeclaration;
 		
 		// We consider interfaces as abstract, because semantically that makes sense.
-		if (containerIsInterface) {
+		if (declarationIsInterface) {
 			out |= Modifier.ABSTRACT;
 		}
 		
 		// Types in interfaces are always static.
-		if (container instanceof ClassDeclaration && parentIsInterface) {
+		if (declaration instanceof ClassDeclaration && containerIsInterface) {
 			out |= Modifier.STATIC;
 		}
 		
-		if (container instanceof MethodDeclaration &&
-				parentIsInterface && (explicit & Modifier.STATIC) == 0) {
+		if (declaration instanceof MethodDeclaration &&
+				containerIsInterface && (explicit & Modifier.STATIC) == 0) {
 			
 			out |= Modifier.PUBLIC | Modifier.ABSTRACT;
 		}
 		
-		if (container instanceof VariableDeclaration && parentIsInterface) {
+		if (declaration instanceof VariableDeclaration && containerIsInterface) {
 			out |= Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC;
 		}
 		
@@ -352,23 +351,26 @@ class ModifiersTemplate {
 @GenerateAstNode(implementing={Statement.class, TypeMember.class, JavadocContainer.class})
 class VariableDeclarationTemplate {
 	Comment javadoc;
-	@Mandatory VariableDefinition definition;
+	@ParentAccessor @Mandatory VariableDefinition definition;
 }
+
+// TODO add adopt() to non-NCONs.
 
 @GenerateAstNode
 class VariableDefinitionTemplate {
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	@Mandatory TypeReference typeReference;
-	List<VariableDefinitionEntry> variables;
+	@ParentAccessor List<VariableDefinitionEntry> variables;
 	
 	@NotChildOfNode
 	boolean varargs;
+	
+	// TODO add ifFieldGetTypeBody to this one and friends.
 }
 
 @GenerateAstNode
 class VariableDefinitionEntryTemplate {
-	@Mandatory Identifier name;
+	@ForcedType @Mandatory("new lombok.ast.Identifier()") Identifier name;
 	@NotChildOfNode int arrayDimensions;
 	Expression initializer;
 	
@@ -385,9 +387,7 @@ class VariableDefinitionEntryTemplate {
 	@CopyMethod
 	static Modifiers getModifiersOfParent(VariableDefinitionEntry self) {
 		VariableDefinition parent = Ast.up(self, VariableDefinition.class);
-		Modifiers m = null;
-		if (parent != null) m = parent.astModifiers();
-		return m == null ? new Modifiers() : m;
+		return parent == null ? new Modifiers() : parent.astModifiers();
 	}
 }
 
@@ -407,21 +407,30 @@ class InlineIfExpressionTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
+@GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
+class VariableReferenceTemplate {
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier identifier;
+}
+
+@GenerateAstNode(implementing=DescribedNode.class)
 class IdentifierTemplate {
 	@NotChildOfNode
-	@Mandatory String name;
+	@Mandatory("\"\"") String value;
 	
 	@CopyMethod
 	static String getDescription(Identifier self) {
-		return self.astName();
+		return self.astValue();
 	}
 	
 	@CopyMethod(isStatic=true)
-	static Identifier of(String name) {
-		return new Identifier().astName(name);
+	static Identifier of(String value) {
+		return new Identifier().astValue(value);
 	}
 }
+
+// TODO If @InitialValue and not @Mandatory, generate a warning.
+// TODO @InitialValue also means setter needs: this.fieldName = fieldName == null ? adopt("initialValueExpr") : adopt(fieldName); - and update ID
+// TODO update ExpressionsParser to return VR instead of Identifier for idents.
 
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class BinaryExpressionTemplate {
@@ -545,29 +554,24 @@ class UnaryExpressionTemplate {
 
 @GenerateAstNode(implementing=DescribedNode.class)
 class TypeVariableTemplate {
-	@Mandatory Identifier name;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	List<TypeReference> extending;
 	
 	@CopyMethod
 	static String getDescription(TypeVariable self) {
-		try {
-			return self.astName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astName().astValue();
 	}
 }
 
 @GenerateAstNode(implementing=DescribedNode.class)
 class TypeReferenceTemplate {
 	@NotChildOfNode
-	@InitialValue("lombok.ast.WildcardKind.NONE")
-	@Mandatory WildcardKind wildcard;
+	@Mandatory("lombok.ast.WildcardKind.NONE") WildcardKind wildcard;
 	
 	@NotChildOfNode
 	int arrayDimensions;
 	
-	List<TypeReferencePart> parts;
+	@ParentAccessor List<TypeReferencePart> parts;
 	
 	@CopyMethod
 	static String getDescription(TypeReference self) {
@@ -589,7 +593,7 @@ class TypeReferenceTemplate {
 	static boolean isPrimitive(TypeReference self) {
 		if (self.astArrayDimensions() > 0 || self.rawParts().size() != 1) return false;
 		try {
-			String name = self.astParts().first().astIdentifier().astName();
+			String name = self.astParts().first().astIdentifier().astValue();
 			return name.indexOf(' ') == -1 && PRIMITIVE_NAMES.contains(" " + name + " ");
 		} catch (NullPointerException e) {
 			return false;
@@ -600,7 +604,7 @@ class TypeReferenceTemplate {
 	static boolean isVoid(TypeReference self) {
 		if (self.rawParts().size() != 1) return false;
 		try {
-			String name = self.astParts().first().astIdentifier().astName();
+			String name = self.astParts().first().astIdentifier().astValue();
 			return name.equals("void");
 		} catch (NullPointerException e) {
 			return false;
@@ -621,28 +625,28 @@ class TypeReferenceTemplate {
 	}
 	
 	@CopyMethod
-	static boolean hasGenerics(TypeReference self) {
-		return getGenerics(self).isEmpty();
+	static boolean hasTypeArguments(TypeReference self) {
+		return getTypeArguments(self).isEmpty();
 	}
 	
 	@CopyMethod
-	static StrictListAccessor<TypeReference, TypeReference> getGenerics(TypeReference self) {
+	static StrictListAccessor<TypeReference, TypeReference> getTypeArguments(TypeReference self) {
 		try {
 			return self.astParts().last().typeArgumentsAccessor.wrap(self).asStrict();
 		} catch (Exception e) {
-			return ListAccessor.emptyStrict("generics", self);
+			return ListAccessor.emptyStrict("typeArguments", self);
 		}
 	}
 }
 
 @GenerateAstNode
 class TypeReferencePartTemplate {
-	@Mandatory Identifier identifier;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier identifier;
 	List<TypeReference> typeArguments;
 	
 	@CopyMethod
 	static String getTypeName(TypeReferencePart self) {
-		String name = self.astIdentifier() == null ? "" : self.astIdentifier().astName();
+		String name = self.astIdentifier().astValue();
 		
 		if (self.astTypeArguments().isEmpty()) return name;
 		
@@ -710,7 +714,7 @@ class ConstructorInvocationTemplate {
 	List<TypeReference> constructorTypeArguments;
 	@Mandatory TypeReference typeReference;
 	List<Expression> arguments;
-	TypeBody anonymousClassBody;
+	@ParentAccessor("AnonymousClass") TypeBody anonymousClassBody;
 	
 	@CopyMethod
 	static String getDescription(ConstructorInvocation self) {
@@ -739,23 +743,19 @@ class SuperConstructorInvocationTemplate {
 class MethodInvocationTemplate {
 	Expression operand;
 	List<TypeReference> methodTypeArguments;
-	@Mandatory Identifier name;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	List<Expression> arguments;
 	
 	@CopyMethod
 	static String getDescription(MethodInvocation self) {
-		try {
-			return self.astName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astName().astValue();
 	}
 }
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class SelectTemplate {
 	@Mandatory Expression operand;
-	@Mandatory Identifier identifier;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier identifier;
 }
 
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
@@ -767,8 +767,8 @@ class ArrayAccessTemplate {
 @GenerateAstNode(implementing=Expression.class, mixin=ExpressionMixin.class)
 class ArrayCreationTemplate {
 	@Mandatory TypeReference componentTypeReference;
-	List<ArrayDimension> dimensions;
-	ArrayInitializer initializer;
+	@ParentAccessor List<ArrayDimension> dimensions;
+	@ParentAccessor ArrayInitializer initializer;
 }
 
 @GenerateAstNode
@@ -823,7 +823,7 @@ class KeywordModifierTemplate {
 		.build();
 	
 	@NotChildOfNode
-	@Mandatory String name;
+	@Mandatory("\"\"") String name;
 	
 	@CopyMethod
 	static String getDescription(KeywordModifier self) {
@@ -862,23 +862,19 @@ class EmptyStatementTemplate {}
 
 @GenerateAstNode(implementing={Statement.class, DescribedNode.class})
 class LabelledStatementTemplate {
-	@Mandatory Identifier label;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier label;
 	@Mandatory Statement statement;
 	
 	@CopyMethod
 	static String getDescription(LabelledStatement self) {
-		try {
-			return self.astLabel().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astLabel().astValue();
 	}
 }
 
 @GenerateAstNode(implementing=Statement.class)
 class SwitchTemplate {
 	@Mandatory Expression condition;
-	@Mandatory Block body;
+	@ParentAccessor @Mandatory Block body;
 }
 
 @GenerateAstNode(implementing=Statement.class)
@@ -1094,7 +1090,7 @@ class StringLiteralTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class BreakTemplate {
-	Identifier label;
+	@ForcedType Identifier label;
 	
 	@CopyMethod
 	static boolean hasLabel(Break self) {
@@ -1104,7 +1100,7 @@ class BreakTemplate {
 
 @GenerateAstNode(implementing=Statement.class)
 class ContinueTemplate {
-	Identifier label;
+	@ForcedType Identifier label;
 	
 	@CopyMethod
 	static boolean hasLabel(Continue self) {
@@ -1130,6 +1126,7 @@ class CommentTemplate {
 	boolean blockComment;
 	
 	@NotChildOfNode
+	@Mandatory("\"\"")
 	String content;
 	
 	@CopyMethod
@@ -1147,20 +1144,15 @@ class CommentTemplate {
 class AnnotationMethodDeclarationTemplate {
 	Comment javadoc;
 	
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	@Mandatory TypeReference returnTypeReference;
-	@Mandatory Identifier methodName;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier methodName;
 	Expression defaultValue;
 	
 	@CopyMethod
 	static String getDescription(AnnotationMethodDeclaration self) {
-		try {
-			return self.astMethodName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astMethodName().astValue();
 	}
 }
 
@@ -1168,23 +1160,18 @@ class AnnotationMethodDeclarationTemplate {
 class MethodDeclarationTemplate {
 	Comment javadoc;
 	
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
 	@Mandatory TypeReference returnTypeReference;
-	@Mandatory Identifier methodName;
-	List<VariableDefinition> parameters;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier methodName;
+	@ParentAccessor("Parameter") List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
-	Block body;
+	@ParentAccessor Block body;
 	
 	@CopyMethod
 	static String getDescription(MethodDeclaration self) {
-		try {
-			return self.astMethodName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astMethodName().astValue();
 	}
 }
 
@@ -1192,64 +1179,54 @@ class MethodDeclarationTemplate {
 class ConstructorDeclarationTemplate {
 	Comment javadoc;
 	
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
-	@Mandatory Identifier typeName;
-	List<VariableDefinition> parameters;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier typeName;
+	@ParentAccessor("Parameter") List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
-	@Mandatory Block body;
+	@ParentAccessor @Mandatory Block body;
 	
 	//TODO test if our syntax checkers flag misnamed constructors.
 }
 
 @GenerateAstNode(implementing=TypeMember.class)
 class InstanceInitializerTemplate {
-	@Mandatory Block body;
+	@ParentAccessor @Mandatory Block body;
 }
 
 @GenerateAstNode(implementing=TypeMember.class)
 class StaticInitializerTemplate {
-	@Mandatory Block body;
+	@ParentAccessor @Mandatory Block body;
 }
 
 @GenerateAstNode
 class TypeBodyTemplate {
-	List<TypeMember> members;
+	@ParentAccessor List<TypeMember> members;
 }
 
-@GenerateAstNode
+@GenerateAstNode(extending="lombok.ast.TypeBody")
 class EnumTypeBodyTemplate {
-	List<TypeMember> members;
-	List<EnumConstant> constants;
+	@ParentAccessor List<EnumConstant> constants;
 }
 
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class})
 class AnnotationDeclarationTemplate {
 	Comment javadoc;
 	
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
-	@Mandatory Identifier name;
-	@Mandatory TypeBody body;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
+	@ParentAccessor @Mandatory TypeBody body;
 	
 	@CopyMethod
 	static String getDescription(AnnotationDeclaration self) {
-		try {
-			return self.astName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astName().astValue();
 	}
 }
 
 @GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
 class EmptyDeclarationTemplate {
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
-
 	@CopyMethod
 	static String getDescription(EmptyDeclaration self) {
 		try {
@@ -1260,23 +1237,42 @@ class EmptyDeclarationTemplate {
 	}
 	
 	@CopyMethod
+	static Modifiers astModifiers(EmptyDeclaration self) {
+		return new Modifiers();
+	}
+	
+	@CopyMethod
 	static Identifier astName(EmptyDeclaration self) {
-		return null;
+		return new Identifier();
 	}
 	
 	@CopyMethod
 	static EmptyDeclaration astName(EmptyDeclaration self, Identifier name) {
-		if (name != null) throw new AstException(self, "EmptyDeclarations cannot be named");
 		return self;
 	}
 	
 	@CopyMethod
-	static Node rawName(EmptyDeclaration self) {
+	static EmptyDeclaration astModifiers(EmptyDeclaration self, Modifiers modifiers) {
+		return self;
+	}
+	
+	@CopyMethod
+	static TypeBody astBody(EmptyDeclaration self) {
 		return null;
 	}
 	
 	@CopyMethod
-	static EmptyDeclaration rawName(EmptyDeclaration self, Node name) {
+	static Node rawBody(EmptyDeclaration self) {
+		return null;
+	}
+	
+	@CopyMethod
+	static EmptyDeclaration astBody(EmptyDeclaration self, TypeBody body) {
+		return self;
+	}
+	
+	@CopyMethod
+	static EmptyDeclaration rawBody(EmptyDeclaration self, Node body) {
 		return self;
 	}
 }
@@ -1285,22 +1281,16 @@ class EmptyDeclarationTemplate {
 class ClassDeclarationTemplate {
 	Comment javadoc;
 	
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
-	
-	@Mandatory Identifier name;
-	@Mandatory TypeBody body;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
+	@ParentAccessor @Mandatory TypeBody body;
 	List<TypeVariable> typeVariables;
 	TypeReference extending;
 	List<TypeReference> implementing;
 	
 	@CopyMethod
 	static String getDescription(ClassDeclaration self) {
-		try {
-			return self.astName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astName().astValue();
 	}
 }
 
@@ -1308,39 +1298,29 @@ class ClassDeclarationTemplate {
 class InterfaceDeclarationTemplate {
 	Comment javadoc;
 	
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
-	
-	@Mandatory Identifier name;
-	@Mandatory TypeBody body;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
+	@ParentAccessor @Mandatory TypeBody body;
 	List<TypeVariable> typeVariables;
 	List<TypeReference> extending;
 	
 	@CopyMethod
 	static String getDescription(InterfaceDeclaration self) {
-		try {
-			return self.astName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astName().astValue();
 	}
 }
 
 @GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class})
 class EnumConstantTemplate {
 	Comment javadoc;
-	TypeBody body;
-	@Mandatory Identifier name;
+	@ParentAccessor TypeBody body;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	List<Annotation> annotations;
 	List<Expression> arguments;
 	
 	@CopyMethod
 	static String getDescription(EnumConstant self) {
-		try {
-			return self.astName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astName().astValue();
 	}
 }
 
@@ -1348,20 +1328,14 @@ class EnumConstantTemplate {
 class EnumDeclarationTemplate {
 	Comment javadoc;
 	
-	@InitialValue("adopt(new lombok.ast.Modifiers())")
-	@Mandatory Modifiers modifiers;
-	
-	@Mandatory Identifier name;
-	@Mandatory EnumTypeBody body;
+	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
+	@ParentAccessor @Mandatory EnumTypeBody body;
 	List<TypeReference> implementing;
 	
 	@CopyMethod
 	static String getDescription(EnumDeclaration self) {
-		try {
-			return self.astName().astName();
-		} catch (NullPointerException e) {
-			return null;
-		}
+		return self.astName().astValue();
 	}
 }
 
@@ -1375,7 +1349,7 @@ class PackageDeclarationTemplate {
 		StringBuilder result = new StringBuilder();
 		for (Identifier part : node.astParts()) {
 			if (result.length() != 0) result.append(".");
-			result.append(part.astName());
+			result.append(part.astValue());
 		}
 		return result.toString();
 	}
@@ -1396,7 +1370,7 @@ class ImportDeclarationTemplate {
 		StringBuilder result = new StringBuilder();
 		for (Identifier part : self.astParts()) {
 			if (result.length() != 0) result.append(".");
-			result.append(part.astName());
+			result.append(part.astValue());
 		}
 		if (self.astStarImport()) result.append(".*");
 		return result.toString();
@@ -1405,8 +1379,8 @@ class ImportDeclarationTemplate {
 
 @GenerateAstNode
 class CompilationUnitTemplate {
-	PackageDeclaration packageDeclaration;
-	List<ImportDeclaration> importDeclarations;
+	@ParentAccessor PackageDeclaration packageDeclaration;
+	@ParentAccessor List<ImportDeclaration> importDeclarations;
 	List<TypeDeclaration> typeDeclarations;
 }
 

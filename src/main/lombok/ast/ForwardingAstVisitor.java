@@ -52,6 +52,7 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	@Override public boolean visitSelect(Select node) {return visitNode(node);}
 	@Override public boolean visitArrayAccess(ArrayAccess node) {return visitNode(node);}
 	@Override public boolean visitArrayCreation(ArrayCreation node) {return visitNode(node);}
+	@Override public boolean visitAnnotationValueArray(AnnotationValueArray node) {return visitNode(node);}
 	@Override public boolean visitArrayInitializer(ArrayInitializer node) {return visitNode(node);}
 	@Override public boolean visitArrayDimension(ArrayDimension node) {return visitNode(node);}
 	@Override public boolean visitClassLiteral(ClassLiteral node) {return visitNode(node);}

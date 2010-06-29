@@ -67,7 +67,7 @@ public class Resolver {
 		String enumName = null;
 		
 		if (value instanceof Identifier) {
-			enumName = ((Identifier)value).astName();
+			enumName = ((Identifier)value).astValue();
 		}
 		
 		// case3: EnumSimpleName.Identifier or EnumFQN.Identifier
@@ -145,7 +145,7 @@ public class Resolver {
 				
 				if (list != null) {
 					for (Node c : ((Block) n).rawContents()) {
-						if (c instanceof TypeDeclaration && namesMatch(name, ((TypeDeclaration) c).rawName())) return false;
+						if (c instanceof TypeDeclaration && namesMatch(name, ((TypeDeclaration) c).astName())) return false;
 					}
 				}
 				
@@ -169,9 +169,8 @@ public class Resolver {
 		return false;
 	}
 	
-	private boolean namesMatch(String name, Node id) {
-		if (!(id instanceof Identifier)) return false;
-		return name.equals(((Identifier)id).astName());
+	private boolean namesMatch(String name, Identifier astName) {
+		return name == null ? astName.astValue() == null : name.equals(astName.astValue());
 	}
 	
 	/**
@@ -249,13 +248,13 @@ public class Resolver {
 	private List<String> unwrapSelectChain(Select s) {
 		List<String> list = Lists.newArrayList();
 		while (s != null) {
-			list.add(s.astIdentifier().astName());
+			list.add(s.astIdentifier().astValue());
 			Expression parent = s.astOperand();
 			if (parent instanceof Select) {
 				s = (Select) parent;
 			} else if (parent instanceof Identifier) {
 				s = null;
-				list.add(((Identifier)parent).astName());
+				list.add(((Identifier)parent).astValue());
 			} else if (parent == null) {
 				break;
 			} else {

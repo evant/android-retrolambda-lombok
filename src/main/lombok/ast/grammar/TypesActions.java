@@ -37,14 +37,14 @@ public class TypesActions extends SourceActions {
 	}
 	
 	public Node createPrimitiveType(String text) {
-		Identifier identifier = posify(new Identifier().astName(text));
+		Identifier identifier = posify(new Identifier().astValue(text));
 		TypeReferencePart typeReferencePart = posify(new TypeReferencePart()
-				.rawIdentifier(identifier));
+				.astIdentifier(identifier));
 		return posify(new TypeReference().rawParts().addToStart(typeReferencePart));
 	}
 	
 	public Node createTypeReferencePart(org.parboiled.Node<Node> identifier, Node typeArguments) {
-		TypeReferencePart result = new TypeReferencePart().rawIdentifier(identifier.getValue());
+		TypeReferencePart result = new TypeReferencePart().astIdentifier(createIdentifierIfNeeded(identifier.getValue(), currentPos()));
 		
 		if (typeArguments instanceof TemporaryNode.TypeArguments) {
 			for (Node arg : ((TemporaryNode.TypeArguments)typeArguments).arguments) {
@@ -66,9 +66,7 @@ public class TypesActions extends SourceActions {
 		
 		if (!(type instanceof TypeReference)) {
 			ref = new TypeReference();
-			if (type != null) {
-				//TODO add screwed up typePart as dangling tail to returned node.
-			}
+			ref.addDanglingNode(type);
 		} else {
 			ref = (TypeReference)type;
 		}
@@ -122,7 +120,7 @@ public class TypesActions extends SourceActions {
 	}
 	
 	public Node createTypeVariable(Node name, Node head, List<Node> tail) {
-		TypeVariable tv = new TypeVariable().rawName(name);
+		TypeVariable tv = new TypeVariable().astName(createIdentifierIfNeeded(name, currentPos()));
 		
 		if (head != null) tv.rawExtending().addToEnd(head);
 		if (tail != null) for (Node t : tail) if (t != null) tv.rawExtending().addToEnd(t);

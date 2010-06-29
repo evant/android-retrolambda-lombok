@@ -184,7 +184,7 @@ public class ExpressionsActions extends SourceActions {
 		}
 		
 		TypeReference typeReference = new TypeReference().astParts().addToEnd(
-				classTypeArgs0.rawIdentifier(identifierNode));
+				classTypeArgs0.astIdentifier(createIdentifierIfNeeded(identifierNode, currentPos())));
 		if (!classTypeArgsCorrect) {
 			if (identifier != null && identifier.getValue() != null) {
 				typeReference.setPosition(identifier.getValue().getPosition());
@@ -224,28 +224,26 @@ public class ExpressionsActions extends SourceActions {
 			if (n instanceof ConstructorInvocation) {
 				current = ((ConstructorInvocation)n).rawQualifier(current);
 				positionSpan(current, qualifier, pNode);
-			}
-			//TODO else hang dangling node.
+			} else current.addDanglingNode(n);
 		}
 		
 		return current;
 	}
 	
 	public Node createMethodInvocationOperation(org.parboiled.Node<Node> dot, Node typeArguments, Node name, Node arguments) {
-		MethodInvocation mi = new MethodInvocation().rawName(name);
+		MethodInvocation mi = new MethodInvocation().astName(createIdentifierIfNeeded(name, currentPos()));
 		
 		if (typeArguments instanceof TemporaryNode.TypeArguments) {
 			for (Node arg : ((TemporaryNode.TypeArguments)typeArguments).arguments) {
 				mi.rawMethodTypeArguments().addToEnd(arg);
 			}
-		}
+		} else mi.addDanglingNode(typeArguments);
 		
 		if (arguments instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
 				mi.rawArguments().addToEnd(arg);
 			}
-		}
-		//TODO hang dangling node on mi if arguments is non null but also not an MI.
+		} else mi.addDanglingNode(arguments);
 		
 		source.registerStructure(mi, dot);
 		
@@ -253,7 +251,7 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createSelectOperation(Node identifier) {
-		return posify(new Select().rawIdentifier(identifier));
+		return posify(new Select().astIdentifier(createIdentifierIfNeeded(identifier, currentPos())));
 	}
 	
 	public Node createArrayAccessOperation(Node indexExpression) {
@@ -273,8 +271,9 @@ public class ExpressionsActions extends SourceActions {
 				current = ((MethodInvocation)o).rawOperand(current);
 			} else if (o instanceof Select) {
 				current = ((Select)o).rawOperand(current);
+			} else {
+				current.addDanglingNode(o);
 			}
-			//TODO else hang dangling node.
 			
 			positionSpan(o, operand, pNode);
 		}
@@ -283,13 +282,12 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createPrimary(Node identifier, Node methodArguments) {
 		if (methodArguments instanceof TemporaryNode.MethodArguments) {
-			MethodInvocation invoke = new MethodInvocation().rawName(identifier);
+			MethodInvocation invoke = new MethodInvocation().astName(createIdentifierIfNeeded(identifier, currentPos()));
 			for (Node arg : ((TemporaryNode.MethodArguments)methodArguments).arguments) {
 				invoke.rawArguments().addToEnd(arg);
 			}
 			return posify(invoke);
-		}
-		//TODO if (methodArguments != null) add dangling node.
+		} else identifier.addDanglingNode(methodArguments);
 		
 		return identifier;
 	}
@@ -309,9 +307,8 @@ public class ExpressionsActions extends SourceActions {
 			for (Node arg : ((TemporaryNode.MethodArguments)args).arguments) {
 				result.rawArguments().addToEnd(arg);
 			}
-		} else {
-			//TODO if (args != null) add dangling.
-		}
+		} else result.addDanglingNode(args);
+		
 		return posify(result);
 	}
 	

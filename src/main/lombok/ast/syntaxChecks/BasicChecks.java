@@ -21,60 +21,49 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.List;
+import static lombok.ast.Message.*;
+import static lombok.ast.syntaxChecks.MessageKey.*;
 
 import lombok.ast.Identifier;
 import lombok.ast.Node;
-import lombok.ast.SyntaxProblem;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
 public class BasicChecks {
-	private final List<SyntaxProblem> problems;
-	
-	public BasicChecks(List<SyntaxProblem> problems) {
-		this.problems = problems;
-	}
-	
 	public void checkNameOfIdentifier(Identifier identifier) {
-		String n = identifier.astName();
-		if (n == null || n.length() == 0) {
-			problems.add(new SyntaxProblem(identifier, "Empty identifier"));
+		String n = identifier.astValue();
+		if (n.length() == 0) {
+			identifier.addMessage(error(IDENTIFIER_EMPTY, "Empty Identifier"));
 			return;
 		}
 		
 		if (!Character.isJavaIdentifierStart(n.charAt(0))) {
-			problems.add(new SyntaxProblem(identifier,
-					"Not a legal start character for a java identifier: " + n.charAt(0)));
+			identifier.addMessage(error(IDENTIFIER_INVALID, "Not a legal start character for a java identifier: " + n.charAt(0)));
 			return;
 		}
 		
 		for (int i = 1; i < n.length(); i++) {
 			if (!Character.isJavaIdentifierPart(n.charAt(i))) {
-				problems.add(new SyntaxProblem(identifier,
-						"Not a legal character in a java identifier: " + n.charAt(i)));
+				identifier.addMessage(error(IDENTIFIER_INVALID, "Not a legal character in a java identifier: " + n.charAt(i)));
 				return;
 			}
 		}
 	}
 	
-	static void checkVarDefIsSimple(List<SyntaxProblem> problems, Node node, Node rawVarDef, String desc, String desc2) {
+	static void checkVarDefIsSimple(Node node, Node rawVarDef, String descriptionOfOuter, String descriptionOfRelation) {
 		if (!(rawVarDef instanceof VariableDefinition)) return;
 		switch (((VariableDefinition)rawVarDef).rawVariables().size()) {
 		case 0: return;
 		case 1: break;
 		default:
-			problems.add(new SyntaxProblem(node, desc + " can only declare one " + desc2 + " variable."));
-			return;
+			rawVarDef.addMessage(error(VARIABLEDEFINITION_ONLY_ONE, String.format("%s can only declare one %s variable", descriptionOfOuter, descriptionOfRelation)));
 		}
 		
-		Node varDefEntry = ((VariableDefinition)rawVarDef).rawVariables().first();
-		if (varDefEntry instanceof VariableDefinitionEntry) {
-			if (((VariableDefinitionEntry)varDefEntry).rawInitializer() != null) {
-				problems.add(new SyntaxProblem(node, desc + " can not declare a value for their " + desc2 + " declaration."));
-			}
+		for (VariableDefinitionEntry entry : ((VariableDefinition)rawVarDef).astVariables()) {
+			if (entry.rawInitializer() != null) entry.addMessage(error(VARIABLEDEFINITIONENTRY_INITIALIZER_NOT_ALLOWED, String.format(
+					"%s can only declare %s variables without an initializer", descriptionOfOuter, descriptionOfRelation)));
 		}
 	}
 }

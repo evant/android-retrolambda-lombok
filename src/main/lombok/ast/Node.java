@@ -44,7 +44,7 @@ public interface Node {
 	 * 
 	 * @see #unparent()
 	 */
-	Node detach(Node child);
+	void detach(Node child);
 	
 	/**
 	 * Severs the child/parent link between this node and its parent. This node's parentage will be set to unparented, and whichever property
@@ -52,7 +52,7 @@ public interface Node {
 	 * 
 	 * @see #detach(Node)
 	 */
-	Node unparent();
+	void unparent();
 	
 	Node setPosition(Position position);
 	
@@ -66,11 +66,15 @@ public interface Node {
 	
 	Position getPosition();
 	
-	Node addDanglingPrefixNode(Node unbound);
+	void addDanglingNode(Node dangler);
 	
-	Node addDanglingPostfixNode(Node unbound);
+	List<Node> getDanglingNodes();
 	
-	List<Node> getDanglingPrefixNodes();
+	void removeDanglingNode(Node dangler);
 	
-	List<Node> getDanglingPostfixNodes();
+	Node addMessage(Message message);
+	
+	boolean hasMessage(String key);
+	
+	List<Message> getMessages();
 }

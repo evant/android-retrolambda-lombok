@@ -27,6 +27,7 @@ import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
 import lombok.ast.AnnotationMethodDeclaration;
+import lombok.ast.AnnotationValueArray;
 import lombok.ast.ArrayAccess;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
@@ -97,6 +98,7 @@ import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
+import lombok.ast.VariableReference;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
@@ -197,15 +199,21 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitTypeReferencePart(TypeReferencePart node) {
 		formatter.buildInline(node);
-		visit(node.rawIdentifier());
+		visit(node.astIdentifier());
 		visitAll(node.rawTypeArguments(), ", ", "<", ">");
 		formatter.closeInline();
 		return true;
 	}
 	
-	public boolean visitIdentifier(Identifier node) {
+	public boolean visitVariableReference(VariableReference node) {
 		parensOpen(node);
-		String name = node.astName();
+		formatter.buildInline(node);
+		parensClose(node);
+		return true;
+	}
+	
+	public boolean visitIdentifier(Identifier node) {
+		String name = node.astValue();
 		if (name == null) name = FAIL + "NULL_IDENTIFIER" + FAIL;
 		else if (name.isEmpty()) name = FAIL + "EMPTY_IDENTIFIER" + FAIL;
 		else if (!isValidJavaIdentifier(name)) name = FAIL + "INVALID_IDENTIFIER: " + name + FAIL;
@@ -213,7 +221,6 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildInline(node);
 		formatter.append(name);
 		formatter.closeInline();
-		parensClose(node);
 		return true;
 	}
 	
@@ -417,7 +424,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		}
 		visitAll(node.rawMethodTypeArguments(), ", ", "<", ">");
 		formatter.nameNextElement("methodName");
-		visit(node.rawName());
+		visit(node.astName());
 		formatter.append("(");
 		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
@@ -435,7 +442,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			formatter.append(".");
 		}
 		formatter.nameNextElement("selected");
-		visit(node.rawIdentifier());
+		visit(node.astIdentifier());
 		formatter.closeInline();
 		parensClose(node);
 		return true;
@@ -466,6 +473,15 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		}
 		formatter.closeInline();
 		parensClose(node);
+		return true;
+	}
+	
+	@Override public boolean visitAnnotationValueArray(AnnotationValueArray node) {
+		formatter.buildInline(node);
+		formatter.append("{");
+		visitAll(node.rawValues(), ", ", "", "");
+		formatter.append("}");
+		formatter.closeInline();
 		return true;
 	}
 	
@@ -537,11 +553,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitLabelledStatement(LabelledStatement node) {
 		formatter.buildBlock(node);
-		if (node.rawLabel() != null) {
-			formatter.nameNextElement("label");
-			visit(node.rawLabel());
-			formatter.append(":");
-		}
+		formatter.nameNextElement("label");
+		visit(node.astLabel());
+		formatter.append(":");
 		visit(node.rawStatement());
 		formatter.closeBlock();
 		return true;
@@ -805,9 +819,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitBreak(Break node) {
 		formatter.buildBlock(node);
 		formatter.keyword("break");
-		if (node.rawLabel() != null) {
+		if (node.astLabel() != null) {
 			formatter.space();
-			visit(node.rawLabel());
+			visit(node.astLabel());
 		}
 		formatter.append(";");
 		formatter.closeBlock();
@@ -817,9 +831,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitContinue(Continue node) {
 		formatter.buildBlock(node);
 		formatter.keyword("continue");
-		if (node.rawLabel() != null) {
+		if (node.astLabel() != null) {
 			formatter.space();
-			visit(node.rawLabel());
+			visit(node.astLabel());
 		}
 		formatter.append(";");
 		formatter.closeBlock();
@@ -859,11 +873,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	public boolean visitVariableDefinition(VariableDefinition node) {
 		formatter.buildInline(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) {
+			formatter.space();
 		}
 		formatter.nameNextElement("type");
 		visit(node.rawTypeReference());
@@ -880,7 +892,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {
 		formatter.buildInline(node);
 		formatter.nameNextElement("varName");
-		visit(node.rawName());
+		visit(node.astName());
 		for (int i = 0; i < node.astArrayDimensions(); i++)
 			formatter.append("[]");
 		if (node.rawInitializer() != null) {
@@ -896,7 +908,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitTypeVariable(TypeVariable node) {
 		formatter.buildInline(node);
-		visit(node.rawName());
+		visit(node.astName());
 		if (!node.rawExtending().isEmpty()) {
 			formatter.space();
 			formatter.keyword("extends");
@@ -934,9 +946,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitAnnotationElement(AnnotationElement node) {
 		formatter.buildInline(node);
-		if (node.rawName() != null) {
+		if (node.astName() != null) {
 			formatter.nameNextElement("name");
-			visit(node.rawName());
+			visit(node.astName());
 			formatter.space();
 			formatter.append("=");
 			formatter.space();
@@ -977,19 +989,15 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		if (!node.rawTypeVariables().isEmpty()) formatter.space();
 		formatter.nameNextElement("returnType");
 		visit(node.rawReturnTypeReference());
 		formatter.space();
 		formatter.nameNextElement("methodName");
-		visit(node.rawMethodName());
+		visit(node.astMethodName());
 		formatter.append("(");
 		visitAll("parameter", node.rawParameters(), ", ", "", "");
 		formatter.append(")");
@@ -1014,16 +1022,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		if (!node.rawTypeVariables().isEmpty()) formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.rawTypeName());
+		visit(node.astTypeName());
 		formatter.append("(");
 		visitAll("parameter", node.rawParameters(), ", ", "", "");
 		formatter.append(")");
@@ -1095,16 +1099,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitClassDeclaration(ClassDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.keyword("class");
 		formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.rawName());
+		visit(node.astName());
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		formatter.space();
 		if (node.rawExtending() != null) {
@@ -1128,16 +1128,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.keyword("interface");
 		formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.rawName());
+		visit(node.astName());
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		formatter.space();
 		if (!node.rawExtending().isEmpty()) {
@@ -1154,16 +1150,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitEnumDeclaration(EnumDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.keyword("enum");
 		formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.rawName());
+		visit(node.astName());
 		formatter.space();
 		if (!node.rawImplementing().isEmpty()) {
 			formatter.keyword("implements");
@@ -1182,7 +1174,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildInline(node);
 		visitAll(node.rawAnnotations(), "", "", "");
 		formatter.nameNextElement("name");
-		visit(node.rawName());
+		visit(node.astName());
 		visitAll(node.rawArguments(), ", ", "(", ")");
 		if (node.rawBody() != null) {
 			formatter.space();
@@ -1197,17 +1189,13 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.append("@");
 		formatter.keyword("interface");
 		formatter.space();
 		formatter.nameNextElement("constantName");
-		visit(node.rawName());
+		visit(node.astName());
 		formatter.space();
 		formatter.startSuppressBlock();
 		visit(node.rawBody());
@@ -1218,17 +1206,13 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
 		formatter.buildBlock(node);
-		if (node.rawModifiers() != null) {
-			visit(node.rawModifiers());
-			if (node.rawModifiers() instanceof Modifiers && !((Modifiers)node.rawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.nameNextElement("returnType");
 		visit(node.rawReturnTypeReference());
 		formatter.space();
 		formatter.nameNextElement("methodName");
-		visit(node.rawMethodName());
+		visit(node.astMethodName());
 		formatter.append("(");
 		formatter.append(")");
 		if (node.rawDefaultValue() != null) {

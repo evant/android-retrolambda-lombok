@@ -23,34 +23,23 @@ package lombok.ast;
 
 import static java.util.Collections.emptyList;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import lombok.Getter;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.TextFormatter;
-import lombok.ast.syntaxChecks.SyntacticValidityVisitorBase;
 
 abstract class AbstractNode implements Node {
 	@Getter private Position position = Position.UNPLACED;
 	@Getter private Node parent;
-	
-	/**
-	 * Checks if a given child is syntactically valid and throws an {@code AstException} otherwise.
-	 * This method will <em>NOT</em> recursively call {@link #checkSyntacticValidity(List)} on the child (on purpose - that's not a good idea here).
-	 * 
-	 * @param child The actual child node object that will be checked.
-	 * @param name The name of this node. For example, in a binary operation, {@code "left side"}.
-	 * @param mandatory If this node not being there (being {@code null}) is a problem or acceptable.
-	 * @param typeAssertion If the node exists, it must be an instance of this type.
-	 * @throws AstException If {@code child} is {@code null} <em>AND</em> {@code mandatory} is {@code true}, or
-	 *    {@code child} is not of the appropriate type as specified.
-	 */
-	protected void assertChildType(Node child, String name, boolean mandatory, Class<?> typeAssertion) throws AstException {
-		SyntaxProblem p = SyntacticValidityVisitorBase.verifyNodeRelation(this, child, name, mandatory, typeAssertion);
-		if (p != null) p.throwAstException();
-	}
+	private List<Node> danglings;
+	private Map<MessageKey, Message> messagesMap;
+	private List<Message> messages;
 	
 	@Override public boolean isGenerated() {
 		return position.getGeneratedBy() != null;
@@ -68,13 +57,8 @@ abstract class AbstractNode implements Node {
 		return emptyList();
 	}
 	
-	@Override public Node detach(Node child) {
-		return this;
-	}
-	
-	@Override public Node unparent() {
+	@Override public void unparent() {
 		if (this.parent != null) this.parent.detach(this);
-		return this;
 	}
 	
 	/**
@@ -138,6 +122,50 @@ abstract class AbstractNode implements Node {
 		SourcePrinter printer = new SourcePrinter(formatter);
 		accept(printer);
 		return formatter.finish();
+	}
+	
+	@Override public void detach(Node child) {
+		//Intentionally left blank - custom implementations are usually terminal nodes that can't have children.
+	}
+	
+	@Override public void addDanglingNode(Node dangling) {
+		if (dangling == null) return;
+		if (danglings == null) danglings = Lists.newArrayList();
+		danglings.add(dangling);
+	}
+	
+	@Override public void removeDanglingNode(Node dangling) {
+		if (danglings != null) danglings.remove(dangling);
+	}
+	
+	public List<Node> getDanglingNodes() {
+		return danglings == null ? Collections.<Node>emptyList() : Collections.unmodifiableList(danglings);
+	}
+	
+	public Node addMessage(Message message) {
+		if (messagesMap == null) {
+			messagesMap = Maps.newHashMap();
+			messages = Lists.newArrayList();
+		}
+		
+		if (message.getKey() == null) {
+			messages.add(message);
+		} else {
+			if (!messagesMap.containsKey(message.getKey())) {
+				messagesMap.put(message.getKey(), message);
+				messages.add(message);
+			}
+		}
+		return this;
+	}
+	
+	public boolean hasMessage(String key) {
+		if (messagesMap == null) return false;
+		return messagesMap.containsKey(key);
+	}
+	
+	public List<Message> getMessages() {
+		return messages == null ? Collections.<Message>emptyList() : Collections.unmodifiableList(messages);
 	}
 	
 	abstract static class WithParens extends AbstractNode implements Expression {

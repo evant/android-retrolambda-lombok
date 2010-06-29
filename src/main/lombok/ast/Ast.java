@@ -44,7 +44,7 @@ public class Ast {
 	 * 
 	 * For example:
 	 * 
-	 * {@code up(someVariableEntry, TypeDeclaration.class, VariableDeclaration.class, VariableDefinition.class)}
+	 * {@code up(someVariableEntry, TypeDeclaration.class, TypeBody.class, VariableDeclaration.class, VariableDefinition.class)}
 	 * 
 	 * will get the type declaration that contains the listed field declaration, or {@code null} if this is some other
 	 * kind of definition, such as the one in a for loop, or a local variable.
@@ -58,6 +58,13 @@ public class Ast {
 		if (target.isInstance(n)) return target.cast(n);
 		return null;
 	}
+	
+	/* TODO
+	 * A) up(VariableDeclaration.class, "definition", up(VariableDefinition.class, "entries", entry))
+	 * B) up(entry, VariableDeclaration.class, "VariableDefinition:entries", "VariableDeclaration:definition");
+	 * C) ifDefinitionOfVariableDeclaration(ifEntryOfVariableDefinition(entry))
+	 * D) as above but not auto-generated, instead written on an as-needed basis with better names, e.g: ifFieldGetTypeBody().
+	 */
 	
 	/**
 	 * Sets the position of {@code node} to {@code position}, and then does the same for all of {@code node}'s children, recursively.

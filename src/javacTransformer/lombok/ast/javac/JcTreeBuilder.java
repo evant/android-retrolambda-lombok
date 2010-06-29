@@ -31,6 +31,7 @@ import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
 import lombok.ast.AnnotationMethodDeclaration;
+import lombok.ast.AnnotationValueArray;
 import lombok.ast.ArrayAccess;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
@@ -168,7 +169,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private Name toName(Identifier identifier) {
 		if (identifier == null) return null;
-		return table.fromString(identifier.astName());
+		return table.fromString(identifier.astValue());
 	}
 	
 	private JCTree toTree(Node node) {
@@ -691,6 +692,14 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		)));
 	}
 	
+	@Override public boolean visitAnnotationValueArray(AnnotationValueArray node) {
+		return posSet(node, treeMaker.NewArray(
+				null,
+				List.<JCExpression>nil(),
+				toList(JCExpression.class, node.astValues())
+		));
+	}
+	
 	@Override
 	public boolean visitArrayInitializer(ArrayInitializer node) {
 		return posSet(node, treeMaker.NewArray(
@@ -1006,7 +1015,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 			if (end == node.getPosition().getStart()) end = node.getPosition().getEnd();
 			
 			Identifier identifier = node.astParts().first().astIdentifier();
-			int typeTag = primitiveTypeTag(identifier.astName());
+			int typeTag = primitiveTypeTag(identifier.astValue());
 			if (typeTag > 0) return setPos(node.getPosition().getStart(), end, treeMaker.TypeIdent(typeTag));
 		}
 		

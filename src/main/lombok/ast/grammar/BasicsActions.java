@@ -33,7 +33,7 @@ public class BasicsActions extends SourceActions {
 	
 	public Node createIdentifier(String text, org.parboiled.Node<Node> rawIdentifier) {
 		Identifier id = new Identifier();
-		if (text != null) id.astName(text);
+		if (text != null) id.astValue(text);
 		
 		int start = rawIdentifier.getStartLocation().getIndex();
 		int end = Math.max(start, rawIdentifier.getEndLocation().getIndex());

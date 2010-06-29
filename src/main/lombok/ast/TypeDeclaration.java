@@ -21,17 +21,18 @@
  */
 package lombok.ast;
 
+import lombok.ast.template.ParentAccessor;
+
 /**
  * Common interface shared by all type declaration nodes.
  */
 public interface TypeDeclaration extends Node, DescribedNode {
-	Node rawModifiers();
-	TypeDeclaration rawModifiers(Node modifiers);
 	Modifiers astModifiers();
 	TypeDeclaration astModifiers(Modifiers modifiers);
 	
-	Node rawName();
-	TypeDeclaration rawName(Node name);
 	Identifier astName();
 	TypeDeclaration astName(Identifier name);
+	
+	@ParentAccessor TypeBody astBody();
+	Node rawBody();
 }

@@ -38,7 +38,7 @@ public @interface GenerateAstNode {
 	/**
 	 * By default AST nodes extend {@link lombok.ast.AbstractNode}, but you can pick a more specific subclass if you'd like.
 	 */
-	Class<?> extending() default Object.class;
+	String extending() default "";
 	
 	/**
 	 * List any interfaces this node is to implement.

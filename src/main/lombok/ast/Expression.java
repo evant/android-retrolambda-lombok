@@ -23,7 +23,7 @@ package lombok.ast;
 
 import java.util.List;
 
-public interface Expression extends Node {
+public interface Expression extends Node, AnnotationValue {
 	/**
 	 * Returns the actual amount of parentheses physically around this expression.
 	 * 

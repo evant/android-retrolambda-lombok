@@ -19,16 +19,47 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package lombok.ast;
+package lombok.ast.syntaxChecks;
 
-import lombok.Data;
-
-@Data
-public class SyntaxProblem {
-	private final Node problemNode;
-	private final String message;
+public enum MessageKey implements lombok.ast.MessageKey {
+	/** Signals an identifier node has zero characters in it. */
+	IDENTIFIER_EMPTY("empty"),
 	
-	public void throwAstException() {
-		throw new AstException(problemNode, message);
+	/** Signals an identifier node is not a valid java identifier. */
+	IDENTIFIER_INVALID("invalid"),
+	
+	/** Signals that only one variable name is legal in a given definition, but there is more than one. */
+	VARIABLEDEFINITION_ONLY_ONE("only one"),
+	
+	/** Signals some variable definition has an initializer but those aren't allowed there. */
+	VARIABLEDEFINITIONENTRY_INITIALIZER_NOT_ALLOWED("initializer not allowed"),
+	
+	MODIFIERS_DUPLICATE_KEYWORD("duplicate keyword"),
+	
+	MODIFIERS_STATIC_CHAIN("static chain"),
+	
+	INITIALIZER_STATIC_IN_NON_STATIC_TYPE("static initializer in non static type"),
+	
+	MODIFIERS_EMPTY_MODIFIER("empty modifier"),
+	
+	MODIFIERS_UNKNOWN_MODIFIER("unknown modifier"),
+	
+	MODIFIERS_MODIFIER_NOT_ALLOWED("modifier not allowed"),
+	
+	;
+	
+	private final String key;
+	
+	MessageKey(String key) {
+		this.key = key;
+	}
+	
+	public String getKey() {
+		return key;
+	}
+	
+	@Override
+	public String toString() {
+		return key;
 	}
 }

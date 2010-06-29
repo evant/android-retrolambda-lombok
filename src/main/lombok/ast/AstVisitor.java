@@ -55,6 +55,7 @@ public abstract class AstVisitor {
 	public abstract boolean visitArrayAccess(ArrayAccess node);
 	public abstract boolean visitArrayCreation(ArrayCreation node);
 	public abstract boolean visitArrayInitializer(ArrayInitializer node);
+	public abstract boolean visitAnnotationValueArray(AnnotationValueArray node);
 	public abstract boolean visitArrayDimension(ArrayDimension node);
 	public abstract boolean visitClassLiteral(ClassLiteral node);
 	public abstract boolean visitSuper(Super node);

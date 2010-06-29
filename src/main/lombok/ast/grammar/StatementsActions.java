@@ -80,7 +80,7 @@ public class StatementsActions extends SourceActions {
 			for (Node n : labelNames) {
 				if (n != null) {
 					Position pos = current == null ? null : new Position(n.getPosition().getStart(), current.getPosition().getEnd());
-					current = new LabelledStatement().rawLabel(n).rawStatement(current);
+					current = new LabelledStatement().astLabel(createIdentifierIfNeeded(n, currentPos())).rawStatement(current);
 					current.setPosition(pos);
 				}
 			}
@@ -152,16 +152,16 @@ public class StatementsActions extends SourceActions {
 		VariableDefinition decl = new VariableDefinition().rawTypeReference(type).rawVariables()
 				.addToEnd(varDefEntry.getValue());
 		positionSpan(decl, modifiers, varDefEntry);
-		decl.rawModifiers(createNewModifiersIfNeeded(modifiers.getValue(), decl.getPosition().getStart()));
+		decl.astModifiers(createModifiersIfNeeded(modifiers.getValue(), decl.getPosition().getStart()));
 		return posify(new ForEach().rawVariable(decl).rawIterable(iterable).rawStatement(statement));
 	}
 	
 	public Node createBreak(Node label) {
-		return posify(new Break().rawLabel(label));
+		return posify(new Break().astLabel(createIdentifierIfNeeded(label, currentPos())));
 	}
 	
 	public Node createContinue(Node label) {
-		return posify(new Continue().rawLabel(label));
+		return posify(new Continue().astLabel(createIdentifierIfNeeded(label, currentPos())));
 	}
 	
 	public Node createReturn(Node value) {
@@ -177,12 +177,12 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createCatch(Node modifiers, Node type, Node varName, Node body) {
-		VariableDefinitionEntry varNameEntry = new VariableDefinitionEntry().rawName(varName);
+		VariableDefinitionEntry varNameEntry = new VariableDefinitionEntry().astName(createIdentifierIfNeeded(varName, currentPos()));
 		if (varName != null) varNameEntry.setPosition(varName.getPosition());
 		VariableDefinition decl = new VariableDefinition().rawTypeReference(type).rawVariables().addToEnd(
 				varNameEntry);
 		if (type != null && varName != null) decl.setPosition(new Position(type.getPosition().getStart(), varName.getPosition().getEnd()));
-		if (modifiers != null) decl.rawModifiers(modifiers);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		return posify(new Catch().rawExceptionDeclaration(decl).rawBody(body));
 	}
 	
@@ -194,7 +194,7 @@ public class StatementsActions extends SourceActions {
 	
 	public Node addLocalVariableModifiers(Node variableDefinition, Node modifiers) {
 		if (modifiers != null && variableDefinition instanceof VariableDefinition) {
-			((VariableDefinition)variableDefinition).rawModifiers(modifiers);
+			((VariableDefinition)variableDefinition).astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		}
 		
 		return posify(variableDefinition);
