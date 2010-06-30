@@ -51,6 +51,7 @@ import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.SimpleAnnotationValueVisitor6;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
@@ -261,7 +262,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			if (key.startsWith("lombok.ast.")) key = key.substring("lombok.ast.".length());
 			Collection<ParentRelation> c = map.get(key);
 			if (c == null) {
-				c = new ArrayList<ParentRelation>();
+				c = new HashSet<ParentRelation>();
 				map.put(key, c);
 			}
 			c.add(value);
@@ -284,6 +285,42 @@ public class TemplateProcessor extends AbstractProcessor {
 			if (element.getKind() == ElementKind.METHOD) {
 				ParentRelation rel = ParentRelation.create((ExecutableElement)element);
 				if (rel != null) out.put(rel.getTypeNameFrom(), rel);
+			}
+		}
+		/** In a full build, the above is fine, but when incrementally building for example only Templates.java, the round does not include interfaces with @ParentAccessor annotations. */
+		final Set<TypeMirror> typesToScan = new HashSet<TypeMirror>();
+		for (Element element : roundEnv.getElementsAnnotatedWith(GenerateAstNode.class)) {
+			for (AnnotationMirror m : element.getAnnotationMirrors()) {
+				if (!m.getAnnotationType().toString().endsWith("GenerateAstNode")) continue;
+				for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e : m.getElementValues().entrySet()) {
+					if (e.getKey().getSimpleName().toString().equals("implementing")) {
+						e.getValue().accept(new SimpleAnnotationValueVisitor6<Void, Void>() {
+							@Override public Void visitArray(List<? extends AnnotationValue> vals, Void p) {
+								for (AnnotationValue inner : vals) inner.accept(this, null);
+								return null;
+							}
+							
+							@Override public Void visitType(TypeMirror t, Void p) {
+								typesToScan.add(t);
+								return null;
+							}
+						}, null);
+					}
+				}
+			}
+		}
+		for (TypeMirror tm : typesToScan) {
+			Element toScan = processingEnv.getTypeUtils().asElement(tm);
+			System.out.printf("MIRRORNAME: %s ELEMENT: %s\n", tm, toScan);
+			if (toScan != null) for (Element child : toScan.getEnclosedElements()) {
+				if (child.getKind() == ElementKind.FIELD) {
+					ParentRelation rel = ParentRelation.create((VariableElement)child);
+					if (rel != null) out.put(rel.getTypeNameFrom(), rel);
+				}
+				if (child.getKind() == ElementKind.METHOD) {
+					ParentRelation rel = ParentRelation.create((ExecutableElement)child);
+					if (rel != null) out.put(rel.getTypeNameFrom(), rel);
+				}
 			}
 		}
 		return out;

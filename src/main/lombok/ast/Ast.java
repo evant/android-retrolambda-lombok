@@ -26,47 +26,6 @@ package lombok.ast;
  */
 public class Ast {
 	/**
-	 * Walks the parentage of {@code node} until it encounters either the top ({@code null} as parent), or a node
-	 * that is an instance of {@code type}. If {@code node} itself is an instance of {@code type}, then it'll be returned.
-	 * If the top is reached, or {@code} node is {@code null}, then {@code null} is returned.
-	 */
-	public static <N extends Node> N closestParentOfType(Class<N> type, Node node) {
-		while (node != null) {
-			if (type.isInstance(node)) return type.cast(node);
-			node = node.getParent();
-		}
-		return null;
-	}
-	
-	/**
-	 * Walks the parentage of {@code node} and checks that each parent is of the stated types, then returns the highest
-	 * parent in the chain, or {@code null} if the parentage isn't as expected. The parent chain must be listed in reverse.
-	 * 
-	 * For example:
-	 * 
-	 * {@code up(someVariableEntry, TypeDeclaration.class, TypeBody.class, VariableDeclaration.class, VariableDefinition.class)}
-	 * 
-	 * will get the type declaration that contains the listed field declaration, or {@code null} if this is some other
-	 * kind of definition, such as the one in a for loop, or a local variable.
-	 */
-	public static <N extends Node> N up(Node node, Class<N> target, Class<?>... parents) {
-		Node n = node.getParent();
-		for (int i = parents.length - 1; i >= 0; i--) {
-			if (!parents[i].isInstance(n)) return null;
-			n = node.getParent();
-		}
-		if (target.isInstance(n)) return target.cast(n);
-		return null;
-	}
-	
-	/* TODO
-	 * A) up(VariableDeclaration.class, "definition", up(VariableDefinition.class, "entries", entry))
-	 * B) up(entry, VariableDeclaration.class, "VariableDefinition:entries", "VariableDeclaration:definition");
-	 * C) ifDefinitionOfVariableDeclaration(ifEntryOfVariableDefinition(entry))
-	 * D) as above but not auto-generated, instead written on an as-needed basis with better names, e.g: ifFieldGetTypeBody().
-	 */
-	
-	/**
 	 * Sets the position of {@code node} to {@code position}, and then does the same for all of {@code node}'s children, recursively.
 	 */
 	public static Node setAllPositions(Node node, Position position) {

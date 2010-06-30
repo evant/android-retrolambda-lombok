@@ -36,6 +36,14 @@ import lombok.ast.template.ParentAccessor;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+class TypeMemberMixin {
+	@CopyMethod
+	static TypeDeclaration upUpToTypeDeclaration(TypeMember self) {
+		TypeBody body = self.upToTypeBody();
+		return body == null ? null : body.upToTypeDeclaration();
+	}
+}
+
 class ExpressionMixin {
 	@NotChildOfNode(suppressSetter=true, codeToCopy="new java.util.ArrayList<lombok.ast.Position>(this.parensPositions)")
 	@Mandatory("new java.util.ArrayList<lombok.ast.Position>()")
@@ -348,7 +356,7 @@ class ModifiersTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={Statement.class, TypeMember.class, JavadocContainer.class})
+@GenerateAstNode(implementing={Statement.class, TypeMember.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class VariableDeclarationTemplate {
 	Comment javadoc;
 	@ParentAccessor @Mandatory VariableDefinition definition;
@@ -365,7 +373,17 @@ class VariableDefinitionTemplate {
 	@NotChildOfNode
 	boolean varargs;
 	
-	// TODO add ifFieldGetTypeBody to this one and friends.
+	@CopyMethod
+	static TypeDeclaration upUpIfFieldToTypeDeclaration(VariableDefinition self) {
+		VariableDeclaration decl = self.upToVariableDeclaration();
+		return decl == null ? null : decl.upUpToTypeDeclaration();
+	}
+	
+	@CopyMethod
+	static Block upUpIfLocalVariableToBlock(VariableDefinition self) {
+		VariableDeclaration decl = self.upToVariableDeclaration();
+		return decl == null ? null : decl.upToBlock();
+	}
 }
 
 @GenerateAstNode
@@ -376,7 +394,7 @@ class VariableDefinitionEntryTemplate {
 	
 	@CopyMethod
 	static TypeReference getEffectiveTypeReference(VariableDefinitionEntry self) {
-		VariableDefinition parent = Ast.up(self, VariableDefinition.class);
+		VariableDefinition parent = self.upToVariableDefinition();
 		if (parent == null) throw new AstException(
 				self, "Cannot calculate type reference of a VariableDefinitionEntry without a VariableDefinition as parent");
 		
@@ -386,8 +404,24 @@ class VariableDefinitionEntryTemplate {
 	
 	@CopyMethod
 	static Modifiers getModifiersOfParent(VariableDefinitionEntry self) {
-		VariableDefinition parent = Ast.up(self, VariableDefinition.class);
+		VariableDefinition parent = self.upToVariableDefinition();
 		return parent == null ? new Modifiers() : parent.astModifiers();
+	}
+	
+	@CopyMethod
+	static TypeDeclaration upUpIfFieldToTypeDeclaration(VariableDefinitionEntry self) {
+		VariableDefinition def = self.upToVariableDefinition();
+		if (def == null) return null;
+		VariableDeclaration decl = def.upToVariableDeclaration();
+		return decl == null ? null : decl.upUpToTypeDeclaration();
+	}
+	
+	@CopyMethod
+	static Block upUpIfLocalVariableToBlock(VariableDefinitionEntry self) {
+		VariableDefinition def = self.upToVariableDefinition();
+		if (def == null) return null;
+		VariableDeclaration decl = def.upToVariableDeclaration();
+		return decl == null ? null : decl.upToBlock();
 	}
 }
 
@@ -1140,7 +1174,7 @@ class CommentTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class AnnotationMethodDeclarationTemplate {
 	Comment javadoc;
 	
@@ -1156,7 +1190,7 @@ class AnnotationMethodDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class MethodDeclarationTemplate {
 	Comment javadoc;
 	
@@ -1175,7 +1209,7 @@ class MethodDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class ConstructorDeclarationTemplate {
 	Comment javadoc;
 	
@@ -1190,12 +1224,12 @@ class ConstructorDeclarationTemplate {
 	//TODO test if our syntax checkers flag misnamed constructors.
 }
 
-@GenerateAstNode(implementing=TypeMember.class)
+@GenerateAstNode(implementing=TypeMember.class, mixin=TypeMemberMixin.class)
 class InstanceInitializerTemplate {
 	@ParentAccessor @Mandatory Block body;
 }
 
-@GenerateAstNode(implementing=TypeMember.class)
+@GenerateAstNode(implementing=TypeMember.class, mixin=TypeMemberMixin.class)
 class StaticInitializerTemplate {
 	@ParentAccessor @Mandatory Block body;
 }
@@ -1210,7 +1244,7 @@ class EnumTypeBodyTemplate {
 	@ParentAccessor List<EnumConstant> constants;
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class AnnotationDeclarationTemplate {
 	Comment javadoc;
 	
@@ -1225,7 +1259,7 @@ class AnnotationDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class}, mixin=TypeMemberMixin.class)
 class EmptyDeclarationTemplate {
 	@CopyMethod
 	static String getDescription(EmptyDeclaration self) {
@@ -1277,7 +1311,7 @@ class EmptyDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class ClassDeclarationTemplate {
 	Comment javadoc;
 	
@@ -1294,7 +1328,7 @@ class ClassDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class InterfaceDeclarationTemplate {
 	Comment javadoc;
 	
@@ -1310,7 +1344,7 @@ class InterfaceDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class EnumConstantTemplate {
 	Comment javadoc;
 	@ParentAccessor TypeBody body;
@@ -1324,7 +1358,7 @@ class EnumConstantTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class})
+@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class EnumDeclarationTemplate {
 	Comment javadoc;
 	
