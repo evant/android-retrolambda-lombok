@@ -7,3 +7,5 @@ build
 report
 .apt_generated
 *.class
+cobertura.ser
+

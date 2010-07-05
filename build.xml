@@ -146,7 +146,7 @@
 		</ivy:compile>
 	</target>
 	
-	<target name="build-cobertura-instrumentation" depends="compile, ensureTestDeps" description="adds the instrumentation to the classes">
+	<target name="build-cobertura-instrumentation" depends="compile, ensureTestDeps">
 		<taskdef name="cobertura-instrument" classname="net.sourceforge.cobertura.ant.InstrumentTask" classpathref="test.path" />
 		
 		<mkdir dir="instrumented/lombok.ast" />
@@ -159,15 +159,18 @@
 	
 	<target name="build-current-cobertura-report" depends="ensureTestDeps">
 		<taskdef name="cobertura-report" classname="net.sourceforge.cobertura.ant.ReportTask" classpathref="test.path" />
-		<mkdir dir="report/cobertura" />
-		<cobertura-report format="html" destdir="report/cobertura">
+		<mkdir dir="build/cobertura" />
+		<cobertura-report format="html" destdir="build/cobertura">
 			<fileset dir="src/printer">
 				<include name="**/*.java" />
 			</fileset>
 		</cobertura-report>
 	</target>
 	
-	<target name="build-cobertura-report" depends="clean, generateSource, compile, build-cobertura-instrumentation, test, build-current-cobertura-report" />
+	<target name="show-cobertura-report" depends="clean, generateSource, compile, build-cobertura-instrumentation, test, build-current-cobertura-report"
+		description="Runs tests and shows a test report.">
+		<ivy:show-html file="build/cobertura/index.html" />
+	</target>
 		
 	<target name="config-ivy" depends="ensure-ipp">
 		<ivy:configure file="buildScripts/ivysettings.xml" />
