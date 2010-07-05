@@ -55,7 +55,7 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 	}
 	
 	protected void createRootContext(MatchHandler<V> matchHandler) {
-		rootContext = new MatcherContext<V>(inputBuffer, startLocation, parseErrors, matchHandler, rootMatcher);
+		rootContext = new MatcherContext<V>(inputBuffer, parseErrors, matchHandler, rootMatcher);
 	}
 	
 	/**
@@ -154,7 +154,7 @@ public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 		
 		public boolean match(MatcherContext<V> context) {
 			String path = stack.isEmpty() ? "" : stack.get(stack.size() - 1).getPath();
-			path += String.format("/%s[%d]", context.getMatcher().getLabel(), context.getCurrentLocation().getIndex());
+			path += String.format("/%s[%d]", context.getMatcher().getLabel(), context.getCurrentIndex());
 			ReportEntry<V> report = new ReportEntry<V>(path);
 			stack.add(report);
 			boolean result = context.getMatcher().match(context);

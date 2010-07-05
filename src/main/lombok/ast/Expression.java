@@ -23,7 +23,7 @@ package lombok.ast;
 
 import java.util.List;
 
-public interface Expression extends Node {
+public interface Expression extends Node, AnnotationValue {
 	/**
 	 * Returns the actual amount of parentheses physically around this expression.
 	 * 
@@ -45,7 +45,7 @@ public interface Expression extends Node {
 	 * 
 	 * @see #getParens()
 	 */
-	List<Position> getParensPositions();
+	List<Position> astParensPositions();
 	
 	/**
 	 * Returns {@code true} if the expression would need parentheses because without them the interpretation

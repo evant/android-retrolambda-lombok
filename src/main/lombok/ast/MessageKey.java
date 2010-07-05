@@ -21,6 +21,8 @@
  */
 package lombok.ast;
 
-public interface Literal extends Node {
-	public String rawValue();
+public interface MessageKey {
+	public String getKey();
+	
+	public String toString();
 }

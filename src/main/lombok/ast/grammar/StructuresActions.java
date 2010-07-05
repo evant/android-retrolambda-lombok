@@ -42,6 +42,7 @@ import lombok.ast.KeywordModifier;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.NormalTypeBody;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.Position;
 import lombok.ast.StaticInitializer;
@@ -65,7 +66,7 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createKeywordModifier(String text) {
-		return posify(new KeywordModifier().setName(text));
+		return posify(new KeywordModifier().astName(text));
 	}
 	
 	public Node createMethodDeclaration(Node modifiers, Node typeParameters, Node resultType, Node name,
@@ -77,20 +78,16 @@ public class StructuresActions extends SourceActions {
 			for (Node param : ((TemporaryNode.MethodParameters)params).parameters) {
 				decl.rawParameters().addToEnd(param);
 			}
-		} else {
-			if (params != null) {
-				//TODO report dangling node
-			}
-		}
+		} else decl.addDanglingNode(params);
 		
-		decl.setRawMethodName(name).setRawBody(body);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+		decl.astMethodName(createIdentifierIfNeeded(name, currentPos())).rawBody(body);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		int extraDims = dims == null ? 0 : dims.size();
 		Node returnType = resultType;
 		if (extraDims > 0 && returnType instanceof TypeReference) {
-			((TypeReference)returnType).setArrayDimensions(((TypeReference)returnType).getArrayDimensions() + extraDims);
+			((TypeReference)returnType).astArrayDimensions(((TypeReference)returnType).astArrayDimensions() + extraDims);
 		}
-		decl.setRawReturnTypeReference(returnType);
+		decl.rawReturnTypeReference(returnType);
 		if (typeParameters instanceof TemporaryNode.OrphanedTypeVariables) {
 			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)typeParameters;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
@@ -112,8 +109,9 @@ public class StructuresActions extends SourceActions {
 	public Node createConstructorDeclaration(Node modifiers, Node typeParameters, Node name,
 			Node params, Node throwsHead, List<Node> throwsTail, Node body) {
 		
-		ConstructorDeclaration decl = new ConstructorDeclaration().setRawTypeName(name).setRawBody(body);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+		ConstructorDeclaration decl = new ConstructorDeclaration().astTypeName(
+				createIdentifierIfNeeded(name, currentPos())).rawBody(body);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		if (typeParameters instanceof TemporaryNode.OrphanedTypeVariables) {
 			for (Node typeParameter : ((TemporaryNode.OrphanedTypeVariables)typeParameters).variables) {
 				decl.rawTypeVariables().addToEnd(typeParameter);
@@ -124,11 +122,7 @@ public class StructuresActions extends SourceActions {
 			for (Node param : ((TemporaryNode.MethodParameters)params).parameters) {
 				decl.rawParameters().addToEnd(param);
 			}
-		} else {
-			if (params != null) {
-				//TODO report dangling node
-			}
-		}
+		} else decl.addDanglingNode(params);
 		
 		if (throwsHead != null) decl.rawThrownTypeReferences().addToEnd(throwsHead);
 		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.rawThrownTypeReferences().addToEnd(n);
@@ -148,8 +142,8 @@ public class StructuresActions extends SourceActions {
 			Node modifiers, Node type, String varargs, Node name,
 			List<org.parboiled.Node<Node>> dimOpen, List<org.parboiled.Node<Node>> dimClosed) {
 		
-		VariableDefinitionEntry e = new VariableDefinitionEntry().setRawName(name)
-				.setArrayDimensions(dimOpen == null ? 0 : dimOpen.size());
+		VariableDefinitionEntry e = new VariableDefinitionEntry().astName(createIdentifierIfNeeded(name, currentPos()))
+				.astArrayDimensions(dimOpen == null ? 0 : dimOpen.size());
 		if (dimOpen != null) for (org.parboiled.Node<Node> pNode : dimOpen) {
 			source.registerStructure(e, pNode);
 		}
@@ -157,35 +151,36 @@ public class StructuresActions extends SourceActions {
 			source.registerStructure(e, pNode);
 		}
 		if (name != null) e.setPosition(new Position(name.getPosition().getStart(), currentPos()));
-		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
-		if (varargs != null && !varargs.trim().isEmpty()) decl.setVarargs(true);
+		VariableDefinition decl = new VariableDefinition().rawTypeReference(type);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
+		if (varargs != null && !varargs.trim().isEmpty()) decl.astVarargs(true);
 		decl.rawVariables().addToEnd(e);
 		return posify(decl);
 	}
 	
 	public Node createInstanceInitializer(Node body) {
-		return posify(new InstanceInitializer().setRawBody(body));
+		return posify(new InstanceInitializer().rawBody(body));
 	}
 	
 	public Node createStaticInitializer(Node body) {
-		return posify(new StaticInitializer().setRawBody(body));
+		return posify(new StaticInitializer().rawBody(body));
 	}
 	
 	public Node createFieldDeclaration(Node variableDefinition, Node modifiers) {
 		if (modifiers != null && variableDefinition instanceof VariableDefinition) {
-			((VariableDefinition)variableDefinition).setRawModifiers(modifiers);
+			((VariableDefinition)variableDefinition).astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		}
 		
-		return posify(new VariableDeclaration().setRawDefinition(variableDefinition));
+		return posify(new VariableDeclaration().rawDefinition(variableDefinition));
 	}
 	
 	public Node createVariableDefinitionPart(Node varName, List<String> dims, Node initializer) {
-		return posify(new VariableDefinitionEntry().setRawName(varName).setRawInitializer(initializer).setArrayDimensions(dims == null ? 0 : dims.size()));
+		return posify(new VariableDefinitionEntry().astName(createIdentifierIfNeeded(varName, currentPos()))
+				.rawInitializer(initializer).astArrayDimensions(dims == null ? 0 : dims.size()));
 	}
 	
 	public Node createVariableDefinition(Node type, Node head, List<Node> tail) {
-		VariableDefinition result = new VariableDefinition().setRawTypeReference(type);
+		VariableDefinition result = new VariableDefinition().rawTypeReference(type);
 		if (head != null) result.rawVariables().addToEnd(head);
 		if (tail != null) for (Node n : tail) if (n != null) result.rawVariables().addToEnd(n);
 		return posify(result);
@@ -199,7 +194,7 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createAnnotationElement(Node name, Node value) {
-		return posify(new AnnotationElement().setRawName(name).setRawValue(value));
+		return posify(new AnnotationElement().astName(createIdentifierIfNeeded(name, currentPos())).rawValue(value));
 	}
 	
 	public Node createAnnotationFromElements(Node head, List<Node> tail) {
@@ -212,16 +207,16 @@ public class StructuresActions extends SourceActions {
 	public Node createAnnotationFromElement(Node value) {
 		Annotation result = new Annotation();
 		if (value != null) {
-			result.rawElements().addToEnd(posify(new AnnotationElement().setRawValue(value)));
+			result.rawElements().addToEnd(posify(new AnnotationElement().rawValue(value)));
 		}
 		return posify(result);
 	}
 	
 	public Node createAnnotation(Node type, Node annotation) {
 		if (annotation instanceof Annotation) {
-			return posify(((Annotation)annotation).setRawAnnotationTypeReference(type));
+			return posify(((Annotation)annotation).rawAnnotationTypeReference(type));
 		}
-		return posify(new Annotation().setRawAnnotationTypeReference(type));
+		return posify(new Annotation().rawAnnotationTypeReference(type));
 	}
 	
 	public Node createExtendsClause(Node head, List<Node> tail) {
@@ -239,8 +234,8 @@ public class StructuresActions extends SourceActions {
 	}
 	
 	public Node createInterfaceDeclaration(Node modifiers, Node name, Node params, Node body, List<Node> addons) {
-		InterfaceDeclaration decl = new InterfaceDeclaration().setRawName(name).setRawBody(body);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+		InterfaceDeclaration decl = new InterfaceDeclaration().astName(createIdentifierIfNeeded(name, currentPos())).rawBody(body);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		if (params instanceof TemporaryNode.OrphanedTypeVariables) {
 			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)params;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
@@ -264,8 +259,8 @@ public class StructuresActions extends SourceActions {
 	public Node createTypeDeclaration(String kind, Node modifiers, Node name, Node params, Node body, List<Node> addons) {
 		if (kind.equals("interface")) return createInterfaceDeclaration(modifiers, name, params, body, addons);
 		
-		ClassDeclaration decl = new ClassDeclaration().setRawName(name).setRawBody(body);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+		ClassDeclaration decl = new ClassDeclaration().astName(createIdentifierIfNeeded(name, currentPos())).rawBody(body);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		if (params instanceof TemporaryNode.OrphanedTypeVariables) {
 			TemporaryNode.OrphanedTypeVariables otv = (TemporaryNode.OrphanedTypeVariables)params;
 			if (otv.variables != null) for (Node typeParameter : otv.variables) {
@@ -280,27 +275,27 @@ public class StructuresActions extends SourceActions {
 				List<Node> superClasses = ((TemporaryNode.ExtendsClause)n).superTypes;
 				if (superClasses != null && superClasses.size() > 0) {
 					//if (superClasses.size() > 1) //TODO add error node: 'extends' on class can only accept 1 type.
-					decl.setRawExtending(superClasses.get(0));
+					decl.rawExtending(superClasses.get(0));
 				}
 			}
 			
 			if (n instanceof TemporaryNode.ImplementsClause) {
 				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
 				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
-				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.rawImplementing().addToEnd(i);
+				if (interfaces != null) for (Node i : interfaces) decl.rawImplementing().addToEnd(i);
 			}
 		}
 		return posify(decl);
 	}
 	
-	public Node createTypeBody(List<Node> values) {
-		TypeBody body = new TypeBody();
-		if (values != null) for (Node n : values) if (n != null) body.rawMembers().addToEnd(n);
+	public Node createNormalTypeBody(List<Node> values) {
+		NormalTypeBody body = new NormalTypeBody();
+		if (values != null) for (Node n : values) body.rawMembers().addToEnd(n);
 		return posify(body);
 	}
 	
 	public Node createEnumConstant(List<Node> annotations, Node name, Node arguments, Node body) {
-		EnumConstant result = new EnumConstant().setRawName(name).setRawBody(body);
+		EnumConstant result = new EnumConstant().astName(createIdentifierIfNeeded(name, currentPos())).rawBody(body);
 		if (annotations != null) for (Node n : annotations) if (n != null) result.rawAnnotations().addToEnd(n);
 		if (arguments instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
@@ -313,7 +308,7 @@ public class StructuresActions extends SourceActions {
 	public Node createEnumBody(Node head, List<Node> tail, Node typeBody) {
 		EnumTypeBody body = new EnumTypeBody();
 		if (head != null) body.rawConstants().addToEnd(head);
-		if (tail != null) for (Node n : tail) if (n != null) body.rawConstants().addToEnd(n);
+		if (tail != null) for (Node n : tail) body.rawConstants().addToEnd(n);
 		if (typeBody instanceof TypeBody) {
 			body.rawMembers().migrateAllFrom(((TypeBody)typeBody).rawMembers());
 		}
@@ -322,38 +317,39 @@ public class StructuresActions extends SourceActions {
 	
 	public Node createEnumDeclaration(Node modifiers, Node name, Node body, List<Node> addons) {
 		EnumDeclaration decl = new EnumDeclaration();
-		decl.setRawName(name).setRawBody(body);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+		decl.astName(createIdentifierIfNeeded(name, currentPos())).rawBody(body);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		if (addons != null) for (Node n : addons) {
 			//if (n instanceof ExtendsClause) //TODO add error node: implements not allowed here.
 			if (n instanceof TemporaryNode.ImplementsClause) {
 				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
 				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
-				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.rawImplementing().addToEnd(i);
+				if (interfaces != null) for (Node i : interfaces) decl.rawImplementing().addToEnd(i);
 			}
 		}
 		return posify(decl);
 	}
 	
 	public Node createAnnotationDeclaration(Node modifiers, Node name, List<Node> members, org.parboiled.Node<Node> typeOpen, org.parboiled.Node<Node> typeClose) {
-		Node typeBody = createTypeBody(members);
+		Node typeBody = createNormalTypeBody(members);
 		if (typeOpen != null && typeClose != null) {
-			typeBody.setPosition(new Position(typeOpen.getStartLocation().getIndex(), typeClose.getEndLocation().getIndex()));
+			typeBody.setPosition(new Position(typeOpen.getStartIndex(), typeClose.getEndIndex()));
 		}
-		AnnotationDeclaration decl = new AnnotationDeclaration().setRawName(name).setRawBody(typeBody);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+		AnnotationDeclaration decl = new AnnotationDeclaration().astName(createIdentifierIfNeeded(name, currentPos())).rawBody(typeBody);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		return posify(decl);
 	}
 	
 	public Node createAnnotationMethodDeclaration(Node modifiers, Node typeReference, Node name, List<org.parboiled.Node<Node>> dims, Node defaultValue) {
-		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration().setRawMethodName(name).setRawDefaultValue(defaultValue);
-		if (modifiers != null) decl.setRawModifiers(modifiers);
+		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration()
+				.astMethodName(createIdentifierIfNeeded(name, currentPos())).rawDefaultValue(defaultValue);
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		int extraDims = dims == null ? 0 : dims.size();
 		Node returnType = typeReference;
 		if (extraDims > 0 && returnType instanceof TypeReference) {
-			((TypeReference)returnType).setArrayDimensions(((TypeReference)returnType).getArrayDimensions() + extraDims);
+			((TypeReference)returnType).astArrayDimensions(((TypeReference)returnType).astArrayDimensions() + extraDims);
 		}
-		decl.setRawReturnTypeReference(returnType);
+		decl.rawReturnTypeReference(returnType);
 		return posify(decl);
 	}
 	
@@ -368,14 +364,14 @@ public class StructuresActions extends SourceActions {
 	public Node createImportDeclaration(String staticKeyword, Node head, List<Node> tail, String dotStar) {
 		ImportDeclaration decl = new ImportDeclaration();
 		if (head != null) decl.rawParts().addToEnd(head);
-		if (tail != null) for (Node n : tail) if (n != null) decl.rawParts().addToEnd(n);
-		if (staticKeyword != null && staticKeyword.length() > 0) decl.setStaticImport(true);
-		if (dotStar != null && dotStar.length() > 0) decl.setStarImport(true);
+		if (tail != null) for (Node n : tail) decl.rawParts().addToEnd(n);
+		if (staticKeyword != null && staticKeyword.length() > 0) decl.astStaticImport(true);
+		if (dotStar != null && dotStar.length() > 0) decl.astStarImport(true);
 		return posify(decl);
 	}
 	
 	public Node createCompilationUnit(Node packageDeclaration, List<Node> importDeclarations, List<Node> typeDeclarations) {
-		CompilationUnit unit = new CompilationUnit().setRawPackageDeclaration(packageDeclaration);
+		CompilationUnit unit = new CompilationUnit().rawPackageDeclaration(packageDeclaration);
 		if (importDeclarations != null) for (Node n : importDeclarations) if (n != null) unit.rawImportDeclarations().addToEnd(n);
 		if (typeDeclarations != null) for (Node n : typeDeclarations) if (n != null) unit.rawTypeDeclarations().addToEnd(n);
 		return posify(unit);

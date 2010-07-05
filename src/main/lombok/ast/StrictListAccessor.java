@@ -31,7 +31,6 @@ public interface StrictListAccessor<T extends Node, P extends Node> extends Iter
 	int size();
 	T first();
 	T last();
-	T get(int idx);
 	boolean contains(Node source);
 	P migrateAllFrom(StrictListAccessor<? extends T, ?> otherList);
 	P addToStart(T... node);

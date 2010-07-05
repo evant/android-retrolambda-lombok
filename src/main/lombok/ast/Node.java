@@ -24,17 +24,35 @@ package lombok.ast;
 import java.util.List;
 
 public interface Node {
+	/**
+	 * Returns {@code true} if this node is generated (not actually present in the source).
+	 */
 	boolean isGenerated();
 	
+	/**
+	 * Returns the node that is responsible for generating this node. Returns {@code null} if this node is not generated.
+	 */
 	Node getGeneratedBy();
 	
 	boolean hasParent();
 	
 	List<Node> getChildren();
 	
-	Node detach(Node child);
+	/**
+	 * If the provided <em>child</em> node is a child of this node, the child/parent link will be deleted. The child's parentage is set to unparented,
+	 * and whichever property in this node is linking to the child is cleared. If <em>child</em> is not a child of this node, nothing happens.
+	 * 
+	 * @see #unparent()
+	 */
+	void detach(Node child);
 	
-	Node unparent();
+	/**
+	 * Severs the child/parent link between this node and its parent. This node's parentage will be set to unparented, and whichever property
+	 * in the parent node is linking to this node is cleared. If this node is already unparented nothing happens.
+	 * 
+	 * @see #detach(Node)
+	 */
+	void unparent();
 	
 	Node setPosition(Position position);
 	
@@ -47,4 +65,16 @@ public interface Node {
 	Node getParent();
 	
 	Position getPosition();
+	
+	void addDanglingNode(Node dangler);
+	
+	List<Node> getDanglingNodes();
+	
+	void removeDanglingNode(Node dangler);
+	
+	Node addMessage(Message message);
+	
+	boolean hasMessage(String key);
+	
+	List<Message> getMessages();
 }

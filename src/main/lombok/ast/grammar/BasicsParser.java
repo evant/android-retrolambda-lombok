@@ -30,9 +30,9 @@ import lombok.ast.Node;
 import org.parboiled.BaseParser;
 import org.parboiled.MatcherContext;
 import org.parboiled.Rule;
-import org.parboiled.matchers.CharactersMatcher;
+import org.parboiled.annotations.SuppressSubnodes;
+import org.parboiled.matchers.CharSetMatcher;
 import org.parboiled.support.Characters;
-import org.parboiled.support.Leaf;
 
 /**
  * Contains the basics of java parsing: Whitespace and comment handling, as well as applying backslash-u escapes.
@@ -50,7 +50,7 @@ public class BasicsParser extends BaseParser<Node> {
 	 * Eats up any whitespace and comments at the current position.
 	 */
 	public Rule optWS() {
-		return zeroOrMore(firstOf(comment(), whitespaceChar())).label("ws");
+		return ZeroOrMore(FirstOf(comment(), whitespaceChar())).label("ws");
 	}
 	
 	/**
@@ -58,27 +58,27 @@ public class BasicsParser extends BaseParser<Node> {
 	 * but only matches if there is at least one comment or whitespace character to gobble up.
 	 */
 	public Rule mandatoryWS() {
-		return oneOrMore(firstOf(comment(), whitespaceChar())).label("ws");
+		return OneOrMore(FirstOf(comment(), whitespaceChar())).label("ws");
 	}
 	
 	public Rule testLexBreak() {
-		return testNot(identifierPart());
+		return TestNot(identifierPart());
 	}
 	
 	public Rule identifier() {
-		return sequence(
+		return Sequence(
 				identifierRaw().label("identifier"),
-				actions.checkIfKeyword(TEXT("identifier")),
-				SET(actions.createIdentifier(TEXT("identifier"), NODE("identifier"))),
+				actions.checkIfKeyword(text("identifier")),
+				set(actions.createIdentifier(text("identifier"), node("identifier"))),
 				optWS());
 	}
 	
 	public Rule dotIdentifier() {
-		return sequence(
-				ch('.'), optWS(),
+		return Sequence(
+				Ch('.'), optWS(),
 				identifierRaw().label("identifier"),
-				actions.checkIfKeyword(TEXT("identifier")),
-				SET(actions.createIdentifier(TEXT("identifier"), NODE("identifier"))),
+				actions.checkIfKeyword(text("identifier")),
+				set(actions.createIdentifier(text("identifier"), node("identifier"))),
 				optWS());
 	}
 	
@@ -97,24 +97,24 @@ public class BasicsParser extends BaseParser<Node> {
 			"public", "private", "protected"
 	));
 	
-	@Leaf
+	@SuppressSubnodes
 	public Rule identifierRaw() {
-		return sequence(new JavaIdentifierStartMatcher(), zeroOrMore(new JavaIdentifierPartMatcher()));
+		return Sequence(new JavaIdentifierStartMatcher(), ZeroOrMore(new JavaIdentifierPartMatcher()));
 	}
 	
 	public Rule identifierPart() {
 		return new JavaIdentifierPartMatcher();
 	}
 	
-	private static class JavaIdentifierPartMatcher extends CharactersMatcher<Node> {
+	private static class JavaIdentifierPartMatcher extends CharSetMatcher<Node> {
 		public JavaIdentifierPartMatcher() {
 			super(Characters.of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$"));
 		}
 		
 		@Override public boolean match(MatcherContext<Node> context) {
-			char current = context.getCurrentLocation().getChar();
+			char current = context.getCurrentChar();
 			if (Character.isJavaIdentifierPart(current)) {
-				context.advanceInputLocation();
+				context.advanceIndex();
 				context.createNode();
 				return true;
 			}
@@ -122,15 +122,15 @@ public class BasicsParser extends BaseParser<Node> {
 		}
 	}
 	
-	private static class JavaIdentifierStartMatcher extends CharactersMatcher<Node> {
+	private static class JavaIdentifierStartMatcher extends CharSetMatcher<Node> {
 		public JavaIdentifierStartMatcher() {
 			super(Characters.of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$"));
 		}
 		
 		@Override public boolean match(MatcherContext<Node> context) {
-			char current = context.getCurrentLocation().getChar();
+			char current = context.getCurrentChar();
 			if (Character.isJavaIdentifierStart(current)) {
-				context.advanceInputLocation();
+				context.advanceIndex();
 				context.createNode();
 				return true;
 			}
@@ -145,34 +145,34 @@ public class BasicsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.7
 	 */
 	public Rule comment() {
-		return sequence(
-				firstOf(lineComment(), blockComment()),
-				actions.logComment(LAST_TEXT()));
+		return Sequence(
+				FirstOf(lineComment(), blockComment()),
+				actions.logComment(lastText()));
 	}
 	
-	@Leaf
+	@SuppressSubnodes
 	Rule lineComment() {
-		return sequence(string("//"), zeroOrMore(sequence(testNot(charSet("\r\n")), any())), firstOf(string("\r\n"), ch('\r'), ch('\n'), test(eoi())));
+		return Sequence(String("//"), ZeroOrMore(Sequence(TestNot(CharSet("\r\n")), Any())), FirstOf(String("\r\n"), Ch('\r'), Ch('\n'), Test(Eoi())));
 	}
 	
-	@Leaf
+	@SuppressSubnodes
 	Rule blockComment() {
-		return sequence("/*", zeroOrMore(sequence(testNot("*/"), any())), "*/");
+		return Sequence("/*", ZeroOrMore(Sequence(TestNot("*/"), Any())), "*/");
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.4
 	 */
-	@Leaf
+	@SuppressSubnodes
 	Rule whitespaceChar() {
-		return firstOf(ch(' '), ch('\t'), ch('\f'), lineTerminator());
+		return FirstOf(Ch(' '), Ch('\t'), Ch('\f'), lineTerminator());
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.6
 	 */
-	@Leaf
+	@SuppressSubnodes
 	public Rule lineTerminator() {
-		return firstOf(string("\r\n").label("\\r\\n"), ch('\r').label("\\r"), ch('\n').label("\\n"));
+		return FirstOf(String("\r\n").label("\\r\\n"), Ch('\r').label("\\r"), Ch('\n').label("\\n"));
 	}
 }

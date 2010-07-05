@@ -33,10 +33,10 @@ public class BasicsActions extends SourceActions {
 	
 	public Node createIdentifier(String text, org.parboiled.Node<Node> rawIdentifier) {
 		Identifier id = new Identifier();
-		if (text != null) id.setName(text);
+		if (text != null) id.astValue(text);
 		
-		int start = rawIdentifier.getStartLocation().getIndex();
-		int end = Math.max(start, rawIdentifier.getEndLocation().getIndex());
+		int start = rawIdentifier.getStartIndex();
+		int end = Math.max(start, rawIdentifier.getEndIndex());
 		id.setPosition(new Position(start, end));
 		return id;
 	}
@@ -53,7 +53,7 @@ public class BasicsActions extends SourceActions {
 	public boolean logBlockComment(String text) {
 		if (text.startsWith("/*")) text = text.substring(2);
 		if (text.endsWith("*/")) text = text.substring(0, text.length() - 2);
-		Comment c = new Comment().setBlockComment(true).setContent(text);
+		Comment c = new Comment().astBlockComment(true).astContent(text);
 		c.setPosition(new Position(startPos(), currentPos()));
 		source.registerComment(getContext(), c);
 		return true;
@@ -61,7 +61,7 @@ public class BasicsActions extends SourceActions {
 	
 	public boolean logLineComment(String text) {
 		if (text.startsWith("//")) text = text.substring(2);
-		Comment c = new Comment().setBlockComment(false).setContent(text);
+		Comment c = new Comment().astBlockComment(false).astContent(text);
 		c.setPosition(new Position(startPos(), currentPos()));
 		source.registerComment(getContext(), c);
 		return true;

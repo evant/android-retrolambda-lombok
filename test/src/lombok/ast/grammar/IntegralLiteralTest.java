@@ -34,138 +34,138 @@ import org.junit.Test;
 public class IntegralLiteralTest {
 	@Test
 	public void testBasics() {
-		IntegralLiteral n = new IntegralLiteral().setIntValue(0);
+		IntegralLiteral n = new IntegralLiteral().astIntValue(0);
 		assertFalse(n.isMarkedAsLong());
 		assertNull(n.getErrorReasonForValue());
-		n.setLongValue(0);
+		n.astLongValue(0);
 		assertTrue(n.isMarkedAsLong());
 		assertNull(n.getErrorReasonForValue());
 	}
 	
 	@Test
 	public void testIntMinValue() {
-		IntegralLiteral n = new IntegralLiteral().setIntValue(Integer.MIN_VALUE);
+		IntegralLiteral n = new IntegralLiteral().astIntValue(Integer.MIN_VALUE);
 		testMinValue(n);
 	}
 	
 	@Test
 	public void testLongMinValue() {
-		IntegralLiteral n = new IntegralLiteral().setLongValue(Long.MIN_VALUE);
+		IntegralLiteral n = new IntegralLiteral().astLongValue(Long.MIN_VALUE);
 		testMinValue(n);
 	}
 	
 	private void testMinValue(IntegralLiteral n) {
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNotNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.OCTAL);
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.HEXADECIMAL);
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.DECIMAL);
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNotNull(n.getErrorReasonForValue());
 		
-		UnaryExpression unary = new UnaryExpression().setOperand(n);
+		UnaryExpression unary = new UnaryExpression().astOperand(n);
 		assertNotNull(n.getErrorReasonForValue());
-		unary.setOperator(UnaryOperator.UNARY_MINUS);
+		unary.astOperator(UnaryOperator.UNARY_MINUS);
 		assertNull(n.getErrorReasonForValue());
-		n.getParensPositions().add(Position.UNPLACED);
+		n.astParensPositions().add(Position.UNPLACED);
 		assertNotNull(n.getErrorReasonForValue());
 	}
 	
 	@Test
 	public void testIntNegativeValue() {
-		IntegralLiteral n = new IntegralLiteral().setIntValue(-1);
+		IntegralLiteral n = new IntegralLiteral().astIntValue(-1);
 		testNegativeValue(n);
 	}
 	
 	@Test
 	public void testLongNegativeValue() {
-		IntegralLiteral n = new IntegralLiteral().setLongValue(-1L);
+		IntegralLiteral n = new IntegralLiteral().astLongValue(-1L);
 		testNegativeValue(n);
 	}
 	
 	private void testNegativeValue(IntegralLiteral n) {
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNotNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.OCTAL);
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.HEXADECIMAL);
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.DECIMAL);
-		assertFalse("raw value starts with -", n.getRawValue().startsWith("-"));
+		assertFalse("raw value starts with -", n.rawValue().startsWith("-"));
 		assertNotNull(n.getErrorReasonForValue());
 		
-		new UnaryExpression().setOperator(UnaryOperator.UNARY_MINUS).setOperand(n);
+		new UnaryExpression().astOperator(UnaryOperator.UNARY_MINUS).astOperand(n);
 		assertNotNull(n.getErrorReasonForValue());
 	}
 	
 	@Test
 	public void testToRaw() {
-		IntegralLiteral n = new IntegralLiteral().setLongValue(32);
-		assertEquals("32L", n.getRawValue());
+		IntegralLiteral n = new IntegralLiteral().astLongValue(32);
+		assertEquals("32L", n.rawValue());
 		n.setLiteralType(LiteralType.HEXADECIMAL);
-		assertEquals("0x20L", n.getRawValue());
+		assertEquals("0x20L", n.rawValue());
 		assertNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.OCTAL);
-		assertEquals("040L", n.getRawValue());
+		assertEquals("040L", n.rawValue());
 		
-		n.setIntValue(0);
+		n.astIntValue(0);
 		n.setLiteralType(LiteralType.DECIMAL);
-		assertEquals("0", n.getRawValue());
+		assertEquals("0", n.rawValue());
 		n.setLiteralType(LiteralType.HEXADECIMAL);
-		assertEquals("0x0", n.getRawValue());
+		assertEquals("0x0", n.rawValue());
 		assertNull(n.getErrorReasonForValue());
 		n.setLiteralType(LiteralType.OCTAL);
-		assertEquals("00", n.getRawValue());
+		assertEquals("00", n.rawValue());
 		
 		n.setLiteralType(LiteralType.DECIMAL);
-		n.setIntValue(Integer.MIN_VALUE);
-		assertEquals("2147483648", n.getRawValue());
-		n.setLongValue(Long.MIN_VALUE);
-		assertEquals("9223372036854775808L", n.getRawValue());
+		n.astIntValue(Integer.MIN_VALUE);
+		assertEquals("2147483648", n.rawValue());
+		n.astLongValue(Long.MIN_VALUE);
+		assertEquals("9223372036854775808L", n.rawValue());
 	}
 	
 	@Test
 	public void testFromRaw() {
 		IntegralLiteral n = new IntegralLiteral();
 		
-		n.setRawValue("0");
+		n.rawValue("0");
 		assertEquals(LiteralType.DECIMAL, n.getLiteralType());
-		assertEquals(0, n.intValue());
+		assertEquals(0, n.astIntValue());
 		assertFalse(n.isMarkedAsLong());
-		n.setRawValue("00");
+		n.rawValue("00");
 		assertEquals(LiteralType.OCTAL, n.getLiteralType());
-		assertEquals(0, n.intValue());
+		assertEquals(0, n.astIntValue());
 		assertFalse(n.isMarkedAsLong());
 		assertNull(n.getErrorReasonForValue());
-		n.setRawValue("0x0");
+		n.rawValue("0x0");
 		assertEquals(LiteralType.HEXADECIMAL, n.getLiteralType());
-		assertEquals(0, n.intValue());
+		assertEquals(0, n.astIntValue());
 		assertFalse(n.isMarkedAsLong());
-		n.setRawValue("00L");
+		n.rawValue("00L");
 		assertEquals(LiteralType.OCTAL, n.getLiteralType());
-		assertEquals(0, n.longValue());
+		assertEquals(0, n.astLongValue());
 		assertTrue(n.isMarkedAsLong());
 		assertNull(n.getErrorReasonForValue());
 		
-		n.setRawValue("0x801291FD");
+		n.rawValue("0x801291FD");
 		assertEquals(LiteralType.HEXADECIMAL, n.getLiteralType());
-		assertEquals(0x801291FD, n.intValue());
+		assertEquals(0x801291FD, n.astIntValue());
 		assertFalse(n.isMarkedAsLong());
 		assertNull(n.getErrorReasonForValue());
 		
-		n.setRawValue("0xAC45005D12DEAAFFL");
+		n.rawValue("0xAC45005D12DEAAFFL");
 		assertEquals(LiteralType.HEXADECIMAL, n.getLiteralType());
-		assertEquals(0xAC45005D12DEAAFFL, n.longValue());
+		assertEquals(0xAC45005D12DEAAFFL, n.astLongValue());
 		assertTrue(n.isMarkedAsLong());
 		assertNull(n.getErrorReasonForValue());
 		
-		n.setRawValue("0xAC45005D12DEAAFF");
+		n.rawValue("0xAC45005D12DEAAFF");
 		assertEquals(LiteralType.HEXADECIMAL, n.getLiteralType());
 		assertFalse(n.isMarkedAsLong());
 		assertNotNull(n.getErrorReasonForValue());
@@ -173,13 +173,13 @@ public class IntegralLiteralTest {
 	
 	@Test
 	public void testOversizedNumbers() {
-		IntegralLiteral n = new IntegralLiteral().setRawValue("100000000000");
+		IntegralLiteral n = new IntegralLiteral().rawValue("100000000000");
 		assertNotNull(n.getErrorReasonForValue());
 		
-		n.setRawValue("100000000000L");
+		n.rawValue("100000000000L");
 		assertNull(n.getErrorReasonForValue());
 		
-		n.setRawValue("100000000000000000000000000L");
+		n.rawValue("100000000000000000000000000L");
 		assertNotNull(n.getErrorReasonForValue());
 	}
 }

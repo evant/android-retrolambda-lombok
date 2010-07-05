@@ -22,25 +22,19 @@
 package lombok.ast;
 
 public class NullLiteral extends AbstractNode.WithParens implements Literal, Expression {
-	private String rawValue;
-	private String errorReasonForValue = "Missing value";
+	private String rawValue = "null";
+	private String errorReasonForValue;
 	
 	@Override
 	public boolean isStatementExpression() {
 		return false;
 	}
 	
-	public NullLiteral setAsValid() {
-		this.rawValue = "null";
-		this.errorReasonForValue = null;
-		return this;
-	}
-	
 	public String getErrorReasonForValue() {
 		return errorReasonForValue;
 	}
 	
-	public NullLiteral setRawValue(String raw) {
+	public NullLiteral rawValue(String raw) {
 		if (raw == null) {
 			this.rawValue = null;
 			this.errorReasonForValue = "Missing value";
@@ -57,11 +51,12 @@ public class NullLiteral extends AbstractNode.WithParens implements Literal, Exp
 		return this;
 	}
 	
-	public String getRawValue() {
+	@Override
+	public String rawValue() {
 		return rawValue;
 	}
 	
-	public boolean isValid() {
+	public boolean astIsValid() {
 		return errorReasonForValue == null;
 	}
 	

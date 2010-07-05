@@ -19,19 +19,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package lombok.ast.template;
+package lombok.ast;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import lombok.Data;
 
-/**
- * Allows you to configure a default value for any field in a template marked with {@link GenerateAstNode}. The {@code value} of this annotation should contain
- * a string literal that would be parsed as a legal java expression in a java source file. For example: {@code "new Modifiers()"}.
- */
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.FIELD)
-public @interface InitialValue {
-	String value();
+@Data
+public class Message {
+	private final boolean error;
+	private final MessageKey key;
+	private final String message;
+	
+	public static Message warning(MessageKey key, String message) {
+		return new Message(false, key, message);
+	}
+	
+	public static Message error(MessageKey key, String message) {
+		return new Message(true, key, message);
+	}
+	
+	public static Message warning(String message) {
+		return new Message(false, null, message);
+	}
+	
+	public static Message error(String message) {
+		return new Message(true, null, message);
+	}
+	
+	@Override
+	public String toString() {
+		return key == null ? message : String.format("[%s] %s", key, message);
+	}
 }

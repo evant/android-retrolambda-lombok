@@ -21,6 +21,7 @@
  */
 package lombok.ast;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -40,6 +41,150 @@ class ListAccessor<T extends Node, P extends Node> {
 		this.tClass = tClass;
 		this.listName = listName;
 		this.returnAsParent = returnAsParent;
+	}
+	
+	public static <T extends Node, P extends Node> StrictListAccessor<T, P> emptyStrict(final String listName, final P returnAsParent) {
+		return new StrictListAccessor<T, P>() {
+			@Override public P addAfter(Node ref, T... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public P addBefore(Node ref, T... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public P addToEnd(T... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public P addToStart(T... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public RawListAccessor<T, P> asRawAccessor() {
+				return emptyRaw(listName, returnAsParent);
+			}
+			
+			@Override public void clear() {
+			}
+			
+			@Override public boolean contains(Node source) {
+				return false;
+			}
+			
+			@Override public T first() {
+				return null;
+			}
+			
+			@Override public boolean isEmpty() {
+				return true;
+			}
+			
+			@Override public T last() {
+				return null;
+			}
+			
+			@Override public P migrateAllFrom(StrictListAccessor<? extends T, ?> otherList) {
+				if (otherList != null && otherList.getClass() != getClass()) throw new UnsupportedOperationException();
+				return returnAsParent;
+			}
+			
+			@Override public Node owner() {
+				return returnAsParent;
+			}
+			
+			@Override public void remove(Node source) throws NoSuchElementException {
+				throw new NoSuchElementException();
+			}
+			
+			@Override public P replace(Node source, T replacement) throws NoSuchElementException {
+				throw new NoSuchElementException(listName + " does not contain: " + source);
+			}
+			
+			@Override public int size() {
+				return 0;
+			}
+			
+			@Override public P up() {
+				return returnAsParent;
+			}
+			
+			@Override public Iterator<T> iterator() {
+				return Collections.<T>emptyList().iterator();
+			}
+		};
+	}
+	
+	public static <T extends Node, P extends Node> RawListAccessor<T, P> emptyRaw(final String listName, final P returnAsParent) {
+		return new RawListAccessor<T, P>() {
+			@Override public P addAfter(Node ref, Node... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public P addBefore(Node ref, Node... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public P addToEnd(Node... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public P addToStart(Node... node) {
+				throw new UnsupportedOperationException();
+			}
+			
+			@Override public StrictListAccessor<T, P> asStrictAccessor() {
+				return emptyStrict(listName, returnAsParent);
+			}
+			
+			@Override public void clear() {
+			}
+			
+			@Override public boolean contains(Node source) {
+				return false;
+			}
+			
+			@Override public Node first() {
+				return null;
+			}
+			
+			@Override public boolean isEmpty() {
+				return true;
+			}
+			
+			@Override public Node last() {
+				return null;
+			}
+			
+			@Override public P migrateAllFrom(RawListAccessor<?, ?> otherList) {
+				if (otherList != null && otherList.getClass() != getClass()) throw new UnsupportedOperationException();
+				return returnAsParent;
+			}
+			
+			@Override public Node owner() {
+				return returnAsParent;
+			}
+			
+			@Override public boolean remove(Node source) {
+				return false;
+			}
+			
+			@Override public P replace(Node source, Node replacement) throws NoSuchElementException {
+				throw new NoSuchElementException(listName + " does not contain: " + source);
+			}
+			
+			@Override public int size() {
+				return 0;
+			}
+			
+			@Override public P up() {
+				return returnAsParent;
+			}
+			
+			@Override public Iterator<Node> iterator() {
+				return Collections.<Node>emptyList().iterator();
+			}
+		};
 	}
 	
 	private RawListAccessor<T, P> raw = new RawListAccessor<T, P>() {
@@ -87,15 +232,6 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override
-		public Node get(int idx) {
-			try {
-				return list.get(idx);
-			} catch (IndexOutOfBoundsException e) {
-				return null;
-			}
-		}
-		
-		@Override
 		public boolean contains(Node source) {
 			if (source == null) return false;
 			if (source.getParent() != parent) return false;
@@ -111,7 +247,7 @@ class ListAccessor<T extends Node, P extends Node> {
 			while (it.hasNext()) {
 				AbstractNode n = (AbstractNode)it.next();
 				((AbstractNode)otherList.owner()).disown(n);
-				it.remove();
+				//TODO This doesn't actually remove the item from the other list!
 				addToEnd(n);
 			}
 			
@@ -190,7 +326,7 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override
-		public P replace(Node source, Node replacement) {
+		public P replace(Node source, Node replacement) throws NoSuchElementException {
 			if (replacement != null) ((AbstractNode)replacement).ensureParentless();
 			parent.ensureParentage((AbstractNode)source);
 			
@@ -209,7 +345,7 @@ class ListAccessor<T extends Node, P extends Node> {
 				}
 			}
 			
-			throw new IllegalStateException(listName + " does not contain: " + source);
+			throw new NoSuchElementException(listName + " does not contain: " + source);
 		}
 		
 		@Override
@@ -234,7 +370,7 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public Iterator<Node> iterator() {
-			return Lists.<Node>newArrayList(list).iterator();
+			return Collections.unmodifiableList(Lists.<Node>newArrayList(list)).iterator();
 		}
 	};
 	
@@ -261,28 +397,13 @@ class ListAccessor<T extends Node, P extends Node> {
 		
 		@Override public T first() {
 			Node r = raw.first();
-			if (r == null) throw new NoSuchElementException();
-			if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
-					"first element of %s isn't of the appropriate type(%s): %s",
-					listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
+			if (!tClass.isInstance(r)) return null;
 			return tClass.cast(r);
 		}
 		
 		@Override public T last() {
 			Node r = raw.last();
-			if (r == null) throw new NoSuchElementException();
-			if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
-					"last element of %s isn't of the appropriate type(%s): %s",
-					listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
-			return tClass.cast(r);
-		}
-		
-		@Override public T get(int idx) {
-			Node r = raw.get(idx);
-			if (r == null) throw new IndexOutOfBoundsException();
-			if (!tClass.isInstance(r)) throw new AstException(parent, String.format(
-					"element #%d of %s isn't of the appropriate type(%s): %s",
-					idx, listName, tClass.getSimpleName(), r.getClass().getSimpleName()));
+			if (!tClass.isInstance(r)) return null;
 			return tClass.cast(r);
 		}
 		
@@ -295,7 +416,7 @@ class ListAccessor<T extends Node, P extends Node> {
 			while (it.hasNext()) {
 				AbstractNode n = (AbstractNode)it.next();
 				((AbstractNode)otherList.owner()).disown(n);
-				it.remove();
+				//TODO This doesn't actually remove the item from the other list!
 				raw.addToEnd(n);
 			}
 			
@@ -318,7 +439,7 @@ class ListAccessor<T extends Node, P extends Node> {
 			return raw.addAfter(ref, node);
 		}
 		
-		@Override public P replace(Node source, T replacement) {
+		@Override public P replace(Node source, T replacement) throws NoSuchElementException {
 			return raw.replace(source, replacement);
 		}
 		
@@ -351,7 +472,7 @@ class ListAccessor<T extends Node, P extends Node> {
 				out.add(tClass.cast(o));
 			}
 			
-			return out.iterator();
+			return Collections.unmodifiableList(out).iterator();
 		}
 	};
 	

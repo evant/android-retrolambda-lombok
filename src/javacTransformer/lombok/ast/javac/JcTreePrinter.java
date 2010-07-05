@@ -243,7 +243,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 		} else {
 			String content;
 			if (val instanceof String) {
-				content = new StringLiteral().setValue(val.toString()).getRawValue();
+				content = new StringLiteral().astValue(val.toString()).rawValue();
 			} else {
 				content = String.valueOf(val);
 			}

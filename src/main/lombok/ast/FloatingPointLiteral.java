@@ -64,7 +64,7 @@ public class FloatingPointLiteral extends AbstractNode.WithParens implements Lit
 		return result;
 	}
 	
-	public FloatingPointLiteral setDoubleValue(double value) {
+	public FloatingPointLiteral astDoubleValue(double value) {
 		checkSpecialValues(value);
 		this.markedAsFloat = false;
 		this.value = value;
@@ -73,7 +73,7 @@ public class FloatingPointLiteral extends AbstractNode.WithParens implements Lit
 		return this;
 	}
 	
-	public FloatingPointLiteral setFloatValue(float value) {
+	public FloatingPointLiteral astFloatValue(float value) {
 		checkSpecialValues(value);
 		this.markedAsFloat = true;
 		this.errorReasonForValue = null;
@@ -105,7 +105,7 @@ public class FloatingPointLiteral extends AbstractNode.WithParens implements Lit
 		}
 	}
 	
-	public FloatingPointLiteral setRawValue(String raw) {
+	public FloatingPointLiteral rawValue(String raw) {
 		if (raw == null) {
 			this.rawValue = null;
 			this.value = null;
@@ -135,23 +135,17 @@ public class FloatingPointLiteral extends AbstractNode.WithParens implements Lit
 		return this;
 	}
 	
-	public double doubleValue() throws AstException {
-		checkValueExists();
-		return value;
+	public double astDoubleValue() throws AstException {
+		return value == null ? 0.0D : value.doubleValue();
 	}
 	
-	public float floatValue() throws AstException {
-		checkValueExists();
-		return value.floatValue();
+	public float astFloatValue() throws AstException {
+		return value == null ? 0.0F : value.floatValue();
 	}
 	
 	@Override
-	public String getRawValue() {
+	public String rawValue() {
 		return rawValue;
-	}
-	
-	private void checkValueExists() throws AstException {
-		if (value == null) throw new AstException(this, String.format("misformed floating point literal(%s): %s", errorReasonForValue, rawValue));
 	}
 	
 	@Override

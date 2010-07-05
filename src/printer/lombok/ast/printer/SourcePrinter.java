@@ -27,6 +27,7 @@ import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
 import lombok.ast.AnnotationMethodDeclaration;
+import lombok.ast.AnnotationValueArray;
 import lombok.ast.ArrayAccess;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
@@ -74,6 +75,7 @@ import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.NormalTypeBody;
 import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.RawListAccessor;
@@ -88,8 +90,6 @@ import lombok.ast.Synchronized;
 import lombok.ast.This;
 import lombok.ast.Throw;
 import lombok.ast.Try;
-import lombok.ast.TypeArguments;
-import lombok.ast.TypeBody;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
@@ -98,6 +98,7 @@ import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
+import lombok.ast.VariableReference;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
@@ -113,7 +114,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		if (node != null) node.accept(this);
 	}
 	
-	@Override public boolean visitNode(Node node) {
+	@Override
+	public boolean visitNode(Node node) {
 		formatter.buildBlock(node);
 		formatter.fail("NOT_IMPLEMENTED: " + node.getClass().getSimpleName());
 		formatter.closeBlock();
@@ -168,8 +170,9 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Basics
+	@Override
 	public boolean visitTypeReference(TypeReference node) {
-		WildcardKind kind = node.getWildcard();
+		WildcardKind kind = node.astWildcard();
 		formatter.buildInline(node);
 		if (kind == WildcardKind.UNBOUND) {
 			formatter.append("?");
@@ -189,24 +192,35 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		
 		visitAll(node.rawParts(), ".", "", "");
 		
-		for (int i = 0 ; i < node.getArrayDimensions(); i++)
+		for (int i = 0 ; i < node.astArrayDimensions(); i++)
 			formatter.append("[]");
 		
 		formatter.closeInline();
 		return true;
 	}
 	
+	@Override
 	public boolean visitTypeReferencePart(TypeReferencePart node) {
 		formatter.buildInline(node);
-		visit(node.getRawIdentifier());
-		visit(node.getRawTypeArguments());
+		visit(node.astIdentifier());
+		visitAll(node.rawTypeArguments(), ", ", "<", ">");
 		formatter.closeInline();
 		return true;
 	}
 	
-	public boolean visitIdentifier(Identifier node) {
+	@Override
+	public boolean visitVariableReference(VariableReference node) {
 		parensOpen(node);
-		String name = node.getName();
+		formatter.buildInline(node);
+		visit(node.astIdentifier());
+		formatter.closeInline();
+		parensClose(node);
+		return true;
+	}
+	
+	@Override
+	public boolean visitIdentifier(Identifier node) {
+		String name = node.astValue();
 		if (name == null) name = FAIL + "NULL_IDENTIFIER" + FAIL;
 		else if (name.isEmpty()) name = FAIL + "EMPTY_IDENTIFIER" + FAIL;
 		else if (!isValidJavaIdentifier(name)) name = FAIL + "INVALID_IDENTIFIER: " + name + FAIL;
@@ -214,13 +228,13 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.buildInline(node);
 		formatter.append(name);
 		formatter.closeInline();
-		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitIntegralLiteral(IntegralLiteral node) {
 		parensOpen(node);
-		String raw = node.getRawValue();
+		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -229,9 +243,10 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {
 		parensOpen(node);
-		String raw = node.getRawValue();
+		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -240,9 +255,10 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitBooleanLiteral(BooleanLiteral node) {
 		parensOpen(node);
-		String raw = node.getRawValue();
+		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -251,9 +267,10 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitCharLiteral(CharLiteral node) {
 		parensOpen(node);
-		String raw = node.getRawValue();
+		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -262,9 +279,10 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitStringLiteral(StringLiteral node) {
 		parensOpen(node);
-		String raw = node.getRawValue();
+		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
 		formatter.append(raw);
@@ -273,6 +291,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitNullLiteral(NullLiteral node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -291,116 +310,122 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Expressions
+	@Override
 	public boolean visitBinaryExpression(BinaryExpression node) {
 		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.nameNextElement("left");
-		visit(node.getRawLeft());
+		visit(node.rawLeft());
 		formatter.space();
 		try {
-			formatter.operator(node.getOperator().getSymbol());
+			formatter.operator(node.astOperator().getSymbol());
 		} catch (Exception e) {
-			formatter.operator(node.getRawOperator());
+			formatter.operator(node.rawOperator());
 		}
 		formatter.space();
 		formatter.nameNextElement("right");
-		visit(node.getRawRight());
+		visit(node.rawRight());
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitUnaryExpression(UnaryExpression node) {
 		UnaryOperator op;
 		parensOpen(node);
 		
 		try {
-			op = node.getOperator();
+			op = node.astOperator();
 			if (op == null) throw new Exception();
 		} catch (Exception e) {
 			formatter.buildInline(node);
-			visit(node.getOperand());
+			visit(node.astOperand());
 			formatter.closeInline();
 			parensClose(node);
 			return true;
 		}
 		formatter.buildInline(node);
 		if (!op.isPostfix()) formatter.operator(op.getSymbol());
-		visit(node.getOperand());
+		visit(node.astOperand());
 		if (op.isPostfix()) formatter.operator(op.getSymbol());
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitCast(Cast node) {
 		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.append("(");
-		visit(node.getRawTypeReference());
+		visit(node.rawTypeReference());
 		formatter.append(")");
 		formatter.space();
-		visit(node.getRawOperand());
+		visit(node.rawOperand());
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
 		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.nameNextElement("condition");
-		visit(node.getRawCondition());
+		visit(node.rawCondition());
 		formatter.space();
 		formatter.operator("?");
 		formatter.space();
 		formatter.nameNextElement("ifTrue");
-		visit(node.getRawIfTrue());
+		visit(node.rawIfTrue());
 		formatter.space();
 		formatter.operator(":");
 		formatter.space();
 		formatter.nameNextElement("ifFalse");
-		visit(node.getRawIfFalse());
+		visit(node.rawIfFalse());
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitInstanceOf(InstanceOf node) {
 		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.nameNextElement("operand");
-		visit(node.getRawObjectReference());
+		visit(node.rawObjectReference());
 		formatter.space();
 		formatter.keyword("instanceof");
 		formatter.space();
 		formatter.nameNextElement("type");
-		visit(node.getRawTypeReference());
+		visit(node.rawTypeReference());
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitConstructorInvocation(ConstructorInvocation node) {
 		parensOpen(node);
 		formatter.buildInline(node);
-		if (node.getRawQualifier() != null) {
+		if (node.rawQualifier() != null) {
 			formatter.nameNextElement("qualifier");
-			visit(node.getRawQualifier());
+			visit(node.rawQualifier());
 			formatter.append(".");
 		}
 		formatter.keyword("new");
 		formatter.space();
-		visit(node.getRawConstructorTypeArguments());
+		visitAll(node.rawConstructorTypeArguments(), ", ", "<", ">");
 		formatter.nameNextElement("type");
-		visit(node.getRawTypeReference());
+		visit(node.rawTypeReference());
 		formatter.append("(");
 		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
-		if (node.getRawAnonymousClassBody() != null) {
+		if (node.rawAnonymousClassBody() != null) {
 			formatter.space();
 			formatter.startSuppressBlock();
-			visit(node.getRawAnonymousClassBody());
+			visit(node.rawAnonymousClassBody());
 			formatter.endSuppressBlock();
 		}
 		formatter.closeInline();
@@ -408,17 +433,18 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitMethodInvocation(MethodInvocation node) {
 		parensOpen(node);
 		formatter.buildInline(node);
-		if (node.getRawOperand() != null) {
+		if (node.rawOperand() != null) {
 			formatter.nameNextElement("operand");
-			visit(node.getRawOperand());
+			visit(node.rawOperand());
 			formatter.append(".");
 		}
-		visit(node.getRawMethodTypeArguments());
+		visitAll(node.rawMethodTypeArguments(), ", ", "<", ">");
 		formatter.nameNextElement("methodName");
-		visit(node.getRawName());
+		visit(node.astName());
 		formatter.append("(");
 		visitAll(node.rawArguments(), ", ", "", "");
 		formatter.append(")");
@@ -427,49 +453,63 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSelect(Select node) {
 		parensOpen(node);
 		formatter.buildInline(node);
-		if (node.getRawOperand() != null) {
+		if (node.rawOperand() != null) {
 			formatter.nameNextElement("operand");
-			visit(node.getRawOperand());
+			visit(node.rawOperand());
 			formatter.append(".");
 		}
 		formatter.nameNextElement("selected");
-		visit(node.getRawIdentifier());
+		visit(node.astIdentifier());
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitArrayAccess(ArrayAccess node) {
 		parensOpen(node);
 		formatter.buildInline(node);
-		visit(node.getRawOperand());
+		visit(node.rawOperand());
 		formatter.append("[");
-		visit(node.getRawIndexExpression());
+		visit(node.rawIndexExpression());
 		formatter.append("]");
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitArrayCreation(ArrayCreation node) {
 		parensOpen(node);
 		formatter.buildInline(node);
 		formatter.keyword("new");
 		formatter.space();
-		visit(node.getRawComponentTypeReference());
+		visit(node.rawComponentTypeReference());
 		visitAll(node.rawDimensions(), "", "", "");
-		if (node.getRawInitializer() != null) {
+		if (node.rawInitializer() != null) {
 			formatter.space();
-			visit(node.getRawInitializer());
+			visit(node.rawInitializer());
 		}
 		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
+	public boolean visitAnnotationValueArray(AnnotationValueArray node) {
+		formatter.buildInline(node);
+		formatter.append("{");
+		visitAll(node.rawValues(), ", ", "", "");
+		formatter.append("}");
+		formatter.closeInline();
+		return true;
+	}
+	
+	@Override
 	public boolean visitArrayInitializer(ArrayInitializer node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -481,19 +521,21 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitArrayDimension(ArrayDimension node) {
 		formatter.buildInline(node);
 		formatter.append("[");
-		visit(node.getRawDimension());
+		visit(node.rawDimension());
 		formatter.append("]");
 		formatter.closeInline();
 		return true;
 	}
 	
+	@Override
 	public boolean visitClassLiteral(ClassLiteral node) {
 		parensOpen(node);
 		formatter.buildInline(node);
-		visit(node.getRawTypeReference());
+		visit(node.rawTypeReference());
 		formatter.append(".");
 		formatter.keyword("class");
 		formatter.closeInline();
@@ -501,11 +543,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSuper(Super node) {
 		parensOpen(node);
 		formatter.buildInline(node);
-		if (node.getRawQualifier() != null) {
-			visit(node.getRawQualifier());
+		if (node.rawQualifier() != null) {
+			visit(node.rawQualifier());
 			formatter.append(".");
 		}
 		formatter.keyword("super");
@@ -514,11 +557,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitThis(This node) {
 		parensOpen(node);
 		formatter.buildInline(node);
-		if (node.getRawQualifier() != null) {
-			visit(node.getRawQualifier());
+		if (node.rawQualifier() != null) {
+			visit(node.rawQualifier());
 			formatter.append(".");
 		}
 		formatter.keyword("this");
@@ -528,52 +572,54 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Statements
+	@Override
 	public boolean visitExpressionStatement(ExpressionStatement node) {
 		formatter.buildBlock(node);
-		visit(node.getRawExpression());
+		visit(node.rawExpression());
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitLabelledStatement(LabelledStatement node) {
 		formatter.buildBlock(node);
-		if (node.getRawLabel() != null) {
-			formatter.nameNextElement("label");
-			visit(node.getRawLabel());
-			formatter.append(":");
-		}
-		visit(node.getRawStatement());
+		formatter.nameNextElement("label");
+		visit(node.astLabel());
+		formatter.append(":");
+		visit(node.rawStatement());
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitIf(If node) {
 		formatter.buildBlock(node);
 		formatter.keyword("if");
 		formatter.space();
 		formatter.append("(");
 		formatter.nameNextElement("condition");
-		visit(node.getRawCondition());
+		visit(node.rawCondition());
 		formatter.append(")");
 		formatter.space();
 		formatter.startSuppressBlock();
 		formatter.nameNextElement("ifTrue");
-		visit(node.getRawStatement());
+		visit(node.rawStatement());
 		formatter.endSuppressBlock();
-		if (node.getRawElseStatement() != null) {
+		if (node.rawElseStatement() != null) {
 			formatter.space();
 			formatter.keyword("else");
 			formatter.space();
 			formatter.startSuppressBlock();
 			formatter.nameNextElement("ifFalse");
-			visit(node.getRawElseStatement());
+			visit(node.rawElseStatement());
 			formatter.endSuppressBlock();
 		}
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitFor(For node) {
 		formatter.buildBlock(node);
 		formatter.keyword("for");
@@ -581,15 +627,15 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.append("(");
 		if (node.isVariableDeclarationBased()) {
 			formatter.nameNextElement("init");
-			visit(node.getRawVariableDeclaration());
+			visit(node.rawVariableDeclaration());
 		} else {
 			visitAll("init", node.rawExpressionInits(), ", ", "", "");
 		}
 		formatter.append(";");
-		if (node.getRawCondition() != null) {
+		if (node.rawCondition() != null) {
 			formatter.space();
 			formatter.nameNextElement("condition");
-			visit(node.getRawCondition());
+			visit(node.rawCondition());
 		}
 		formatter.append(";");
 		if (!node.rawUpdates().isEmpty()) {
@@ -599,119 +645,126 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.append(")");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawStatement());
+		visit(node.rawStatement());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitForEach(ForEach node) {
 		formatter.buildBlock(node);
 		formatter.keyword("for");
 		formatter.space();
 		formatter.append("(");
 		formatter.nameNextElement("variable");
-		visit(node.getRawVariable());
+		visit(node.rawVariable());
 		formatter.space();
 		formatter.append(":");
 		formatter.space();
 		formatter.nameNextElement("iterable");
-		visit(node.getRawIterable());
+		visit(node.rawIterable());
 		formatter.append(")");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawStatement());
+		visit(node.rawStatement());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitTry(Try node) {
 		formatter.buildBlock(node);
 		formatter.keyword("try");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		visitAll(node.rawCatches(), " ", " ", "");
-		if (node.getRawFinally() != null) {
+		if (node.rawFinally() != null) {
 			formatter.space();
 			formatter.keyword("finally");
 			formatter.space();
 			formatter.startSuppressBlock();
-			visit(node.getRawFinally());
+			visit(node.rawFinally());
 			formatter.endSuppressBlock();
 		}
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitCatch(Catch node) {
 		formatter.buildInline(node);
 		formatter.keyword("catch");
 		formatter.space();
 		formatter.append("(");
-		visit(node.getRawExceptionDeclaration());
+		visit(node.rawExceptionDeclaration());
 		formatter.append(")");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		formatter.closeInline();
 		return true;
 	}
 	
+	@Override
 	public boolean visitWhile(While node) {
 		formatter.buildBlock(node);
 		formatter.keyword("while");
 		formatter.space();
 		formatter.append("(");
 		formatter.nameNextElement("condition");
-		visit(node.getRawCondition());
+		visit(node.rawCondition());
 		formatter.append(")");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawStatement());
+		visit(node.rawStatement());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitDoWhile(DoWhile node) {
 		formatter.buildBlock(node);
 		formatter.keyword("do");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawStatement());
+		visit(node.rawStatement());
 		formatter.endSuppressBlock();
 		formatter.space();
 		formatter.keyword("while");
 		formatter.space();
 		formatter.append("(");
 		formatter.nameNextElement("condition");
-		visit(node.getRawCondition());
+		visit(node.rawCondition());
 		formatter.append(")");
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitSynchronized(Synchronized node) {
 		formatter.buildBlock(node);
 		formatter.keyword("synchronized");
 		formatter.space();
 		formatter.append("(");
 		formatter.nameNextElement("lock");
-		visit(node.getRawLock());
+		visit(node.rawLock());
 		formatter.append(")");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getBody());
+		visit(node.astBody());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitBlock(Block node) {
 		formatter.buildBlock(node);
 		formatter.append("{");
@@ -723,23 +776,25 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAssert(Assert node) {
 		formatter.buildBlock(node);
 		formatter.keyword("assert");
 		formatter.space();
 		formatter.nameNextElement("assertion");
-		visit(node.getRawAssertion());
-		if (node.getRawMessage() != null) {
+		visit(node.rawAssertion());
+		if (node.rawMessage() != null) {
 			formatter.append(":");
 			formatter.space();
 			formatter.nameNextElement("message");
-			visit(node.getRawMessage());
+			visit(node.rawMessage());
 		}
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitEmptyStatement(EmptyStatement node) {
 		formatter.buildBlock(node);
 		formatter.append(";");
@@ -747,17 +802,18 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSwitch(Switch node) {
 		formatter.buildBlock(node);
 		formatter.keyword("switch");
 		formatter.space();
 		formatter.append("(");
 		formatter.nameNextElement("operand");
-		visit(node.getRawCondition());
+		visit(node.rawCondition());
 		formatter.append(")");
 		formatter.space();
 		
-		Node body = node.getRawBody();
+		Node body = node.rawBody();
 		if (!(body instanceof Block)) {
 			visit(body);
 			formatter.closeBlock();
@@ -784,17 +840,19 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitCase(Case node) {
 		formatter.buildBlock(node);
 		formatter.keyword("case");
 		formatter.space();
 		formatter.nameNextElement("condition");
-		visit(node.getRawCondition());
+		visit(node.rawCondition());
 		formatter.append(":");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitDefault(Default node) {
 		formatter.buildBlock(node);
 		formatter.keyword("default");
@@ -803,72 +861,76 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitBreak(Break node) {
 		formatter.buildBlock(node);
 		formatter.keyword("break");
-		if (node.getRawLabel() != null) {
+		if (node.astLabel() != null) {
 			formatter.space();
-			visit(node.getRawLabel());
+			visit(node.astLabel());
 		}
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitContinue(Continue node) {
 		formatter.buildBlock(node);
 		formatter.keyword("continue");
-		if (node.getRawLabel() != null) {
+		if (node.astLabel() != null) {
 			formatter.space();
-			visit(node.getRawLabel());
+			visit(node.astLabel());
 		}
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitReturn(Return node) {
 		formatter.buildBlock(node);
 		formatter.keyword("return");
-		if (node.getRawValue() != null) {
+		if (node.rawValue() != null) {
 			formatter.space();
-			visit(node.getRawValue());
+			visit(node.rawValue());
 		}
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitThrow(Throw node) {
 		formatter.buildBlock(node);
 		formatter.keyword("throw");
 		formatter.space();
-		visit(node.getRawThrowable());
+		visit(node.rawThrowable());
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
 	//Structural
+	@Override
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		visit(node.getRawDefinition());
+		visit(node.rawDefinition());
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
+	@Override
 	public boolean visitVariableDefinition(VariableDefinition node) {
 		formatter.buildInline(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) {
+			formatter.space();
 		}
 		formatter.nameNextElement("type");
-		visit(node.getRawTypeReference());
-		if (node.isVarargs()) {
+		visit(node.rawTypeReference());
+		if (node.astVarargs()) {
 			formatter.append("...");
 		}
 		formatter.space();
@@ -878,33 +940,28 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {
 		formatter.buildInline(node);
 		formatter.nameNextElement("varName");
-		visit(node.getRawName());
-		for (int i = 0; i < node.getArrayDimensions(); i++)
+		visit(node.astName());
+		for (int i = 0; i < node.astArrayDimensions(); i++)
 			formatter.append("[]");
-		if (node.getRawInitializer() != null) {
+		if (node.rawInitializer() != null) {
 			formatter.space();
 			formatter.append("=");
 			formatter.space();
-			visit(node.getRawInitializer());
+			visit(node.rawInitializer());
 		}
 		formatter.closeInline();
 		
 		return true;
 	}
 	
-	public boolean visitTypeArguments(TypeArguments node) {
-		formatter.buildInline(node);
-		visitAll(node.rawGenerics(), ", ", "<", ">");
-		formatter.closeInline();
-		return true;
-	}
-	
+	@Override
 	public boolean visitTypeVariable(TypeVariable node) {
 		formatter.buildInline(node);
-		visit(node.getRawName());
+		visit(node.astName());
 		if (!node.rawExtending().isEmpty()) {
 			formatter.space();
 			formatter.keyword("extends");
@@ -914,15 +971,17 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitKeywordModifier(KeywordModifier node) {
 		formatter.buildInline(node);
-		if (node.getName() == null || node.getName().isEmpty()) formatter.fail("MISSING_MODIFIER");
+		if (node.astName() == null || node.astName().isEmpty()) formatter.fail("MISSING_MODIFIER");
 		else
-			formatter.keyword(node.getName());
+			formatter.keyword(node.astName());
 		formatter.closeInline();
 		return true;
 	}
 	
+	@Override
 	public boolean visitModifiers(Modifiers node) {
 		formatter.buildInline(node);
 		visitAll(node.rawAnnotations(), "", "", "");
@@ -931,29 +990,32 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotation(Annotation node) {
 		formatter.buildBlock(node);
 		formatter.append("@");
-		visit(node.getRawAnnotationTypeReference());
+		visit(node.rawAnnotationTypeReference());
 		visitAll(node.rawElements(), ", ", "(", ")");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotationElement(AnnotationElement node) {
 		formatter.buildInline(node);
-		if (node.getRawName() != null) {
+		if (node.astName() != null) {
 			formatter.nameNextElement("name");
-			visit(node.getRawName());
+			visit(node.astName());
 			formatter.space();
 			formatter.append("=");
 			formatter.space();
 		}
-		visit(node.getValue());
+		visit(node.astValue());
 		formatter.closeInline();
 		return true;
 	}
 	
+	@Override
 	public boolean visitEnumTypeBody(EnumTypeBody node) {
 		formatter.buildBlock(node);
 		formatter.append("{");
@@ -970,7 +1032,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
-	public boolean visitTypeBody(TypeBody node) {
+	@Override
+	public boolean visitNormalTypeBody(NormalTypeBody node) {
 		formatter.buildBlock(node);
 		formatter.append("{");
 		formatter.buildBlock(null);
@@ -982,22 +1045,19 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Class Bodies
+	@Override
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		if (!node.rawTypeVariables().isEmpty()) formatter.space();
 		formatter.nameNextElement("returnType");
-		visit(node.getRawReturnTypeReference());
+		visit(node.rawReturnTypeReference());
 		formatter.space();
 		formatter.nameNextElement("methodName");
-		visit(node.getRawMethodName());
+		visit(node.astMethodName());
 		formatter.append("(");
 		visitAll("parameter", node.rawParameters(), ", ", "", "");
 		formatter.append(")");
@@ -1006,12 +1066,12 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			formatter.keyword("throws");
 			visitAll("throws", node.rawThrownTypeReferences(), ", ", " ", "");
 		}
-		if (node.getRawBody() == null) {
+		if (node.rawBody() == null) {
 			formatter.append(";");
 		} else {
 			formatter.space();
 			formatter.startSuppressBlock();
-			visit(node.getRawBody());
+			visit(node.rawBody());
 			formatter.endSuppressBlock();
 		}
 		formatter.closeBlock();
@@ -1019,19 +1079,16 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		if (!node.rawTypeVariables().isEmpty()) formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.getRawTypeName());
+		visit(node.astTypeName());
 		formatter.append("(");
 		visitAll("parameter", node.rawParameters(), ", ", "", "");
 		formatter.append(")");
@@ -1041,8 +1098,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			visitAll("throws", node.rawThrownTypeReferences(), ", ", " ", " ");
 		}
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
-		if (node.getRawBody() == null) {
+		visit(node.rawBody());
+		if (node.rawBody() == null) {
 			formatter.append(";");
 		}
 		formatter.endSuppressBlock();
@@ -1051,14 +1108,15 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSuperConstructorInvocation(SuperConstructorInvocation node) {
 		formatter.buildBlock(node);
-		if (node.getRawQualifier() != null) {
+		if (node.rawQualifier() != null) {
 			formatter.nameNextElement("qualifier");
-			visit(node.getRawQualifier());
+			visit(node.rawQualifier());
 			formatter.append(".");
 		}
-		visit(node.getRawConstructorTypeArguments());
+		visitAll(node.rawConstructorTypeArguments(), ", ", "<", ">");
 		formatter.keyword("super");
 		formatter.append("(");
 		visitAll(node.rawArguments(), ", ", "", "");
@@ -1068,9 +1126,10 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
 		formatter.buildBlock(node);
-		visit(node.getRawConstructorTypeArguments());
+		visitAll(node.rawConstructorTypeArguments(), ", ", "<", ">");
 		formatter.keyword("this");
 		formatter.append("(");
 		visitAll(node.rawArguments(), ", ", "", "");
@@ -1080,46 +1139,45 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitInstanceInitializer(InstanceInitializer node) {
 		formatter.buildBlock(node);
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitStaticInitializer(StaticInitializer node) {
 		formatter.buildBlock(node);
 		formatter.keyword("static");
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitClassDeclaration(ClassDeclaration node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.keyword("class");
 		formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.getRawName());
+		visit(node.astName());
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		formatter.space();
-		if (node.getRawExtending() != null) {
+		if (node.rawExtending() != null) {
 			formatter.keyword("extends");
 			formatter.space();
 			formatter.nameNextElement("extends");
-			visit(node.getRawExtending());
+			visit(node.rawExtending());
 			formatter.space();
 		}
 		if (!node.rawImplementing().isEmpty()) {
@@ -1127,25 +1185,22 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			visitAll("implements", node.rawImplementing(), ", ", " ", " ");
 		}
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.keyword("interface");
 		formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.getRawName());
+		visit(node.astName());
 		visitAll(node.rawTypeVariables(), ", ", "<", ">");
 		formatter.space();
 		if (!node.rawExtending().isEmpty()) {
@@ -1153,25 +1208,22 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			visitAll("extends", node.rawExtending(), ", ", " ", " ");
 		}
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitEnumDeclaration(EnumDeclaration node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.keyword("enum");
 		formatter.space();
 		formatter.nameNextElement("typeName");
-		visit(node.getRawName());
+		visit(node.astName());
 		formatter.space();
 		if (!node.rawImplementing().isEmpty()) {
 			formatter.keyword("implements");
@@ -1179,82 +1231,78 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		}
 		
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitEnumConstant(EnumConstant node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildInline(node);
 		visitAll(node.rawAnnotations(), "", "", "");
 		formatter.nameNextElement("name");
-		visit(node.getRawName());
+		visit(node.astName());
 		visitAll(node.rawArguments(), ", ", "(", ")");
-		if (node.getRawBody() != null) {
+		if (node.rawBody() != null) {
 			formatter.space();
 			formatter.startSuppressBlock();
-			visit(node.getRawBody());
+			visit(node.rawBody());
 			formatter.endSuppressBlock();
 		}
 		formatter.closeInline();
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
-		visit(node.getRawJavadoc());
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.append("@");
 		formatter.keyword("interface");
 		formatter.space();
 		formatter.nameNextElement("constantName");
-		visit(node.getRawName());
+		visit(node.astName());
 		formatter.space();
 		formatter.startSuppressBlock();
-		visit(node.getRawBody());
+		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
 		formatter.buildBlock(node);
-		if (node.getRawModifiers() != null) {
-			visit(node.getRawModifiers());
-			if (node.getRawModifiers() instanceof Modifiers && !((Modifiers)node.getRawModifiers()).rawKeywords().isEmpty()) {
-				formatter.space();
-			}
-		}
+		visit(node.astModifiers());
+		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();
 		formatter.nameNextElement("returnType");
-		visit(node.getRawReturnTypeReference());
+		visit(node.rawReturnTypeReference());
 		formatter.space();
 		formatter.nameNextElement("methodName");
-		visit(node.getRawMethodName());
+		visit(node.astMethodName());
 		formatter.append("(");
 		formatter.append(")");
-		if (node.getRawDefaultValue() != null) {
+		if (node.rawDefaultValue() != null) {
 			formatter.space();
 			formatter.keyword("default");
 			formatter.space();
 			formatter.nameNextElement("default");
-			visit(node.getRawDefaultValue());
+			visit(node.rawDefaultValue());
 		}
 		formatter.append(";");
 		formatter.closeBlock();
 		return true;
 	}
 	
+	@Override
 	public boolean visitCompilationUnit(CompilationUnit node) {
 		formatter.buildBlock(node);
-		if (node.getRawPackageDeclaration() != null) {
-			visit(node.getRawPackageDeclaration());
+		if (node.rawPackageDeclaration() != null) {
+			visit(node.rawPackageDeclaration());
 			if (!node.rawTypeDeclarations().isEmpty() || !node.rawImportDeclarations().isEmpty()) formatter.verticalSpace();
 		}
 		visitAll(node.rawImportDeclarations(), "", "", "");
@@ -1264,6 +1312,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
 		formatter.buildBlock(node);
 		visitAll(node.rawAnnotations(), "", "", "");
@@ -1275,16 +1324,17 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitImportDeclaration(ImportDeclaration node) {
 		formatter.buildBlock(node);
 		formatter.keyword("import");
 		formatter.space();
-		if (node.isStaticImport()) {
+		if (node.astStaticImport()) {
 			formatter.keyword("static");
 			formatter.space();
 		}
 		visitAll(node.rawParts(), ".", "", "");
-		if (node.isStarImport()) {
+		if (node.astStarImport()) {
 			formatter.append(".*");
 		}
 		formatter.append(";");
@@ -1293,6 +1343,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Various
+	@Override
 	public boolean visitParseArtefact(Node node) {
 		formatter.buildInline(node);
 		formatter.fail("ARTEFACT: " + node.getClass().getSimpleName());
@@ -1300,13 +1351,14 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitComment(Comment node) {
 		formatter.buildBlock(node);
-		formatter.append(node.isBlockComment() ? "/*" : "//");
-		if (node.getContent() == null) formatter.fail("MISSING_COMMENT");
+		formatter.append(node.astBlockComment() ? "/*" : "//");
+		if (node.astContent() == null) formatter.fail("MISSING_COMMENT");
 		else
-			formatter.append(node.getContent());
-		if (node.isBlockComment()) formatter.append("*/");
+			formatter.append(node.astContent());
+		if (node.astBlockComment()) formatter.append("*/");
 		formatter.closeBlock();
 		return true;
 	}

@@ -21,38 +21,9 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.List;
-
-import lombok.ast.FloatingPointLiteral;
-import lombok.ast.IntegralLiteral;
-import lombok.ast.NullLiteral;
-import lombok.ast.SyntaxProblem;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
 public class LiteralValidityChecks {
-	private final List<SyntaxProblem> problems;
-	
-	public LiteralValidityChecks(List<SyntaxProblem> problems) {
-		this.problems = problems;
-	}
-	
-	//IntegralLiteral does its own 'literal too large' checking.
-	public void checkIntegralLiteralValidity(IntegralLiteral node) {
-		if (node.getErrorReasonForValue() != null) {
-			problems.add(new SyntaxProblem(node, node.getErrorReasonForValue()));
-		}
-	}
-	
-	public void checkFloatingPointLiteralValidity(FloatingPointLiteral node) {
-		if (node.getErrorReasonForValue() != null) {
-			problems.add(new SyntaxProblem(node, node.getErrorReasonForValue()));
-		}
-	}
-	
-	public void checkNullLiteralValidity(NullLiteral node) {
-		if (node.getErrorReasonForValue() != null) {
-			problems.add(new SyntaxProblem(node, node.getErrorReasonForValue()));
-		}
-	}
+	//TODO Add unified 'check any Node object with a getErrorReasonForValue() method.
 }

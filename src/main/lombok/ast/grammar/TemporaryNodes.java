@@ -27,6 +27,7 @@ import java.util.List;
 import com.google.common.collect.Lists;
 
 import lombok.ast.AstVisitor;
+import lombok.ast.Message;
 import lombok.ast.Node;
 import lombok.ast.Position;
 
@@ -41,72 +42,64 @@ abstract class TemporaryNode implements Node {
 		return Collections.emptyList();
 	}
 	
-	@Override public Node detach(Node child) {
-		return this;
+	@Override public void detach(Node child) {
 	}
 	
-	@Override public Node unparent() {
-		return this;
+	@Override public void unparent() {
+	}
+	
+	@Override public void addDanglingNode(Node dangler) {
+	}
+	
+	@Override public Node addMessage(Message message) {
+		return null;
+	}
+	
+	@Override public Node copy() {
+		return null;
+	}
+	
+	@Override public List<Node> getDanglingNodes() {
+		return null;
+	}
+	
+	@Override public List<Message> getMessages() {
+		return Collections.emptyList();
+	}
+	
+	@Override public boolean hasMessage(String key) {
+		return false;
+	}
+	
+	@Override public void removeDanglingNode(Node dangler) {
 	}
 	
 	static class MethodParameters extends TemporaryNode {
 		List<Node> parameters = Lists.newArrayList();
-		
-		@Override public MethodParameters copy() {
-			MethodParameters result = new MethodParameters();
-			for (Node n : parameters) result.parameters.add(n == null ? null : n.copy());
-			return result;
-		}
 	}
 	
 	static class MethodArguments extends TemporaryNode {
 		List<Node> arguments = Lists.newArrayList();
-		
-		@Override public MethodArguments copy() {
-			MethodArguments result = new MethodArguments();
-			for (Node n : arguments) result.arguments.add(n == null ? null : n.copy());
-			return result;
-		}
+	}
+	
+	static class TypeArguments extends TemporaryNode {
+		List<Node> arguments = Lists.newArrayList();
 	}
 	
 	static class OrphanedTypeVariables extends TemporaryNode {
 		List<Node> variables = Lists.newArrayList();
-		
-		@Override public OrphanedTypeVariables copy() {
-			OrphanedTypeVariables result = new OrphanedTypeVariables();
-			for (Node n : variables) result.variables.add(n == null ? null : n.copy());
-			return result;
-		}
 	}
 	
 	static class StatementExpressionList extends TemporaryNode {
 		List<Node> expressions = Lists.newArrayList();
-		
-		@Override public StatementExpressionList copy() {
-			StatementExpressionList result = new StatementExpressionList();
-			for (Node n : expressions) result.expressions.add(n == null ? null : n.copy());
-			return result;
-		}
 	}
 	
 	static class ExtendsClause extends TemporaryNode {
 		List<Node> superTypes = Lists.newArrayList();
-		
-		@Override public ExtendsClause copy() {
-			ExtendsClause result = new ExtendsClause();
-			for (Node n : superTypes) result.superTypes.add(n == null ? null : n.copy());
-			return result;
-		}
 	}
 	
 	static class ImplementsClause extends TemporaryNode {
 		List<Node> superInterfaces = Lists.newArrayList();
-		
-		@Override public ImplementsClause copy() {
-			ImplementsClause result = new ImplementsClause();
-			for (Node n : superInterfaces) result.superInterfaces.add(n == null ? null : n.copy());
-			return result;
-		}
 	}
 	
 	@Override public Node getGeneratedBy() {

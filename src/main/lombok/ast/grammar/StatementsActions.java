@@ -80,7 +80,7 @@ public class StatementsActions extends SourceActions {
 			for (Node n : labelNames) {
 				if (n != null) {
 					Position pos = current == null ? null : new Position(n.getPosition().getStart(), current.getPosition().getEnd());
-					current = new LabelledStatement().setRawLabel(n).setRawStatement(current);
+					current = new LabelledStatement().astLabel(createIdentifierIfNeeded(n, currentPos())).rawStatement(current);
 					current.setPosition(pos);
 				}
 			}
@@ -89,19 +89,19 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createIfStatement(Node condition, Node statement, Node elseStatement) {
-		return posify(new If().setRawCondition(condition).setRawStatement(statement).setRawElseStatement(elseStatement));
+		return posify(new If().rawCondition(condition).rawStatement(statement).rawElseStatement(elseStatement));
 	}
 	
 	public Node createAssertStatement(Node assertion, Node message) {
-		return posify(new Assert().setRawAssertion(assertion).setRawMessage(message));
+		return posify(new Assert().rawAssertion(assertion).rawMessage(message));
 	}
 	
 	public Node createSwitchStatement(Node condition, Node body) {
-		return posify(new Switch().setRawCondition(condition).setRawBody(body));
+		return posify(new Switch().rawCondition(condition).rawBody(body));
 	}
 	
 	public Node createCaseStatement(Node condition) {
-		return posify(new Case().setRawCondition(condition));
+		return posify(new Case().rawCondition(condition));
 	}
 	
 	public Node createDefaultStatement(org.parboiled.Node<Node> defaultStatement) {
@@ -111,11 +111,11 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createWhileStatement(Node condition, Node statement) {
-		return posify(new While().setRawCondition(condition).setRawStatement(statement));
+		return posify(new While().rawCondition(condition).rawStatement(statement));
 	}
 	
 	public Node createDoStatement(Node condition, Node statement) {
-		return posify(new DoWhile().setRawCondition(condition).setRawStatement(statement));
+		return posify(new DoWhile().rawCondition(condition).rawStatement(statement));
 	}
 	
 	public Node createStatementExpressionList(Node head, List<Node> tail) {
@@ -126,7 +126,7 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createBasicFor(Node init, Node condition, Node update, Node statement) {
-		For result = new For().setRawCondition(condition).setRawStatement(statement);
+		For result = new For().rawCondition(condition).rawStatement(statement);
 		List<Node> updates;
 		
 		if (update instanceof TemporaryNode.StatementExpressionList) {
@@ -138,7 +138,7 @@ public class StatementsActions extends SourceActions {
 		if (init instanceof TemporaryNode.StatementExpressionList) {
 			for (Node n : ((TemporaryNode.StatementExpressionList)init).expressions) result.rawExpressionInits().addToEnd(n);
 		} else {
-			result.setRawVariableDeclaration(init);
+			result.rawVariableDeclaration(init);
 		}
 		
 		for (Node n : updates) if (n != null) result.rawUpdates().addToEnd(n);
@@ -149,60 +149,70 @@ public class StatementsActions extends SourceActions {
 			org.parboiled.Node<Node> modifiers, Node type,
 			org.parboiled.Node<Node> varDefEntry, Node iterable, Node statement) {
 		
-		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).rawVariables()
+		VariableDefinition decl = new VariableDefinition().rawTypeReference(type).rawVariables()
 				.addToEnd(varDefEntry.getValue());
 		positionSpan(decl, modifiers, varDefEntry);
-		decl.setRawModifiers(createNewModifiersIfNeeded(modifiers.getValue(), decl.getPosition().getStart()));
-		return posify(new ForEach().setRawVariable(decl).setRawIterable(iterable).setRawStatement(statement));
+		decl.astModifiers(createModifiersIfNeeded(modifiers.getValue(), decl.getPosition().getStart()));
+		return posify(new ForEach().rawVariable(decl).rawIterable(iterable).rawStatement(statement));
 	}
 	
 	public Node createBreak(Node label) {
-		return posify(new Break().setRawLabel(label));
+		Break b = new Break();
+		if (label != null) b.astLabel(createIdentifierIfNeeded(label, currentPos()));
+		return posify(b);
 	}
 	
 	public Node createContinue(Node label) {
-		return posify(new Continue().setRawLabel(label));
+		Continue c = new Continue();
+		if (label != null) c.astLabel(createIdentifierIfNeeded(label, currentPos()));
+		return posify(c);
 	}
 	
 	public Node createReturn(Node value) {
-		return posify(new Return().setRawValue(value));
+		return posify(new Return().rawValue(value));
 	}
 	
 	public Node createThrow(Node throwable) {
-		return posify(new Throw().setRawThrowable(throwable));
+		return posify(new Throw().rawThrowable(throwable));
 	}
 	
 	public Node createSynchronizedStatement(Node lock, Node body) {
-		return posify(new Synchronized().setRawLock(lock).setRawBody(body));
+		return posify(new Synchronized().rawLock(lock).rawBody(body));
 	}
 	
 	public Node createCatch(Node modifiers, Node type, Node varName, Node body) {
-		VariableDefinitionEntry varNameEntry = new VariableDefinitionEntry().setRawName(varName);
+		VariableDefinitionEntry varNameEntry = new VariableDefinitionEntry().astName(createIdentifierIfNeeded(varName, currentPos()));
 		if (varName != null) varNameEntry.setPosition(varName.getPosition());
-		VariableDefinition decl = new VariableDefinition().setRawTypeReference(type).rawVariables().addToEnd(
+		VariableDefinition decl = new VariableDefinition().rawTypeReference(type).rawVariables().addToEnd(
 				varNameEntry);
 		if (type != null && varName != null) decl.setPosition(new Position(type.getPosition().getStart(), varName.getPosition().getEnd()));
-		if (modifiers != null) decl.setRawModifiers(modifiers);
-		return posify(new Catch().setRawExceptionDeclaration(decl).setRawBody(body));
+		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
+		return posify(new Catch().rawExceptionDeclaration(decl).rawBody(body));
 	}
 	
 	public Node createTryStatement(Node body, List<Node> catches, Node finallyBody) {
-		Try result = new Try().setRawBody(body).setRawFinally(finallyBody);
+		Try result = new Try().rawBody(body).rawFinally(finallyBody);
 		if (catches != null) for (Node c : catches) if (c != null) result.rawCatches().addToEnd(c);
 		return posify(result);
 	}
 	
 	public Node addLocalVariableModifiers(Node variableDefinition, Node modifiers) {
 		if (modifiers != null && variableDefinition instanceof VariableDefinition) {
-			((VariableDefinition)variableDefinition).setRawModifiers(modifiers);
+			((VariableDefinition)variableDefinition).astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
 		}
 		
 		return posify(variableDefinition);
 	}
 	
 	public Node createAlternateConstructorInvocation(Node typeArguments, Node arguments) {
-		AlternateConstructorInvocation result = new AlternateConstructorInvocation()
-				.setRawConstructorTypeArguments(typeArguments);
+		AlternateConstructorInvocation result = new AlternateConstructorInvocation();
+		
+		if (typeArguments instanceof TemporaryNode.TypeArguments) {
+			for (Node arg : ((TemporaryNode.TypeArguments)typeArguments).arguments) {
+				result.rawConstructorTypeArguments().addToEnd(arg);
+			}
+		}
+		
 		if (arguments instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
 				result.rawArguments().addToEnd(arg);
@@ -212,8 +222,14 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createSuperConstructorInvocation(org.parboiled.Node<Node> dot, Node qualifier, Node typeArguments, Node arguments) {
-		SuperConstructorInvocation result = new SuperConstructorInvocation().setRawQualifier(qualifier)
-				.setRawConstructorTypeArguments(typeArguments);
+		SuperConstructorInvocation result = new SuperConstructorInvocation().rawQualifier(qualifier);
+		
+		if (typeArguments instanceof TemporaryNode.TypeArguments) {
+			for (Node arg : ((TemporaryNode.TypeArguments)typeArguments).arguments) {
+				result.rawConstructorTypeArguments().addToEnd(arg);
+			}
+		}
+		
 		if (arguments instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
 				result.rawArguments().addToEnd(arg);
@@ -224,10 +240,10 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createExpressionStatement(Node expression) {
-		return posify(new ExpressionStatement().setRawExpression(expression));
+		return posify(new ExpressionStatement().rawExpression(expression));
 	}
 	
 	public Node createVariableDeclaration(Node definition) {
-		return posify(new VariableDeclaration().setRawDefinition(definition));
+		return posify(new VariableDeclaration().rawDefinition(definition));
 	}
 }

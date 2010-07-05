@@ -131,8 +131,8 @@ public class SyntaxValidityCheckerGenerator {
 		out.write(" * which do not support the + operator.\n");
 		out.write(" */\n");
 		out.write("public class SyntacticValidityVisitor extends lombok.ast.syntaxChecks.SyntacticValidityVisitorBase {\n");
-		out.write("\tpublic SyntacticValidityVisitor(java.util.List<SyntaxProblem> problems, boolean recursing) {\n");
-		out.write("\t\tsuper(problems, recursing);\n");
+		out.write("\tpublic SyntacticValidityVisitor(boolean recursing) {\n");
+		out.write("\t\tsuper(recursing);\n");
 		out.write("\t}\n");
 		Set<String> typesToCheck = new TreeSet<String>();
 		typesToCheck.addAll(checkMethods.keySet());
@@ -173,7 +173,7 @@ public class SyntaxValidityCheckerGenerator {
 					out.write(method.getTypeName());
 					out.write(".");
 					out.write(method.getMethodName());
-					out.write("(node, problems);\n");
+					out.write("(node);\n");
 				} else {
 					out.write("this.getCheckerObject(");
 					out.write(method.getTypeName());
@@ -211,30 +211,38 @@ public class SyntaxValidityCheckerGenerator {
 		if (!field.getRawFormParser().isEmpty()) {
 			out.write("\t\tif (node.getErrorReasonFor");
 			out.write(field.titleCasedName());
-			out.write("() != null) problems.add(new SyntaxProblem(node, node.getErrorReasonFor");
+			out.write("() != null) {\n");
+			out.write("\t\t\tnode.addMessage(lombok.ast.Message.error(\n");
+			out.write("\t\t\t\t\tlombok.ast.syntaxChecks.MessageKey.TERMINAL_INVALID,\n");
+			out.write("\t\t\t\t\tnode.getErrorReasonFor");
 			out.write(field.titleCasedName());
-			out.write("()));\n");
+			out.write("()));\n\t\t}\n");
 		} else {
 			if (field.isMandatory()) {
-				out.write("\t\tif (node.get");
-				if (!field.getRawFormGenerator().isEmpty()) out.write("Raw");
+				out.write("\t\tif (node.ast");
 				out.write(field.titleCasedName());
-				out.write("() == null) problems.add(new SyntaxProblem(node, \"");
+				out.write("() == null) {\n");
+				out.write("\t\t\tnode.addMessage(lombok.ast.Message.error(\n");
+				out.write("\t\t\t\t\tlombok.ast.syntaxChecks.MessageKey.TERMINAL_MISSING,\n");
+				out.write("\t\t\t\t\t\"");
 				out.write(field.getName());
 				out.write(" is mandatory\"));\n");
+				out.write("\t\t}\n");
 			}
 		}
 	}
 	
 	private void generateCheckForNodeField(Writer out, FieldData field) throws IOException {
-		out.write("\t\tthis.checkChildValidity(node, node.getRaw");
-		out.write(field.titleCasedName());
-		out.write("(), \"");
-		out.write(field.getName());
-		out.write("\", ");
-		out.write(String.valueOf(field.isMandatory()));
-		out.write(", ");
-		out.write(field.getType().toString());
-		out.write(".class);\n");
+		if (!field.isForcedType()) {
+			out.write("\t\tthis.checkChildValidity(node, node.raw");
+			out.write(field.titleCasedName());
+			out.write("(), \"");
+			out.write(field.getName());
+			out.write("\", ");
+			out.write(String.valueOf(field.isMandatory()));
+			out.write(", ");
+			out.write(field.getType().toString());
+			out.write(".class);\n");
+		}
 	}
 }

@@ -21,59 +21,39 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.List;
+import static lombok.ast.syntaxChecks.MessageKey.*;
+import static lombok.ast.Message.*;
 
-import lombok.ast.ClassLiteral;
-import lombok.ast.MethodDeclaration;
-import lombok.ast.Node;
-import lombok.ast.SyntaxProblem;
-import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
-import lombok.ast.TypeVariable;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
 public class TypeChecks {
-	private final List<SyntaxProblem> problems;
-	
-	public TypeChecks(List<SyntaxProblem> problems) {
-		this.problems = problems;
-	}
-	
-	public void checkNoPrimitivesInGenerics(TypeArguments node) {
-		for (Node n : node.rawGenerics()) {
-			if (n instanceof TypeReference) {
-				if (((TypeReference)n).isPrimitive()) {
-					problems.add(new SyntaxProblem(node, "Primitive types aren't allowed in type arguments."));
-				}
-			}
+	public void checkNoPrimitivesInGenerics(TypeReference node) {
+		if (!node.isPrimitive()) return;
+		
+		if (node.upIfTypeArgumentToTypeReferencePart() != null) {
+			node.addMessage(error(TYPEARGUMENT_PRIMITIVE_NOT_ALLOWED, "Primitive types aren't allowed in type arguments."));
+			return;
 		}
-	}
-	
-	public void checkNoPrimitivesInGenerics(TypeVariable node) {
-		for (Node n : node.rawExtending()) {
-			if (n instanceof TypeReference) {
-				if (((TypeReference)n).isPrimitive()) {
-					problems.add(new SyntaxProblem(node, "Primitive types aren't allowed in type variable bounds."));
-				}
-			}
+		
+		if (node.upIfTypeVariableBoundToTypeVariable() != null) {
+			node.addMessage(error(TYPEVARIABLE_PRIMITIVE_NOT_ALLOWED, "Primitive types aren't allowed in type variable bounds."));
+			return;
 		}
 	}
 	
 	public void checkVoidNotLegalJustAboutEverywhere(TypeReference node) {
 		if (!node.isVoid()) return;
-		if (node.getArrayDimensions() > 0) {
-			problems.add(new SyntaxProblem(node, "array of void type is not legal"));
+		if (node.astArrayDimensions() > 0) {
+			node.addMessage(error(TYPEREFERENCE_VOID_NOT_ALLOWED, "Array of void type is not legal."));
 			return;
 		}
-		if (node.getParent() instanceof MethodDeclaration) {
-			if (node == ((MethodDeclaration)node.getParent()).getRawReturnTypeReference()) return;
-		}
 		
-		if (node.getParent() instanceof ClassLiteral) {
-			if (node == ((ClassLiteral)node.getParent()).getRawTypeReference()) return;
-		}
+		if (node.upIfReturnTypeToMethodDeclaration() != null) return;
 		
-		problems.add(new SyntaxProblem(node, "The void type is not legal here"));
+		if (node.upToClassLiteral() != null) return;
+		
+		node.addMessage(error(TYPEREFERENCE_VOID_NOT_ALLOWED, "The void type is not legal here."));
 	}
 }

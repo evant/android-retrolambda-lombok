@@ -21,6 +21,7 @@
  */
 package lombok.ast.grammar;
 
+import lombok.ast.Identifier;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.Position;
@@ -34,9 +35,20 @@ class SourceActions extends BaseActions<Node> {
 		this.source = source;
 	}
 	
-	Node createNewModifiersIfNeeded(Node modifiers, int pos) {
-		if (modifiers != null) return modifiers;
-		return new Modifiers().setPosition(new Position(pos, pos));
+	Identifier createIdentifierIfNeeded(Node identifier, int pos) {
+		if (identifier instanceof Identifier) return (Identifier)identifier;
+		Identifier i = new Identifier();
+		i.setPosition(new Position(pos, pos));
+		i.addDanglingNode(identifier);
+		return i;
+	}
+	
+	Modifiers createModifiersIfNeeded(Node modifiers, int pos) {
+		if (modifiers instanceof Modifiers) return (Modifiers)modifiers;
+		Modifiers m = new Modifiers();
+		m.setPosition(new Position(pos, pos));
+		m.addDanglingNode(modifiers);
+		return m;
 	}
 	
 	<T extends Node> T posify(T node) {
@@ -47,15 +59,15 @@ class SourceActions extends BaseActions<Node> {
 	}
 	
 	int startPos() {
-		return getContext().getStartLocation().getIndex();
+		return getContext().getStartIndex();
 	}
 	
 	int currentPos() {
-		return getContext().getCurrentLocation().getIndex();
+		return getContext().getCurrentIndex();
 	}
 	
 	void positionSpan(Node target, org.parboiled.Node<Node> start, org.parboiled.Node<Node> end) {
 		if (target == null || start == null || end == null) return;
-		target.setPosition(new Position(start.getStartLocation().getIndex(), end.getEndLocation().getIndex()));
+		target.setPosition(new Position(start.getStartIndex(), end.getEndIndex()));
 	}
 }

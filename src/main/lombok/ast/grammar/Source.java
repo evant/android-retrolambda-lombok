@@ -136,16 +136,16 @@ public class Source {
 		if (parsed) return;
 		preProcess();
 		ParserGroup group = new ParserGroup(this);
-		this.parsingResult = RecoveringParseRunner.run(group.structures.compilationUnitEoi(), preprocessed);
+		parsingResult = RecoveringParseRunner.run(group.structures.compilationUnitEoi(), preprocessed);
 		postProcess();
 	}
 	
 	private void postProcess() {
 		nodes.add(parsingResult.parseTreeRoot.getValue());
 		for (ParseError error : parsingResult.parseErrors) {
-			int errStart = error.getErrorLocation().getIndex();
-			int errEnd = errStart + error.getErrorCharCount();
-			problems.add(new ParseProblem(new Position(mapPosition(errStart), mapPosition(errEnd)), error.getErrorMessage()));
+			int errStart = error.getStartIndex();
+			int errEnd = error.getEndIndex();
+			problems.add(new ParseProblem(new Position(mapPosition(errStart), mapPosition(errEnd)), error.toString()));
 		}
 		
 		gatherComments(parsingResult.parseTreeRoot);
@@ -205,8 +205,8 @@ public class Source {
 	private void buildSourceStructures(org.parboiled.Node<Node> pNode, Node owner, ListMultimap<Node, SourceStructure> map) {
 		Node target = registeredStructures.remove(pNode);
 		if (target != null || pNode.getChildren().isEmpty()) {
-			int start = pNode.getStartLocation().getIndex();
-			int end = pNode.getEndLocation().getIndex();
+			int start = pNode.getStartIndex();
+			int end = pNode.getEndIndex();
 			String text = preprocessed.substring(start, end);
 			SourceStructure structure = new SourceStructure(new Position(start, end), text);
 			if (target != null) addSourceStructure(map, target, structure);
@@ -253,7 +253,7 @@ public class Source {
 				Position p = node.getPosition();
 				if (p.isUnplaced()) return false;
 				
-				int trimmed = p.getEnd();
+				int trimmed = Math.min(whitespace.length, p.getEnd());
 				while (trimmed > 0 && whitespace[trimmed-1]) trimmed--;
 				
 				int start, end;
@@ -286,7 +286,7 @@ public class Source {
 					node.setPosition(new Position(mapPosition(p.getStart()), mapPosition(p.getEnd())));
 				}
 				if (node instanceof Expression) {
-					List<Position> list = ((Expression)node).getParensPositions();
+					List<Position> list = ((Expression)node).astParensPositions();
 					if (list != null) {
 						ListIterator<Position> li = list.listIterator();
 						while (li.hasNext()) {
@@ -328,10 +328,10 @@ public class Source {
 			Node assoc = tailMap.values().iterator().next();
 			if (!(assoc instanceof JavadocContainer)) continue;
 			JavadocContainer jc = (JavadocContainer) assoc;
-			if (jc.getRawJavadoc() != null) {
-				if (jc.getRawJavadoc().getPosition().getEnd() >= comment.getPosition().getEnd()) continue;
+			if (jc.rawJavadoc() != null) {
+				if (jc.rawJavadoc().getPosition().getEnd() >= comment.getPosition().getEnd()) continue;
 			}
-			jc.setRawJavadoc(comment);
+			jc.rawJavadoc(comment);
 		}
 	}
 	

@@ -35,19 +35,19 @@ public class LiteralsActions extends SourceActions {
 	}
 	
 	public Node createNullLiteral(String raw) {
-		return posify(new NullLiteral().setRawValue(raw));
+		return posify(new NullLiteral().rawValue(raw));
 	}
 	
 	public Node createStringLiteral(String raw) {
-		return posify(new StringLiteral().setRawValue(raw));
+		return posify(new StringLiteral().rawValue(raw));
 	}
 	
 	public Node createCharLiteral(String raw) {
-		return posify(new CharLiteral().setRawValue(raw));
+		return posify(new CharLiteral().rawValue(raw));
 	}
 	
 	public Node createBooleanLiteral(String raw) {
-		return posify(new BooleanLiteral().setRawValue(raw));
+		return posify(new BooleanLiteral().rawValue(raw));
 	}
 	
 	public Node createNumberLiteral(String raw) {
@@ -56,13 +56,13 @@ public class LiteralsActions extends SourceActions {
 		String v = raw.trim().toLowerCase();
 		
 		if (v.startsWith("0x")) {
-			if (v.contains("p")) return posify(new FloatingPointLiteral().setRawValue(raw));
-			return posify(new IntegralLiteral().setRawValue(raw));
+			if (v.contains("p")) return posify(new FloatingPointLiteral().rawValue(raw));
+			return posify(new IntegralLiteral().rawValue(raw));
 		}
 		
 		if (v.contains(".") || v.endsWith("d") || v.endsWith("f") || v.contains("e")) {
-			return posify(new FloatingPointLiteral().setRawValue(raw));
+			return posify(new FloatingPointLiteral().rawValue(raw));
 		}
-		else return posify(new IntegralLiteral().setRawValue(raw));
+		else return posify(new IntegralLiteral().rawValue(raw));
 	}
 }

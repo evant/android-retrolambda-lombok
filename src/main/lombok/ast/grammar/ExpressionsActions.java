@@ -41,11 +41,11 @@ import lombok.ast.Position;
 import lombok.ast.Select;
 import lombok.ast.Super;
 import lombok.ast.This;
-import lombok.ast.TypeArguments;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
 import lombok.ast.UnaryOperator;
+import lombok.ast.VariableReference;
 
 public class ExpressionsActions extends SourceActions {
 	public ExpressionsActions(Source source) {
@@ -62,8 +62,8 @@ public class ExpressionsActions extends SourceActions {
 		
 		for (int i = 0; i < operators.size(); i++) {
 			currentLeft = new BinaryExpression()
-					.setRawLeft(currentLeft)
-					.setRawRight(tail.get(i).getValue()).setRawOperator(operators.get(i));
+					.rawLeft(currentLeft)
+					.rawRight(tail.get(i).getValue()).rawOperator(operators.get(i));
 			source.registerStructure(currentLeft, operatorsNodes.get(i));
 			positionSpan(currentLeft, head, tail.get(i));
 		}
@@ -73,7 +73,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createAssignmentExpression(Node lhs, String operator, Node rhs) {
 		if (rhs == null && operator == null) return lhs;
-		return posify(new BinaryExpression().setRawLeft(lhs).setRawRight(rhs).setRawOperator(operator));
+		return posify(new BinaryExpression().rawLeft(lhs).rawRight(rhs).rawOperator(operator));
 	}
 	
 	public Node createInlineIfExpression(
@@ -83,7 +83,7 @@ public class ExpressionsActions extends SourceActions {
 		if (tail1 == null || tail2 == null) return head;
 		
 		InlineIfExpression result = new InlineIfExpression()
-				.setRawCondition(head).setRawIfTrue(tail1).setRawIfFalse(tail2);
+				.rawCondition(head).rawIfTrue(tail1).rawIfFalse(tail2);
 		source.registerStructure(result, operator1Node);
 		source.registerStructure(result, operator2Node);
 		return posify(result);
@@ -93,13 +93,13 @@ public class ExpressionsActions extends SourceActions {
 		if (opNode == null) return operand;
 		
 		if (!opNode.getChildren().isEmpty() && "cast".equals(opNode.getChildren().get(0).getLabel())) {
-			return posify(new Cast().setRawOperand(operand).setRawTypeReference(opNode.getValue()));
+			return posify(new Cast().rawOperand(operand).rawTypeReference(opNode.getValue()));
 		} else {
 			if (symbol != null) symbol = symbol.trim();
 			if (!symbol.isEmpty()) {
 				UnaryOperator op = UnaryOperator.fromSymbol(symbol, false);
-				UnaryExpression expr = new UnaryExpression().setRawOperand(operand);
-				if (op != null) expr.setOperator(op);
+				UnaryExpression expr = new UnaryExpression().rawOperand(operand);
+				if (op != null) expr.astOperator(op);
 				return posify(expr);
 			}
 		}
@@ -120,7 +120,7 @@ public class ExpressionsActions extends SourceActions {
 			Node prev = current;
 			if (operator == null) continue;
 			if (!operator.getChildren().isEmpty() && "cast".equals(operator.getChildren().get(0).getLabel())) {
-				current = new Cast().setRawOperand(current).setRawTypeReference(operator.getValue());
+				current = new Cast().rawOperand(current).rawTypeReference(operator.getValue());
 			} else {
 				String symbol = operatorTexts.get(i);
 				if (symbol == null) continue;
@@ -128,8 +128,8 @@ public class ExpressionsActions extends SourceActions {
 				if (symbol.isEmpty()) continue;
 				
 				UnaryOperator op = UnaryOperator.fromSymbol(symbol, false);
-				UnaryExpression expr = new UnaryExpression().setRawOperand(current);
-				if (op != null) expr.setOperator(op);
+				UnaryExpression expr = new UnaryExpression().rawOperand(current);
+				if (op != null) expr.astOperator(op);
 				current = expr;
 			}
 			
@@ -150,11 +150,11 @@ public class ExpressionsActions extends SourceActions {
 			if (op == null) continue;
 			op = op.trim();
 			Node prev = current;
-			if (op.equals("++")) current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.POSTFIX_INCREMENT);
-			else if (op.equals("--")) current = new UnaryExpression().setRawOperand(current).setOperator(UnaryOperator.POSTFIX_DECREMENT);
+			if (op.equals("++")) current = new UnaryExpression().rawOperand(current).astOperator(UnaryOperator.POSTFIX_INCREMENT);
+			else if (op.equals("--")) current = new UnaryExpression().rawOperand(current).astOperator(UnaryOperator.POSTFIX_DECREMENT);
 			org.parboiled.Node<Node> p = nodes.get(i);
 			if (prev != null && !prev.getPosition().isUnplaced() && p != null) {
-				current.setPosition(new Position(prev.getPosition().getStart(), p.getEndLocation().getIndex()));
+				current.setPosition(new Position(prev.getPosition().getStart(), p.getEndIndex()));
 			}
 		}
 		return current;
@@ -162,7 +162,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createInstanceOfExpression(Node operand, Node type) {
 		if (type == null) return operand;
-		return posify(new InstanceOf().setRawObjectReference(operand).setRawTypeReference(type));
+		return posify(new InstanceOf().rawObjectReference(operand).rawTypeReference(type));
 	}
 	
 	public Node createQualifiedConstructorInvocation(
@@ -184,8 +184,8 @@ public class ExpressionsActions extends SourceActions {
 			}
 		}
 		
-		TypeReference typeReference = new TypeReference().parts().addToEnd(
-				classTypeArgs0.setRawIdentifier(identifierNode));
+		TypeReference typeReference = new TypeReference().astParts().addToEnd(
+				classTypeArgs0.astIdentifier(createIdentifierIfNeeded(identifierNode, currentPos())));
 		if (!classTypeArgsCorrect) {
 			if (identifier != null && identifier.getValue() != null) {
 				typeReference.setPosition(identifier.getValue().getPosition());
@@ -195,9 +195,14 @@ public class ExpressionsActions extends SourceActions {
 		}
 		
 		ConstructorInvocation constructorInvocation = new ConstructorInvocation()
-				.setRawConstructorTypeArguments(constructorTypeArgs)
-				.setRawTypeReference(typeReference)
-				.setRawAnonymousClassBody(classBody);
+				.rawTypeReference(typeReference)
+				.rawAnonymousClassBody(classBody);
+		
+		if (constructorTypeArgs instanceof TemporaryNode.TypeArguments) {
+			for (Node arg : ((TemporaryNode.TypeArguments)constructorTypeArgs).arguments) {
+				constructorInvocation.rawConstructorTypeArguments().addToEnd(arg);
+			}
+		}
 		
 		if (methodArguments instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)methodArguments).arguments) {
@@ -218,23 +223,28 @@ public class ExpressionsActions extends SourceActions {
 		for (org.parboiled.Node<Node> pNode : constructorInvocations) {
 			Node n = pNode.getValue();
 			if (n instanceof ConstructorInvocation) {
-				current = ((ConstructorInvocation)n).setRawQualifier(current);
+				current = ((ConstructorInvocation)n).rawQualifier(current);
 				positionSpan(current, qualifier, pNode);
-			}
-			//TODO else hang dangling node.
+			} else current.addDanglingNode(n);
 		}
 		
 		return current;
 	}
 	
 	public Node createMethodInvocationOperation(org.parboiled.Node<Node> dot, Node typeArguments, Node name, Node arguments) {
-		MethodInvocation mi = new MethodInvocation().setRawName(name).setRawMethodTypeArguments(typeArguments);
+		MethodInvocation mi = new MethodInvocation().astName(createIdentifierIfNeeded(name, currentPos()));
+		
+		if (typeArguments instanceof TemporaryNode.TypeArguments) {
+			for (Node arg : ((TemporaryNode.TypeArguments)typeArguments).arguments) {
+				mi.rawMethodTypeArguments().addToEnd(arg);
+			}
+		} else mi.addDanglingNode(typeArguments);
+		
 		if (arguments instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
 				mi.rawArguments().addToEnd(arg);
 			}
-		}
-		//TODO hang dangling node on mi if arguments is non null but also not an MI.
+		} else mi.addDanglingNode(arguments);
 		
 		source.registerStructure(mi, dot);
 		
@@ -242,11 +252,11 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createSelectOperation(Node identifier) {
-		return posify(new Select().setRawIdentifier(identifier));
+		return posify(new Select().astIdentifier(createIdentifierIfNeeded(identifier, currentPos())));
 	}
 	
 	public Node createArrayAccessOperation(Node indexExpression) {
-		return posify(new ArrayAccess().setRawIndexExpression(indexExpression));
+		return posify(new ArrayAccess().rawIndexExpression(indexExpression));
 	}
 	
 	public Node createLevel1Expression(org.parboiled.Node<Node> operand, List<org.parboiled.Node<Node>> operations) {
@@ -257,13 +267,14 @@ public class ExpressionsActions extends SourceActions {
 			Node o = pNode.getValue();
 			
 			if (o instanceof ArrayAccess) {
-				current = ((ArrayAccess)o).setRawOperand(current);
+				current = ((ArrayAccess)o).rawOperand(current);
 			} else if (o instanceof MethodInvocation) {
-				current = ((MethodInvocation)o).setRawOperand(current);
+				current = ((MethodInvocation)o).rawOperand(current);
 			} else if (o instanceof Select) {
-				current = ((Select)o).setRawOperand(current);
+				current = ((Select)o).rawOperand(current);
+			} else {
+				current.addDanglingNode(o);
 			}
-			//TODO else hang dangling node.
 			
 			positionSpan(o, operand, pNode);
 		}
@@ -271,30 +282,38 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createPrimary(Node identifier, Node methodArguments) {
+		Identifier id = createIdentifierIfNeeded(identifier, currentPos());
+		
 		if (methodArguments instanceof TemporaryNode.MethodArguments) {
-			MethodInvocation invoke = new MethodInvocation().setRawName(identifier);
+			MethodInvocation invoke = new MethodInvocation().astName(id);
 			for (Node arg : ((TemporaryNode.MethodArguments)methodArguments).arguments) {
 				invoke.rawArguments().addToEnd(arg);
 			}
 			return posify(invoke);
+		} else {
+			VariableReference ref = new VariableReference().astIdentifier(id);
+			ref.addDanglingNode(methodArguments);
+			return posify(ref);
 		}
-		//TODO if (methodArguments != null) add dangling node.
-		
-		return identifier;
 	}
 	
 	public Node createUnqualifiedConstructorInvocation(Node constructorTypeArgs, Node type, Node args, Node anonymousClassBody) {
 		ConstructorInvocation result = new ConstructorInvocation()
-				.setRawConstructorTypeArguments(constructorTypeArgs)
-				.setRawTypeReference(type)
-				.setRawAnonymousClassBody(anonymousClassBody);
+				.rawTypeReference(type)
+				.rawAnonymousClassBody(anonymousClassBody);
+		
+		if (constructorTypeArgs instanceof TemporaryNode.TypeArguments) {
+			for (Node arg : ((TemporaryNode.TypeArguments)constructorTypeArgs).arguments) {
+				result.rawConstructorTypeArguments().addToEnd(arg);
+			}
+		}
+		
 		if (args instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)args).arguments) {
 				result.rawArguments().addToEnd(arg);
 			}
-		} else {
-			//TODO if (args != null) add dangling.
-		}
+		} else result.addDanglingNode(args);
+		
 		return posify(result);
 	}
 	
@@ -306,13 +325,13 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createDimension(Node dimExpr, org.parboiled.Node<Node> arrayOpen) {
-		ArrayDimension d = new ArrayDimension().setRawDimension(dimExpr);
-		if (arrayOpen != null) d.setPosition(new Position(arrayOpen.getStartLocation().getIndex(), currentPos()));
+		ArrayDimension d = new ArrayDimension().rawDimension(dimExpr);
+		if (arrayOpen != null) d.setPosition(new Position(arrayOpen.getStartIndex(), currentPos()));
 		return d;
 	}
 	
 	public Node createArrayCreationExpression(Node type, List<Node> dimensions, Node initializer) {
-		ArrayCreation ac = new ArrayCreation().setRawComponentTypeReference(type).setRawInitializer(initializer);
+		ArrayCreation ac = new ArrayCreation().rawComponentTypeReference(type).rawInitializer(initializer);
 		if (dimensions != null) for (Node d : dimensions) {
 			if (d != null) ac.rawDimensions().addToEnd(d);
 		}
@@ -322,22 +341,22 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node addParens(Node v) {
 		if (v instanceof Expression) {
-			((Expression)v).getParensPositions().add(new Position(startPos(), currentPos()));
+			((Expression)v).astParensPositions().add(new Position(startPos(), currentPos()));
 		}
 		return v;
 	}
 	
 	public Node createThisOrSuperOrClass(org.parboiled.Node<Node> dot, String text, Node qualifier) {
 		Node result;
-		if ("super".equals(text)) result = new Super().setRawQualifier(qualifier);
-		else if ("class".equals(text)) result = new ClassLiteral().setRawTypeReference(qualifier);
-		else result = new This().setRawQualifier(qualifier);
+		if ("super".equals(text)) result = new Super().rawQualifier(qualifier);
+		else if ("class".equals(text)) result = new ClassLiteral().rawTypeReference(qualifier);
+		else result = new This().rawQualifier(qualifier);
 		if (dot != null) source.registerStructure(result, dot);
 		return posify(result);
 	}
 	
 	public boolean checkIfLevel1ExprIsValidForAssignment(Node node) {
-		return node instanceof Identifier || node instanceof Select || node instanceof ArrayAccess;
+		return node instanceof VariableReference || node instanceof Select || node instanceof ArrayAccess;
 	}
 	
 	public boolean checkIfMethodOrConstructorInvocation(Node node) {
@@ -347,14 +366,11 @@ public class ExpressionsActions extends SourceActions {
 	public boolean typeIsAlsoLegalAsExpression(Node type) {
 		if (!(type instanceof TypeReference)) return true;
 		TypeReference tr = (TypeReference)type;
-		if (tr.getArrayDimensions() > 0) return false;
+		if (tr.astArrayDimensions() > 0) return false;
 		if (tr.isPrimitive() || tr.isVoid()) return false;
 		for (Node part : tr.rawParts()) {
 			if (part instanceof TypeReferencePart) {
-				Node rta = ((TypeReferencePart)part).getRawTypeArguments();
-				if (rta instanceof TypeArguments) {
-					if (((TypeArguments)rta).rawGenerics().size() > 0) return false;
-				}
+				if (!((TypeReferencePart)part).rawTypeArguments().isEmpty()) return false;
 			}
 		}
 		

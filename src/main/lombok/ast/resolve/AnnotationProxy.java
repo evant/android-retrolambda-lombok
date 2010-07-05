@@ -54,7 +54,7 @@ class AnnotationProxy implements InvocationHandler {
 		if (expectedType != String.class) return false;
 		
 		if (val instanceof StringLiteral) {
-			returnValues.add(((StringLiteral)val).getValue());
+			returnValues.add(((StringLiteral)val).astValue());
 			return true;
 		}
 		
@@ -73,7 +73,7 @@ class AnnotationProxy implements InvocationHandler {
 		if (expectedType != boolean.class) return false;
 		
 		if (val instanceof BooleanLiteral) {
-			boolean v = ((BooleanLiteral)val).getValue();
+			boolean v = ((BooleanLiteral)val).astValue();
 			returnValues.add(v);
 			return true;
 		}
@@ -85,8 +85,8 @@ class AnnotationProxy implements InvocationHandler {
 		if (!Resolver.NUMERIC_PRIMITIVE_CLASSES.contains(expectedType)) return false;
 		
 		boolean negative = false;
-		if (val instanceof UnaryExpression && ((UnaryExpression)val).getOperator() == UnaryOperator.UNARY_MINUS) {
-			val = ((UnaryExpression)val).getRawOperand();
+		if (val instanceof UnaryExpression && ((UnaryExpression)val).astOperator() == UnaryOperator.UNARY_MINUS) {
+			val = ((UnaryExpression)val).rawOperand();
 			negative = true;
 		}
 		
@@ -97,10 +97,10 @@ class AnnotationProxy implements InvocationHandler {
 		boolean isIntegral = true;
 		long iVal; {
 			if (val instanceof IntegralLiteral) {
-				long v = ((IntegralLiteral)val).longValue();
+				long v = ((IntegralLiteral)val).astLongValue();
 				iVal = negative ? -v : v;
 			} else if (val instanceof CharLiteral) {
-				long v = ((CharLiteral)val).getValue();
+				long v = ((CharLiteral)val).astValue();
 				iVal = negative ? -v : v;
 			} else {
 				iVal = 0;
@@ -110,7 +110,7 @@ class AnnotationProxy implements InvocationHandler {
 		
 		double dVal; {
 			if (val instanceof FloatingPointLiteral) {
-				dVal = ((FloatingPointLiteral)val).doubleValue();
+				dVal = ((FloatingPointLiteral)val).astDoubleValue();
 			} else {
 				dVal = 0.0;
 			}
@@ -142,8 +142,8 @@ class AnnotationProxy implements InvocationHandler {
 		
 		List<String> classNames = Lists.newArrayList();
 		AnnotationClassNotAvailableException classNotAvailable = null;
-		for (AnnotationElement elem : node.elements()) {
-			if (!(elem.getName() == null && name.equals("value")) && !name.equals(elem.getName())) continue;
+		for (AnnotationElement elem : node.astElements()) {
+			if (!(elem.astName() == null && name.equals("value")) && !name.equals(elem.astName())) continue;
 			for (Node val : elem.getValues()) {
 				if (tryAsNumeric(val, expectedType, returnValues)) continue;
 				if (tryAsBoolean(val, expectedType, returnValues)) continue;
@@ -151,7 +151,7 @@ class AnnotationProxy implements InvocationHandler {
 				if (tryAsEnum(val, expectedType, returnValues)) continue;
 				if (expectedType == Class.class) {
 					if (val instanceof ClassLiteral) {
-						String className = ((ClassLiteral)val).getTypeReference().getTypeName();
+						String className = ((ClassLiteral)val).astTypeReference().getTypeName();
 						String cName = className;
 						int dims = 0;
 						while (cName.endsWith("[]")) {

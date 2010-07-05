@@ -25,7 +25,7 @@ import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.Rule;
-import org.parboiled.support.Leaf;
+import org.parboiled.annotations.SuppressSubnodes;
 
 public class StructuresParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -37,16 +37,16 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule typeBody() {
-		return sequence(
-				ch('{'), group.basics.optWS(),
-				typeBodyDeclarations(), SET(),
-				ch('}'), group.basics.optWS(),
-				SET(actions.posify(VALUE())));
+		return Sequence(
+				Ch('{'), group.basics.optWS(),
+				typeBodyDeclarations(), set(),
+				Ch('}'), group.basics.optWS(),
+				set(actions.posify(value())));
 	}
 	
 	Rule typeBodyDeclarations() {
-		return sequence(
-				zeroOrMore(firstOf(
+		return Sequence(
+				ZeroOrMore(FirstOf(
 						anyTypeDeclaration(),
 						fieldDeclaration(),
 						methodDeclaration(),
@@ -55,33 +55,33 @@ public class StructuresParser extends BaseParser<Node> {
 						instanceInitializer(),
 						emptyDeclaration()
 						).label("member")).label("members"),
-				SET(actions.createTypeBody(VALUES("members/member"))));
+				set(actions.createNormalTypeBody(values("members/member"))));
 	}
 	
 	Rule emptyDeclaration() {
-		return sequence(ch(';'), group.basics.optWS(), SET(actions.createEmptyDeclaration()));
+		return Sequence(Ch(';'), group.basics.optWS(), set(actions.createEmptyDeclaration()));
 	}
 	
 	public Rule methodArguments() {
-		return sequence(
-				ch('('),
+		return Sequence(
+				Ch('('),
 				group.basics.optWS(),
-				optional(sequence(
+				Optional(Sequence(
 						group.expressions.anyExpression(),
-						SET(),
-						zeroOrMore(sequence(
-								ch(','),
+						set(),
+						ZeroOrMore(Sequence(
+								Ch(','),
 								group.basics.optWS(),
-								group.expressions.anyExpression(), SET())))),
-				ch(')'),
+								group.expressions.anyExpression(), set())))),
+				Ch(')'),
 				group.basics.optWS(),
-				SET(actions.createMethodArguments(VALUE("optional/sequence"), VALUES("optional/sequence/zeroOrMore/sequence"))));
+				set(actions.createMethodArguments(value("Optional/Sequence"), values("Optional/Sequence/ZeroOrMore/Sequence"))));
 	}
 	
 	public Rule anyTypeDeclaration() {
-		return sequence(
-				testNot(firstOf(eoi(), ch('}'))),
-				firstOf(
+		return Sequence(
+				TestNot(FirstOf(Eoi(), Ch('}'))),
+				FirstOf(
 						classOrInterfaceDeclaration(),
 						enumDeclaration(),
 						annotationDeclaration(),
@@ -89,356 +89,356 @@ public class StructuresParser extends BaseParser<Node> {
 	}
 	
 	public Rule classOrInterfaceDeclaration() {
-		return sequence(
+		return Sequence(
 				typeDeclarationModifiers().label("modifiers"),
-				firstOf(string("class"), string("interface")).label("kind"),
+				FirstOf(String("class"), String("interface")).label("kind"),
 				group.basics.testLexBreak(), group.basics.optWS(),
 				group.basics.identifier().label("typeName"),
 				group.types.typeVariables().label("typeParameters"),
-				zeroOrMore(firstOf(
+				ZeroOrMore(FirstOf(
 						extendsClause(),
 						implementsClause()).label("addon")).label("addons"),
 				typeBody().label("body"),
-				SET(actions.createTypeDeclaration(TEXT("kind"), VALUE("modifiers"), VALUE("typeName"), VALUE("typeParameters"), VALUE("body"), VALUES("addons/addon"))));
+				set(actions.createTypeDeclaration(text("kind"), value("modifiers"), value("typeName"), value("typeParameters"), value("body"), values("addons/addon"))));
 	}
 	
 	Rule extendsClause() {
-		return sequence(
-				sequence(string("extends"), group.basics.testLexBreak(), group.basics.optWS()),
+		return Sequence(
+				Sequence(String("extends"), group.basics.testLexBreak(), group.basics.optWS()),
 				group.types.type().label("head"),
-				zeroOrMore(sequence(
-						ch(','), group.basics.optWS(),
+				ZeroOrMore(Sequence(
+						Ch(','), group.basics.optWS(),
 						group.types.type()).label("tail")),
-				SET(actions.createExtendsClause(VALUE("head"), VALUES("zeroOrMore/tail"))));
+				set(actions.createExtendsClause(value("head"), values("ZeroOrMore/tail"))));
 	}
 	
 	Rule implementsClause() {
-		return sequence(
-				sequence(string("implements"), group.basics.testLexBreak(), group.basics.optWS()),
+		return Sequence(
+				Sequence(String("implements"), group.basics.testLexBreak(), group.basics.optWS()),
 				group.types.type().label("head"),
-				zeroOrMore(sequence(
-						ch(','), group.basics.optWS(),
+				ZeroOrMore(Sequence(
+						Ch(','), group.basics.optWS(),
 						group.types.type()).label("tail")),
-				SET(actions.createImplementsClause(VALUE("head"), VALUES("zeroOrMore/tail"))));
+				set(actions.createImplementsClause(value("head"), values("ZeroOrMore/tail"))));
 	}
 	
 	public Rule enumDeclaration() {
-		return sequence(
+		return Sequence(
 				typeDeclarationModifiers().label("modifiers"),
-				string("enum"), group.basics.testLexBreak(), group.basics.optWS(),
+				String("enum"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.basics.identifier().label("typeName"),
-				zeroOrMore(firstOf(
+				ZeroOrMore(FirstOf(
 						extendsClause(),
 						implementsClause()).label("addon")).label("addons"),
 				enumBody().label("body"),
-				SET(actions.createEnumDeclaration(VALUE("modifiers"), VALUE("typeName"), VALUE("body"), VALUES("addons/addon"))));
+				set(actions.createEnumDeclaration(value("modifiers"), value("typeName"), value("body"), values("addons/addon"))));
 	}
 	
 	public Rule annotationDeclaration() {
-		return sequence(
+		return Sequence(
 				typeDeclarationModifiers().label("modifiers"),
-				ch('@'), group.basics.optWS(),
-				string("interface"), group.basics.testLexBreak(), group.basics.optWS(),
+				Ch('@'), group.basics.optWS(),
+				String("interface"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.basics.identifier().label("name"),
-				ch('{').label("typeOpen"), group.basics.optWS(),
-				zeroOrMore(annotationElementDeclaration().label("member")).label("members"),
-				ch('}').label("typeClose"), group.basics.optWS(),
-				SET(actions.createAnnotationDeclaration(VALUE("modifiers"), VALUE("name"), VALUES("members/member"), NODE("typeOpen"), NODE("typeClose"))));
+				Ch('{').label("typeOpen"), group.basics.optWS(),
+				ZeroOrMore(annotationElementDeclaration().label("member")).label("members"),
+				Ch('}').label("typeClose"), group.basics.optWS(),
+				set(actions.createAnnotationDeclaration(value("modifiers"), value("name"), values("members/member"), node("typeOpen"), node("typeClose"))));
 	}
 	
 	Rule annotationElementDeclaration() {
-		return firstOf(
+		return FirstOf(
 				annotationMethodDeclaration(),
 				fieldDeclaration(),
 				classOrInterfaceDeclaration(),
 				enumDeclaration(),
 				annotationDeclaration(),
-				sequence(ch(';'), group.basics.optWS())
+				Sequence(Ch(';'), group.basics.optWS())
 				);
 	}
 	
 	Rule enumBody() {
-		return sequence(
-				ch('{'), group.basics.optWS(),
-				optional(sequence(
+		return Sequence(
+				Ch('{'), group.basics.optWS(),
+				Optional(Sequence(
 						enumConstant().label("head"),
-						zeroOrMore(sequence(
-								ch(','), group.basics.optWS(),
+						ZeroOrMore(Sequence(
+								Ch(','), group.basics.optWS(),
 								enumConstant()).label("tail")),
-						optional(sequence(ch(','), group.basics.optWS())))).label("constants"),
-				optional(sequence(
-						ch(';'), group.basics.optWS(),
+						Optional(Sequence(Ch(','), group.basics.optWS())))).label("constants"),
+				Optional(Sequence(
+						Ch(';'), group.basics.optWS(),
 						typeBodyDeclarations())).label("typeBodyDeclarations"),
-				ch('}'), group.basics.optWS(),
-				SET(actions.createEnumBody(VALUE("constants/sequence/head"), VALUES("constants/sequence/zeroOrMore/tail"), VALUE("typeBodyDeclarations"))));
+				Ch('}'), group.basics.optWS(),
+				set(actions.createEnumBody(value("constants/Sequence/head"), values("constants/Sequence/ZeroOrMore/tail"), value("typeBodyDeclarations"))));
 	}
 	
 	Rule enumConstant() {
-		return sequence(
-				zeroOrMore(annotation().label("annotation")).label("annotations"),
+		return Sequence(
+				ZeroOrMore(annotation().label("annotation")).label("annotations"),
 				group.basics.identifier().label("name"),
-				optional(methodArguments()).label("arguments"),
-				optional(typeBody()).label("body"),
-				SET(actions.createEnumConstant(VALUES("annotations/annotation"), VALUE("name"), VALUE("arguments"), VALUE("body"))));
+				Optional(methodArguments()).label("arguments"),
+				Optional(typeBody()).label("body"),
+				set(actions.createEnumConstant(values("annotations/annotation"), value("name"), value("arguments"), value("body"))));
 	}
 	
 	public Rule constructorDeclaration() {
-		return sequence(
+		return Sequence(
 				methodDeclarationModifiers().label("modifiers"),
 				group.types.typeVariables().label("typeParameters"),
 				group.basics.identifier().label("typeName"),
 				methodParameters().label("params"),
-				optional(sequence(
-						sequence(string("throws"), group.basics.testLexBreak(), group.basics.optWS()),
+				Optional(Sequence(
+						Sequence(String("throws"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type().label("throwsHead"),
-						zeroOrMore(sequence(ch(','), group.basics.optWS(), group.types.type()).label("throwsTail"))
+						ZeroOrMore(Sequence(Ch(','), group.basics.optWS(), group.types.type()).label("throwsTail"))
 						)).label("throwsClause"),
-				firstOf(
-						sequence(ch(';'), group.basics.optWS()),
+				FirstOf(
+						Sequence(Ch(';'), group.basics.optWS()),
 						group.statements.blockStatement()).label("body"),
-				SET(actions.createConstructorDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("typeName"), VALUE("params"), 
-						VALUE("throwsClause/sequence/throwsHead"), VALUES("throwsClause/sequence/zeroOrMore/throwsTail"),
-						VALUE("body"))));
+				set(actions.createConstructorDeclaration(value("modifiers"), value("typeParameters"), value("typeName"), value("params"), 
+						value("throwsClause/Sequence/throwsHead"), values("throwsClause/Sequence/ZeroOrMore/throwsTail"),
+						value("body"))));
 	}
 	
 	public Rule annotationMethodDeclaration() {
-		return sequence(
+		return Sequence(
 				methodDeclarationModifiers().label("modifiers"),
 				group.types.type().label("resultType"),
 				group.basics.identifier().label("methodName"),
-				ch('('), group.basics.optWS(),
-				ch(')'), group.basics.optWS(),
-				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
-				optional(sequence(
-						sequence(string("default"), group.basics.testLexBreak(), group.basics.optWS()),
+				Ch('('), group.basics.optWS(),
+				Ch(')'), group.basics.optWS(),
+				ZeroOrMore(Sequence(Ch('['), group.basics.optWS(), Ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				Optional(Sequence(
+						Sequence(String("default"), group.basics.testLexBreak(), group.basics.optWS()),
 						annotationElementValue())).label("defaultValue"),
-				ch(';'), group.basics.optWS(),
-				SET(actions.createAnnotationMethodDeclaration(VALUE("modifiers"), VALUE("resultType"), VALUE("methodName"), NODES("dims/dim"), VALUE("defaultValue"))));
+				Ch(';'), group.basics.optWS(),
+				set(actions.createAnnotationMethodDeclaration(value("modifiers"), value("resultType"), value("methodName"), nodes("dims/dim"), value("defaultValue"))));
 	}
 	
 	public Rule methodDeclaration() {
-		return sequence(
+		return Sequence(
 				methodDeclarationModifiers().label("modifiers"),
 				group.types.typeVariables().label("typeParameters"),
 				group.types.type().label("resultType"),
 				group.basics.identifier().label("methodName"),
 				methodParameters().label("params"),
-				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
-				optional(sequence(
-						sequence(string("throws"), group.basics.testLexBreak(), group.basics.optWS()),
+				ZeroOrMore(Sequence(Ch('['), group.basics.optWS(), Ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				Optional(Sequence(
+						Sequence(String("throws"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type().label("throwsHead"),
-						zeroOrMore(sequence(ch(','), group.basics.optWS(), group.types.type()).label("throwsTail"))
+						ZeroOrMore(Sequence(Ch(','), group.basics.optWS(), group.types.type()).label("throwsTail"))
 						)).label("throwsClause"),
-				firstOf(
-						sequence(ch(';'), group.basics.optWS()),
+				FirstOf(
+						Sequence(Ch(';'), group.basics.optWS()),
 						group.statements.blockStatement()).label("body"),
-				SET(actions.createMethodDeclaration(VALUE("modifiers"), VALUE("typeParameters"), VALUE("resultType"), VALUE("methodName"), VALUE("params"), 
-						NODES("dims/dim"), VALUE("throwsClause/sequence/throwsHead"), VALUES("throwsClause/sequence/zeroOrMore/throwsTail"),
-						VALUE("body"))));
+				set(actions.createMethodDeclaration(value("modifiers"), value("typeParameters"), value("resultType"), value("methodName"), value("params"), 
+						nodes("dims/dim"), value("throwsClause/Sequence/throwsHead"), values("throwsClause/Sequence/ZeroOrMore/throwsTail"),
+						value("body"))));
 	}
 	
 	Rule methodParameters() {
-		return sequence(
-				ch('('), group.basics.optWS(),
-				optional(sequence(
+		return Sequence(
+				Ch('('), group.basics.optWS(),
+				Optional(Sequence(
 						methodParameter().label("head"),
-						zeroOrMore(sequence(
-								ch(','), group.basics.optWS(),
+						ZeroOrMore(Sequence(
+								Ch(','), group.basics.optWS(),
 								methodParameter().label("tail"))))),
-				ch(')'), group.basics.optWS(),
-				SET(actions.createMethodParameters(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))));
+				Ch(')'), group.basics.optWS(),
+				set(actions.createMethodParameters(value("Optional/Sequence/head"), values("Optional/Sequence/ZeroOrMore/Sequence/tail"))));
 	}
 	
 	Rule methodParameter() {
-		return sequence(
+		return Sequence(
 				variableDefinitionModifiers().label("modifiers"),
 				group.types.type().label("type"),
-				optional(sequence(string("..."), group.basics.optWS())).label("varargs"),
+				Optional(Sequence(String("..."), group.basics.optWS())).label("varargs"),
 				group.basics.identifier().label("name"),
-				zeroOrMore(sequence(ch('[').label("open"), group.basics.optWS(), ch(']').label("closed"), group.basics.optWS()).label("dim")).label("dims"),
-				SET(actions.createMethodParameter(VALUE("modifiers"), VALUE("type"), TEXT("varargs"), VALUE("name"), NODES("dims/dim/open"), NODES("dims/dim/closed"))));
+				ZeroOrMore(Sequence(Ch('[').label("open"), group.basics.optWS(), Ch(']').label("closed"), group.basics.optWS()).label("dim")).label("dims"),
+				set(actions.createMethodParameter(value("modifiers"), value("type"), text("varargs"), value("name"), nodes("dims/dim/open"), nodes("dims/dim/closed"))));
 	}
 	
 	public Rule instanceInitializer() {
-		return sequence(
+		return Sequence(
 				group.statements.blockStatement().label("initializer"),
-				SET(actions.createInstanceInitializer(VALUE("initializer"))));
+				set(actions.createInstanceInitializer(value("initializer"))));
 	}
 	
 	public Rule staticInitializer() {
-		return sequence(
-				string("static"), group.basics.testLexBreak(), group.basics.optWS(),
+		return Sequence(
+				String("static"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.statements.blockStatement().label("initializer"),
-				SET(actions.createStaticInitializer(VALUE("initializer"))));
+				set(actions.createStaticInitializer(value("initializer"))));
 	}
 	
 	public Rule fieldDeclaration() {
-		return sequence(
+		return Sequence(
 				fieldDeclarationModifiers().label("modifiers"),
-				variableDefinition(), SET(), SET(actions.posify(VALUE())),
-				ch(';'), group.basics.optWS(),
-				SET(actions.createFieldDeclaration(VALUE(), VALUE("modifiers"))));
+				variableDefinition(), set(), set(actions.posify(value())),
+				Ch(';'), group.basics.optWS(),
+				set(actions.createFieldDeclaration(value(), value("modifiers"))));
 	}
 	
 	/**
 	 * Add your own modifiers!
 	 */
 	Rule variableDefinition() {
-		return sequence(
+		return Sequence(
 				group.types.type().label("type"),
 				variableDefinitionPart().label("head"),
-				zeroOrMore(sequence(
-						ch(','), group.basics.optWS(),
+				ZeroOrMore(Sequence(
+						Ch(','), group.basics.optWS(),
 						variableDefinitionPart()).label("tail")),
-				SET(actions.createVariableDefinition(VALUE("type"), VALUE("head"), VALUES("zeroOrMore/tail"))));
+				set(actions.createVariableDefinition(value("type"), value("head"), values("ZeroOrMore/tail"))));
 	}
 	
 	Rule variableDefinitionPartNoAssign() {
-		return sequence(
+		return Sequence(
 				group.basics.identifier().label("varName"),
-				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
-				SET(actions.createVariableDefinitionPart(VALUE("varName"), TEXTS("dims/dim"), null)));
+				ZeroOrMore(Sequence(Ch('['), group.basics.optWS(), Ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				set(actions.createVariableDefinitionPart(value("varName"), texts("dims/dim"), null)));
 	}
 	
 	Rule variableDefinitionPart() {
-		return sequence(
+		return Sequence(
 				group.basics.identifier().label("varName"),
-				zeroOrMore(sequence(ch('['), group.basics.optWS(), ch(']'), group.basics.optWS()).label("dim")).label("dims"),
-				optional(sequence(
-						ch('='), group.basics.optWS(),
-						firstOf(
+				ZeroOrMore(Sequence(Ch('['), group.basics.optWS(), Ch(']'), group.basics.optWS()).label("dim")).label("dims"),
+				Optional(Sequence(
+						Ch('='), group.basics.optWS(),
+						FirstOf(
 								group.expressions.arrayInitializer(),
 								group.expressions.anyExpression()))).label("initializer"),
-				SET(actions.createVariableDefinitionPart(VALUE("varName"), TEXTS("dims/dim"), VALUE("initializer"))));
+				set(actions.createVariableDefinitionPart(value("varName"), texts("dims/dim"), value("initializer"))));
 	}
 	
 	public Rule annotation() {
-		return sequence(
-				ch('@'), group.basics.optWS(),
+		return Sequence(
+				Ch('@'), group.basics.optWS(),
 				group.types.plainReferenceType().label("annotationType"),
-				optional(sequence(
-						ch('('), group.basics.optWS(),
-						optional(firstOf(
+				Optional(Sequence(
+						Ch('('), group.basics.optWS(),
+						Optional(FirstOf(
 								annotationElements(),
-								sequence(annotationElementValue(),
-										SET(actions.createAnnotationFromElement(LAST_VALUE()))))),
-						ch(')'), group.basics.optWS())).label("content"),
-				SET(actions.createAnnotation(VALUE("annotationType"), VALUE("content"))));
+								Sequence(annotationElementValue(),
+										set(actions.createAnnotationFromElement(lastValue()))))),
+						Ch(')'), group.basics.optWS())).label("content"),
+				set(actions.createAnnotation(value("annotationType"), value("content"))));
 	}
 	
 	Rule annotationElements() {
-		return sequence(
+		return Sequence(
 				annotationElement().label("head"),
-				zeroOrMore(sequence(
-						ch(','), group.basics.optWS(),
+				ZeroOrMore(Sequence(
+						Ch(','), group.basics.optWS(),
 						annotationElement()).label("tail")),
-				SET(actions.createAnnotationFromElements(VALUE("head"), VALUES("zeroOrMore/tail"))));
+				set(actions.createAnnotationFromElements(value("head"), values("ZeroOrMore/tail"))));
 	}
 	
 	Rule annotationElement() {
-		return sequence(
+		return Sequence(
 				group.basics.identifier().label("name"),
-				ch('='), group.basics.optWS(),
+				Ch('='), group.basics.optWS(),
 				annotationElementValue().label("value"),
-				SET(actions.createAnnotationElement(VALUE("name"), VALUE("value"))));
+				set(actions.createAnnotationElement(value("name"), value("value"))));
 	}
 	
 	Rule annotationElementValue() {
-		return firstOf(
+		return FirstOf(
 				annotation(),
-				sequence(
-						ch('{'), group.basics.optWS(),
-						optional(sequence(
+				Sequence(
+						Ch('{'), group.basics.optWS(),
+						Optional(Sequence(
 								annotationElementValue().label("head"),
-								zeroOrMore(sequence(
-										ch(','), group.basics.optWS(),
+								ZeroOrMore(Sequence(
+										Ch(','), group.basics.optWS(),
 										annotationElementValue()).label("tail")),
-								optional(sequence(ch(','), group.basics.optWS())))),
-						ch('}'), group.basics.optWS(),
-						SET(actions.createAnnotationElementValueArrayInitializer(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/tail")))),
+								Optional(Sequence(Ch(','), group.basics.optWS())))),
+						Ch('}'), group.basics.optWS(),
+						set(actions.createAnnotationElementValueArrayInitializer(value("Optional/Sequence/head"), values("Optional/Sequence/ZeroOrMore/tail")))),
 				group.expressions.inlineIfExpressionChaining());
 	}
 	
-	@Leaf
+	@SuppressSubnodes
 	Rule anyKeyword() {
-		return firstOf("final", "strictfp", "abstract", "transient", "volatile",
+		return FirstOf("final", "strictfp", "abstract", "transient", "volatile",
 				"public", "protected", "private", "synchronized", "static", "native");
 	}
 	
 	public Rule keywordModifier() {
-		return sequence(
+		return Sequence(
 				anyKeyword().label("keyword"),
 				group.basics.testLexBreak(),
-				SET(actions.createKeywordModifier(TEXT("keyword"))),
+				set(actions.createKeywordModifier(text("keyword"))),
 				group.basics.optWS());
 	}
 	
 	public Rule typeDeclarationModifiers() {
-		return sequence(
-				testNot(ch('}')),
-				zeroOrMore(anyModifier().label("modifier")),
-				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
+		return Sequence(
+				TestNot(Ch('}')),
+				ZeroOrMore(anyModifier().label("modifier")),
+				set(actions.createModifiers(values("ZeroOrMore/modifier"))));
 	}
 	
 	public Rule methodDeclarationModifiers() {
-		return sequence(
-				testNot(ch('}')),
-				zeroOrMore(anyModifier().label("modifier")),
-				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
+		return Sequence(
+				TestNot(Ch('}')),
+				ZeroOrMore(anyModifier().label("modifier")),
+				set(actions.createModifiers(values("ZeroOrMore/modifier"))));
 	}
 	
 	public Rule fieldDeclarationModifiers() {
-		return sequence(
-				testNot(ch('}')),
-				zeroOrMore(anyModifier().label("modifier")),
-				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
+		return Sequence(
+				TestNot(Ch('}')),
+				ZeroOrMore(anyModifier().label("modifier")),
+				set(actions.createModifiers(values("ZeroOrMore/modifier"))));
 	}
 	
 	public Rule variableDefinitionModifiers() {
-		return sequence(
-				testNot(ch('}')),
-				zeroOrMore(anyModifier().label("modifier")),
-				SET(actions.createModifiers(VALUES("zeroOrMore/modifier"))));
+		return Sequence(
+				TestNot(Ch('}')),
+				ZeroOrMore(anyModifier().label("modifier")),
+				set(actions.createModifiers(values("ZeroOrMore/modifier"))));
 	}
 	
 	public Rule anyModifier() {
-		return firstOf(annotation(), keywordModifier());
+		return FirstOf(annotation(), keywordModifier());
 	}
 	
 	public Rule packageDeclaration() {
-		return sequence(
-				sequence(
-						zeroOrMore(annotation().label("annotation")).label("annotations"),
-						string("package"), group.basics.testLexBreak(), group.basics.optWS()),
+		return Sequence(
+				Sequence(
+						ZeroOrMore(annotation().label("annotation")).label("annotations"),
+						String("package"), group.basics.testLexBreak(), group.basics.optWS()),
 				group.basics.identifier().label("head"),
-				zeroOrMore(group.basics.dotIdentifier().label("tail")),
-				ch(';'), group.basics.optWS(),
-				SET(actions.createPackageDeclaration(VALUES("sequence/annotations/annotation"), VALUE("head"), VALUES("zeroOrMore/tail"))));
+				ZeroOrMore(group.basics.dotIdentifier().label("tail")),
+				Ch(';'), group.basics.optWS(),
+				set(actions.createPackageDeclaration(values("Sequence/annotations/annotation"), value("head"), values("ZeroOrMore/tail"))));
 	}
 	
 	public Rule importDeclaration() {
-		return sequence(
-				sequence(string("import"), group.basics.testLexBreak(), group.basics.optWS()),
-				optional(sequence(string("static"), group.basics.testLexBreak(), group.basics.optWS())).label("static"),
+		return Sequence(
+				Sequence(String("import"), group.basics.testLexBreak(), group.basics.optWS()),
+				Optional(Sequence(String("static"), group.basics.testLexBreak(), group.basics.optWS())).label("static"),
 				group.basics.identifier().label("head"),
-				zeroOrMore(group.basics.dotIdentifier().label("tail")),
-				optional(sequence(
-						ch('.'), group.basics.optWS(),
-						ch('*'), group.basics.optWS())).label("dotStar"),
-				ch(';'), group.basics.optWS(),
-				SET(actions.createImportDeclaration(TEXT("static"), VALUE("head"), VALUES("zeroOrMore/tail"), TEXT("dotStar"))));
+				ZeroOrMore(group.basics.dotIdentifier().label("tail")),
+				Optional(Sequence(
+						Ch('.'), group.basics.optWS(),
+						Ch('*'), group.basics.optWS())).label("dotStar"),
+				Ch(';'), group.basics.optWS(),
+				set(actions.createImportDeclaration(text("static"), value("head"), values("ZeroOrMore/tail"), text("dotStar"))));
 	}
 	
 	public Rule compilationUnitEoi() {
-		return sequence(compilationUnit(), eoi());
+		return Sequence(compilationUnit(), Eoi());
 	}
 	
 	public Rule compilationUnit() {
-		return sequence(
+		return Sequence(
 				group.basics.optWS(),
-				optional(packageDeclaration()).label("package"),
-				zeroOrMore(importDeclaration().label("import")).label("imports"),
-				zeroOrMore(anyTypeDeclaration().label("type")).label("types"),
-				SET(actions.createCompilationUnit(VALUE("package"), VALUES("imports/import"), VALUES("types/type"))));
+				Optional(packageDeclaration()).label("package"),
+				ZeroOrMore(importDeclaration().label("import")).label("imports"),
+				ZeroOrMore(anyTypeDeclaration().label("type")).label("types"),
+				set(actions.createCompilationUnit(value("package"), values("imports/import"), values("types/type"))));
 	}
 }

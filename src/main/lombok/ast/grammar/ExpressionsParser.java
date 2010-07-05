@@ -27,7 +27,7 @@ import org.parboiled.Action;
 import org.parboiled.BaseParser;
 import org.parboiled.Context;
 import org.parboiled.Rule;
-import org.parboiled.support.Cached;
+import org.parboiled.annotations.Cached;
 
 public class ExpressionsParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -42,7 +42,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * P0
 	 */
 	public Rule primaryExpression() {
-		return firstOf(
+		return FirstOf(
 				parenGrouping(),
 				group.literals.anyLiteral(),
 				unqualifiedThisOrSuperLiteral(),
@@ -53,43 +53,43 @@ public class ExpressionsParser extends BaseParser<Node> {
 	}
 	
 	Rule parenGrouping() {
-		return sequence(
-				ch('('), group.basics.optWS(),
-				anyExpression(), SET(),
-				ch(')'), SET(actions.addParens(VALUE())),
+		return Sequence(
+				Ch('('), group.basics.optWS(),
+				anyExpression(), set(),
+				Ch(')'), set(actions.addParens(value())),
 				group.basics.optWS());
 	}
 	
 	Rule unqualifiedThisOrSuperLiteral() {
-		return sequence(
-				firstOf(string("this"), string("super")).label("thisOrSuper"),
+		return Sequence(
+				FirstOf(String("this"), String("super")).label("thisOrSuper"),
 				group.basics.testLexBreak(),
 				group.basics.optWS(),
-				testNot(ch('(')),
-				SET(actions.createThisOrSuperOrClass(null, TEXT("thisOrSuper"), null)));
+				TestNot(Ch('(')),
+				set(actions.createThisOrSuperOrClass(null, text("thisOrSuper"), null)));
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.8.2
 	 */
 	Rule qualifiedClassOrThisOrSuperLiteral() {
-		return sequence(
+		return Sequence(
 				group.types.type().label("type"),
-				ch('.').label("dot"), group.basics.optWS(),
-				firstOf(string("this"), string("super"), string("class")).label("thisOrSuperOrClass"),
+				Ch('.').label("dot"), group.basics.optWS(),
+				FirstOf(String("this"), String("super"), String("class")).label("thisOrSuperOrClass"),
 				group.basics.testLexBreak(),
 				group.basics.optWS(),
-				SET(actions.createThisOrSuperOrClass(NODE("dot"), TEXT("thisOrSuperOrClass"), VALUE("type"))));
+				set(actions.createThisOrSuperOrClass(node("dot"), text("thisOrSuperOrClass"), value("type"))));
 	}
 	
 	Rule unqualifiedConstructorInvocation() {
-		return sequence(
-				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
+		return Sequence(
+				String("new"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.types.typeArguments().label("constructorTypeArgs"),
 				group.types.type().label("type"),
 				group.structures.methodArguments().label("args"),
-				optional(group.structures.typeBody()).label("classBody"),
-				SET(actions.createUnqualifiedConstructorInvocation(VALUE("constructorTypeArgs"), VALUE("type"), VALUE("args"), VALUE("classBody"))));
+				Optional(group.structures.typeBody()).label("classBody"),
+				set(actions.createUnqualifiedConstructorInvocation(value("constructorTypeArgs"), value("type"), value("args"), value("classBody"))));
 	}
 	
 	/**
@@ -97,37 +97,37 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.10
 	 */
 	Rule arrayCreationExpression() {
-		return sequence(
-				string("new"), group.basics.testLexBreak(), group.basics.optWS(),
+		return Sequence(
+				String("new"), group.basics.testLexBreak(), group.basics.optWS(),
 				group.types.nonArrayType().label("type"),
-				oneOrMore(sequence(
-						ch('[').label("openArray"), group.basics.optWS(),
-						optional(anyExpression()).label("dimension"), ch(']'), group.basics.optWS(),
-						SET(actions.createDimension(VALUE("dimension"), NODE("openArray"))))),
-				optional(arrayInitializer()).label("initializer"),
-				SET(actions.createArrayCreationExpression(VALUE("type"), VALUES("oneOrMore/sequence"), VALUE("initializer"))));
+				OneOrMore(Sequence(
+						Ch('[').label("openArray"), group.basics.optWS(),
+						Optional(anyExpression()).label("dimension"), Ch(']'), group.basics.optWS(),
+						set(actions.createDimension(value("dimension"), node("openArray"))))),
+				Optional(arrayInitializer()).label("initializer"),
+				set(actions.createArrayCreationExpression(value("type"), values("OneOrMore/Sequence"), value("initializer"))));
 	}
 	
 	public Rule arrayInitializer() {
-		return sequence(
-				ch('{'), group.basics.optWS(),
-				optional(sequence(
-						firstOf(arrayInitializer(), anyExpression()).label("head"),
-						zeroOrMore(sequence(
-								ch(','), group.basics.optWS(),
-								firstOf(arrayInitializer(), anyExpression()).label("tail"))),
-						optional(ch(',')),
+		return Sequence(
+				Ch('{'), group.basics.optWS(),
+				Optional(Sequence(
+						FirstOf(arrayInitializer(), anyExpression()).label("head"),
+						ZeroOrMore(Sequence(
+								Ch(','), group.basics.optWS(),
+								FirstOf(arrayInitializer(), anyExpression()).label("tail"))),
+						Optional(Ch(',')),
 						group.basics.optWS())),
-				ch('}'), group.basics.optWS(),
-				SET(actions.createArrayInitializerExpression(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))));
+				Ch('}'), group.basics.optWS(),
+				set(actions.createArrayInitializerExpression(value("Optional/Sequence/head"), values("Optional/Sequence/ZeroOrMore/Sequence/tail"))));
 	}
 	
 	Rule identifierExpression() {
-		return sequence(
+		return Sequence(
 				group.basics.identifier(),
-				SET(),
-				optional(sequence(group.structures.methodArguments(), SET()).label("methodArgs")),
-				SET(actions.createPrimary(VALUE(), VALUE("optional/methodArgs"))));
+				set(),
+				Optional(Sequence(group.structures.methodArguments(), set()).label("methodArgs")),
+				set(actions.createPrimary(value(), value("Optional/methodArgs"))));
 	}
 	
 	public Rule anyExpression() {
@@ -138,51 +138,51 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8
 	 */
 	public Rule statementExpression() {
-		return firstOf(
+		return FirstOf(
 				assignmentExpression(),
 				postfixIncrementExpression(),
 				prefixIncrementExpression(),
-				sequence(dotNewExpressionChaining(), SET(), actions.checkIfMethodOrConstructorInvocation(VALUE())));
+				Sequence(dotNewExpressionChaining(), set(), actions.checkIfMethodOrConstructorInvocation(value())));
 	}
 	
 	public Rule allPrimaryExpressions() {
-		return sequence(level1ExpressionChaining(), empty());
+		return Sequence(level1ExpressionChaining(), Empty());
 	}
 	
 	/**
 	 * P1
 	 */
 	Rule level1ExpressionChaining() {
-		return sequence(
-				primaryExpression().label("head"), SET(),
-				zeroOrMore(firstOf(
+		return Sequence(
+				primaryExpression().label("head"), set(),
+				ZeroOrMore(FirstOf(
 						arrayAccessOperation().label("arrayAccess"),
 						methodInvocationWithTypeArgsOperation().label("methodInvocation"),
 						select().label("select"))),
-				SET(actions.createLevel1Expression(NODE("head"), NODES("zeroOrMore/firstOf"))));
+				set(actions.createLevel1Expression(node("head"), nodes("ZeroOrMore/FirstOf"))));
 	}
 	
 	Rule arrayAccessOperation() {
-		return sequence(
-				ch('['), group.basics.optWS(),
-				anyExpression(), SET(), ch(']'), group.basics.optWS(),
-				SET(actions.createArrayAccessOperation(VALUE())));
+		return Sequence(
+				Ch('['), group.basics.optWS(),
+				anyExpression(), set(), Ch(']'), group.basics.optWS(),
+				set(actions.createArrayAccessOperation(value())));
 	}
 	
 	Rule methodInvocationWithTypeArgsOperation() {
-		return sequence(
-				ch('.').label("dot"), group.basics.optWS(),
+		return Sequence(
+				Ch('.').label("dot"), group.basics.optWS(),
 				group.types.typeArguments().label("typeArguments"),
 				group.basics.identifier().label("name"),
 				group.structures.methodArguments().label("methodArguments"),
-				SET(actions.createMethodInvocationOperation(NODE("dot"), VALUE("typeArguments"), VALUE("name"), VALUE("methodArguments"))));
+				set(actions.createMethodInvocationOperation(node("dot"), value("typeArguments"), value("name"), value("methodArguments"))));
 	}
 	
 	Rule select() {
-		return sequence(
+		return Sequence(
 				group.basics.dotIdentifier().label("identifier"),
-				testNot(ch('(')),
-				SET(actions.createSelectOperation(VALUE("identifier"))));
+				TestNot(Ch('(')),
+				set(actions.createSelectOperation(value("identifier"))));
 	}
 	
 	/**
@@ -192,22 +192,22 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * in all java parsers, and so we give it its own little precedence group here.
 	 */
 	Rule dotNewExpressionChaining() {
-		return sequence(
-				level1ExpressionChaining().label("head"), SET(),
-				zeroOrMore(sequence(
-						sequence(
-								ch('.'),
+		return Sequence(
+				level1ExpressionChaining().label("head"), set(),
+				ZeroOrMore(Sequence(
+						Sequence(
+								Ch('.'),
 								group.basics.optWS(),
-								string("new"),
+								String("new"),
 								group.basics.testLexBreak(),
 								group.basics.optWS()),
 						group.types.typeArguments().label("constructorTypeArgs"),
 						group.basics.identifier().label("innerClassName"),
 						group.types.typeArguments().label("classTypeArgs"),
 						group.structures.methodArguments().label("methodArguments"),
-						optional(group.structures.typeBody()).label("classBody"),
-						SET(actions.createQualifiedConstructorInvocation(VALUE("constructorTypeArgs"), NODE("innerClassName"), NODE("classTypeArgs"), VALUE("methodArguments"), VALUE("classBody"))))),
-				SET(actions.createChainOfQualifiedConstructorInvocations(NODE("head"), NODES("zeroOrMore/sequence"))));
+						Optional(group.structures.typeBody()).label("classBody"),
+						set(actions.createQualifiedConstructorInvocation(value("constructorTypeArgs"), node("innerClassName"), node("classTypeArgs"), value("methodArguments"), value("classBody"))))),
+				set(actions.createChainOfQualifiedConstructorInvocations(node("head"), nodes("ZeroOrMore/Sequence"))));
 	}
 	
 	/**
@@ -216,55 +216,55 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * However, because ALL of the P2 expression are right-associative, the postfix operators can be considered as a higher level of precedence.
 	 */
 	Rule postfixIncrementExpressionChaining() {
-		return sequence(
-				dotNewExpressionChaining(), SET(),
-				zeroOrMore(sequence(
-						firstOf(string("++"), string("--")).label("operator"),
+		return Sequence(
+				dotNewExpressionChaining(), set(),
+				ZeroOrMore(Sequence(
+						FirstOf(String("++"), String("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				SET(actions.createUnaryPostfixExpression(VALUE(), NODES("zeroOrMore/operatorCt/operator"), TEXTS("zeroOrMore/operatorCt/operator"))));
+				set(actions.createUnaryPostfixExpression(value(), nodes("ZeroOrMore/operatorCt/operator"), texts("ZeroOrMore/operatorCt/operator"))));
 	}
 	
 	Rule postfixIncrementExpression() {
-		return sequence(
-				dotNewExpressionChaining(), SET(),
-				oneOrMore(sequence(
-						firstOf(string("++"), string("--")).label("operator"),
+		return Sequence(
+				dotNewExpressionChaining(), set(),
+				OneOrMore(Sequence(
+						FirstOf(String("++"), String("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-				SET(actions.createUnaryPostfixExpression(VALUE(), NODES("oneOrMore/operatorCt/operator"), TEXTS("oneOrMore/operatorCt/operator"))));
+				set(actions.createUnaryPostfixExpression(value(), nodes("OneOrMore/operatorCt/operator"), texts("OneOrMore/operatorCt/operator"))));
 	}
 	
 	Rule prefixIncrementExpression() {
-		return sequence(
-				oneOrMore(sequence(
-						firstOf(string("++"), string("--")).label("operator"),
+		return Sequence(
+				OneOrMore(Sequence(
+						FirstOf(String("++"), String("--")).label("operator"),
 						group.basics.optWS()).label("operatorCt")),
-						postfixIncrementExpressionChaining().label("operand"), SET(),
-				SET(actions.createUnaryPrefixExpressions(NODE("operand"), NODES("oneOrMore/operatorCt/operator"), TEXTS("oneOrMore/operatorCt/operator"))));
+						postfixIncrementExpressionChaining().label("operand"), set(),
+				set(actions.createUnaryPrefixExpressions(node("operand"), nodes("OneOrMore/operatorCt/operator"), texts("OneOrMore/operatorCt/operator"))));
 	}
 	
 	/**
 	 * P2
 	 */
 	Rule level2ExpressionChaining() {
-		return firstOf(
-				sequence(
-						firstOf(
-								string("++"), string("--"),
-								ch('!'), ch('~'),
+		return FirstOf(
+				Sequence(
+						FirstOf(
+								String("++"), String("--"),
+								Ch('!'), Ch('~'),
 								solitarySymbol('+'), solitarySymbol('-'),
-								sequence(
-										ch('('), group.basics.optWS(),
+								Sequence(
+										Ch('('), group.basics.optWS(),
 										group.types.type().label("type"),
-										ch(')'),
-										testNot(sequence(
-												actions.typeIsAlsoLegalAsExpression(UP(UP(VALUE("type")))),
+										Ch(')'),
+										TestNot(Sequence(
+												actions.typeIsAlsoLegalAsExpression(UP(UP(value("type")))),
 												group.basics.optWS(),
-												firstOf(solitarySymbol('+'), solitarySymbol('-'))))).label("cast")
+												FirstOf(solitarySymbol('+'), solitarySymbol('-'))))).label("cast")
 								).label("operator"),
 						group.basics.optWS(),
-						level2ExpressionChaining().label("operand"), SET(),
-						SET(actions.createUnaryPrefixExpression(VALUE("operand"), NODE("operator"), TEXT("operator")))),
-					sequence(postfixIncrementExpressionChaining(), SET()));
+						level2ExpressionChaining().label("operand"), set(),
+						set(actions.createUnaryPrefixExpression(value("operand"), node("operator"), text("operator")))),
+					Sequence(postfixIncrementExpressionChaining(), set()));
 	}
 	
 	/**
@@ -273,7 +273,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17
 	 */
 	Rule multiplicativeExpressionChaining() {
-		return forLeftAssociativeBinaryExpression("exprMultiplicative", firstOf(ch('*'), solitarySymbol('/'), ch('%')), level2ExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprMultiplicative", FirstOf(Ch('*'), solitarySymbol('/'), Ch('%')), level2ExpressionChaining());
 	}
 	
 	/**
@@ -282,7 +282,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18
 	 */
 	Rule additiveExpressionChaining() {
-		return forLeftAssociativeBinaryExpression("exprAdditive", firstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprAdditive", FirstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeExpressionChaining());
 	}
 	
 	/**
@@ -291,7 +291,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19
 	 */
 	Rule shiftExpressionChaining() {
-		return forLeftAssociativeBinaryExpression("exprShift", firstOf(string(">>>"), string("<<<"), string("<<"), string(">>")), additiveExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprShift", FirstOf(String(">>>"), String("<<<"), String("<<"), String(">>")), additiveExpressionChaining());
 	}
 	
 	/**
@@ -305,13 +305,13 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.20
 	 */
 	Rule relationalExpressionChaining() {
-		return sequence(
-				forLeftAssociativeBinaryExpression("exprRelational", firstOf(string("<="), string(">="), solitarySymbol('<'), solitarySymbol('>')), shiftExpressionChaining()),
-				SET(),
-				optional(sequence(
-						sequence(string("instanceof"), group.basics.testLexBreak(), group.basics.optWS()),
+		return Sequence(
+				forLeftAssociativeBinaryExpression("exprRelational", FirstOf(String("<="), String(">="), solitarySymbol('<'), solitarySymbol('>')), shiftExpressionChaining()),
+				set(),
+				Optional(Sequence(
+						Sequence(String("instanceof"), group.basics.testLexBreak(), group.basics.optWS()),
 						group.types.type().label("type")).label("typeCt")).label("instanceof"),
-				SET(actions.createInstanceOfExpression(VALUE(), VALUE("instanceof/typeCt/type"))));
+				set(actions.createInstanceOfExpression(value(), value("instanceof/typeCt/type"))));
 	}
 	
 	/**
@@ -320,7 +320,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21
 	 */
 	Rule equalityExpressionChaining() {
-		return forLeftAssociativeBinaryExpression("exprEquality", firstOf(string("==="), string("!=="), string("=="), string("!=")), relationalExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprEquality", FirstOf(String("==="), String("!=="), String("=="), String("!=")), relationalExpressionChaining());
 	}
 	
 	/**
@@ -356,7 +356,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23
 	 */
 	Rule conditionalAndExpressionChaining() {
-		return forLeftAssociativeBinaryExpression("exprLogicalAnd", string("&&"), bitwiseOrExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprLogicalAnd", String("&&"), bitwiseOrExpressionChaining());
 	}
 	
 	/**
@@ -366,7 +366,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * It also has no other sensible meaning, so we will parse it and flag it as a syntax error in AST phase.
 	 */
 	Rule conditionalXorExpressionChaining() {
-		return forLeftAssociativeBinaryExpression("exprLogicalXor", string("^^"), conditionalAndExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprLogicalXor", String("^^"), conditionalAndExpressionChaining());
 	}
 	
 	/**
@@ -375,7 +375,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24
 	 */
 	Rule conditionalOrExpressionChaining() {
-		return forLeftAssociativeBinaryExpression("exprLogicalOr", string("||"), conditionalXorExpressionChaining());
+		return forLeftAssociativeBinaryExpression("exprLogicalOr", String("||"), conditionalXorExpressionChaining());
 	}
 	
 	/**
@@ -384,21 +384,21 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.25
 	 */
 	Rule inlineIfExpressionChaining() {
-		return sequence(
+		return Sequence(
 				conditionalOrExpressionChaining().label("head"),
-				SET(),
-				optional(
-						sequence(
-								sequence(ch('?'), testNot(firstOf(ch('.'), ch(':'), ch('?')))).label("operator1"),
+				set(),
+				Optional(
+						Sequence(
+								Sequence(Ch('?'), TestNot(FirstOf(Ch('.'), Ch(':'), Ch('?')))).label("operator1"),
 								group.basics.optWS(),
 								assignmentExpressionChaining().label("tail1"),
-								ch(':').label("operator2"),
+								Ch(':').label("operator2"),
 								group.basics.optWS(),
 								inlineIfExpressionChaining().label("tail2")
 								)),
-				SET(actions.createInlineIfExpression(VALUE("head"),
-						NODE("optional/sequence/operator1"), NODE("optional/sequence/operator2"),
-						VALUE("optional/sequence/tail1"), VALUE("optional/sequence/tail2"))),
+				set(actions.createInlineIfExpression(value("head"),
+						node("Optional/Sequence/operator1"), node("Optional/Sequence/operator2"),
+						value("Optional/Sequence/tail1"), value("Optional/Sequence/tail2"))),
 				group.basics.optWS());
 	}
 	
@@ -410,39 +410,39 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26
 	 */
 	Rule assignmentExpressionChaining() {
-		return sequence(
-				inlineIfExpressionChaining(), SET(),
-				optional(sequence(
+		return Sequence(
+				inlineIfExpressionChaining(), set(),
+				Optional(Sequence(
 						assignmentOperator().label("operator"),
 						group.basics.optWS(),
 						assignmentExpressionChaining().label("RHS"))).label("assignment"),
-				SET(actions.createAssignmentExpression(VALUE(), TEXT("assignment/sequence/operator"), VALUE("assignment"))));
+				set(actions.createAssignmentExpression(value(), text("assignment/Sequence/operator"), value("assignment"))));
 	}
 	
 	// TODO add checks to see if an LHS that isn't valid for assignment shows up as a syntax error of some sort, e.g. a.b() = 2;
 	
 	Rule assignmentExpression() {
-		return sequence(
-				assignmentLHS(), SET(),
+		return Sequence(
+				assignmentLHS(), set(),
 				assignmentOperator().label("operator"),
 				group.basics.optWS(),
 				assignmentExpressionChaining().label("RHS"),
-				SET(actions.createAssignmentExpression(VALUE(), TEXT("operator"), LAST_VALUE())));
+				set(actions.createAssignmentExpression(value(), text("operator"), lastValue())));
 	}
 	
 	Rule assignmentLHS() {
-		return sequence(
-				level1ExpressionChaining(), SET(),
-				actions.checkIfLevel1ExprIsValidForAssignment(VALUE()));
+		return Sequence(
+				level1ExpressionChaining(), set(),
+				actions.checkIfLevel1ExprIsValidForAssignment(value()));
 	}
 	
 	Rule assignmentOperator() {
-		return firstOf(
+		return FirstOf(
 				solitarySymbol('='),
-				string("*="), string("/="), string("+="), string("-="), string("%="),
-				string(">>>="), string("<<<="), string("<<="), string(">>="),
-				string("&="), string("^="), string("|="),
-				string("&&="), string("^^="), string("||="));
+				String("*="), String("/="), String("+="), String("-="), String("%="),
+				String(">>>="), String("<<<="), String("<<="), String(">>="),
+				String("&="), String("^="), String("|="),
+				String("&&="), String("^^="), String("||="));
 	}
 	
 	/**
@@ -450,15 +450,15 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 */
 	@Cached
 	Rule forLeftAssociativeBinaryExpression(String labelName, Rule operator, Rule nextHigher) {
-		return sequence(
+		return Sequence(
 				nextHigher.label("head"), new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
 						setContext(context);
-						return SET();
+						return set();
 					}
 				},
 				group.basics.optWS(),
-				zeroOrMore(sequence(
+				ZeroOrMore(Sequence(
 						operator.label("operator"),
 						group.basics.optWS(),
 						nextHigher.label("tail"),
@@ -466,16 +466,16 @@ public class ExpressionsParser extends BaseParser<Node> {
 				new Action<Node>() {
 					@Override public boolean run(Context<Node> context) {
 						setContext(context);
-						return SET(actions.createLeftAssociativeBinaryExpression(
-								NODE("head"),
-								NODES("zeroOrMore/sequence/operator"), TEXTS("zeroOrMore/sequence/operator"),
-								NODES("zeroOrMore/sequence/tail")));
+						return set(actions.createLeftAssociativeBinaryExpression(
+								node("head"),
+								nodes("ZeroOrMore/Sequence/operator"), texts("ZeroOrMore/Sequence/operator"),
+								nodes("ZeroOrMore/Sequence/tail")));
 					}
 				},
 				group.basics.optWS()).label(labelName);
 	}
 	
 	Rule solitarySymbol(char c) {
-		return sequence(ch(c), testNot(ch(c)));
+		return Sequence(Ch(c), TestNot(Ch(c)));
 	}
 }

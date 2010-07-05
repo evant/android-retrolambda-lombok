@@ -19,8 +19,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package lombok.ast;
+package lombok.ast.template;
 
-public interface Literal extends Node {
-	public String rawValue();
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Marks a field in a template to indicate there should be a method in the 'child' class that returns the parent, if this is indeed the parent/child relation.
+ */
+@Retention(RetentionPolicy.SOURCE)
+@Target({ElementType.FIELD, ElementType.METHOD})
+public @interface ParentAccessor {
+	/** An optional descriptive name for the relation; it will be part of the method name. */
+	String value() default "";
 }

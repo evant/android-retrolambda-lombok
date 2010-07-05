@@ -25,7 +25,7 @@ import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.Rule;
-import org.parboiled.support.Leaf;
+import org.parboiled.annotations.SuppressSubnodes;
 
 public class LiteralsParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -37,7 +37,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	public Rule anyLiteral() {
-		return firstOf(
+		return FirstOf(
 				nullLiteral(),
 				booleanLiteral(),
 				numberLiteral(),
@@ -49,11 +49,11 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.7
 	 */
 	public Rule nullLiteral() {
-		return sequence(
-			sequence(
-					string("null"),
+		return Sequence(
+			Sequence(
+					String("null"),
 					group.basics.testLexBreak()),
-			SET(actions.createNullLiteral(LAST_TEXT())),
+			set(actions.createNullLiteral(lastText())),
 			group.basics.optWS());
 	}
 	
@@ -61,45 +61,45 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.5
 	 */
 	public Rule stringLiteral() {
-		return sequence(
+		return Sequence(
 				stringLiteralRaw(),
-				SET(actions.createStringLiteral(LAST_TEXT())),
+				set(actions.createStringLiteral(lastText())),
 				group.basics.optWS());
 	}
 	
-	@Leaf
+	@SuppressSubnodes
 	Rule stringLiteralRaw() {
-		return sequence(
-				ch('"'),
-				zeroOrMore(firstOf(
+		return Sequence(
+				Ch('"'),
+				ZeroOrMore(FirstOf(
 						stringEscape(),
-						sequence(testNot(charSet("\"\r\n")), any()))),
-				ch('"'));
+						Sequence(TestNot(CharSet("\"\r\n")), Any()))),
+				Ch('"'));
 	}
 	
 	Rule stringEscape() {
-		return sequence(
-				ch('\\'),
-				firstOf(
-						sequence(optional(charRange('0', '3')), optional(charRange('0', '7')), charRange('0', '7')),
-						sequence(testNot("\r\n"), any())));
+		return Sequence(
+				Ch('\\'),
+				FirstOf(
+						Sequence(Optional(CharRange('0', '3')), Optional(CharRange('0', '7')), CharRange('0', '7')),
+						Sequence(TestNot("\r\n"), Any())));
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.4
 	 */
 	public Rule charLiteral() {
-		return sequence(
-				sequence(
-						ch('\''),
-						firstOf(
-								sequence(escapedSequence(), ch('\'')),
-								sequence(
-										zeroOrMore(sequence(testNot(
-												firstOf(ch('\''), group.basics.lineTerminator())), any())),
-										ch('\'')),
-								any())),
-				SET(actions.createCharLiteral(LAST_TEXT())),
+		return Sequence(
+				Sequence(
+						Ch('\''),
+						FirstOf(
+								Sequence(escapedSequence(), Ch('\'')),
+								Sequence(
+										ZeroOrMore(Sequence(TestNot(
+												FirstOf(Ch('\''), group.basics.lineTerminator())), Any())),
+										Ch('\'')),
+								Any())),
+				set(actions.createCharLiteral(lastText())),
 				group.basics.optWS());
 	}
 	
@@ -107,29 +107,29 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.6
 	 */
 	Rule escapedSequence() {
-		return sequence(ch('\\'),
-				firstOf(
-						sequence(optional(zeroToThree()), octalDigit(), optional(octalDigit())),
-						any()));
+		return Sequence(Ch('\\'),
+				FirstOf(
+						Sequence(Optional(zeroToThree()), octalDigit(), Optional(octalDigit())),
+						Any()));
 	}
 	
 	Rule zeroToThree() {
-		return firstOf(ch('0'), ch('1'), ch('2'), ch('3'));
+		return FirstOf(Ch('0'), Ch('1'), Ch('2'), Ch('3'));
 	}
 	
 	Rule octalDigit() {
-		return firstOf(ch('0'), ch('1'), ch('2'), ch('3'), ch('4'), ch('5'), ch('6'), ch('7'));
+		return FirstOf(Ch('0'), Ch('1'), Ch('2'), Ch('3'), Ch('4'), Ch('5'), Ch('6'), Ch('7'));
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.3
 	 */
 	public Rule booleanLiteral() {
-		return sequence(
-				sequence(
-						firstOf(string("true"), string("false")),
+		return Sequence(
+				Sequence(
+						FirstOf(String("true"), String("false")),
 						group.basics.testLexBreak()),
-				SET(actions.createBooleanLiteral(LAST_TEXT())),
+				set(actions.createBooleanLiteral(lastText())),
 				group.basics.optWS());
 	}
 	
@@ -138,10 +138,10 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
 	public Rule numberLiteral() {
-		return sequence(
-				test(sequence(optional(ch('.')), charRange('0', '9'))),
-				firstOf(hexLiteral(), fpLiteral()),
-				SET(LAST_VALUE()),
+		return Sequence(
+				Test(Sequence(Optional(Ch('.')), CharRange('0', '9'))),
+				FirstOf(hexLiteral(), fpLiteral()),
+				set(lastValue()),
 				group.basics.optWS());
 	}
 	
@@ -150,18 +150,18 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
 	Rule fpLiteral() {
-		return sequence(
-				sequence(
-						firstOf(
-								sequence(oneOrMore(digit()), optional(sequence(ch('.'), zeroOrMore(digit())))),
-								sequence(ch('.'), oneOrMore(digit()))),
-						optional(
-								sequence(
-										charIgnoreCase('e'),
-										optional(firstOf(ch('+'), ch('-'))),
-										oneOrMore(digit()))),
+		return Sequence(
+				Sequence(
+						FirstOf(
+								Sequence(OneOrMore(digit()), Optional(Sequence(Ch('.'), ZeroOrMore(digit())))),
+								Sequence(Ch('.'), OneOrMore(digit()))),
+						Optional(
+								Sequence(
+										CharIgnoreCase('e'),
+										Optional(FirstOf(Ch('+'), Ch('-'))),
+										OneOrMore(digit()))),
 						numberTypeSuffix()),
-				SET(actions.createNumberLiteral(LAST_TEXT())));
+				set(actions.createNumberLiteral(lastText())));
 	}
 	
 	/**
@@ -169,43 +169,43 @@ public class LiteralsParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
 	Rule hexLiteral() {
-		return sequence(
-				sequence(
-						sequence(ch('0'), charIgnoreCase('x')),
-						firstOf(
+		return Sequence(
+				Sequence(
+						Sequence(Ch('0'), CharIgnoreCase('x')),
+						FirstOf(
 								hexFP(),
-								sequence(oneOrMore(hexDigit()), numberTypeSuffix())
+								Sequence(OneOrMore(hexDigit()), numberTypeSuffix())
 								)),
-				SET(actions.createNumberLiteral(LAST_TEXT())));
+				set(actions.createNumberLiteral(lastText())));
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
 	 */
 	Rule hexFP() {
-		return sequence(
-				firstOf(
-						sequence(ch('.'), oneOrMore(hexDigit())),
-						sequence(
-								oneOrMore(hexDigit()),
-								optional(sequence(ch('.'), zeroOrMore(hexDigit()))))),
-				sequence(
-						charIgnoreCase('p'),
-						optional(firstOf(ch('+'), ch('-'))),
-						oneOrMore(digit())),
+		return Sequence(
+				FirstOf(
+						Sequence(Ch('.'), OneOrMore(hexDigit())),
+						Sequence(
+								OneOrMore(hexDigit()),
+								Optional(Sequence(Ch('.'), ZeroOrMore(hexDigit()))))),
+				Sequence(
+						CharIgnoreCase('p'),
+						Optional(FirstOf(Ch('+'), Ch('-'))),
+						OneOrMore(digit())),
 				numberTypeSuffix());
 	}
 	
 	Rule numberTypeSuffix() {
-		return optional(firstOf(charIgnoreCase('d'), charIgnoreCase('f'), charIgnoreCase('l')));
+		return Optional(FirstOf(CharIgnoreCase('d'), CharIgnoreCase('f'), CharIgnoreCase('l')));
 	}
 	
 	Rule digit() {
-		return firstOf(ch('0'), ch('1'), ch('2'), ch('3'), ch('4'), ch('5'), ch('6'), ch('7'), ch('8'), ch('9'), ch('0'));
+		return FirstOf(Ch('0'), Ch('1'), Ch('2'), Ch('3'), Ch('4'), Ch('5'), Ch('6'), Ch('7'), Ch('8'), Ch('9'), Ch('0'));
 	}
 	
 	Rule hexDigit() {
-		return firstOf(digit(),
-				charIgnoreCase('a'), charIgnoreCase('b'), charIgnoreCase('c'), charIgnoreCase('d'), charIgnoreCase('e'), charIgnoreCase('f'));
+		return FirstOf(digit(),
+				CharIgnoreCase('a'), CharIgnoreCase('b'), CharIgnoreCase('c'), CharIgnoreCase('d'), CharIgnoreCase('e'), CharIgnoreCase('f'));
 	}
 }

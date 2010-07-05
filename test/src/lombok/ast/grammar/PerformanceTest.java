@@ -185,7 +185,7 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 	private void parseWithParboiled(Source source) {
 		if (VERBOSE) {
 			ParboiledJavaGrammar parser = Parboiled.createParser(ParboiledJavaGrammar.class);
-			ReportingParseRunner.run(parser.compilationUnit(), source.getRawInput());
+			ReportingParseRunner.run(parser.CompilationUnit(), source.getRawInput());
 		}
 	}
 	

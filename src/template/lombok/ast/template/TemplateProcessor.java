@@ -50,73 +50,167 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.SimpleAnnotationValueVisitor6;
 import javax.tools.JavaFileObject;
 import javax.tools.Diagnostic.Kind;
 
 import lombok.Data;
 
-@SupportedAnnotationTypes({"lombok.ast.template.GenerateAstNode", "lombok.ast.template.SyntaxCheck"})
+@SupportedAnnotationTypes({"lombok.ast.template.GenerateAstNode", "lombok.ast.template.SyntaxCheck", "lombok.ast.template.ParentAccessor"})
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class TemplateProcessor extends AbstractProcessor {
 	private SyntaxValidityCheckerGenerator validityGenerator;
 	
 	@Data
-	static class FieldData {
-		private final String name;
-		private final boolean mandatory;
-		private final String rawFormParser;
-		private final String rawFormGenerator;
-		private final String initialValue;
-		private final VariableElement element;
-		private final boolean astNode;
-		private final boolean suppressSetter;
-		private final String codeToCopy;
+	static class ParentRelation {
+		/** The full name of the method to be generated. */
+		private final String methodName;
+		/** The reverse check needs to use the list accessor. */
+		private final boolean list;
+		/** The reverse check needs to call this method to check if 'this' is equal to it. */
+		private final String methodThatShouldGiveThis;
+		/** The method will be generated here. */
+		private final String typeNameFrom;
+		/** The method will return this type. */
+		private final String typeNameTo;
 		
-		public String getType() {
-			String result = element.asType().toString();
+		private static String calcRelName(Element e) {
+			for (AnnotationMirror ann : e.getAnnotationMirrors()) {
+				if (!ann.getAnnotationType().toString().equals(ParentAccessor.class.getName())) continue;
+				
+				for (Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : ann.getElementValues().entrySet()) {
+					String v = (String)entry.getValue().getValue();
+					if (v != null) return v;
+				}
+				return "";
+			}
+			return null;
+		}
+		
+		public static ParentRelation create(ExecutableElement method) {
+			String methodThatShouldGiveThis = method.getSimpleName().toString();
 			
-			if (isAstNode() && element.asType() instanceof DeclaredType) {
-				DeclaredType t = (DeclaredType) element.asType();
-				if (t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<")) {
-					result = t.getTypeArguments().get(0).toString();
+			/* Calling rawFoo() is marginally more useful than calling astFoo(), but rawFoo() may not exist. Let's check. */
+			if (methodThatShouldGiveThis.startsWith("ast")) {
+				String alt = "raw" + methodThatShouldGiveThis.substring("ast".length());
+				for (Element sibling : method.getEnclosingElement().getEnclosedElements()) {
+					if (sibling instanceof ExecutableElement) {
+						ExecutableElement siblingMethod = (ExecutableElement)sibling;
+						if (siblingMethod.getParameters().isEmpty() && siblingMethod.getSimpleName().toString().equals(alt)) {
+							methodThatShouldGiveThis = alt;
+							break;
+						}
+					}
 				}
 			}
 			
-			if (result.startsWith("lombok.ast.")) {
-				String rest = result.substring("lombok.ast.".length());
-				return rest.indexOf('.') == -1 ? rest : result;
-			}
-			return result;
+			return create(method, method.getReturnType(), method.getEnclosingElement().asType(), methodThatShouldGiveThis);
+		}
+		
+		public static ParentRelation create(VariableElement field) {
+			String methodThatShouldGiveThis = field.getAnnotation(ForcedType.class) != null ? "ast" : "raw";
+			methodThatShouldGiveThis += TemplateProcessor.titleCasedName(field.getSimpleName().toString());
+			
+			return create(field, field.asType(), field.getEnclosingElement().asType(), methodThatShouldGiveThis);
+		}
+		
+		private static ParentRelation create(Element source, TypeMirror from, TypeMirror to, String methodThatShouldGiveThis) {
+			String relName = calcRelName(source);
+			if (relName == null) return null;
+			
+			String fromStr = TemplateProcessor.getType(from, true);
+			String toStr = TemplateProcessor.getType(to, true);
+			if (toStr.endsWith("Template")) toStr = toStr.substring(0, toStr.length() - "Template".length());
+			String methodName = relName.isEmpty() ? ("upTo" + toStr) : ("upIf" + relName + "To" + toStr);
+			return new ParentRelation(methodName, TemplateProcessor.isList(from), methodThatShouldGiveThis, fromStr, toStr);
+		}
+	}
+	
+	private static boolean isList(TypeMirror t) {
+		if (t instanceof DeclaredType) {
+			String r = t.toString();
+			return r.startsWith("java.util.List<") || r.startsWith("List<") ||
+					r.startsWith("lombok.ast.StrictListAccessor<") || r.startsWith("StrictListAccessor<") ||
+					r.startsWith("lombok.ast.RawListAccessor<") || r.startsWith("RawListAccessor<");
+		}
+		
+		return false;
+	}
+	
+	private static String getType(TypeMirror t, boolean delist) {
+		String result = t.toString();
+		
+		if (delist && isList(t)) {
+			result = ((DeclaredType)t).getTypeArguments().get(0).toString();
+		}
+		
+		if (result.startsWith("lombok.ast.")) {
+			String rest = result.substring("lombok.ast.".length());
+			return rest.indexOf('.') == -1 ? rest : result;
+		}
+		return result;
+	}
+	
+	@Data
+	static class FieldData {
+		/** Name of the field */
+		private final String name;
+		/** If {@code true} then this field would always contain a non-null value in a legal AST. */
+		private final boolean mandatory;
+		/** Terminals such as string literals may have their own internal parser. If so, this field contains name of method that goes from raw to value. */
+		private final String rawFormParser;
+		/** Reverse of {@code rawFormParer} - contains method that goes from value to raw. If this is set, {@code rawFormParser} is set and vice versa. */
+		private final String rawFormGenerator;
+		/** The java code that forms the expression that assigns the initial value of this field. Always set. */
+		private final String initialValue;
+		/** The javax.model mirror class representing this field. */
+		private final VariableElement element;
+		/** If {@code true}, this field's type is an AST Node type, and thus assignments to it should update children array, etcetera. */
+		private final boolean astNode;
+		/** If {@code true}, no setter should be generated, probably because the template has its own. */
+		private final boolean suppressSetter;
+		/** If {@code true}, there will be no rawFieldName() method, only an astFieldName() method. */
+		private final boolean forcedType;
+		/**
+		 * Never set if {@code astNode} is {@code true}, but may be set otherwise. Contains the expression required to create a copy of the field.
+		 * @see NotChildOfNode#codeToCopy()
+		 */
+		private final String codeToCopy;
+		
+		/**
+		 * Returns the type of this field in a way that you can legally put into the generated java file. For Lists of X, returns X.
+		 */
+		public String getType() {
+			return TemplateProcessor.getType(element.asType(), isAstNode());
 		}
 		
 		public boolean isList() {
-			if (isAstNode() && element.asType() instanceof DeclaredType) {
-				DeclaredType t = (DeclaredType) element.asType();
-				return t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<");
-			}
-			
-			return false;
+			return isAstNode() && TemplateProcessor.isList(element.asType());
 		}
 		
 		FieldData(VariableElement field) {
 			this.name = String.valueOf(field.getSimpleName());
-			boolean isMandatory = false; {
-				for (AnnotationMirror ann :field.getAnnotationMirrors()) {
-					if (ann.getAnnotationType().toString().equals("lombok.NonNull")) {
-						isMandatory = true;
-						break;
-					}
-				}
-			}
+			Mandatory mandatory = field.getAnnotation(Mandatory.class);
 			this.element = field;
-			this.mandatory = isMandatory;
+			this.mandatory = mandatory != null;
 			NotChildOfNode ncon = field.getAnnotation(NotChildOfNode.class);
 			this.astNode = ncon == null;
 			this.rawFormParser = astNode ? "" : ncon.rawFormParser();
 			this.rawFormGenerator = astNode ? "" : ncon.rawFormGenerator();
+			if (field.getAnnotation(ForcedType.class) != null) {
+				this.forcedType = true;
+			} else {
+				if (ncon != null && rawFormParser.isEmpty()) this.forcedType = true;
+				else this.forcedType = false;
+			}
 			/* grab initial value */ {
-				InitialValue iv = field.getAnnotation(InitialValue.class);
-				this.initialValue = iv == null ? "" : iv.value();
+				if (mandatory == null || mandatory.value().isEmpty()) {
+					this.initialValue = defaultInitialValueFor(field.asType());
+				} else {
+					if (ncon != null) this.initialValue = mandatory.value();
+					else this.initialValue = String.format("adopt(%s)", mandatory.value());
+				}
 			}
 			this.suppressSetter = ncon != null && ncon.suppressSetter();
 			if (ncon != null) {
@@ -126,12 +220,24 @@ public class TemplateProcessor extends AbstractProcessor {
 			}
 		}
 		
+		private String defaultInitialValueFor(TypeMirror asType) {
+			String defaultValue = getDefaultValueForType(asType.toString());
+			return defaultValue == null ? "null" : defaultValue;
+		}
+		
 		String titleCasedName() {
-			String n = name.replace("_", "");
-			return n.isEmpty() ? "" : Character.toTitleCase(n.charAt(0)) + n.substring(1);
+			return TemplateProcessor.titleCasedName(name);
 		}
 	}
 	
+	private static String titleCasedName(String in) {
+		String n = in.replace("_", "");
+		return n.isEmpty() ? "" : Character.toTitleCase(n.charAt(0)) + n.substring(1);
+	}
+	
+	/**
+	 * Turns "X.class" into just "X", otherwise just calls toString().
+	 */
 	private static String getClassName(Object type) {
 		String c = type.toString();
 		return c.endsWith(".class") ? c.substring(0, c.length() - ".class".length()) : c;
@@ -144,11 +250,83 @@ public class TemplateProcessor extends AbstractProcessor {
 	
 	@Override public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 		handleSyntaxCheck(roundEnv);
-		handleGenerateAstNode(roundEnv);
+		Relations parentRelations = generateParentRelations(roundEnv);
+		handleGenerateAstNode(roundEnv, parentRelations);
 		
 		return true;
 	}
 	
+	private static class Relations {
+		private Map<String, Collection<ParentRelation>> map = new HashMap<String, Collection<ParentRelation>>();
+		
+		void put(String key, ParentRelation value) {
+			if (key.startsWith("lombok.ast.")) key = key.substring("lombok.ast.".length());
+			Collection<ParentRelation> c = map.get(key);
+			if (c == null) {
+				c = new HashSet<ParentRelation>();
+				map.put(key, c);
+			}
+			c.add(value);
+		}
+		
+		Collection<ParentRelation> get(String key) {
+			if (key.startsWith("lombok.ast.")) key = key.substring("lombok.ast.".length());
+			Collection<ParentRelation> c = map.get(key);
+			return c == null ? Collections.<ParentRelation>emptyList() : c;
+		}
+	}
+	
+	private Relations generateParentRelations(RoundEnvironment roundEnv) {
+		Relations out = new Relations();
+		for (Element element : roundEnv.getElementsAnnotatedWith(ParentAccessor.class)) {
+			if (element.getKind() == ElementKind.FIELD) {
+				ParentRelation rel = ParentRelation.create((VariableElement)element);
+				if (rel != null) out.put(rel.getTypeNameFrom(), rel);
+			}
+			if (element.getKind() == ElementKind.METHOD) {
+				ParentRelation rel = ParentRelation.create((ExecutableElement)element);
+				if (rel != null) out.put(rel.getTypeNameFrom(), rel);
+			}
+		}
+		/** In a full build, the above is fine, but when incrementally building for example only Templates.java, the round does not include interfaces with @ParentAccessor annotations. */
+		final Set<TypeMirror> typesToScan = new HashSet<TypeMirror>();
+		for (Element element : roundEnv.getElementsAnnotatedWith(GenerateAstNode.class)) {
+			for (AnnotationMirror m : element.getAnnotationMirrors()) {
+				if (!m.getAnnotationType().toString().endsWith("GenerateAstNode")) continue;
+				for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e : m.getElementValues().entrySet()) {
+					if (e.getKey().getSimpleName().toString().equals("implementing")) {
+						e.getValue().accept(new SimpleAnnotationValueVisitor6<Void, Void>() {
+							@Override public Void visitArray(List<? extends AnnotationValue> vals, Void p) {
+								for (AnnotationValue inner : vals) inner.accept(this, null);
+								return null;
+							}
+							
+							@Override public Void visitType(TypeMirror t, Void p) {
+								typesToScan.add(t);
+								return null;
+							}
+						}, null);
+					}
+				}
+			}
+		}
+		for (TypeMirror tm : typesToScan) {
+			Element toScan = processingEnv.getTypeUtils().asElement(tm);
+			if (toScan != null) for (Element child : toScan.getEnclosedElements()) {
+				if (child.getKind() == ElementKind.FIELD) {
+					ParentRelation rel = ParentRelation.create((VariableElement)child);
+					if (rel != null) out.put(rel.getTypeNameFrom(), rel);
+				}
+				if (child.getKind() == ElementKind.METHOD) {
+					ParentRelation rel = ParentRelation.create((ExecutableElement)child);
+					if (rel != null) out.put(rel.getTypeNameFrom(), rel);
+				}
+			}
+		}
+		return out;
+	}
+	
+	/** Searches for methods and classes annotated with @SyntaxCheck and adds them to the appropriate list. */
 	private void handleSyntaxCheck(RoundEnvironment roundEnv) {
 		int added = 0;
 		for (Element element : roundEnv.getElementsAnnotatedWith(SyntaxCheck.class)) {
@@ -178,7 +356,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 	}
 	
-	private void handleGenerateAstNode(RoundEnvironment roundEnv) {
+	private void handleGenerateAstNode(RoundEnvironment roundEnv, Relations parentRelations) {
 		for (Element element : roundEnv.getElementsAnnotatedWith(GenerateAstNode.class)) {
 			if (element.getKind() != ElementKind.CLASS) {
 				processingEnv.getMessager().printMessage(Kind.ERROR, "@GenerateAstNode is only supported on plain classes", element);
@@ -209,18 +387,18 @@ public class TemplateProcessor extends AbstractProcessor {
 				for (AnnotationMirror annotation : annotated.getAnnotationMirrors()) {
 					if (!annotation.getAnnotationType().toString().equals(GenerateAstNode.class.getName())) continue;
 					
-					for (Entry<? extends ExecutableElement, ? extends AnnotationValue> value : annotation.getElementValues().entrySet()) {
-						if (value.getKey().getSimpleName().contentEquals("extending")) {
-							extending = getClassName(value.getValue().getValue());
+					for (Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : annotation.getElementValues().entrySet()) {
+						if (entry.getKey().getSimpleName().contentEquals("extending")) {
+							extending = getClassName(entry.getValue().getValue());
 						}
 						
-						if (value.getKey().getSimpleName().contentEquals("implementing")) {
-							Collection<?> list = (Collection<?>)value.getValue().getValue();
+						if (entry.getKey().getSimpleName().contentEquals("implementing")) {
+							Collection<?> list = (Collection<?>)entry.getValue().getValue();
 							for (Object type : list) implementing.add(getClassName(type));
 						}
 						
-						if (value.getKey().getSimpleName().contentEquals("mixin")) {
-							Collection<?> list = (Collection<?>)value.getValue().getValue();
+						if (entry.getKey().getSimpleName().contentEquals("mixin")) {
+							Collection<?> list = (Collection<?>)entry.getValue().getValue();
 							for (Object type : list) bases.add(
 									processingEnv.getElementUtils().getTypeElement(getClassName(type)));
 						}
@@ -269,7 +447,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			try {
 				validityGenerator.recordFieldDataForCheck(className, fields);
-				generateSourceFile(annotated, className, extending, implementing, fields, methodsToCopy);
+				generateSourceFile(annotated, className, extending, implementing, fields, methodsToCopy, parentRelations);
 			} catch (IOException e) {
 				processingEnv.getMessager().printMessage(Kind.ERROR, String.format(
 						"Can't generate sourcefile %s: %s",
@@ -279,7 +457,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateSourceFile(Element originatingElement, String className, String extending, List<String> implementing, List<FieldData> fields,
-			List<ExecutableElement> methodsToCopy) throws IOException {
+			List<ExecutableElement> methodsToCopy, Relations relations) throws IOException {
 		
 		JavaFileObject file = processingEnv.getFiler().createSourceFile(className, originatingElement);
 		Writer out = file.openWriter();
@@ -334,6 +512,17 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		out.write("\t\n");
+		List<ParentRelation> parentRelations = new ArrayList<ParentRelation>();
+		parentRelations.addAll(relations.get(className));
+		if (extending != null) parentRelations.addAll(relations.get(extending));
+		if (implementing != null) for (String impl : implementing) parentRelations.addAll(relations.get(impl));
+		
+		for (ParentRelation relation : parentRelations) {
+			generateUpMethod(out, relation);
+		}
+		
+		if (!parentRelations.isEmpty()) out.write("\t\n");
+		
 		for (FieldData field : fields) {
 			if (field.isList()) {
 				generateListAccessor(out, className, field);
@@ -360,7 +549,7 @@ public class TemplateProcessor extends AbstractProcessor {
 			
 			generateFairWeatherGetter(out, field, true);
 			generateFairWeatherSetter(out, className, field);
-			generateRawGetter(out, field, false);
+			if (!field.isForcedType()) generateRawGetter(out, field, false);
 			generateRawSetter(out, className, field);
 		}
 		
@@ -385,9 +574,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		/* detach */ {
-			out.write("\t@java.lang.Override public ");
-			out.write(typeName);
-			out.write(" detach(Node child) {\n");
+			out.write("\t@java.lang.Override public void detach(Node child) {\n");
 			for (FieldData field : fields) {
 				if (!field.isAstNode()) continue;
 				if (!field.isList()) {
@@ -398,15 +585,14 @@ public class TemplateProcessor extends AbstractProcessor {
 					out.write("\t\t\tthis.");
 					out.write(field.getName());
 					out.write(" = null;\n");
-					out.write("\t\t\treturn this;\n");
+					out.write("\t\t\treturn;\n");
 					out.write("\t\t}\n");
 				} else {
-					out.write("\t\tif (this.raw");
+					out.write("\t\tthis.raw");
 					out.write(field.titleCasedName());
-					out.write("().remove(child)) return this;\n");
+					out.write("().remove(child);\n");
 				}
 			}
-			out.write("\t\treturn this;\n");
 			out.write("\t}\n\t\n");
 		}
 		
@@ -469,7 +655,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				} else {
 					out.write("\t\tif (this.");
 					out.write(field.getName());
-					out.write(" != null) result.setRaw");
+					out.write(" != null) result.raw");
 					out.write(field.titleCasedName());
 					out.write("(this.");
 					out.write(field.getName());
@@ -551,6 +737,18 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.close();
 	}
 	
+	private void generateUpMethod(Writer out, ParentRelation relation) throws IOException {
+		out.write(String.format("\tpublic %s %s() {\n", relation.getTypeNameTo(), relation.getMethodName()));
+		out.write(String.format("\t\tif (!(this.getParent() instanceof %s)) return null;\n", relation.getTypeNameTo()));
+		out.write(String.format("\t\t%s out = (%<s)this.getParent();\n", relation.getTypeNameTo()));
+		if (relation.isList()) {
+			out.write(String.format("\t\tif (!out.%s().contains(this)) return null;\n", relation.getMethodThatShouldGiveThis()));
+		} else {
+			out.write(String.format("\t\tif (out.%s() != this) return null;\n", relation.getMethodThatShouldGiveThis()));
+		}
+		out.write("\t\treturn out;\n\t}\n\t\n");
+	}
+	
 	private void generateFieldsForList(Writer out, String className, String typeName, int fieldsSize, FieldData field) throws IOException {
 		out.write("\tprivate final java.util.List<lombok.ast.AbstractNode> ");
 		out.write(field.getName());
@@ -579,27 +777,23 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateFairWeatherGetter(Writer out, FieldData field, boolean generateCheck) throws IOException {
 		out.write("\tpublic ");
 		out.write(field.getType());
-		out.write(field.getType().equals("boolean") ? " is" : " get");
+		out.write(" ast");
 		out.write(field.titleCasedName());
 		out.write("() {\n");
 		if (!field.getRawFormParser().isEmpty()) {
 			out.write("\t\tif (this.errorReasonFor");
 			out.write(field.titleCasedName());
-			out.write(" != null) throw new lombok.ast.AstException(this, this.errorReasonFor");
-			out.write(field.titleCasedName());
-			out.write(");\n");
+			out.write(" != null) return ");
+			out.write(field.getInitialValue());
+			out.write(";\n");
 		}
 		
 		if (generateCheck) {
-			out.write("\t\tassertChildType(");
+			out.write("\t\tif (!(this.");
 			out.write(field.getName());
-			out.write(", \"");
-			out.write(field.getName());
-			out.write("\", ");
-			out.write("" + field.isMandatory());
-			out.write(", ");
+			out.write(" instanceof ");
 			out.write(field.getType());
-			out.write(".class);\n");
+			out.write(")) return null;\n");
 		}
 		out.write("\t\treturn ");
 		if (generateCheck) {
@@ -613,9 +807,10 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateRawGetter(Writer out, FieldData field, boolean basic) throws IOException {
-		out.write("\tpublic ");
+		out.write("\t");
+		out.write(field.isForcedType() ? "private " : "public ");
 		out.write(basic ? "java.lang.String" : "lombok.ast.Node");
-		out.write(" getRaw");
+		out.write(" raw");
 		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		if (basic) {
@@ -637,22 +832,30 @@ public class TemplateProcessor extends AbstractProcessor {
 	}
 	
 	private void generateRawSetter(Writer out, String className, FieldData field) throws IOException {
+		String initialValueElse = "";
+		
+		if (field.isMandatory() && field.getInitialValue().equals("null")) {
+			String.format("\t\telse %s = %s;\n", field.getName(), field.getInitialValue());
+		}
+		
 		Object[] params = {
 				className,
 				field.titleCasedName(),
-				field.getName()
+				field.getName(),
+				initialValueElse,
+				field.isForcedType() ? "private" : "public",
 		};
 		
 		out.write(String.format(
-				"\tpublic %1$s setRaw%2$s(lombok.ast.Node %3$s) {\n" +
+				"\t%5$s %1$s raw%2$s(lombok.ast.Node %3$s) {\n" +
 				"\t\tif (%3$s == this.%3$s) return this;\n" +
 				"\t\tif (%3$s != null) this.adopt((lombok.ast.AbstractNode)%3$s);\n" +
+				"%4$s" +
 				"\t\tif (this.%3$s != null) this.disown(this.%3$s);\n" +
 				"\t\tthis.%3$s = (lombok.ast.AbstractNode)%3$s;\n" +
 				"\t\treturn this;\n" +
 				"\t}\n\t\n", params));
 	}
-	
 	
 	private void generateRawSetterForBasic(Writer out, String className, FieldData field) throws IOException {
 		Object[] params = {
@@ -663,7 +866,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				field.getRawFormParser()
 		};
 		out.write(String.format(
-				"\tpublic %1$s setRaw%2$s(java.lang.String %3$s) {\n" +
+				"\tpublic %1$s raw%2$s(java.lang.String %3$s) {\n" +
 				"\t\tthis.raw%2$s = %3$s;\n" +
 				"\t\tthis.%3$s = %4$s;\n" +
 				"\t\tthis.errorReasonFor%2$s = null;\n" +
@@ -691,6 +894,10 @@ public class TemplateProcessor extends AbstractProcessor {
 		DEFAULT_VALUES = Collections.unmodifiableMap(m);
 	}
 	
+	private static boolean isPrimitiveType(String type) {
+		return DEFAULT_VALUES.containsKey(type);
+	}
+	
 	private static String getDefaultValueForType(String type) {
 		return String.valueOf(DEFAULT_VALUES.get(type));
 	}
@@ -698,22 +905,24 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateFairWeatherSetter(Writer out, String className, FieldData field) throws IOException {
 		out.write("\tpublic ");
 		out.write(className);
-		out.write(" set");
+		out.write(" ast");
 		out.write(field.titleCasedName());
 		out.write("(");
 		out.write(field.getType());
 		out.write(" ");
 		out.write(field.getName());
 		out.write(") {\n");
-		if (field.isMandatory()) {
+		if (field.isMandatory() && field.initialValue.equals("null")) {
+			// if there's an initial value, the raw setter will use that, so we can just chain the call.
 			out.write("\t\tif (");
 			out.write(field.getName());
-			out.write(" == null) throw new java.lang.NullPointerException(\"");
+			out.write(" == null) ");
+			out.write("throw new java.lang.NullPointerException(\"");
 			out.write(field.getName());
 			out.write(" is mandatory\");\n");
 		}
 		if (field.isAstNode()) {
-			out.write("\t\treturn this.setRaw");
+			out.write("\t\treturn this.raw");
 			out.write(field.titleCasedName());
 			out.write("(");
 			out.write(field.getName());
@@ -723,6 +932,13 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write(field.getName());
 			out.write(" = ");
 			out.write(field.getName());
+			
+			if (!isPrimitiveType(field.getType()) && !field.initialValue.equals("null")) {
+				out.write("== null ? ");
+				out.write(field.getInitialValue());
+				out.write(" : ");
+				out.write(field.getName());
+			}
 			out.write(";\n\t\treturn this;\n");
 		}
 		
@@ -732,7 +948,7 @@ public class TemplateProcessor extends AbstractProcessor {
 	private void generateFairWeatherSetterForRawBasics(Writer out, String className, FieldData field) throws IOException {
 		out.write("\tpublic ");
 		out.write(className);
-		out.write(" set");
+		out.write(" ast");
 		out.write(field.titleCasedName());
 		out.write("(");
 		out.write(field.getType());
@@ -806,8 +1022,8 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.getType());
 		out.write(", ");
 		out.write(className);
-		out.write("> ");
-		out.write(field.getName());
+		out.write("> ast");
+		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
 		out.write("Accessor.asStrict();\n\t}\n\t\n");

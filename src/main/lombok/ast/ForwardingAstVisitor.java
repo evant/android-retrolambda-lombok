@@ -33,6 +33,7 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	//Basics
 	@Override public boolean visitTypeReference(TypeReference node) {return visitNode(node);}
 	@Override public boolean visitTypeReferencePart(TypeReferencePart node) {return visitNode(node);}
+	@Override public boolean visitVariableReference(VariableReference node) {return visitNode(node);}
 	@Override public boolean visitIdentifier(Identifier node) {return visitNode(node);}
 	@Override public boolean visitIntegralLiteral(IntegralLiteral node) {return visitNode(node);}
 	@Override public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {return visitNode(node);}
@@ -52,6 +53,7 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	@Override public boolean visitSelect(Select node) {return visitNode(node);}
 	@Override public boolean visitArrayAccess(ArrayAccess node) {return visitNode(node);}
 	@Override public boolean visitArrayCreation(ArrayCreation node) {return visitNode(node);}
+	@Override public boolean visitAnnotationValueArray(AnnotationValueArray node) {return visitNode(node);}
 	@Override public boolean visitArrayInitializer(ArrayInitializer node) {return visitNode(node);}
 	@Override public boolean visitArrayDimension(ArrayDimension node) {return visitNode(node);}
 	@Override public boolean visitClassLiteral(ClassLiteral node) {return visitNode(node);}
@@ -84,13 +86,12 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	@Override public boolean visitVariableDeclaration(VariableDeclaration node) {return visitNode(node);}
 	@Override public boolean visitVariableDefinition(VariableDefinition node) {return visitNode(node);}
 	@Override public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {return visitNode(node);}
-	@Override public boolean visitTypeArguments(TypeArguments node) {return visitNode(node);}
 	@Override public boolean visitTypeVariable(TypeVariable node) {return visitNode(node);}
 	@Override public boolean visitKeywordModifier(KeywordModifier node) {return visitNode(node);}
 	@Override public boolean visitModifiers(Modifiers node) {return visitNode(node);}
 	@Override public boolean visitAnnotation(Annotation node) {return visitNode(node);}
 	@Override public boolean visitAnnotationElement(AnnotationElement node) {return visitNode(node);}
-	@Override public boolean visitTypeBody(TypeBody node) {return visitNode(node);}
+	@Override public boolean visitNormalTypeBody(NormalTypeBody node) {return visitNode(node);}
 	@Override public boolean visitEnumTypeBody(EnumTypeBody node) {return visitNode(node);}
 	@Override public boolean visitEmptyDeclaration(EmptyDeclaration node) {return visitNode(node);}
 	
