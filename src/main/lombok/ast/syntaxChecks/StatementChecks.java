@@ -21,7 +21,8 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.List;
+import static lombok.ast.syntaxChecks.MessageKey.*;
+import static lombok.ast.Message.*;
 
 import lombok.ast.Block;
 import lombok.ast.Case;
@@ -34,7 +35,6 @@ import lombok.ast.If;
 import lombok.ast.Node;
 import lombok.ast.Statement;
 import lombok.ast.Switch;
-import lombok.ast.SyntaxProblem;
 import lombok.ast.Try;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.VariableDeclaration;
@@ -43,15 +43,9 @@ import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
 public class StatementChecks {
-	private final List<SyntaxProblem> problems;
-	
-	public StatementChecks(List<SyntaxProblem> problems) {
-		this.problems = problems;
-	}
-	
 	public void checkNotLoneTry(Try node) {
 		if (node.rawCatches().size() == 0 && node.rawFinally() == null) {
-			problems.add(new SyntaxProblem(node, "try statement with no catches and no finally"));
+			node.addMessage(error(TRY_LONE_TRY, "try statement with no catches and no finally"));
 		}
 	}
 	
@@ -78,20 +72,20 @@ public class StatementChecks {
 	
 	private void checkDeclarationsAsDirectChild(Node n, Node c) {
 		if (c instanceof VariableDeclaration) {
-			problems.add(new SyntaxProblem(c, "Variable declarations only make sense in the context of a block."));
+			c.addMessage(error(DECLARATION_NOT_ALLOWED, "Variable declarations only make sense in the context of a block."));
 		}
 		
 		if (c instanceof TypeDeclaration) {
-			problems.add(new SyntaxProblem(c, "Type declarations only make sense in the context of a block or other type."));
+			c.addMessage(error(DECLARATION_NOT_ALLOWED, "Type declarations only make sense in the context of a block or other type."));
 		}
 	}
 	
 	public void checkVarDefOfCatch(Catch node) {
-		BasicChecks.checkVarDefIsSimple(problems, node, node.rawExceptionDeclaration(), "catch blocks", "exception");
+		BasicChecks.checkVarDefIsSimple(node, node.rawExceptionDeclaration(), "catch blocks", "exception");
 	}
 	
 	public void checkVarDefOfForEach(ForEach node) {
-		BasicChecks.checkVarDefIsSimple(problems, node, node.rawVariable(), "for-each statements", "loop");
+		BasicChecks.checkVarDefIsSimple(node, node.rawVariable(), "for-each statements", "loop");
 	}
 	
 	public void checkCaseChildOfSwitch(Case node) {
@@ -102,27 +96,27 @@ public class StatementChecks {
 		checkChildOfSwitch(node, "default");
 	}
 	
-	private void checkChildOfSwitch(Node node, String desc) {
-		Node p = node.getParent();
-		Node gp = p == null ? null : p.getParent();
+	private void checkChildOfSwitch(Statement node, String desc) {
+		if (node.getParent() == null) return;
+		
+		Block p = node.upToBlock();
+		Switch gp = p == null ? null : p.upToSwitch();
 		boolean genError = false;
 		
-		if (!(p instanceof Statement)) return;
-		
-		genError = !(p instanceof Block);
-		genError |= gp != null && !(gp instanceof Switch);
+		genError = p == null;
+		genError |= gp == null && p.getParent() != null;
 		
 		if (genError) {
-			problems.add(new SyntaxProblem(node, desc + " statements are only legal directly inside switch statements."));
+			node.addMessage(error(STATEMENT_ONLY_LEGAL_IN_SWITCH, desc + " statements are only legal directly inside switch statements."));
 		}
 	}
 	
 	public void checkSwitchStartsWithDefaultOrCase(Switch node) {
 		Block body = node.astBody();
 		if (body != null) {
-			Node first = body.astContents().first();
+			Statement first = body.astContents().first();
 			if (first != null && !(first instanceof Case) && !(first instanceof Default)) {
-				problems.add(new SyntaxProblem(node, "switch statements should start with a default or case statement."));
+				node.addMessage(error(SWITCH_DOES_NOT_START_WITH_CASE, "switch statements should start with a default or case statement."));
 			}
 		}
 	}

@@ -37,9 +37,12 @@ import lombok.ast.AnnotationValueArray;
 import lombok.ast.BinaryOperator;
 import lombok.ast.Comment;
 import lombok.ast.JavadocContainer;
+import lombok.ast.KeywordModifier;
+import lombok.ast.Modifiers;
 import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
 import lombok.ast.UnaryOperator;
+import lombok.ast.VariableReference;
 import lombok.ast.grammar.Source;
 import lombok.ast.grammar.SourceStructure;
 
@@ -191,6 +194,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		abstract AbstractVariableDeclaration create();
 		
 		static VariableKind kind(lombok.ast.VariableDefinition node) {
+			//TODO rewrite this whole thing.
 			lombok.ast.Node parent = node.getParent();
 			if (parent instanceof lombok.ast.VariableDeclaration) {
 				if (parent.getParent() instanceof lombok.ast.TypeBody ||
@@ -708,7 +712,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 		}
 		
-		if (node.astModifiers().isAbstract()) {
+		if (isExplicitlyAbstract(node.astModifiers())) {
 			bubblingFlags.add(BubblingFlags.ABSTRACT_METHOD);
 		}
 		if (isUndocumented(node.astBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
@@ -717,7 +721,14 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		
 		return set(node, decl);
 	}
-
+	
+	private static boolean isExplicitlyAbstract(Modifiers m) {
+		for (KeywordModifier keyword : m.astKeywords()) {
+			if ("abstract".equals(keyword.astName())) return true;
+		}
+		return false;
+	}
+	
 	@Override
 	public boolean visitAnnotationMethodDeclaration(lombok.ast.AnnotationMethodDeclaration node) {
 		AnnotationMethodDeclaration decl = new AnnotationMethodDeclaration(compilationResult);
@@ -750,7 +761,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 		}
 		
-		if (node.astModifiers().isAbstract()) {
+		if (isExplicitlyAbstract(node.astModifiers())) {
 			bubblingFlags.add(BubblingFlags.ABSTRACT_METHOD);
 		}
 		return set(node, decl);
@@ -1119,8 +1130,8 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				selects.add(current.astIdentifier());
 				pos.add(pos(current.astIdentifier()));
 				if (current.astOperand() instanceof lombok.ast.Select) current = (lombok.ast.Select) current.astOperand();
-				else if (current.astOperand() instanceof lombok.ast.Identifier) {
-					selects.add((lombok.ast.Identifier) current.astOperand());
+				else if (current.astOperand() instanceof lombok.ast.VariableReference) {
+					selects.add(((lombok.ast.VariableReference) current.astOperand()).astIdentifier());
 					pos.add(pos(current.rawOperand()));
 					Collections.reverse(selects);
 					long[] posArray = new long[pos.size()];
@@ -1307,6 +1318,12 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	@Override
 	public boolean visitNullLiteral(lombok.ast.NullLiteral node) {
 		return set(node, new NullLiteral(start(node), end(node)));
+	}
+	
+	@Override
+	public boolean visitVariableReference(VariableReference node) {
+		SingleNameReference ref = new SingleNameReference(toName(node.astIdentifier()), pos(node));
+		return set(node, ref);
 	}
 	
 	@Override

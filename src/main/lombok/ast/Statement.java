@@ -22,5 +22,5 @@
 package lombok.ast;
 
 public interface Statement extends Node {
-	
+	public Block upToBlock();
 }

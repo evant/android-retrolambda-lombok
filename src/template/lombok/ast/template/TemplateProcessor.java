@@ -129,7 +129,10 @@ public class TemplateProcessor extends AbstractProcessor {
 	
 	private static boolean isList(TypeMirror t) {
 		if (t instanceof DeclaredType) {
-			return t.toString().startsWith("java.util.List<") || t.toString().startsWith("List<");
+			String r = t.toString();
+			return r.startsWith("java.util.List<") || r.startsWith("List<") ||
+					r.startsWith("lombok.ast.StrictListAccessor<") || r.startsWith("StrictListAccessor<") ||
+					r.startsWith("lombok.ast.RawListAccessor<") || r.startsWith("RawListAccessor<");
 		}
 		
 		return false;
@@ -138,10 +141,8 @@ public class TemplateProcessor extends AbstractProcessor {
 	private static String getType(TypeMirror t, boolean delist) {
 		String result = t.toString();
 		
-		if (delist && t instanceof DeclaredType) {
-			if (result.startsWith("java.util.List<") || result.startsWith("List<")) {
-				result = ((DeclaredType)t).getTypeArguments().get(0).toString();
-			}
+		if (delist && isList(t)) {
+			result = ((DeclaredType)t).getTypeArguments().get(0).toString();
 		}
 		
 		if (result.startsWith("lombok.ast.")) {
@@ -311,7 +312,6 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		for (TypeMirror tm : typesToScan) {
 			Element toScan = processingEnv.getTypeUtils().asElement(tm);
-			System.out.printf("MIRRORNAME: %s ELEMENT: %s\n", tm, toScan);
 			if (toScan != null) for (Element child : toScan.getEnclosedElements()) {
 				if (child.getKind() == ElementKind.FIELD) {
 					ParentRelation rel = ParentRelation.create((VariableElement)child);

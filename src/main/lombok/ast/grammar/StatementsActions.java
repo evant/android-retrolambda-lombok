@@ -157,11 +157,15 @@ public class StatementsActions extends SourceActions {
 	}
 	
 	public Node createBreak(Node label) {
-		return posify(new Break().astLabel(createIdentifierIfNeeded(label, currentPos())));
+		Break b = new Break();
+		if (label != null) b.astLabel(createIdentifierIfNeeded(label, currentPos()));
+		return posify(b);
 	}
 	
 	public Node createContinue(Node label) {
-		return posify(new Continue().astLabel(createIdentifierIfNeeded(label, currentPos())));
+		Continue c = new Continue();
+		if (label != null) c.astLabel(createIdentifierIfNeeded(label, currentPos()));
+		return posify(c);
 	}
 	
 	public Node createReturn(Node value) {

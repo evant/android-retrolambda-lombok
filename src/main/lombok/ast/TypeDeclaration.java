@@ -35,4 +35,9 @@ public interface TypeDeclaration extends Node, DescribedNode {
 	
 	@ParentAccessor TypeBody astBody();
 	Node rawBody();
+	
+	CompilationUnit upIfTopLevelToCompilationUnit();
+	Block upToBlock();
+	
+	boolean isInterface();
 }

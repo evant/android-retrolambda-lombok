@@ -53,7 +53,7 @@ public class TypesActions extends SourceActions {
 		}
 		
 		posify(result); //We only care about the end position here.
-		return result.setPosition(new Position(identifier.getStartLocation().getIndex(), result.getPosition().getEnd()));
+		return result.setPosition(new Position(identifier.getStartIndex(), result.getPosition().getEnd()));
 	}
 	
 	public Node createWildcardedType(org.parboiled.Node<Node> qmark, org.parboiled.Node<Node> boundType, String extendsOrSuper, Node type) {

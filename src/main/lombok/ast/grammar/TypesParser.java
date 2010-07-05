@@ -25,7 +25,7 @@ import lombok.ast.Node;
 
 import org.parboiled.BaseParser;
 import org.parboiled.Rule;
-import org.parboiled.support.Leaf;
+import org.parboiled.annotations.SuppressSubnodes;
 
 public class TypesParser extends BaseParser<Node> {
 	final ParserGroup group;
@@ -37,35 +37,35 @@ public class TypesParser extends BaseParser<Node> {
 	}
 	
 	public Rule nonArrayType() {
-		return firstOf(primitiveType(), referenceType());
+		return FirstOf(primitiveType(), referenceType());
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2
 	 */
 	public Rule type() {
-		return sequence(
+		return Sequence(
 				nonArrayType(),
-				SET(),
-				zeroOrMore(sequence(
-						ch('['), group.basics.optWS(), ch(']'), group.basics.optWS())),
-				SET(actions.setArrayDimensionsOfType(VALUE(), TEXTS("zeroOrMore/sequence")))).label("type");
+				set(),
+				ZeroOrMore(Sequence(
+						Ch('['), group.basics.optWS(), Ch(']'), group.basics.optWS())),
+				set(actions.setArrayDimensionsOfType(value(), texts("ZeroOrMore/Sequence")))).label("type");
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2
 	 */
 	public Rule primitiveType() {
-		return sequence(
+		return Sequence(
 				rawPrimitiveType(),
-				SET(actions.createPrimitiveType(LAST_TEXT())),
+				set(actions.createPrimitiveType(lastText())),
 				group.basics.optWS());
 	}
 	
-	@Leaf
+	@SuppressSubnodes
 	Rule rawPrimitiveType() {
-		return sequence(
-				firstOf("boolean", "int", "long", "double", "float", "short", "char", "byte", "void"),
+		return Sequence(
+				FirstOf("boolean", "int", "long", "double", "float", "short", "char", "byte", "void"),
 				group.basics.testLexBreak());
 	}
 	
@@ -73,113 +73,113 @@ public class TypesParser extends BaseParser<Node> {
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.3
 	 */
 	public Rule referenceType() {
-		return sequence(
+		return Sequence(
 				referenceTypePart().label("head"),
-				zeroOrMore(dotReferenceTypePart().label("tail")),
-				SET(actions.createReferenceType(VALUE("head"), VALUES("zeroOrMore/tail"))));
+				ZeroOrMore(dotReferenceTypePart().label("tail")),
+				set(actions.createReferenceType(value("head"), values("ZeroOrMore/tail"))));
 	}
 	
 	Rule dotReferenceTypePart() {
-		return sequence(
-				ch('.'), group.basics.optWS(),
+		return Sequence(
+				Ch('.'), group.basics.optWS(),
 				group.basics.identifier().label("partName"),
-				optional(typeArguments()),
-				SET(actions.createTypeReferencePart(NODE("partName"), VALUE("optional/typeArguments"))),
+				Optional(typeArguments()),
+				set(actions.createTypeReferencePart(node("partName"), value("Optional/typeArguments"))),
 				group.basics.optWS());
 	}
 	
 	Rule referenceTypePart() {
-		return sequence(
+		return Sequence(
 				group.basics.identifier().label("partName"),
-				optional(typeArguments()),
-				SET(actions.createTypeReferencePart(NODE("partName"), VALUE("optional/typeArguments"))),
+				Optional(typeArguments()),
+				set(actions.createTypeReferencePart(node("partName"), value("Optional/typeArguments"))),
 				group.basics.optWS());
 	}
 	
 	public Rule plainReferenceType() {
-		return sequence(
+		return Sequence(
 				plainReferenceTypePart().label("head"),
-				zeroOrMore(dotPlainReferenceTypePart().label("tail")),
-				SET(actions.createReferenceType(VALUE("head"), VALUES("zeroOrMore/tail"))));
+				ZeroOrMore(dotPlainReferenceTypePart().label("tail")),
+				set(actions.createReferenceType(value("head"), values("ZeroOrMore/tail"))));
 	}
 	
 	Rule plainReferenceTypePart() {
-		return sequence(
+		return Sequence(
 				group.basics.identifier().label("partName"),
-				SET(actions.createTypeReferencePart(NODE("partName"), null)),
+				set(actions.createTypeReferencePart(node("partName"), null)),
 				group.basics.optWS());
 	}
 	
 	Rule dotPlainReferenceTypePart() {
-		return sequence(
-				ch('.'), group.basics.optWS(),
+		return Sequence(
+				Ch('.'), group.basics.optWS(),
 				group.basics.identifier().label("partName"),
-				SET(actions.createTypeReferencePart(NODE("partName"), null)),
+				set(actions.createTypeReferencePart(node("partName"), null)),
 				group.basics.optWS());
 	}
 	
 	public Rule typeVariables() {
-		return optional(sequence(
-				ch('<'),
+		return Optional(Sequence(
+				Ch('<'),
 				group.basics.optWS(),
-				optional(sequence(
+				Optional(Sequence(
 						typeVariable().label("head"),
-						zeroOrMore(sequence(
-								ch(','),
+						ZeroOrMore(Sequence(
+								Ch(','),
 								group.basics.optWS(),
 								typeVariable().label("tail"))))),
-				ch('>'),
-				SET(actions.createTypeVariables(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))),
+				Ch('>'),
+				set(actions.createTypeVariables(value("Optional/Sequence/head"), values("Optional/Sequence/ZeroOrMore/Sequence/tail"))),
 				group.basics.optWS()));
 	}
 	
 	Rule typeVariable() {
-		return sequence(
+		return Sequence(
 				group.basics.identifier(),
-				optional(sequence(
-						sequence(
-							string("extends"),
+				Optional(Sequence(
+						Sequence(
+							String("extends"),
 							group.basics.testLexBreak(),
 							group.basics.optWS()),
 						type(),
-						zeroOrMore(sequence(
-								ch('&'), group.basics.optWS(),
+						ZeroOrMore(Sequence(
+								Ch('&'), group.basics.optWS(),
 								type())))),
-				SET(actions.createTypeVariable(VALUE("identifier"), VALUE("optional/sequence/type"), VALUES("optional/sequence/zeroOrMore/sequence/type"))));
+				set(actions.createTypeVariable(value("identifier"), value("Optional/Sequence/type"), values("Optional/Sequence/ZeroOrMore/Sequence/type"))));
 	}
 	
 	/**
 	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.5
 	 */
 	public Rule typeArguments() {
-		return optional(sequence(
-				ch('<'),
+		return Optional(Sequence(
+				Ch('<'),
 				group.basics.optWS(),
-				optional(sequence(
+				Optional(Sequence(
 						typeArgument().label("head"),
-						zeroOrMore(sequence(
-								ch(','),
+						ZeroOrMore(Sequence(
+								Ch(','),
 								group.basics.optWS(),
 								typeArgument().label("tail"))))),
-				ch('>'),
-				SET(actions.createTypeArguments(VALUE("optional/sequence/head"), VALUES("optional/sequence/zeroOrMore/sequence/tail"))),
+				Ch('>'),
+				set(actions.createTypeArguments(value("Optional/Sequence/head"), values("Optional/Sequence/ZeroOrMore/Sequence/tail"))),
 				group.basics.optWS())).label("typeArguments");
 	}
 	
 	public Rule typeArgument() {
-		return firstOf(
+		return FirstOf(
 				type(),
-				sequence(
-						ch('?').label("qmark"),
+				Sequence(
+						Ch('?').label("qmark"),
 						group.basics.optWS(),
-						firstOf(string("extends"), string("super")).label("boundType"),
+						FirstOf(String("extends"), String("super")).label("boundType"),
 						group.basics.testLexBreak(),
 						group.basics.optWS(),
 						type(),
-						SET(actions.createWildcardedType(NODE("qmark"), NODE("boundType"), TEXT("boundType"), VALUE("type")))),
-				sequence(
-						ch('?').label("qmark"),
-						SET(actions.createUnboundedWildcardType(NODE("qmark"))),
+						set(actions.createWildcardedType(node("qmark"), node("boundType"), text("boundType"), value("type")))),
+				Sequence(
+						Ch('?').label("qmark"),
+						set(actions.createUnboundedWildcardType(node("qmark"))),
 						group.basics.optWS()));
 	}
 }

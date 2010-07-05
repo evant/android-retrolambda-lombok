@@ -21,14 +21,15 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.List;
+import static lombok.ast.syntaxChecks.MessageKey.*;
+import static lombok.ast.Message.*;
+
 import java.util.Map;
 
 import com.google.common.collect.Maps;
 
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
-import lombok.ast.SyntaxProblem;
 
 /**
  * The base class of {@code SyntacticValidityVisitor}, which is generated. Don't use this class, use
@@ -37,10 +38,8 @@ import lombok.ast.SyntaxProblem;
 public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 	final Map<Class<?>, Object> checkerObjectStore = Maps.newHashMap();
 	final boolean recursing;
-	final List<SyntaxProblem> problems;
 	
-	SyntacticValidityVisitorBase(List<SyntaxProblem> problems, boolean recursing) {
-		this.problems = problems;
+	SyntacticValidityVisitorBase(boolean recursing) {
 		this.recursing = recursing;
 	}
 	
@@ -49,9 +48,9 @@ public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 		Object o = checkerObjectStore.get(clazz);
 		if (o != null) return (T)o;
 		try {
-			o = clazz.getConstructor(List.class).newInstance(problems);
+			o = clazz.newInstance();
 		} catch (Exception e) {
-			throw new IllegalStateException("Class " + clazz.getName() + " could not be constructed. Does it have a public constructor that takes a list?", e);
+			throw new IllegalStateException("Class " + clazz.getName() + " could not be constructed. Does it have a public no-args constructort?", e);
 		}
 		checkerObjectStore.put(clazz, o);
 		return (T)o;
@@ -59,7 +58,7 @@ public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 	
 	/**
 	 * Checks if a given child is syntactically valid; you specify exactly what is required for this to hold in the parameters.
-	 * This method will recursively call {@link #checkSyntacticValidity(List)} on the child.
+	 * This method will recursively call {@link #checkSyntacticValidity()} on the child.
 	 * 
 	 * @param node The node responsible for the check.
 	 * @param child The actual child node object that will be checked.
@@ -68,31 +67,32 @@ public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 	 * @param typeAssertion If the node exists, it must be an instance of this type.
 	 */
 	void checkChildValidity(Node node, Node child, String name, boolean mandatory, Class<?> typeAssertion) {
-		SyntaxProblem p = verifyNodeRelation(node, child, name, mandatory, typeAssertion);
-		if (p != null) problems.add(p);
+		verifyNodeRelation(node, child, name, mandatory, typeAssertion);
 	}
 	
-	public static SyntaxProblem verifyNodeRelation(Node parent, Node child, String name, boolean mandatory, Class<?> typeAssertion) {
+	public static boolean verifyNodeRelation(Node parent, Node child, String name, boolean mandatory, Class<?> typeAssertion) {
 		String typeAssertionName = typeAssertion.getSimpleName().toLowerCase();
 		boolean typeAssertionVowel = startsWithVowel(typeAssertionName);
 		
 		if (child == null) {
 			if (mandatory) {
-				return new SyntaxProblem(parent, String.format("Missing %s %s",
-						name, typeAssertion.getSimpleName().toLowerCase()));
+				parent.addMessage(error(NODE_MISSING_MANDATORY_CHILD, String.format("Missing %s %s",
+						name, typeAssertion.getSimpleName().toLowerCase())));
+				return false;
 			}
 		} else {
 			if (!typeAssertion.isInstance(child)) {
 				String actualName = child.getClass().getSimpleName();
-				return new SyntaxProblem(parent, String.format(
+				child.addMessage(error(NODE_CHILD_TYPE_INCORRECT, String.format(
 						"%s isn't a%s %s but a%s %s",
 						name,
 						typeAssertionVowel ? "n" : "", typeAssertionName,
-						startsWithVowel(actualName) ? "n" : "", actualName));
+						startsWithVowel(actualName) ? "n" : "", actualName)));
+				return false;
 			}
 		}
 		
-		return null;
+		return true;
 	}
 	
 	private static boolean startsWithVowel(String typeAssertionName) {
@@ -117,7 +117,7 @@ public class SyntacticValidityVisitorBase extends ForwardingAstVisitor {
 			if (Character.isUpperCase(c)) errorName.append(" ").append(Character.toLowerCase(c));
 			else errorName.append(c);
 		}
-		problems.add(new SyntaxProblem(node, errorName.toString()));
+		node.addMessage(error(PARSEARTEFACT, "parse artefact remained in node tree"));
 		
 		return !recursing;
 	}

@@ -101,6 +101,7 @@
 	</target>
 	
 	<target name="compile" depends="ensureBuildDeps, templateProcessor" description="Compiles all code for lombok.ast">
+		<mkdir dir="build/lombok.ast_generatedSource" />
 		<ivy:compile destdir="build/lombok.ast">
 			<src path="src/main" />
 			<src path="src/printer" />
@@ -120,7 +121,8 @@
 	<target name="test" depends="compile, ensureTestDeps" description="Runs unit tests.">
 		<ivy:resolve file="buildScripts/ivy.xml" refresh="true" conf="test" />
 		<mkdir dir="build/tests" />
-		<ivy:compile destdir="build/tests" srcdir="test/src">
+		<ivy:compile destdir="build/tests">
+			<src path="test/src" />
 			<classpath refid="test.path" />
 			<classpath location="build/lombok.ast" />
 		</ivy:compile>

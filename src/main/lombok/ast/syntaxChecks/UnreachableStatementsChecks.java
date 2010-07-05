@@ -21,24 +21,19 @@
  */
 package lombok.ast.syntaxChecks;
 
-import java.util.List;
+import static lombok.ast.syntaxChecks.MessageKey.*;
+import static lombok.ast.Message.*;
 
 import lombok.ast.Block;
 import lombok.ast.Break;
 import lombok.ast.Continue;
 import lombok.ast.Node;
 import lombok.ast.Return;
-import lombok.ast.SyntaxProblem;
+import lombok.ast.Statement;
 import lombok.ast.template.SyntaxCheck;
 
 @SyntaxCheck
 public class UnreachableStatementsChecks {
-	private final List<SyntaxProblem> problems;
-	
-	public UnreachableStatementsChecks(List<SyntaxProblem> problems) {
-		this.problems = problems;
-	}
-	
 	public void unreachablesAfterBreak(Break statement) {
 		checkForUnreachables(statement);
 	}
@@ -51,16 +46,17 @@ public class UnreachableStatementsChecks {
 		checkForUnreachables(statement);
 	}
 	
-	private void checkForUnreachables(Node n) {
-		Node p = n.getParent();
-		if (p instanceof Block) {
-			boolean found = false;
-			for (Node s : ((Block)p).rawContents()) {
-				if (found) {
-					problems.add(new SyntaxProblem(s, "Unreachable code"));
-				}
-				if (s == n) found = true;
+	private void checkForUnreachables(Statement n) {
+		Block b = n.upToBlock();
+		if (b == null) return;
+		
+		boolean found = false;
+		for (Node s : b.rawContents()) {
+			if (found) {
+				s.addMessage(error(STATEMENT_UNREACHABLE, "Unreachable code"));
+				return;
 			}
+			if (s == n) found = true;
 		}
 	}
 }

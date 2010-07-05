@@ -273,7 +273,6 @@ class ModifiersTemplate {
 		int explicit = getExplicitModifierFlags(m);
 		int out = explicit;
 		Node declaration = m.getParent();
-		Node container = declaration == null ? null : declaration.getParent();
 		
 		// Interfaces and Enums can only be static by their very nature.
 		if (declaration instanceof TypeDeclaration && !(declaration instanceof ClassDeclaration)) {
@@ -281,33 +280,33 @@ class ModifiersTemplate {
 		}
 		
 		// We consider top-level types as static, because semantically that makes sense.
-		if (declaration instanceof ClassDeclaration && container instanceof CompilationUnit) {
+		if (declaration instanceof ClassDeclaration && ((ClassDeclaration)declaration).upIfTopLevelToCompilationUnit() != null) {
 			out |= Modifier.STATIC;
 		}
 		
-		boolean declarationIsInterface = declaration instanceof InterfaceDeclaration ||
-				declaration instanceof AnnotationDeclaration;
-		boolean containerIsInterface = container instanceof InterfaceDeclaration ||
-				container instanceof AnnotationDeclaration;
-		
 		// We consider interfaces as abstract, because semantically that makes sense.
-		if (declarationIsInterface) {
+		if (declaration instanceof TypeDeclaration && ((TypeDeclaration)declaration).isInterface()) {
 			out |= Modifier.ABSTRACT;
 		}
 		
 		// Types in interfaces are always static.
-		if (declaration instanceof ClassDeclaration && containerIsInterface) {
-			out |= Modifier.STATIC;
+		if (declaration instanceof ClassDeclaration) {
+			TypeDeclaration container = ((ClassDeclaration)declaration).upUpToTypeDeclaration();
+			if (container != null && container.isInterface()) out |= Modifier.STATIC;
 		}
 		
-		if (declaration instanceof MethodDeclaration &&
-				containerIsInterface && (explicit & Modifier.STATIC) == 0) {
-			
-			out |= Modifier.PUBLIC | Modifier.ABSTRACT;
+		if (declaration instanceof MethodDeclaration) {
+			TypeDeclaration container = ((MethodDeclaration)declaration).upUpToTypeDeclaration();
+			if (container != null && container.isInterface() && (explicit & Modifier.STATIC) == 0) {
+				out |= Modifier.PUBLIC | Modifier.ABSTRACT;
+			}
 		}
 		
-		if (declaration instanceof VariableDeclaration && containerIsInterface) {
-			out |= Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC;
+		if (declaration instanceof VariableDeclaration) {
+			TypeDeclaration container = ((VariableDeclaration)declaration).upUpToTypeDeclaration();
+			if (container != null && container.isInterface()) {
+				out |= Modifier.PUBLIC | Modifier.FINAL | Modifier.STATIC;
+			}
 		}
 		
 		return out;
@@ -589,7 +588,7 @@ class UnaryExpressionTemplate {
 @GenerateAstNode(implementing=DescribedNode.class)
 class TypeVariableTemplate {
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
-	List<TypeReference> extending;
+	@ParentAccessor("TypeVariableBound") List<TypeReference> extending;
 	
 	@CopyMethod
 	static String getDescription(TypeVariable self) {
@@ -676,7 +675,7 @@ class TypeReferenceTemplate {
 @GenerateAstNode
 class TypeReferencePartTemplate {
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier identifier;
-	List<TypeReference> typeArguments;
+	@ParentAccessor("TypeArgument") List<TypeReference> typeArguments;
 	
 	@CopyMethod
 	static String getTypeName(TypeReferencePart self) {
@@ -748,7 +747,7 @@ class ConstructorInvocationTemplate {
 	List<TypeReference> constructorTypeArguments;
 	@Mandatory TypeReference typeReference;
 	List<Expression> arguments;
-	@ParentAccessor("AnonymousClass") TypeBody anonymousClassBody;
+	@ParentAccessor("AnonymousClass") NormalTypeBody anonymousClassBody;
 	
 	@CopyMethod
 	static String getDescription(ConstructorInvocation self) {
@@ -827,7 +826,7 @@ class SuperTemplate {
 
 @GenerateAstNode(implementing={Expression.class, DescribedNode.class}, mixin=ExpressionMixin.class)
 class ClassLiteralTemplate {
-	@Mandatory TypeReference typeReference;
+	@ParentAccessor @Mandatory TypeReference typeReference;
 	
 	@CopyMethod
 	static String getDescription(ClassLiteral self) {
@@ -1197,7 +1196,7 @@ class MethodDeclarationTemplate {
 	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
-	@Mandatory TypeReference returnTypeReference;
+	@ParentAccessor("ReturnType") @Mandatory TypeReference returnTypeReference;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier methodName;
 	@ParentAccessor("Parameter") List<VariableDefinition> parameters;
 	List<TypeReference> thrownTypeReferences;
@@ -1234,28 +1233,44 @@ class StaticInitializerTemplate {
 	@ParentAccessor @Mandatory Block body;
 }
 
-@GenerateAstNode
-class TypeBodyTemplate {
-	@ParentAccessor List<TypeMember> members;
+@GenerateAstNode(implementing=TypeBody.class)
+class NormalTypeBodyTemplate {
+	List<TypeMember> members;
 }
 
-@GenerateAstNode(extending="lombok.ast.TypeBody")
+@GenerateAstNode(implementing=TypeBody.class)
 class EnumTypeBodyTemplate {
 	@ParentAccessor List<EnumConstant> constants;
+	List<TypeMember> members;
+	
+	@CopyMethod
+	static ConstructorInvocation upIfAnonymousClassToConstructorInvocation(EnumTypeBody self) {
+		return null;
+	}
+	
+	@CopyMethod
+	static EnumConstant upToEnumConstant(EnumTypeBody self) {
+		return null;
+	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
+@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class AnnotationDeclarationTemplate {
 	Comment javadoc;
 	
 	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
-	@ParentAccessor @Mandatory TypeBody body;
+	@Mandatory NormalTypeBody body;
 	
 	@CopyMethod
 	static String getDescription(AnnotationDeclaration self) {
 		return self.astName().astValue();
+	}
+	
+	@CopyMethod
+	static boolean isInterface(AnnotationDeclaration self) {
+		return true;
 	}
 }
 
@@ -1268,6 +1283,11 @@ class EmptyDeclarationTemplate {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+	
+	@CopyMethod
+	static boolean isInterface(EmptyDeclaration self) {
+		return false;
 	}
 	
 	@CopyMethod
@@ -1301,13 +1321,8 @@ class EmptyDeclarationTemplate {
 	}
 	
 	@CopyMethod
-	static EmptyDeclaration astBody(EmptyDeclaration self, TypeBody body) {
-		return self;
-	}
-	
-	@CopyMethod
-	static EmptyDeclaration rawBody(EmptyDeclaration self, Node body) {
-		return self;
+	static Block upToBlock(EmptyDeclaration self) {
+		return null;
 	}
 }
 
@@ -1317,7 +1332,7 @@ class ClassDeclarationTemplate {
 	
 	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
-	@ParentAccessor @Mandatory TypeBody body;
+	@Mandatory NormalTypeBody body;
 	List<TypeVariable> typeVariables;
 	TypeReference extending;
 	List<TypeReference> implementing;
@@ -1326,15 +1341,20 @@ class ClassDeclarationTemplate {
 	static String getDescription(ClassDeclaration self) {
 		return self.astName().astValue();
 	}
+	
+	@CopyMethod
+	static boolean isInterface(ClassDeclaration self) {
+		return false;
+	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
+@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class InterfaceDeclarationTemplate {
 	Comment javadoc;
 	
 	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
-	@ParentAccessor @Mandatory TypeBody body;
+	@Mandatory NormalTypeBody body;
 	List<TypeVariable> typeVariables;
 	List<TypeReference> extending;
 	
@@ -1342,12 +1362,17 @@ class InterfaceDeclarationTemplate {
 	static String getDescription(InterfaceDeclaration self) {
 		return self.astName().astValue();
 	}
+	
+	@CopyMethod
+	static boolean isInterface(InterfaceDeclaration self) {
+		return true;
+	}
 }
 
 @GenerateAstNode(implementing={TypeMember.class, DescribedNode.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class EnumConstantTemplate {
 	Comment javadoc;
-	@ParentAccessor TypeBody body;
+	@ParentAccessor NormalTypeBody body;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	List<Annotation> annotations;
 	List<Expression> arguments;
@@ -1358,7 +1383,7 @@ class EnumConstantTemplate {
 	}
 }
 
-@GenerateAstNode(implementing={TypeMember.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
+@GenerateAstNode(implementing={TypeMember.class, Statement.class, TypeDeclaration.class, JavadocContainer.class}, mixin=TypeMemberMixin.class)
 class EnumDeclarationTemplate {
 	Comment javadoc;
 	
@@ -1370,6 +1395,11 @@ class EnumDeclarationTemplate {
 	@CopyMethod
 	static String getDescription(EnumDeclaration self) {
 		return self.astName().astValue();
+	}
+	
+	@CopyMethod
+	static boolean isInterface(EnumDeclaration self) {
+		return false;
 	}
 }
 
@@ -1415,7 +1445,7 @@ class ImportDeclarationTemplate {
 class CompilationUnitTemplate {
 	@ParentAccessor PackageDeclaration packageDeclaration;
 	@ParentAccessor List<ImportDeclaration> importDeclarations;
-	List<TypeDeclaration> typeDeclarations;
+	@ParentAccessor("TopLevel") List<TypeDeclaration> typeDeclarations;
 }
 
 @GenerateAstNode(implementing=Statement.class)

@@ -83,6 +83,7 @@ import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.NormalTypeBody;
 import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.Position;
@@ -99,7 +100,6 @@ import lombok.ast.Synchronized;
 import lombok.ast.This;
 import lombok.ast.Throw;
 import lombok.ast.Try;
-import lombok.ast.TypeBody;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
@@ -108,6 +108,7 @@ import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
+import lombok.ast.VariableReference;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 import lombok.ast.grammar.Source;
@@ -422,7 +423,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	}
 	
 	@Override
-	public boolean visitTypeBody(TypeBody node) {
+	public boolean visitNormalTypeBody(NormalTypeBody node) {
 		return posSet(node, treeMaker.ClassDef(treeMaker.Modifiers(0), table.empty,
 				List.<JCTypeParameter>nil(), null, List.<JCExpression>nil(), toList(JCTree.class, node.astMembers())));
 	}
@@ -468,9 +469,13 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return posSet(node, treeMaker.Literal(TypeTags.CLASS, node.astValue()));
 	}
 	
-	@Override
-	public boolean visitIdentifier(Identifier node) {
+	@Override public boolean visitIdentifier(Identifier node) {
 		return posSet(node, treeMaker.Ident(toName(node)));
+	}
+	
+	@Override
+	public boolean visitVariableReference(VariableReference node) {
+		return posSet(node, treeMaker.Ident(toName(node.astIdentifier())));
 	}
 	
 	@Override

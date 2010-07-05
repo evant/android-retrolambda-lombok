@@ -32,16 +32,12 @@ import com.google.common.collect.Lists;
 
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationMethodDeclaration;
-import lombok.ast.Block;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
 import lombok.ast.EmptyDeclaration;
 import lombok.ast.EnumDeclaration;
-import lombok.ast.For;
-import lombok.ast.ForEach;
 import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
-import lombok.ast.Message;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
@@ -123,7 +119,7 @@ public class KeywordChecks {
 			String k = n.astName();
 			if (k != null && !k.isEmpty() ) {
 				if (keywords.contains(k)) {
-					n.addMessage(Message.error(MODIFIERS_DUPLICATE_KEYWORD, "Duplicate modifier: " + k));
+					n.addMessage(error(MODIFIERS_DUPLICATE_KEYWORD, "Duplicate modifier: " + k));
 				} else {
 					keywords.add(k);
 				}
@@ -145,7 +141,8 @@ public class KeywordChecks {
 	}
 	
 	public void fieldModifiersCheck(VariableDeclaration vd) {
-		if (!(vd.getParent() instanceof TypeDeclaration)) return;
+		TypeDeclaration td = vd.upUpToTypeDeclaration();
+		if (td == null) return;	//not a field.
 		VariableDefinition def = vd.astDefinition();
 		if (def != null) {
 			Modifiers m = def.astModifiers();
@@ -167,7 +164,7 @@ public class KeywordChecks {
 	}
 	
 	public void localVariableModifiersCheck(VariableDefinition vd) {
-		boolean applies = vd.getParent() instanceof VariableDeclaration && vd.getParent().getParent() instanceof Block;
+		boolean applies = vd.upUpIfLocalVariableToBlock() != null;
 		if (!applies) applies = vd.upToForEach() != null;
 		if (!applies) applies = vd.upToFor() != null;
 		if (!applies) return;
@@ -198,10 +195,10 @@ public class KeywordChecks {
 		int flags = modifiersCheck(td.astModifiers(),
 				TYPE_MODIFIERS_EXCLUSIVITY, TYPE_MODIFIERS_LEGAL, desc);
 		boolean staticWarningEmitted = false;
-		if (td.getParent() instanceof CompilationUnit) {
+		if (td.upIfTopLevelToCompilationUnit() != null) {
 			generateNotAllowedKeywordError(td.astModifiers(), flags, K_PRIVATE, "private", "Top-level types cannot be private.");
 			staticWarningEmitted |= generateNotAllowedKeywordError(td.astModifiers(), flags, K_STATIC, "static", "Top-level types cannot be static.");
-		} else if (td.getParent() instanceof Block) {
+		} else if (td.upToBlock() != null) {
 			generateNotAllowedKeywordError(td.astModifiers(), flags, K_PRIVATE, "private", "Method-local types cannot be private.");
 			generateNotAllowedKeywordError(td.astModifiers(), flags, K_PROTECTED, "protected", "Method-local types cannot be protected.");
 			generateNotAllowedKeywordError(td.astModifiers(), flags, K_PUBLIC, "public", "Method-local types cannot be public.");
@@ -214,10 +211,10 @@ public class KeywordChecks {
 	}
 	
 	public void checkStaticInitializerInNonStaticType(StaticInitializer node) {
-		if (node.getParent() instanceof TypeDeclaration) {
-			Modifiers pMods = ((TypeDeclaration)node.getParent()).astModifiers();
-			if (!pMods.isStatic()) {
-				node.addMessage(Message.error(INITIALIZER_STATIC_IN_NON_STATIC_TYPE,
+		TypeDeclaration parent = node.upUpToTypeDeclaration();
+		if (parent != null) {
+			if (!parent.astModifiers().isStatic()) {
+				node.addMessage(error(INITIALIZER_STATIC_IN_NON_STATIC_TYPE,
 						"static initializers are only allowed in top-level or static types declarations."));
 			}
 		}
@@ -232,7 +229,7 @@ public class KeywordChecks {
 			if (p instanceof TypeDeclaration) {
 				Modifiers pMods = ((TypeDeclaration)p).astModifiers();
 				if (!pMods.isStatic()) {
-					modifiers.getParent().addMessage(Message.error(MODIFIERS_STATIC_CHAIN,
+					modifiers.getParent().addMessage(error(MODIFIERS_STATIC_CHAIN,
 							"This declaration is (effectively) static; static declarations or only legal in top-level and static declarations."));
 				}
 			}
@@ -240,27 +237,25 @@ public class KeywordChecks {
 		}
 	}
 	
-	private int modifiersCheck(Node rawModifiers, int[] exclusivity, int legality, String desc) {
-		if (!(rawModifiers instanceof Modifiers)) return 0;
-		Modifiers modifiers = (Modifiers) rawModifiers;
+	private int modifiersCheck(Modifiers modifiers, int[] exclusivity, int legality, String desc) {
 		int flags = modifiers.getEffectiveModifierFlags();
 		int implicits = flags & ~modifiers.getExplicitModifierFlags();
 		
-		for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
+		for (Node n : modifiers.rawKeywords()) {
 			if (n instanceof KeywordModifier) {
 				String k = ((KeywordModifier)n).astName();
 				if (k == null || k.isEmpty()) {
-					n.addMessage(Message.error(MODIFIERS_EMPTY_MODIFIER, "Empty/null modifier."));
+					n.addMessage(error(MODIFIERS_EMPTY_MODIFIER, "Empty/null modifier."));
 				}
 				
 				if (!TO_FLAG_MAP.containsKey(k)) {
-					n.addMessage(Message.error(MODIFIERS_UNKNOWN_MODIFIER, "Unknown modifier: " + k));
+					n.addMessage(error(MODIFIERS_UNKNOWN_MODIFIER, "Unknown modifier: " + k));
 					continue;
 				}
 				
 				int flag = TO_FLAG_MAP.get(k);
 				if ((legality & flag) == 0) {
-					n.addMessage(Message.error(MODIFIERS_MODIFIER_NOT_ALLOWED, "Modifier not allowed on " + desc + ": " + k));
+					n.addMessage(error(MODIFIERS_MODIFIER_NOT_ALLOWED, "Modifier not allowed on " + desc + ": " + k));
 					continue;
 				}
 				
@@ -270,7 +265,7 @@ public class KeywordChecks {
 		
 		for (int exclusive : exclusivity) {
 			if ((flags & exclusive) == exclusive) {
-				generateExclusivityError(implicits, exclusive, rawModifiers);
+				generateExclusivityError(implicits, exclusive, modifiers);
 			}
 		}
 		
@@ -282,7 +277,7 @@ public class KeywordChecks {
 		
 		for (KeywordModifier n : modifiers.astKeywords()) {
 			if (keyword.equals(n.astName())) {
-				n.addMessage(Message.error(MessageKey.MODIFIERS_MODIFIER_NOT_ALLOWED, error));
+				n.addMessage(error(MODIFIERS_MODIFIER_NOT_ALLOWED, error));
 				return true;
 			}
 		}
@@ -291,18 +286,14 @@ public class KeywordChecks {
 	}
 	
 	public void emptyDeclarationMustHaveNoModifiers(EmptyDeclaration node) {
-		Node rawModifiers = node.astModifiers();
-		if (!(rawModifiers instanceof Modifiers)) return;
-		Modifiers modifiers = (Modifiers)rawModifiers;
+		Modifiers modifiers = node.astModifiers();
 		
 		if (!modifiers.astKeywords().isEmpty() || !modifiers.astAnnotations().isEmpty()) {
-			problems.add(new SyntaxProblem(node, "Empty Declarations cannot have modifiers."));
+			node.addMessage(error(MODIFIERS_MODIFIER_NOT_ALLOWED, "Empty Declarations cannot have modifiers."));
 		}
 	}
 	
-	private void generateExclusivityError(int implicit, int exclusive, Node rawModifiers) {
-		if (!(rawModifiers instanceof Modifiers)) return;
-		
+	private void generateExclusivityError(int implicit, int exclusive, Modifiers modifiers) {
 		String hit = null;
 		
 		int responsibleImplicit = implicit & exclusive;
@@ -313,19 +304,19 @@ public class KeywordChecks {
 				if (x.getValue() == responsibleImplicit) nameOfResponsibleImplicit = x.getKey();
 			}
 			
-			for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
+			for (Node n : modifiers.rawKeywords()) {
 				if (n instanceof KeywordModifier) {
 					String k = ((KeywordModifier)n).astName();
 					if (!TO_FLAG_MAP.containsKey(k)) continue;
 					int f = TO_FLAG_MAP.get(k);
 					if ((f & exclusive) == 0) continue;
 					
-					problems.add(new SyntaxProblem(n, String.format(
-							"Modifier %s cannot be used together with %s here", k, nameOfResponsibleImplicit)));
+					modifiers.addMessage(error(MODIFIERS_MODIFIER_CONFLICT, String.format(
+							"Modifier %s cannot be used here; it is already implicitly %s.", k, nameOfResponsibleImplicit)));
 				}
 			}
 		} else {
-			for (Node n : ((Modifiers)rawModifiers).rawKeywords()) {
+			for (Node n : modifiers.rawKeywords()) {
 				if (n instanceof KeywordModifier) {
 					String k = ((KeywordModifier)n).astName();
 					if (!TO_FLAG_MAP.containsKey(k)) continue;
@@ -337,8 +328,8 @@ public class KeywordChecks {
 						continue;
 					}
 					
-					problems.add(new SyntaxProblem(n, String.format(
-							"Modifier %s cannot be used together with %s here", k, hit)));
+					modifiers.addMessage(error(MODIFIERS_MODIFIER_CONFLICT, String.format(
+							"Modifier %s cannot be used together with %s here.", k, hit)));
 				}
 			}
 		}

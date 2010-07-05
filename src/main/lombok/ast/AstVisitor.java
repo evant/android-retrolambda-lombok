@@ -35,6 +35,7 @@ public abstract class AstVisitor {
 	//Basics
 	public abstract boolean visitTypeReference(TypeReference node);
 	public abstract boolean visitTypeReferencePart(TypeReferencePart node);
+	public abstract boolean visitVariableReference(VariableReference node);
 	public abstract boolean visitIdentifier(Identifier node);
 	public abstract boolean visitIntegralLiteral(IntegralLiteral node);
 	public abstract boolean visitFloatingPointLiteral(FloatingPointLiteral node);
@@ -92,7 +93,7 @@ public abstract class AstVisitor {
 	public abstract boolean visitModifiers(Modifiers node);
 	public abstract boolean visitAnnotation(Annotation node);
 	public abstract boolean visitAnnotationElement(AnnotationElement node);
-	public abstract boolean visitTypeBody(TypeBody node);
+	public abstract boolean visitNormalTypeBody(NormalTypeBody node);
 	public abstract boolean visitEnumTypeBody(EnumTypeBody enumTypeBody);
 	public abstract boolean visitEmptyDeclaration(EmptyDeclaration node);
 	

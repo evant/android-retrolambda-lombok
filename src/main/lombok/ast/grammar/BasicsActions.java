@@ -35,8 +35,8 @@ public class BasicsActions extends SourceActions {
 		Identifier id = new Identifier();
 		if (text != null) id.astValue(text);
 		
-		int start = rawIdentifier.getStartLocation().getIndex();
-		int end = Math.max(start, rawIdentifier.getEndLocation().getIndex());
+		int start = rawIdentifier.getStartIndex();
+		int end = Math.max(start, rawIdentifier.getEndIndex());
 		id.setPosition(new Position(start, end));
 		return id;
 	}

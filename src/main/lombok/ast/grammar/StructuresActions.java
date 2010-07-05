@@ -42,6 +42,7 @@ import lombok.ast.KeywordModifier;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.NormalTypeBody;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.Position;
 import lombok.ast.StaticInitializer;
@@ -281,15 +282,15 @@ public class StructuresActions extends SourceActions {
 			if (n instanceof TemporaryNode.ImplementsClause) {
 				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
 				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
-				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.rawImplementing().addToEnd(i);
+				if (interfaces != null) for (Node i : interfaces) decl.rawImplementing().addToEnd(i);
 			}
 		}
 		return posify(decl);
 	}
 	
-	public Node createTypeBody(List<Node> values) {
-		TypeBody body = new TypeBody();
-		if (values != null) for (Node n : values) if (n != null) body.rawMembers().addToEnd(n);
+	public Node createNormalTypeBody(List<Node> values) {
+		NormalTypeBody body = new NormalTypeBody();
+		if (values != null) for (Node n : values) body.rawMembers().addToEnd(n);
 		return posify(body);
 	}
 	
@@ -307,7 +308,7 @@ public class StructuresActions extends SourceActions {
 	public Node createEnumBody(Node head, List<Node> tail, Node typeBody) {
 		EnumTypeBody body = new EnumTypeBody();
 		if (head != null) body.rawConstants().addToEnd(head);
-		if (tail != null) for (Node n : tail) if (n != null) body.rawConstants().addToEnd(n);
+		if (tail != null) for (Node n : tail) body.rawConstants().addToEnd(n);
 		if (typeBody instanceof TypeBody) {
 			body.rawMembers().migrateAllFrom(((TypeBody)typeBody).rawMembers());
 		}
@@ -323,16 +324,16 @@ public class StructuresActions extends SourceActions {
 			if (n instanceof TemporaryNode.ImplementsClause) {
 				//if (!decl.implementing().isEmpty()) //TODO add error node: multiple implements clauses.
 				List<Node> interfaces = ((TemporaryNode.ImplementsClause)n).superInterfaces;
-				if (interfaces != null) for (Node i : interfaces) if (i != null) decl.rawImplementing().addToEnd(i);
+				if (interfaces != null) for (Node i : interfaces) decl.rawImplementing().addToEnd(i);
 			}
 		}
 		return posify(decl);
 	}
 	
 	public Node createAnnotationDeclaration(Node modifiers, Node name, List<Node> members, org.parboiled.Node<Node> typeOpen, org.parboiled.Node<Node> typeClose) {
-		Node typeBody = createTypeBody(members);
+		Node typeBody = createNormalTypeBody(members);
 		if (typeOpen != null && typeClose != null) {
-			typeBody.setPosition(new Position(typeOpen.getStartLocation().getIndex(), typeClose.getEndLocation().getIndex()));
+			typeBody.setPosition(new Position(typeOpen.getStartIndex(), typeClose.getEndIndex()));
 		}
 		AnnotationDeclaration decl = new AnnotationDeclaration().astName(createIdentifierIfNeeded(name, currentPos())).rawBody(typeBody);
 		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
@@ -363,7 +364,7 @@ public class StructuresActions extends SourceActions {
 	public Node createImportDeclaration(String staticKeyword, Node head, List<Node> tail, String dotStar) {
 		ImportDeclaration decl = new ImportDeclaration();
 		if (head != null) decl.rawParts().addToEnd(head);
-		if (tail != null) for (Node n : tail) if (n != null) decl.rawParts().addToEnd(n);
+		if (tail != null) for (Node n : tail) decl.rawParts().addToEnd(n);
 		if (staticKeyword != null && staticKeyword.length() > 0) decl.astStaticImport(true);
 		if (dotStar != null && dotStar.length() > 0) decl.astStarImport(true);
 		return posify(decl);

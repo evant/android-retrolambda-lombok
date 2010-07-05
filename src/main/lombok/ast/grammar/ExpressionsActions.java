@@ -45,6 +45,7 @@ import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.UnaryExpression;
 import lombok.ast.UnaryOperator;
+import lombok.ast.VariableReference;
 
 public class ExpressionsActions extends SourceActions {
 	public ExpressionsActions(Source source) {
@@ -153,7 +154,7 @@ public class ExpressionsActions extends SourceActions {
 			else if (op.equals("--")) current = new UnaryExpression().rawOperand(current).astOperator(UnaryOperator.POSTFIX_DECREMENT);
 			org.parboiled.Node<Node> p = nodes.get(i);
 			if (prev != null && !prev.getPosition().isUnplaced() && p != null) {
-				current.setPosition(new Position(prev.getPosition().getStart(), p.getEndLocation().getIndex()));
+				current.setPosition(new Position(prev.getPosition().getStart(), p.getEndIndex()));
 			}
 		}
 		return current;
@@ -281,15 +282,19 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public Node createPrimary(Node identifier, Node methodArguments) {
+		Identifier id = createIdentifierIfNeeded(identifier, currentPos());
+		
 		if (methodArguments instanceof TemporaryNode.MethodArguments) {
-			MethodInvocation invoke = new MethodInvocation().astName(createIdentifierIfNeeded(identifier, currentPos()));
+			MethodInvocation invoke = new MethodInvocation().astName(id);
 			for (Node arg : ((TemporaryNode.MethodArguments)methodArguments).arguments) {
 				invoke.rawArguments().addToEnd(arg);
 			}
 			return posify(invoke);
-		} else identifier.addDanglingNode(methodArguments);
-		
-		return identifier;
+		} else {
+			VariableReference ref = new VariableReference().astIdentifier(id);
+			ref.addDanglingNode(methodArguments);
+			return posify(ref);
+		}
 	}
 	
 	public Node createUnqualifiedConstructorInvocation(Node constructorTypeArgs, Node type, Node args, Node anonymousClassBody) {
@@ -321,7 +326,7 @@ public class ExpressionsActions extends SourceActions {
 	
 	public Node createDimension(Node dimExpr, org.parboiled.Node<Node> arrayOpen) {
 		ArrayDimension d = new ArrayDimension().rawDimension(dimExpr);
-		if (arrayOpen != null) d.setPosition(new Position(arrayOpen.getStartLocation().getIndex(), currentPos()));
+		if (arrayOpen != null) d.setPosition(new Position(arrayOpen.getStartIndex(), currentPos()));
 		return d;
 	}
 	
@@ -351,7 +356,7 @@ public class ExpressionsActions extends SourceActions {
 	}
 	
 	public boolean checkIfLevel1ExprIsValidForAssignment(Node node) {
-		return node instanceof Identifier || node instanceof Select || node instanceof ArrayAccess;
+		return node instanceof VariableReference || node instanceof Select || node instanceof ArrayAccess;
 	}
 	
 	public boolean checkIfMethodOrConstructorInvocation(Node node) {

@@ -75,6 +75,7 @@ import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
+import lombok.ast.NormalTypeBody;
 import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.RawListAccessor;
@@ -89,7 +90,6 @@ import lombok.ast.Synchronized;
 import lombok.ast.This;
 import lombok.ast.Throw;
 import lombok.ast.Try;
-import lombok.ast.TypeBody;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
@@ -114,7 +114,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		if (node != null) node.accept(this);
 	}
 	
-	@Override public boolean visitNode(Node node) {
+	@Override
+	public boolean visitNode(Node node) {
 		formatter.buildBlock(node);
 		formatter.fail("NOT_IMPLEMENTED: " + node.getClass().getSimpleName());
 		formatter.closeBlock();
@@ -169,6 +170,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Basics
+	@Override
 	public boolean visitTypeReference(TypeReference node) {
 		WildcardKind kind = node.astWildcard();
 		formatter.buildInline(node);
@@ -197,6 +199,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitTypeReferencePart(TypeReferencePart node) {
 		formatter.buildInline(node);
 		visit(node.astIdentifier());
@@ -205,13 +208,17 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitVariableReference(VariableReference node) {
 		parensOpen(node);
 		formatter.buildInline(node);
+		visit(node.astIdentifier());
+		formatter.closeInline();
 		parensClose(node);
 		return true;
 	}
 	
+	@Override
 	public boolean visitIdentifier(Identifier node) {
 		String name = node.astValue();
 		if (name == null) name = FAIL + "NULL_IDENTIFIER" + FAIL;
@@ -224,6 +231,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitIntegralLiteral(IntegralLiteral node) {
 		parensOpen(node);
 		String raw = node.rawValue();
@@ -235,6 +243,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {
 		parensOpen(node);
 		String raw = node.rawValue();
@@ -246,6 +255,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitBooleanLiteral(BooleanLiteral node) {
 		parensOpen(node);
 		String raw = node.rawValue();
@@ -257,6 +267,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitCharLiteral(CharLiteral node) {
 		parensOpen(node);
 		String raw = node.rawValue();
@@ -268,6 +279,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitStringLiteral(StringLiteral node) {
 		parensOpen(node);
 		String raw = node.rawValue();
@@ -279,6 +291,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitNullLiteral(NullLiteral node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -297,6 +310,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Expressions
+	@Override
 	public boolean visitBinaryExpression(BinaryExpression node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -316,6 +330,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitUnaryExpression(UnaryExpression node) {
 		UnaryOperator op;
 		parensOpen(node);
@@ -339,6 +354,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitCast(Cast node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -352,6 +368,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitInlineIfExpression(InlineIfExpression node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -372,6 +389,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitInstanceOf(InstanceOf node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -387,6 +405,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitConstructorInvocation(ConstructorInvocation node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -414,6 +433,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitMethodInvocation(MethodInvocation node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -433,6 +453,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSelect(Select node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -448,6 +469,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitArrayAccess(ArrayAccess node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -460,6 +482,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitArrayCreation(ArrayCreation node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -476,7 +499,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
-	@Override public boolean visitAnnotationValueArray(AnnotationValueArray node) {
+	@Override
+	public boolean visitAnnotationValueArray(AnnotationValueArray node) {
 		formatter.buildInline(node);
 		formatter.append("{");
 		visitAll(node.rawValues(), ", ", "", "");
@@ -485,6 +509,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitArrayInitializer(ArrayInitializer node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -496,6 +521,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitArrayDimension(ArrayDimension node) {
 		formatter.buildInline(node);
 		formatter.append("[");
@@ -505,6 +531,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitClassLiteral(ClassLiteral node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -516,6 +543,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSuper(Super node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -529,6 +557,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitThis(This node) {
 		parensOpen(node);
 		formatter.buildInline(node);
@@ -543,6 +572,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Statements
+	@Override
 	public boolean visitExpressionStatement(ExpressionStatement node) {
 		formatter.buildBlock(node);
 		visit(node.rawExpression());
@@ -551,6 +581,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitLabelledStatement(LabelledStatement node) {
 		formatter.buildBlock(node);
 		formatter.nameNextElement("label");
@@ -561,6 +592,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitIf(If node) {
 		formatter.buildBlock(node);
 		formatter.keyword("if");
@@ -587,6 +619,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitFor(For node) {
 		formatter.buildBlock(node);
 		formatter.keyword("for");
@@ -618,6 +651,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitForEach(ForEach node) {
 		formatter.buildBlock(node);
 		formatter.keyword("for");
@@ -639,6 +673,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitTry(Try node) {
 		formatter.buildBlock(node);
 		formatter.keyword("try");
@@ -659,6 +694,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitCatch(Catch node) {
 		formatter.buildInline(node);
 		formatter.keyword("catch");
@@ -674,6 +710,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitWhile(While node) {
 		formatter.buildBlock(node);
 		formatter.keyword("while");
@@ -690,6 +727,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitDoWhile(DoWhile node) {
 		formatter.buildBlock(node);
 		formatter.keyword("do");
@@ -709,6 +747,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSynchronized(Synchronized node) {
 		formatter.buildBlock(node);
 		formatter.keyword("synchronized");
@@ -725,6 +764,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitBlock(Block node) {
 		formatter.buildBlock(node);
 		formatter.append("{");
@@ -736,6 +776,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAssert(Assert node) {
 		formatter.buildBlock(node);
 		formatter.keyword("assert");
@@ -753,6 +794,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitEmptyStatement(EmptyStatement node) {
 		formatter.buildBlock(node);
 		formatter.append(";");
@@ -760,6 +802,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSwitch(Switch node) {
 		formatter.buildBlock(node);
 		formatter.keyword("switch");
@@ -797,6 +840,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitCase(Case node) {
 		formatter.buildBlock(node);
 		formatter.keyword("case");
@@ -808,6 +852,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitDefault(Default node) {
 		formatter.buildBlock(node);
 		formatter.keyword("default");
@@ -816,6 +861,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitBreak(Break node) {
 		formatter.buildBlock(node);
 		formatter.keyword("break");
@@ -828,6 +874,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitContinue(Continue node) {
 		formatter.buildBlock(node);
 		formatter.keyword("continue");
@@ -840,6 +887,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitReturn(Return node) {
 		formatter.buildBlock(node);
 		formatter.keyword("return");
@@ -852,6 +900,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitThrow(Throw node) {
 		formatter.buildBlock(node);
 		formatter.keyword("throw");
@@ -863,6 +912,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Structural
+	@Override
 	public boolean visitVariableDeclaration(VariableDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
@@ -871,6 +921,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.closeBlock();
 		return true;
 	}
+	@Override
 	public boolean visitVariableDefinition(VariableDefinition node) {
 		formatter.buildInline(node);
 		visit(node.astModifiers());
@@ -889,6 +940,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {
 		formatter.buildInline(node);
 		formatter.nameNextElement("varName");
@@ -906,6 +958,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitTypeVariable(TypeVariable node) {
 		formatter.buildInline(node);
 		visit(node.astName());
@@ -918,6 +971,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitKeywordModifier(KeywordModifier node) {
 		formatter.buildInline(node);
 		if (node.astName() == null || node.astName().isEmpty()) formatter.fail("MISSING_MODIFIER");
@@ -927,6 +981,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitModifiers(Modifiers node) {
 		formatter.buildInline(node);
 		visitAll(node.rawAnnotations(), "", "", "");
@@ -935,6 +990,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotation(Annotation node) {
 		formatter.buildBlock(node);
 		formatter.append("@");
@@ -944,6 +1000,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotationElement(AnnotationElement node) {
 		formatter.buildInline(node);
 		if (node.astName() != null) {
@@ -958,6 +1015,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitEnumTypeBody(EnumTypeBody node) {
 		formatter.buildBlock(node);
 		formatter.append("{");
@@ -974,7 +1032,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
-	public boolean visitTypeBody(TypeBody node) {
+	@Override
+	public boolean visitNormalTypeBody(NormalTypeBody node) {
 		formatter.buildBlock(node);
 		formatter.append("{");
 		formatter.buildBlock(null);
@@ -986,6 +1045,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Class Bodies
+	@Override
 	public boolean visitMethodDeclaration(MethodDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
@@ -1019,6 +1079,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
@@ -1047,6 +1108,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitSuperConstructorInvocation(SuperConstructorInvocation node) {
 		formatter.buildBlock(node);
 		if (node.rawQualifier() != null) {
@@ -1064,6 +1126,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
 		formatter.buildBlock(node);
 		visitAll(node.rawConstructorTypeArguments(), ", ", "<", ">");
@@ -1076,6 +1139,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitInstanceInitializer(InstanceInitializer node) {
 		formatter.buildBlock(node);
 		formatter.startSuppressBlock();
@@ -1085,6 +1149,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitStaticInitializer(StaticInitializer node) {
 		formatter.buildBlock(node);
 		formatter.keyword("static");
@@ -1096,6 +1161,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitClassDeclaration(ClassDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
@@ -1125,6 +1191,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitInterfaceDeclaration(InterfaceDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
@@ -1147,6 +1214,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitEnumDeclaration(EnumDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
@@ -1169,6 +1237,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitEnumConstant(EnumConstant node) {
 		visit(node.rawJavadoc());
 		formatter.buildInline(node);
@@ -1186,6 +1255,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotationDeclaration(AnnotationDeclaration node) {
 		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
@@ -1204,6 +1274,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
 		formatter.buildBlock(node);
 		visit(node.astModifiers());
@@ -1227,6 +1298,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitCompilationUnit(CompilationUnit node) {
 		formatter.buildBlock(node);
 		if (node.rawPackageDeclaration() != null) {
@@ -1240,6 +1312,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
 		formatter.buildBlock(node);
 		visitAll(node.rawAnnotations(), "", "", "");
@@ -1251,6 +1324,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitImportDeclaration(ImportDeclaration node) {
 		formatter.buildBlock(node);
 		formatter.keyword("import");
@@ -1269,6 +1343,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	}
 	
 	//Various
+	@Override
 	public boolean visitParseArtefact(Node node) {
 		formatter.buildInline(node);
 		formatter.fail("ARTEFACT: " + node.getClass().getSimpleName());
@@ -1276,6 +1351,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		return true;
 	}
 	
+	@Override
 	public boolean visitComment(Comment node) {
 		formatter.buildBlock(node);
 		formatter.append(node.astBlockComment() ? "/*" : "//");

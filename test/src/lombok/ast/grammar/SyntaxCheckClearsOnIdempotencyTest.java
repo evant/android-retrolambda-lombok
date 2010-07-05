@@ -27,17 +27,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 
+import lombok.ast.ForwardingAstVisitor;
+import lombok.ast.Message;
 import lombok.ast.Node;
-import lombok.ast.SyntaxProblem;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.syntaxChecks.SyntacticValidityVisitor;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.google.common.collect.Lists;
 
 @RunWith(RunForEachFileInDirRunner.class)
 public class SyntaxCheckClearsOnIdempotencyTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
@@ -49,7 +47,7 @@ public class SyntaxCheckClearsOnIdempotencyTest extends RunForEachFileInDirRunne
 	}
 	
 	@Test
-	public void testSyntaxCheckclearsOnIdempotency(Source source) throws IOException {
+	public void testSyntaxCheckclearsOnIdempotency(final Source source) throws IOException {
 		source.parseCompilationUnit();
 		
 		if (!source.getProblems().isEmpty()) {
@@ -57,10 +55,15 @@ public class SyntaxCheckClearsOnIdempotencyTest extends RunForEachFileInDirRunne
 		}
 		
 		Node node = source.getNodes().get(0);
-		List<SyntaxProblem> problems = Lists.newArrayList();
-		node.accept(new SyntacticValidityVisitor(problems, true));
-		if (problems.size() > 0) {
-			fail("On source: " + source.getName() + ": " + problems);
-		}
+		node.accept(new SyntacticValidityVisitor(true));
+		node.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitNode(Node node) {
+				for (Message m : node.getMessages()) if (m.isError()) {
+					fail(String.format("Source: %s[%s]: %s: %s\n", source.getName(), node.getPosition(), node, m.getMessage()));
+					
+				}
+				return false;
+			}
+		});
 	}
 }
