@@ -65,10 +65,6 @@ public class TextFormatter implements SourceFormatter {
 		return len;
 	}
 	
-	private TextFormatter a(char text) {
-		return a(String.valueOf(text));
-	}
-	
 	@Override public void fail(String fail) {
 		a(FAIL).a(fail).a(FAIL);
 	}
