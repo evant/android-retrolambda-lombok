@@ -270,7 +270,7 @@ class ListAccessor<T extends Node, P extends Node> {
 		public P addToEnd(Node... node) {
 			for (Node n : node) {
 				AbstractNode child = (AbstractNode)n;
-				if (node != null) {
+				if (child != null) {
 					parent.adopt(child);
 					list.add(child);
 				}
