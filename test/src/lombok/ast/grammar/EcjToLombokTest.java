@@ -78,6 +78,6 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 		
 		if (cud.hasErrors()) return null;
 		
-		return new EcjTreeConverter(cud).convert();
+		return EcjTreeConverter.convert(cud);
 	}
 }
