@@ -22,10 +22,10 @@
 package lombok.ast.printer;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Getter;
 import lombok.ast.DescribedNode;
 import lombok.ast.Node;
 import lombok.ast.grammar.Source;
@@ -36,16 +36,29 @@ import com.google.common.collect.Lists;
 
 public class StructureFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
-	@Getter private final Source source;
 	private final StringBuilder sb = new StringBuilder();
 	private final List<String> errors = Lists.newArrayList();
 	private int indent;
 	private final Map<Node, Collection<SourceStructure>> sourceStructures;
 	private String name;
+	private final String nodeFormatString;
 	
-	public StructureFormatter(Source source) {
-		this.source = source;
-		sourceStructures = source.getSourceStructures();
+	
+	public static StructureFormatter formatterWithoutPositions() {
+		return new StructureFormatter(Collections.<Node, Collection<SourceStructure>>emptyMap(), false);
+	}
+	
+	public static StructureFormatter formatterWithPositions() {
+		return new StructureFormatter(Collections.<Node, Collection<SourceStructure>>emptyMap(), true);
+	}
+	
+	public static StructureFormatter formatterWithEverything(Source source) {
+		return new StructureFormatter(source.getSourceStructures(), true);
+	}
+	
+	private StructureFormatter(Map<Node, Collection<SourceStructure>> sourceStructures, boolean printPositions) {
+		this.sourceStructures = sourceStructures;
+		this.nodeFormatString = printPositions ? "[%s %s%s (%d-%d)]\n" : "[%s %s%s]\n";
 	}
 	
 	private void a(String in, Object... args) {
@@ -74,7 +87,7 @@ public class StructureFormatter implements SourceFormatter {
 		String name = node.getClass().getSimpleName();
 		String description = "";
 		if (node instanceof DescribedNode) description = " " + ((DescribedNode)node).getDescription();
-		a("[%s %s%s (%d-%d)]\n", type, name, description, node.getPosition().getStart(), node.getPosition().getEnd());
+		a(nodeFormatString, type, name, description, node.getPosition().getStart(), node.getPosition().getEnd());
 		indent++;
 		if (sourceStructures.containsKey(node)) {
 			for (SourceStructure struct : sourceStructures.get(node)) {

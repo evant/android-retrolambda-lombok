@@ -11,7 +11,6 @@ import java.util.regex.Pattern;
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreeConverter;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
-import lombok.ast.printer.SourceFormatter;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.StructureFormatter;
 
@@ -53,9 +52,9 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	}
 	
 	protected String convertToString(Source source, Node tree) {
-		SourceFormatter formatter = new StructureFormatter(source);
+		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
 		tree.accept(new SourcePrinter(formatter));
-		return formatter.toString();
+		return formatter.finish();
 	}
 	
 	protected Node parseWithLombok(Source source) {
