@@ -49,7 +49,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 		return testCompiler(source);
 	}
 	
-	protected String convertToString(JCTree tree) {
+	protected String convertToString(Source source, JCTree tree) {
 		JcTreePrinter printer = new JcTreePrinter(true);
 		tree.accept(printer);
 		String string = printer.toString();

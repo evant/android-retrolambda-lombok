@@ -47,7 +47,7 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 			// at all will do error reporting.
 			return false;
 		}
-		String targetString = convertToString(parsedWithTargetCompiler);
+		String targetString = convertToString(source, parsedWithTargetCompiler);
 		
 		source.parseCompilationUnit();
 		if (!source.getProblems().isEmpty()) {
@@ -62,7 +62,7 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		
 		String lombokString;
 		try {
-			lombokString = fixLineEndings(convertToString(parseWithLombok(source)));
+			lombokString = fixLineEndings(convertToString(source, parseWithLombok(source)));
 		} catch (Exception e) {
 			printDebugInformation(source, targetString, null);
 			throw e;
@@ -94,7 +94,7 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		System.out.printf("======= End of %s =======\n", name);
 	}
 	
-	protected abstract String convertToString(N tree) throws Exception;
+	protected abstract String convertToString(Source source, N tree) throws Exception;
 	
 	protected abstract N parseWithLombok(Source source) throws Exception;
 	

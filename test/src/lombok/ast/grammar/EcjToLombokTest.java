@@ -1,37 +1,22 @@
-/*
- * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import lombok.ast.Node;
-import lombok.ast.ecj.EcjTreePrinter;
-import lombok.ast.ecj.EcjTreeBuilder;
+import lombok.ast.ecj.EcjTreeConverter;
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
+import lombok.ast.printer.SourceFormatter;
+import lombok.ast.printer.SourcePrinter;
+import lombok.ast.printer.StructureFormatter;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
-import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
@@ -43,7 +28,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(RunForEachFileInDirRunner.class)
-public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
+public class EcjToLombokTest extends TreeBuilderRunner<Node> {
+	@Override protected Collection<DirDescriptor> getDirDescriptors() {
+		return Arrays.asList(
+				DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[a-a]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+//		return Arrays.asList(
+//				DirDescriptor.of(new File("test/resources/idempotency"), true),
+//				DirDescriptor.of(new File("test/resources/alias"), true),
+//				DirDescriptor.of(new File("test/resources/special"), true));
+	}
+	
 	@Test
 	public boolean testEcjTreeBuilder(Source source) throws Exception {
 		return testCompiler(source);
@@ -58,23 +52,20 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 		return options;
 	}
 	
-	protected String convertToString(Source source, ASTNode tree) {
-		EcjTreePrinter printer = new EcjTreePrinter(true);
-		printer.visitEcjNode(tree);
-		String string = printer.toString();
-		return string;
+	protected String convertToString(Source source, Node tree) {
+		SourceFormatter formatter = new StructureFormatter(source);
+		tree.accept(new SourcePrinter(formatter));
+		return formatter.toString();
 	}
 	
-	protected ASTNode parseWithLombok(Source source) {
+	protected Node parseWithLombok(Source source) {
 		List<Node> nodes = source.getNodes();
 		assertEquals(1, nodes.size());
 		
-		EcjTreeBuilder builder = new EcjTreeBuilder(source, ecjCompilerOptions());
-		nodes.get(0).accept(builder);
-		return builder.get();
+		return nodes.get(0);
 	}
 	
-	protected ASTNode parseWithTargetCompiler(Source source) {
+	protected Node parseWithTargetCompiler(Source source) {
 		CompilerOptions compilerOptions = ecjCompilerOptions();
 		Parser parser = new Parser(new ProblemReporter(
 				DefaultErrorHandlingPolicies.proceedWithAllProblems(),
@@ -87,6 +78,7 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 		CompilationUnitDeclaration cud = parser.parse(sourceUnit, compilationResult);
 		
 		if (cud.hasErrors()) return null;
-		return cud;
+		
+		return new EcjTreeConverter(cud).convert();
 	}
 }
