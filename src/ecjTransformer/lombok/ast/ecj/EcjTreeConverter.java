@@ -27,6 +27,7 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		return params.containsKey(key);
 	}
 	
+	@SuppressWarnings("unused")
 	private Object getFlag(FlagKey key) {
 		return params.get(key);
 	}
@@ -53,6 +54,7 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		this.result = result;
 	}
 	
+	@SuppressWarnings("unused")
 	private void set(ASTNode node, List<? extends Node> values) {
 		if (values.isEmpty()) System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
 		
