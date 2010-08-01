@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.List;
 
 import lombok.Cleanup;
-import lombok.ast.grammar.JcTreeBuilderTest.TestJavaFileObject;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
@@ -193,7 +192,7 @@ public class PerformanceTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 		Context context = new Context();
 		JavaCompiler compiler = new JavaCompiler(context);
 		compiler.genEndPos = true;
-		compiler.parse(new TestJavaFileObject(source.getName(), source.getRawInput()));
+		compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
 	}
 	
 	protected CompilerOptions ecjCompilerOptions() {

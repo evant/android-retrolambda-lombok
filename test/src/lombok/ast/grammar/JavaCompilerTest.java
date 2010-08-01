@@ -54,7 +54,7 @@ public class JavaCompilerTest extends RunForEachFileInDirRunner.SourceFileBasedT
 		File tempDir = getTempDir();
 		tempDir.mkdirs();
 		List<String> options = Arrays.asList("-proc:none", "-d", tempDir.getAbsolutePath());
-		CompilationTask task = compiler.getTask(null, null, null, options, null, Collections.singleton(new JcTreeBuilderTest.TestJavaFileObject(source.getName(), source.getRawInput())));
+		CompilationTask task = compiler.getTask(null, null, null, options, null, Collections.singleton(new ContentBasedJavaFileObject(source.getName(), source.getRawInput())));
 		assertTrue(task.call());
 	}
 	

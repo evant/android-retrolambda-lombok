@@ -23,13 +23,10 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
-import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
 
 import javax.tools.JavaFileManager;
-import javax.tools.SimpleJavaFileObject;
 
 import lombok.ast.Node;
 import lombok.ast.javac.JcTreeBuilder;
@@ -97,21 +94,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 		Context context = new Context();
 		JavaCompiler compiler = new JavaCompiler(context);
 		compiler.genEndPos = true;
-		JCTree result = compiler.parse(new TestJavaFileObject(source.getName(), source.getRawInput()));
+		JCTree result = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
 		return compiler.errorCount() > 0 ? null : result;
-	}
-	
-	static class TestJavaFileObject extends SimpleJavaFileObject {
-		private final String content;
-		
-		protected TestJavaFileObject(String name, String content) {
-			super(new File(name).toURI(), Kind.SOURCE);
-			this.content = content;
-		}
-		
-		@Override
-		public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
-			return content;
-		}
 	}
 }
