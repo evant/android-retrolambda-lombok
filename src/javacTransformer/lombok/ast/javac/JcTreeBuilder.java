@@ -394,13 +394,14 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitEnumConstant(EnumConstant node) {
-		JCIdent parentType = treeMaker.Ident(toName(((EnumDeclaration)node.getParent().getParent()).astName()));
+		JCIdent parentType1 = treeMaker.Ident(toName(((EnumDeclaration)node.getParent().getParent()).astName()));
+		JCIdent parentType2 = treeMaker.Ident(toName(((EnumDeclaration)node.getParent().getParent()).astName()));
 		JCClassDecl body = (JCClassDecl) toTree(node.astBody());
 		if (body != null) body.mods.flags |= Flags.STATIC | Flags.ENUM;
 		JCNewClass newClass = treeMaker.NewClass(
 				null, 
 				List.<JCExpression>nil(),
-				parentType, 
+				parentType1,
 				toList(JCExpression.class, node.astArguments()),
 				body
 		);
@@ -416,8 +417,8 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		
 		return posSet(node, treeMaker.VarDef(
 				treeMaker.Modifiers(ENUM_CONSTANT_FLAGS, toList(JCAnnotation.class, node.astAnnotations())),
-				toName(node.astName()), 
-				parentType, 
+				toName(node.astName()),
+				parentType2,
 				newClass
 		));
 	}
@@ -1234,7 +1235,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitEmptyDeclaration(EmptyDeclaration node) {
 		if (node.getParent() instanceof CompilationUnit) {
 			return posSet(node, treeMaker.Skip());
-		} 
+		}
 		return set(node, posNone(treeMaker.Block(0, List.<JCStatement>nil())));
 	}
 	

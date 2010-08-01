@@ -28,6 +28,7 @@ import java.util.Map;
 
 import lombok.ast.StringLiteral;
 
+import com.google.common.collect.MapMaker;
 import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.TypeTags;
@@ -90,10 +91,13 @@ import com.sun.tools.javac.util.List;
 public class JcTreePrinter extends JCTree.Visitor {
 	private final StringBuilder output = new StringBuilder();
 	private final boolean includePositions;
+	private final boolean includeObjectRefs;
 	private int indent;
 	private String rel;
 	private Map<JCTree, Integer> endPosTable;
 	private boolean modsOfEnum;
+	private final Map<Object, Integer> visited = new MapMaker().weakKeys().makeMap();
+	private int objectCounter = 0;
 	
 	private static final Method GET_TAG_METHOD;
 	private static final Field TAG_FIELD;
@@ -136,6 +140,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 	
 	public JcTreePrinter(boolean includePositions) {
 		this.includePositions = includePositions;
+		this.includeObjectRefs = true;
 	}
 	
 	@Override
@@ -147,6 +152,16 @@ public class JcTreePrinter extends JCTree.Visitor {
 		if (tree == null) {
 			printNode("NULL");
 		} else {
+			String suffix = "";
+			int objId;
+			Integer backRef = visited.get(tree);
+			if (backRef == null) {
+				objId = ++objectCounter;
+				visited.put(tree, objId);
+			} else {
+				objId = backRef;
+			}
+			
 			if (includePositions) {
 				int endPos = tree.getEndPosition(endPosTable);
 				int startPos = tree.pos;
@@ -210,10 +225,14 @@ public class JcTreePrinter extends JCTree.Visitor {
 						startPos = -2;
 					}
 				}
-				printNode(String.format("%s (%d-%d)", tree.getClass().getSimpleName(), startPos, endPos));
-			} else {
-				printNode(tree.getClass().getSimpleName());
+				suffix += String.format("(%d-%d)", startPos, endPos);
 			}
+			
+			if (includeObjectRefs) {
+				suffix += String.format("(id: %d%s)", objId, backRef != null ? " BACKREF" : "");
+			}
+			
+			printNode(String.format("%s%s", tree.getClass().getSimpleName(), suffix));
 		}
 	}
 	
