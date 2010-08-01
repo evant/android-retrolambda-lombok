@@ -33,8 +33,10 @@ import lombok.ast.template.Mandatory;
 import lombok.ast.template.NotChildOfNode;
 import lombok.ast.template.ParentAccessor;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 class TypeMemberMixin {
 	@CopyMethod
@@ -840,7 +842,7 @@ class ClassLiteralTemplate {
 
 @GenerateAstNode(implementing=DescribedNode.class)
 class KeywordModifierTemplate {
-	private static final Map<String, Integer> REFLECT_MODIFIERS = ImmutableMap.<String, Integer>builder()
+	private static final BiMap<String, Integer> REFLECT_MODIFIERS = ImmutableBiMap.<String, Integer>builder()
 		.put("public", Modifier.PUBLIC)
 		.put("private", Modifier.PRIVATE)
 		.put("protected", Modifier.PROTECTED)
@@ -867,6 +869,22 @@ class KeywordModifierTemplate {
 	static int asReflectModifiers(KeywordModifier self) {
 		Integer value = REFLECT_MODIFIERS.get(self.astName());
 		return value == null ? 0 : value;
+	}
+	
+	@CopyMethod(isStatic=true)
+	static KeywordModifier fromReflectModifier(int modifierFlag) {
+		String keyword = REFLECT_MODIFIERS.inverse().get(modifierFlag);
+		return keyword == null ? null : new KeywordModifier().astName(keyword);
+	}
+	
+	@CopyMethod(isStatic=true)
+	static List<KeywordModifier> fromReflectModifiers(int modifierFlags) {
+		List<KeywordModifier> list = Lists.newArrayList();
+		for (Map.Entry<Integer, String> entry : REFLECT_MODIFIERS.inverse().entrySet()) {
+			if ((modifierFlags & entry.getKey()) != 0) list.add(KeywordModifier.fromReflectModifier(entry.getKey()));
+		}
+		
+		return list;
 	}
 	
 	@CopyMethod(isStatic=true)
