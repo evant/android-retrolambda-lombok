@@ -41,6 +41,10 @@ import com.sun.tools.javac.util.Context;
 
 @RunWith(RunForEachFileInDirRunner.class)
 public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
+	public JcTreeBuilderTest() {
+		super(true);
+	}
+	
 	@Test
 	public boolean testJcTreeBuilder(Source source) throws Exception {
 		return testCompiler(source);

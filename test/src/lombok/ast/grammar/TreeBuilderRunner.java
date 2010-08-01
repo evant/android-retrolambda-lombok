@@ -31,6 +31,12 @@ import java.util.Collection;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFileBasedTester {
+	private final boolean lombokIsActual;
+	
+	protected TreeBuilderRunner(boolean lombokIsActual) {
+		this.lombokIsActual = lombokIsActual;
+		
+	}
 	@Override
 	protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(
@@ -72,9 +78,17 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		}
 		
 		try {
-			assertEquals(targetString, lombokString);
+			if (lombokIsActual) {
+				assertEquals(targetString, lombokString);
+			} else {
+				assertEquals(lombokString, targetString);
+			}
 		} catch (AssertionError e) {
-			printDebugInformation(source, targetString, lombokString);
+			if (lombokIsActual) {
+				printDebugInformation(source, targetString, lombokString);
+			} else {
+				printDebugInformation(source, lombokString, targetString);
+			}
 			throw e;
 		}
 		

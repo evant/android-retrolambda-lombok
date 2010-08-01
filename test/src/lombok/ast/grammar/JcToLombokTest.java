@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
+ * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,26 +30,23 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import lombok.ast.Node;
-import lombok.ast.ecj.EcjTreeConverter;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
+import lombok.ast.javac.JcTreeConverter;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.StructureFormatter;
 
-import org.eclipse.jdt.internal.compiler.CompilationResult;
-import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
-import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
-import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
-import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
-import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
-import org.eclipse.jdt.internal.compiler.parser.Parser;
-import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
-import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import com.sun.tools.javac.main.JavaCompiler;
+import com.sun.tools.javac.main.OptionName;
+import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
+import com.sun.tools.javac.util.Context;
+import com.sun.tools.javac.util.Options;
+
 @RunWith(RunForEachFileInDirRunner.class)
-public class EcjToLombokTest extends TreeBuilderRunner<Node> {
-	public EcjToLombokTest() {
+public class JcToLombokTest extends TreeBuilderRunner<Node> {
+	public JcToLombokTest() {
 		super(false);
 	}
 	
@@ -63,17 +60,8 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	}
 	
 	@Test
-	public boolean testEcjTreeConverter(Source source) throws Exception {
+	public boolean testJcTreeConverter(Source source) throws Exception {
 		return testCompiler(source);
-	}
-	
-	protected CompilerOptions ecjCompilerOptions() {
-		CompilerOptions options = new CompilerOptions();
-		options.complianceLevel = ClassFileConstants.JDK1_6;
-		options.sourceLevel = ClassFileConstants.JDK1_6;
-		options.targetJDK = ClassFileConstants.JDK1_6;
-		options.parseLiteralExpressionsAsConstants = true;
-		return options;
 	}
 	
 	protected String convertToString(Source source, Node tree) {
@@ -90,19 +78,14 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	}
 	
 	protected Node parseWithTargetCompiler(Source source) {
-		CompilerOptions compilerOptions = ecjCompilerOptions();
-		Parser parser = new Parser(new ProblemReporter(
-				DefaultErrorHandlingPolicies.proceedWithAllProblems(),
-				compilerOptions,
-				new DefaultProblemFactory()
-			), compilerOptions.parseLiteralExpressionsAsConstants);
-		parser.javadocParser.checkDocComment = true;
-		CompilationUnit sourceUnit = new CompilationUnit(source.getRawInput().toCharArray(), source.getName(), "UTF-8");
-		CompilationResult compilationResult = new CompilationResult(sourceUnit, 0, 0, 0);
-		CompilationUnitDeclaration cud = parser.parse(sourceUnit, compilationResult);
+		Context context = new Context();
 		
-		if (cud.hasErrors()) return null;
+		Options.instance(context).put(OptionName.ENCODING, "UTF-8");
 		
-		return EcjTreeConverter.convert(cud);
+		JavaCompiler compiler = new JavaCompiler(context);
+		compiler.genEndPos = true;
+		
+		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
+		return JcTreeConverter.convert(cu);
 	}
 }

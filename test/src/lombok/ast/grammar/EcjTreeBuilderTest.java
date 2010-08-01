@@ -44,6 +44,10 @@ import org.junit.runner.RunWith;
 
 @RunWith(RunForEachFileInDirRunner.class)
 public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
+	public EcjTreeBuilderTest() {
+		super(true);
+	}
+	
 	@Test
 	public boolean testEcjTreeBuilder(Source source) throws Exception {
 		return testCompiler(source);
