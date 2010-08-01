@@ -33,6 +33,7 @@ import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.ImportReference;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -42,7 +43,9 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 	}
 	
 	private List<? extends Node> result = null;
-	private Map<FlagKey, Object> params;
+	private Map<FlagKey, Object> params = ImmutableMap.of();
+	
+	private EcjTreeConverter() {}
 	
 	private boolean hasFlag(FlagKey key) {
 		return params.containsKey(key);
@@ -92,7 +95,7 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 	private Node toTree(ASTNode node, Map<FlagKey, Object> params) {
 		if (node == null) return null;
 		EcjTreeConverter visitor = new EcjTreeConverter();
-		visitor.params = params;
+		if (params != null) visitor.params = params;
 		visitor.visitEcjNode(node);
 		try {
 			return visitor.get();
