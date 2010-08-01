@@ -36,7 +36,6 @@ import java.util.regex.Pattern;
 
 import lombok.Data;
 
-import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -47,8 +46,10 @@ import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.io.Files;
 
 public class RunForEachFileInDirRunner extends Runner {
 	@Data
@@ -314,8 +315,8 @@ public class RunForEachFileInDirRunner extends Runner {
 			Throwable error;
 			
 			try {
-				content = entry.getKey() == null ? null : FileUtils.readFileToString(
-						data.getAlias() == null ? data.getMain() : data.getAlias(), "UTF-8");
+				content = entry.getKey() == null ? null : Files.toString(
+						data.getAlias() == null ? data.getMain() : data.getAlias(), Charsets.UTF_8);
 				error = null;
 			} catch (IOException e) {
 				content = null;
@@ -387,7 +388,7 @@ public class RunForEachFileInDirRunner extends Runner {
 			params = new Object[2];
 			main = new File(main.getParent(), alias.getName().replaceAll("\\.\\d+\\.java$", ".java"));
 			
-			String expectedContent = FileUtils.readFileToString(main, "UTF-8");
+			String expectedContent = Files.toString(main, Charsets.UTF_8);
 			
 			if (paramTypes[0] == String.class) params[0] = expectedContent;
 			else if (paramTypes[0] == File.class) params[0] = main;

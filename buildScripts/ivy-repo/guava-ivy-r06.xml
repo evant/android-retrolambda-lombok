@@ -1,0 +1,14 @@
+<ivy-module version="2.0">
+	<info organisation="google.com" module="guava" revision="r06" publication="20100707120000">
+		<license name="Apache license 2.0" url="http://www.apache.org/licenses/LICENSE-2.0" />
+		<description homepage="http://code.google.com/p/guava-libraries/" />
+	</info>
+	<configurations>
+		<conf name="runtime" />
+		<conf name="sources" />
+	</configurations>
+	<publications>
+		<artifact conf="runtime" url="http://projectlombok.org/ivyrepo/tools/guava-r06.jar" />
+		<artifact type="zip" conf="sources" url="http://projectlombok.org/ivyrepo/tools/guava-src-r06.zip" />
+	</publications>
+</ivy-module>

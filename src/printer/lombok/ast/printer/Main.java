@@ -29,7 +29,8 @@ import lombok.ast.Node;
 import lombok.ast.grammar.ParseProblem;
 import lombok.ast.grammar.Source;
 
-import org.apache.commons.io.FileUtils;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 
 public class Main {
 	public static void main(String[] args) throws IOException {
@@ -44,7 +45,7 @@ public class Main {
 			System.exit(1);
 		}
 		
-		String rawSource = FileUtils.readFileToString(new File(args[1]), "UTF-8");
+		String rawSource = Files.toString(new File(args[1]), Charsets.UTF_8);
 		Source source = new Source(rawSource, args[1]);
 		source.parseCompilationUnit();
 		long now = System.currentTimeMillis();
@@ -63,7 +64,7 @@ public class Main {
 		}
 		
 		File outFile = new File(args[1] + (isText ? ".out.java" : ".html"));
-		FileUtils.writeStringToFile(outFile, formatter.finish(), "UTF-8");
+		Files.write(formatter.finish(), outFile, Charsets.UTF_8);
 		if (!isText) Desktop.getDesktop().browse(outFile.toURI());
 		System.out.println("Generated " + outFile);
 		System.exit(0);

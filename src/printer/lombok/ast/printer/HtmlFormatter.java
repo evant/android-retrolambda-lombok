@@ -34,11 +34,11 @@ import lombok.Cleanup;
 import lombok.ast.DescribedNode;
 import lombok.ast.Node;
 
-import org.apache.commons.io.IOUtils;
-
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteStreams;
 
 public class HtmlFormatter implements SourceFormatter {
 	private final StringBuilder sb = new StringBuilder();
@@ -181,7 +181,7 @@ public class HtmlFormatter implements SourceFormatter {
 	
 	private String readResource(String resource) throws IOException {
 		@Cleanup InputStream in = getClass().getResourceAsStream(resource);
-		return IOUtils.toString(in, "UTF-8");
+		return new String(ByteStreams.toByteArray(in), Charsets.UTF_8);
 	}
 	
 	@Override public String finish() throws IOException {
