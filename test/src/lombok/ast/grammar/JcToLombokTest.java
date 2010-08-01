@@ -82,7 +82,11 @@ public class JcToLombokTest extends TreeBuilderRunner<Node> {
 		
 		Options.instance(context).put(OptionName.ENCODING, "UTF-8");
 		
-		JavaCompiler compiler = new JavaCompiler(context);
+		JavaCompiler compiler = new JavaCompiler(context) {
+			@Override protected boolean keepComments() {
+				return true;
+			}
+		};
 		compiler.genEndPos = true;
 		
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
