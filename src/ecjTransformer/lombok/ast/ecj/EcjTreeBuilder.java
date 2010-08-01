@@ -383,7 +383,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		cud.types = toArray(TypeDeclaration.class, node.astTypeDeclarations());
 		
 		if (CharOperation.equals(PACKAGE_INFO, cud.getMainTypeName())) {
-			TypeDeclaration[] newTypes;;
+			TypeDeclaration[] newTypes;
 			if (cud.types == null) {
 				newTypes = new TypeDeclaration[1];
 			} else {
@@ -1470,7 +1470,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		Annotation[] annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
 		int modifiers = toModifiers(node.astModifiers());
 		TypeReference base = (TypeReference) toTree(node.astTypeReference());
-		AbstractVariableDeclaration prevDecl = null;
+		AbstractVariableDeclaration prevDecl = null, firstDecl = null;
 		for (lombok.ast.VariableDefinitionEntry entry : node.astVariables()) {
 			VariableKind kind = VariableKind.kind(node);
 			AbstractVariableDeclaration decl = kind.create();
@@ -1484,8 +1484,11 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 				decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 				decl.type.sourceStart = base.sourceStart;
 				// This makes no sense whatsoever but eclipse wants it this way.
-				if (prevDecl == null && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
+				if (firstDecl == null && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
 					decl.type.sourceEnd = posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1;
+				} else if (firstDecl != null) {
+					// This replicates an eclipse bug; the end pos of the type of b in: int[] a[][], b[]; is in fact the second closing ] of a.
+					decl.type.sourceEnd = firstDecl.type.sourceEnd;
 				} else decl.type.sourceEnd = base.sourceEnd;
 				// Yet another eclipse inconsistency.
 				if (kind == VariableKind.FIELD && base instanceof ArrayQualifiedTypeReference) {
@@ -1542,6 +1545,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 			}
 			values.add(decl);
 			prevDecl = decl;
+			if (firstDecl == null) firstDecl = decl;
 		}
 		
 		return set(node, values);
