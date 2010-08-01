@@ -63,6 +63,9 @@ public class HtmlFormatter implements SourceFormatter {
 		sb.append("<span class=\"fail\">").append(FAIL).append(escapeHtml(fail)).append(FAIL).append("</span>");
 	}
 	
+	@Override public void property(String name, Object value) {
+	}
+	
 	@Override public void keyword(String text) {
 		sb.append("<span class=\"keyword\">").append(escapeHtml(text)).append("</span>");
 	}

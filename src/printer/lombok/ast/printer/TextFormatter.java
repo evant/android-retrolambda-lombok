@@ -69,6 +69,9 @@ public class TextFormatter implements SourceFormatter {
 		a(FAIL).a(fail).a(FAIL);
 	}
 	
+	@Override public void property(String name, Object value) {
+	}
+	
 	@Override public void keyword(String text) {
 		a(text);
 	}

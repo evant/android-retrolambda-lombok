@@ -35,6 +35,7 @@ public interface SourceFormatter {
 	 */
 	void fail(String fail);
 	
+	void property(String name, Object value);
 	void keyword(String text);
 	void operator(String text);
 	

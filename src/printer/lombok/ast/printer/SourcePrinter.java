@@ -174,6 +174,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitTypeReference(TypeReference node) {
 		WildcardKind kind = node.astWildcard();
 		formatter.buildInline(node);
+		formatter.property("WilcardKind", kind);
+		formatter.property("arrayDimensions", node.astArrayDimensions());
 		if (kind == WildcardKind.UNBOUND) {
 			formatter.append("?");
 			formatter.closeInline();
@@ -226,6 +228,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		else if (!isValidJavaIdentifier(name)) name = FAIL + "INVALID_IDENTIFIER: " + name + FAIL;
 		
 		formatter.buildInline(node);
+		formatter.property("name", name);
 		formatter.append(name);
 		formatter.closeInline();
 		return true;
@@ -237,6 +240,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
+		formatter.property("value", raw);
 		formatter.append(raw);
 		formatter.closeInline();
 		parensClose(node);
@@ -249,6 +253,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
+		formatter.property("value", raw);
 		formatter.append(raw);
 		formatter.closeInline();
 		parensClose(node);
@@ -261,6 +266,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
+		formatter.property("value", raw);
 		formatter.append(raw);
 		formatter.closeInline();
 		parensClose(node);
@@ -273,6 +279,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
+		formatter.property("value", raw);
 		formatter.append(raw);
 		formatter.closeInline();
 		parensClose(node);
@@ -285,6 +292,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		String raw = node.rawValue();
 		
 		formatter.buildInline(node);
+		formatter.property("value", raw);
 		formatter.append(raw);
 		formatter.closeInline();
 		parensClose(node);
@@ -313,15 +321,19 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	@Override
 	public boolean visitBinaryExpression(BinaryExpression node) {
 		parensOpen(node);
+		String symbol;
+		try {
+			symbol = node.astOperator().getSymbol();
+		} catch (Exception e) {
+			symbol = node.rawOperator();
+		}
+		
 		formatter.buildInline(node);
+		formatter.property("operator", symbol);
 		formatter.nameNextElement("left");
 		visit(node.rawLeft());
 		formatter.space();
-		try {
-			formatter.operator(node.astOperator().getSymbol());
-		} catch (Exception e) {
-			formatter.operator(node.rawOperator());
-		}
+		formatter.operator(symbol);
 		formatter.space();
 		formatter.nameNextElement("right");
 		visit(node.rawRight());
@@ -346,6 +358,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			return true;
 		}
 		formatter.buildInline(node);
+		formatter.property("operator", op.getSymbol());
+		formatter.property("postfix", op.isPostfix());
 		if (!op.isPostfix()) formatter.operator(op.getSymbol());
 		visit(node.astOperand());
 		if (op.isPostfix()) formatter.operator(op.getSymbol());
@@ -679,6 +693,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		formatter.keyword("try");
 		formatter.space();
 		formatter.startSuppressBlock();
+		formatter.nameNextElement("try");
 		visit(node.rawBody());
 		formatter.endSuppressBlock();
 		visitAll(node.rawCatches(), " ", " ", "");
@@ -687,6 +702,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			formatter.keyword("finally");
 			formatter.space();
 			formatter.startSuppressBlock();
+			formatter.nameNextElement("finally");
 			visit(node.rawFinally());
 			formatter.endSuppressBlock();
 		}
@@ -924,6 +940,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	@Override
 	public boolean visitVariableDefinition(VariableDefinition node) {
 		formatter.buildInline(node);
+		formatter.property("varargs", node.astVarargs());
 		visit(node.astModifiers());
 		if (!node.astModifiers().rawKeywords().isEmpty()) {
 			formatter.space();
@@ -943,6 +960,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	@Override
 	public boolean visitVariableDefinitionEntry(VariableDefinitionEntry node) {
 		formatter.buildInline(node);
+		formatter.property("arrayDimensions", node.astArrayDimensions());
 		formatter.nameNextElement("varName");
 		visit(node.astName());
 		for (int i = 0; i < node.astArrayDimensions(); i++)
@@ -974,6 +992,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	@Override
 	public boolean visitKeywordModifier(KeywordModifier node) {
 		formatter.buildInline(node);
+		formatter.property("modifier", node.astName());
 		if (node.astName() == null || node.astName().isEmpty()) formatter.fail("MISSING_MODIFIER");
 		else
 			formatter.keyword(node.astName());
@@ -1327,6 +1346,8 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	@Override
 	public boolean visitImportDeclaration(ImportDeclaration node) {
 		formatter.buildBlock(node);
+		formatter.property("static", node.astStaticImport());
+		formatter.property("star", node.astStarImport());
 		formatter.keyword("import");
 		formatter.space();
 		if (node.astStaticImport()) {

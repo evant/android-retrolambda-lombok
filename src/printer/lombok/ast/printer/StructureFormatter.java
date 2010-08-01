@@ -100,6 +100,10 @@ public class StructureFormatter implements SourceFormatter {
 		a("FAIL: " + fail);
 	}
 	
+	@Override public void property(String name, Object value) {
+		a("PROPERTY: %s = %s\n", name, value);
+	}
+	
 	@Override public void keyword(String text) {
 	}
 	
