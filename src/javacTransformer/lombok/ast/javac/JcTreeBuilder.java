@@ -114,7 +114,8 @@ import lombok.ast.WildcardKind;
 import lombok.ast.grammar.Source;
 import lombok.ast.grammar.SourceStructure;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.BoundKind;
@@ -1285,7 +1286,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		BINARY_OPERATORS.put(BinaryOperator.REMAINDER, JCTree.MOD);
 	}
 	
-	private static final Map<String, Integer> PRIMITIVES = ImmutableMap.<String, Integer>builder()
+	static final BiMap<String, Integer> PRIMITIVES = ImmutableBiMap.<String, Integer>builder()
 		.put("byte", TypeTags.BYTE)
 		.put("char", TypeTags.CHAR)
 		.put("short", TypeTags.SHORT)

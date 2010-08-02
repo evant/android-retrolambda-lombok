@@ -21,6 +21,8 @@
  */
 package lombok.ast.javac;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 
 import lombok.ast.Block;
@@ -41,26 +43,42 @@ import lombok.ast.RawListAccessor;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.TypeDeclaration;
+import lombok.ast.TypeReference;
+import lombok.ast.TypeReferencePart;
+import lombok.ast.TypeVariable;
+import lombok.ast.VariableDeclaration;
+import lombok.ast.VariableDefinition;
+import lombok.ast.VariableDefinitionEntry;
+import lombok.ast.VariableReference;
+import lombok.ast.WildcardKind;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.tree.JCTree.JCArrayTypeTree;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
+import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCImport;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
+import com.sun.tools.javac.tree.JCTree.JCPrimitiveTypeTree;
 import com.sun.tools.javac.tree.JCTree.JCSkip;
+import com.sun.tools.javac.tree.JCTree.JCTypeApply;
+import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
+import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.util.List;
 
 public class JcTreeConverter extends JCTree.Visitor {
 	private enum FlagKey {
 		BLOCKS_ARE_INITIALIZERS,
-		SKIP_IS_DECL;
+		SKIP_IS_DECL,
+		VARDEF_IS_DEFINITION,
+		TYPE_REFERENCE;
 	}
 	
 	private java.util.List<? extends Node> result;
@@ -136,10 +154,88 @@ public class JcTreeConverter extends JCTree.Visitor {
 		}
 	}
 	
+	private Node toVariableDefinition(java.util.List<JCVariableDecl> decls, FlagKey... keys) {
+		boolean createDeclaration = true;
+		for (FlagKey key : keys) if (key == FlagKey.VARDEF_IS_DEFINITION) createDeclaration = false;
+		
+		if (decls == null || decls.isEmpty()) {
+			return createDeclaration ? new VariableDeclaration() : new VariableDefinition();
+		}
+		
+		JCVariableDecl first = decls.get(0);
+		int startPosFirst = first.pos;
+		
+		JCExpression baseType = first.vartype;
+		while (baseType instanceof JCArrayTypeTree) {
+			// if written as int[] a[], b; then the base Type is *NOT* a's type, but a's type with any number of JCATT's dewrapped.
+			// The only way to tell the difference is by checking positions, unfortunately: If end pos of type is after start pos of decl, it's a split.
+			int endPosType = baseType.getEndPosition(endPosTable);
+			if (endPosType != -1 && startPosFirst != -1 && endPosType > startPosFirst) {
+				baseType = ((JCArrayTypeTree) baseType).elemtype;
+			} else {
+				break;
+			}
+		}
+		
+		VariableDefinition def = new VariableDefinition();
+		def.astModifiers((Modifiers) toTree(first.mods));
+		def.rawTypeReference(toTree(baseType, FlagKey.TYPE_REFERENCE));
+		def.astVarargs((first.mods.flags & Flags.VARARGS) != 0);
+		
+		int baseDims = countDims(baseType);
+		
+		for (JCVariableDecl varDecl : decls) {
+			int extraDims = countDims(varDecl.vartype) - baseDims;
+			VariableDefinitionEntry entry = new VariableDefinitionEntry();
+			entry.astArrayDimensions(extraDims);
+			entry.astName(setPos(varDecl, new Identifier().astValue(varDecl.name.toString())));
+			entry.rawInitializer(toTree(varDecl.init));
+			def.astVariables().addToEnd(entry);
+		}
+		
+		if (createDeclaration) {
+			 return new VariableDeclaration().astDefinition(def);
+		}
+		
+		return def;
+	}
+	
+	private static int countDims(JCExpression type) {
+		int dims = 0;
+		while (type instanceof JCArrayTypeTree) {
+			type = ((JCArrayTypeTree) type).elemtype;
+			dims++;
+		}
+		return dims;
+	}
+	
 	private void fillList(List<? extends JCTree> nodes, RawListAccessor<?, ?> list, FlagKey... keys) {
 		if (nodes == null) return;
 		
-		for (JCTree node : nodes) list.addToEnd(toTree(node, keys));
+		// int i, j; is represented with multiple JCVariableDeclarations, but in lombok.ast, it's 1 node. We need to
+		// gather up sequential JCVD nodes, check if their modifier objects are == equal, and call a special method
+		// to convert them.
+		java.util.List<JCVariableDecl> varDeclQueue = new ArrayList<JCVariableDecl>();
+		
+		for (JCTree node : nodes) {
+			if (node instanceof JCVariableDecl) {
+				if (varDeclQueue.isEmpty() || varDeclQueue.get(0).mods == ((JCVariableDecl) node).mods) {
+					varDeclQueue.add((JCVariableDecl) node);
+					continue;
+				} else {
+					if (!varDeclQueue.isEmpty()) list.addToEnd(toVariableDefinition(varDeclQueue, keys));
+					varDeclQueue.clear();
+					varDeclQueue.add((JCVariableDecl) node);
+					continue;
+				}
+			}
+			
+			if (!varDeclQueue.isEmpty()) list.addToEnd(toVariableDefinition(varDeclQueue, keys));
+			varDeclQueue.clear();
+			list.addToEnd(toTree(node, keys));
+		}
+		
+		if (!varDeclQueue.isEmpty()) list.addToEnd(toVariableDefinition(varDeclQueue, keys));
 	}
 	
 	public static Node convert(JCCompilationUnit cu) {
@@ -213,8 +309,8 @@ public class JcTreeConverter extends JCTree.Visitor {
 		if ((flags & (Flags.ENUM | Flags.INTERFACE)) == 0) {
 			ClassDeclaration classDecl = new ClassDeclaration();
 			typeDecl = classDecl;
-			fillList(node.implementing, classDecl.rawImplementing());
-			classDecl.rawExtending(toTree(node.extending));
+			fillList(node.implementing, classDecl.rawImplementing(), FlagKey.TYPE_REFERENCE);
+			classDecl.rawExtending(toTree(node.extending, FlagKey.TYPE_REFERENCE));
 			fillList(node.typarams, classDecl.rawTypeVariables());
 			NormalTypeBody body = new NormalTypeBody();
 			fillList(node.defs, body.rawMembers(), FlagKey.BLOCKS_ARE_INITIALIZERS, FlagKey.SKIP_IS_DECL);
@@ -266,13 +362,83 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	@Override public void visitVarDef(JCVariableDecl node) {
-		// In order to handle int i, j; and friends:
-		//   - somehow get all consecutive JCVD objects in a list.
-		//   - For any given Element, the type is either (A) a backref, or (B) any number of TypeArray wraps around a backref.
-		//     * Therefore the 'base' type is whatever you find that is backreffed. It can be a type wrapped by X TypeArrays in the first.
-		//   - Check the modifier; it will be a backref for subsequent JCVDs.
-		//   - positions for individual parts go from name to the following comma, unless its the last one, in which case it goes to the end of the NAME.
-		//   - to separate int a[][], int[] a[] and int[][] a;, there's only one way: Check positions.
-		visitTree(node);
+		if (hasFlag(FlagKey.VARDEF_IS_DEFINITION)) {
+			set(node, toVariableDefinition(Collections.singletonList(node), FlagKey.VARDEF_IS_DEFINITION));
+		} else {
+			set(node, toVariableDefinition(Collections.singletonList(node)));
+		}
+	}
+	
+	@Override public void visitTypeIdent(JCPrimitiveTypeTree node) {
+		String primitiveType = JcTreeBuilder.PRIMITIVES.inverse().get(node.typetag);
+		
+		if (primitiveType == null) throw new IllegalArgumentException("Uknown primitive type tag: " + node.typetag);
+		
+		TypeReferencePart part = setPos(node, new TypeReferencePart().astIdentifier(setPos(node, new Identifier().astValue(primitiveType))));
+		
+		set(node, new TypeReference().astParts().addToEnd(part));
+	}
+	
+	@Override public void visitIdent(JCIdent node) {
+		Identifier id = setPos(node, new Identifier().astValue(node.name.toString()));
+		
+		if (hasFlag(FlagKey.TYPE_REFERENCE)) {
+			TypeReferencePart part = setPos(node, new TypeReferencePart().astIdentifier(id));
+			set(node, new TypeReference().astParts().addToEnd(part));
+			return;
+		}
+		
+		set(node, new VariableReference().astIdentifier(id));
+	}
+	
+	@Override public void visitSelect(JCFieldAccess node) {
+		Identifier id = setPos(node, new Identifier().astValue(node.name.toString()));
+		Node selected = toTree(node.selected, params);
+		
+		if (hasFlag(FlagKey.TYPE_REFERENCE)) {
+			TypeReference parent = (TypeReference) selected;
+			parent.astParts().addToEnd(setPos(node, new TypeReferencePart().astIdentifier(id)));
+			set(node, parent);
+			return;
+		}
+		
+		throw new IllegalArgumentException(" ---- non-type-reference select not implemented.");
+	}
+	
+	@Override public void visitTypeApply(JCTypeApply node) {
+		TypeReference ref = (TypeReference) toTree(node.clazz, FlagKey.TYPE_REFERENCE);
+		TypeReferencePart last = ref.astParts().last();
+		fillList(node.arguments, last.rawTypeArguments(), FlagKey.TYPE_REFERENCE);
+		set(node, ref);
+	}
+	
+	@Override public void visitWildcard(JCWildcard node) {
+		TypeReference ref = (TypeReference) toTree(node.getBound(), FlagKey.TYPE_REFERENCE);
+		if (ref == null) ref = new TypeReference();
+		switch (node.getKind()) {
+		case UNBOUNDED_WILDCARD:
+			ref.astWildcard(WildcardKind.UNBOUND);
+			break;
+		case EXTENDS_WILDCARD:
+			ref.astWildcard(WildcardKind.EXTENDS);
+			break;
+		case SUPER_WILDCARD:
+			ref.astWildcard(WildcardKind.SUPER);
+			break;
+		}
+		set(node, ref);
+	}
+	
+	@Override public void visitTypeParameter(JCTypeParameter node) {
+		TypeVariable var = new TypeVariable();
+		var.astName(setPos(node, new Identifier().astValue(node.name.toString())));
+		fillList(node.bounds, var.rawExtending(), FlagKey.TYPE_REFERENCE);
+		set(node, var);
+	}
+	
+	@Override public void visitTypeArray(JCArrayTypeTree node) {
+		TypeReference ref = (TypeReference) toTree(node.getType(), FlagKey.TYPE_REFERENCE);
+		ref.astArrayDimensions(ref.astArrayDimensions() + 1);
+		set(node, ref);
 	}
 }
