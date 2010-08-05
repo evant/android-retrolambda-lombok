@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.ast.DescribedNode;
 import lombok.ast.Node;
@@ -33,6 +34,7 @@ import lombok.ast.grammar.SourceStructure;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class StructureFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
@@ -40,9 +42,9 @@ public class StructureFormatter implements SourceFormatter {
 	private final List<String> errors = Lists.newArrayList();
 	private int indent;
 	private final Map<Node, Collection<SourceStructure>> sourceStructures;
-	private String name;
+	private String name, currentType;
 	private final String nodeFormatString;
-	
+	private Set<String> propertySkipList = Sets.newHashSet();
 	
 	public static StructureFormatter formatterWithoutPositions() {
 		return new StructureFormatter(Collections.<Node, Collection<SourceStructure>>emptyMap(), false);
@@ -85,6 +87,7 @@ public class StructureFormatter implements SourceFormatter {
 			return;
 		}
 		String name = node.getClass().getSimpleName();
+		currentType = name;
 		String description = "";
 		if (node instanceof DescribedNode) description = " " + ((DescribedNode)node).getDescription();
 		a(nodeFormatString, type, name, description, node.getPosition().getStart(), node.getPosition().getEnd());
@@ -101,7 +104,12 @@ public class StructureFormatter implements SourceFormatter {
 	}
 	
 	@Override public void property(String name, Object value) {
-		a("PROPERTY: %s = %s\n", name, value);
+		if (!propertySkipList.contains(currentType + "/" + name)) a("PROPERTY: %s = %s\n", name, value);
+	}
+	
+	public StructureFormatter skipProperty(Class<? extends Node> type, String propertyName) {
+		propertySkipList.add(type.getSimpleName() + "/" + propertyName);
+		return this;
 	}
 	
 	@Override public void keyword(String text) {

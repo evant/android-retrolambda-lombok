@@ -25,27 +25,51 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 
+import lombok.ast.ArrayAccess;
+import lombok.ast.ArrayCreation;
+import lombok.ast.ArrayDimension;
+import lombok.ast.ArrayInitializer;
+import lombok.ast.BinaryExpression;
+import lombok.ast.BinaryOperator;
 import lombok.ast.Block;
+import lombok.ast.BooleanLiteral;
+import lombok.ast.Cast;
+import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
+import lombok.ast.ClassLiteral;
 import lombok.ast.CompilationUnit;
+import lombok.ast.ConstructorInvocation;
 import lombok.ast.EmptyDeclaration;
 import lombok.ast.EmptyStatement;
+import lombok.ast.Expression;
+import lombok.ast.ExpressionStatement;
+import lombok.ast.FloatingPointLiteral;
 import lombok.ast.Identifier;
 import lombok.ast.ImportDeclaration;
+import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceInitializer;
+import lombok.ast.InstanceOf;
+import lombok.ast.IntegralLiteral;
 import lombok.ast.KeywordModifier;
+import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.NormalTypeBody;
+import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
+import lombok.ast.Select;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
+import lombok.ast.StringLiteral;
+import lombok.ast.This;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
 import lombok.ast.TypeVariable;
+import lombok.ast.UnaryExpression;
+import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
@@ -56,19 +80,33 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.tree.JCTree.JCArrayAccess;
 import com.sun.tools.javac.tree.JCTree.JCArrayTypeTree;
+import com.sun.tools.javac.tree.JCTree.JCAssign;
+import com.sun.tools.javac.tree.JCTree.JCAssignOp;
+import com.sun.tools.javac.tree.JCTree.JCBinary;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
+import com.sun.tools.javac.tree.JCTree.JCConditional;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
+import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
 import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.JCTree.JCImport;
+import com.sun.tools.javac.tree.JCTree.JCInstanceOf;
+import com.sun.tools.javac.tree.JCTree.JCLiteral;
+import com.sun.tools.javac.tree.JCTree.JCMethodInvocation;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
+import com.sun.tools.javac.tree.JCTree.JCNewArray;
+import com.sun.tools.javac.tree.JCTree.JCNewClass;
+import com.sun.tools.javac.tree.JCTree.JCParens;
 import com.sun.tools.javac.tree.JCTree.JCPrimitiveTypeTree;
 import com.sun.tools.javac.tree.JCTree.JCSkip;
 import com.sun.tools.javac.tree.JCTree.JCTypeApply;
+import com.sun.tools.javac.tree.JCTree.JCTypeCast;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
+import com.sun.tools.javac.tree.JCTree.JCUnary;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.util.List;
@@ -123,15 +161,6 @@ public class JcTreeConverter extends JCTree.Visitor {
 		java.util.List<Node> result = Lists.newArrayList();
 		if (value != null) result.add(value);
 		this.result = result;
-	}
-	
-	private void set(JCTree node, java.util.List<? extends Node> values) {
-		if (values.isEmpty()) System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
-		
-		for (Node v : values) if (v.getPosition().isUnplaced()) setPos(node, v);
-		
-		if (result != null) throw new IllegalStateException("result is already set");
-		this.result = values;
 	}
 	
 	private Node toTree(JCTree node, FlagKey... keys) {
@@ -380,7 +409,14 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	@Override public void visitIdent(JCIdent node) {
-		Identifier id = setPos(node, new Identifier().astValue(node.name.toString()));
+		String name = node.getName().toString();
+		
+		if ("this".equals(name)) {
+			set(node, new This());
+			return;
+		}
+		
+		Identifier id = setPos(node, new Identifier().astValue(name));
 		
 		if (hasFlag(FlagKey.TYPE_REFERENCE)) {
 			TypeReferencePart part = setPos(node, new TypeReferencePart().astIdentifier(id));
@@ -392,7 +428,9 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	@Override public void visitSelect(JCFieldAccess node) {
-		Identifier id = setPos(node, new Identifier().astValue(node.name.toString()));
+		String name = node.getIdentifier().toString();
+		
+		Identifier id = setPos(node, new Identifier().astValue(name));
 		Node selected = toTree(node.selected, params);
 		
 		if (hasFlag(FlagKey.TYPE_REFERENCE)) {
@@ -402,7 +440,17 @@ public class JcTreeConverter extends JCTree.Visitor {
 			return;
 		}
 		
-		throw new IllegalArgumentException(" ---- non-type-reference select not implemented.");
+		if ("this".equals(name)) {
+			set(node, new This().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+			return;
+		}
+		
+		if ("class".equals(name)) {
+			set(node, new ClassLiteral().rawTypeReference(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+			return;
+		}
+		
+		set(node, new Select().astIdentifier(id).rawOperand(toTree(node.getExpression())));
 	}
 	
 	@Override public void visitTypeApply(JCTypeApply node) {
@@ -440,5 +488,182 @@ public class JcTreeConverter extends JCTree.Visitor {
 		TypeReference ref = (TypeReference) toTree(node.getType(), FlagKey.TYPE_REFERENCE);
 		ref.astArrayDimensions(ref.astArrayDimensions() + 1);
 		set(node, ref);
+	}
+	
+	@Override public void visitLiteral(JCLiteral node) {
+		Object val = node.getValue();
+		boolean negative = false;
+		Expression literal = null;
+		switch (node.getKind()) {
+		case INT_LITERAL:
+			int intValue = ((Number)val).intValue();
+			negative = intValue < 0;
+			if (intValue == Integer.MIN_VALUE) literal = new IntegralLiteral().astIntValue(Integer.MIN_VALUE);
+			else if (negative) literal = new IntegralLiteral().astIntValue(-intValue);
+			else literal = new IntegralLiteral().astIntValue(intValue);
+			break;
+		case LONG_LITERAL:
+			long longValue = ((Number)val).longValue();
+			negative = longValue < 0;
+			if (longValue == Long.MIN_VALUE) literal = new IntegralLiteral().astLongValue(Long.MIN_VALUE);
+			else if (negative) literal = new IntegralLiteral().astLongValue(-longValue);
+			else literal = new IntegralLiteral().astLongValue(longValue);
+			break;
+		case FLOAT_LITERAL:
+			set(node, new FloatingPointLiteral().astFloatValue(((Number)val).floatValue()));
+			return;
+		case DOUBLE_LITERAL:
+			set(node, new FloatingPointLiteral().astDoubleValue(((Number)val).doubleValue()));
+			return;
+		case BOOLEAN_LITERAL:
+			set(node, new BooleanLiteral().astValue((Boolean)val));
+			return;
+		case CHAR_LITERAL:
+			set(node, new CharLiteral().astValue((Character)val));
+			return;
+		case STRING_LITERAL:
+			set(node, new StringLiteral().astValue(val == null ? "" : val.toString()));
+			return;
+		case NULL_LITERAL:
+			set(node, new NullLiteral());
+			return;
+		}
+		
+		if (literal != null) {
+			if (negative) set(node, new UnaryExpression().astOperand(setPos(node, literal)).astOperator(UnaryOperator.UNARY_MINUS));
+			else set(node, literal);
+		} else {
+			throw new IllegalArgumentException("Unknown JCLiteral type tag:" + node.typetag);
+		}
+	}
+	
+	@Override public void visitParens(JCParens node) {
+		Expression expr = (Expression) toTree(node.getExpression());
+		expr.astParensPositions().add(new Position(node.pos, node.getEndPosition(endPosTable)));
+		set(node, expr);
+	}
+	
+	@Override public void visitTypeCast(JCTypeCast node) {
+		Cast cast = new Cast();
+		cast.rawOperand(toTree(node.getExpression()));
+		cast.rawTypeReference(toTree(node.getType(), FlagKey.TYPE_REFERENCE));
+		set(node, cast);
+	}
+	
+	@Override public void visitUnary(JCUnary node) {
+		UnaryExpression expr = new UnaryExpression();
+		expr.rawOperand(toTree(node.getExpression()));
+		expr.astOperator(JcTreeBuilder.UNARY_OPERATORS.inverse().get(node.getTag()));
+		set(node, expr);
+	}
+	
+	@Override public void visitBinary(JCBinary node) {
+		BinaryExpression expr = new BinaryExpression();
+		expr.rawLeft(toTree(node.getLeftOperand()));
+		expr.rawRight(toTree(node.getRightOperand()));
+		expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
+		set(node, expr);
+	}
+	
+	@Override public void visitNewClass(JCNewClass node) {
+		ConstructorInvocation inv = new ConstructorInvocation();
+		fillList(node.getArguments(), inv.rawArguments());
+		fillList(node.getTypeArguments(), inv.rawConstructorTypeArguments());
+		inv.rawTypeReference(toTree(node.getIdentifier(), FlagKey.TYPE_REFERENCE));
+		inv.rawQualifier(toTree(node.getEnclosingExpression()));
+		inv.rawAnonymousClassBody(toTree(node.getClassBody()));
+		set(node, inv);
+	}
+	
+	@Override public void visitTypeTest(JCInstanceOf node) {
+		InstanceOf io = new InstanceOf();
+		io.rawTypeReference(toTree(node.getType(), FlagKey.TYPE_REFERENCE));
+		io.rawObjectReference(toTree(node.getExpression()));
+		set(node, io);
+	}
+	
+	@Override public void visitConditional(JCConditional node) {
+		InlineIfExpression iie = new InlineIfExpression();
+		iie.rawCondition(toTree(node.getCondition()));
+		iie.rawIfTrue(toTree(node.getTrueExpression()));
+		iie.rawIfFalse(toTree(node.getFalseExpression()));
+		set(node, iie);
+	}
+	
+	@Override public void visitAssign(JCAssign node) {
+		BinaryExpression expr = new BinaryExpression();
+		expr.rawRight(toTree(node.getExpression()));
+		expr.rawLeft(toTree(node.getVariable()));
+		expr.astOperator(BinaryOperator.ASSIGN);
+		set(node, expr);
+	}
+	
+	@Override public void visitAssignop(JCAssignOp node) {
+		BinaryExpression expr = new BinaryExpression();
+		expr.rawRight(toTree(node.getExpression()));
+		expr.rawLeft(toTree(node.getVariable()));
+		expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
+		set(node, expr);
+	}
+	
+	@Override public void visitExec(JCExpressionStatement node) {
+		ExpressionStatement exec = new ExpressionStatement();
+		exec.rawExpression(toTree(node.getExpression()));
+		set(node, exec);
+	}
+	
+	@Override public void visitApply(JCMethodInvocation node) {
+		MethodInvocation inv = new MethodInvocation();
+		JCTree sel = node.getMethodSelect();
+		Identifier id = new Identifier();
+		if (sel instanceof JCIdent) {
+			setPos(sel, id.astValue(((JCIdent) sel).getName().toString()));
+			sel = null;
+		} else if (sel instanceof JCFieldAccess) {
+			setPos(sel, id.astValue(((JCFieldAccess) sel).getIdentifier().toString()));
+			sel = ((JCFieldAccess) sel).getExpression();
+		}
+		inv.astName(id).rawOperand(toTree(sel));
+		fillList(node.getTypeArguments(), inv.rawMethodTypeArguments());
+		fillList(node.getArguments(), inv.rawArguments());
+		set(node, inv);
+	}
+	
+	@Override public void visitNewArray(JCNewArray node) {
+		ArrayInitializer init = null;
+		
+		if (node.getInitializers() != null) {
+			init = setPos(node, new ArrayInitializer());
+			fillList(node.getInitializers(), init.rawExpressions());
+		}
+		
+		if (node.getType() == null) {
+			set(node, init == null ? new ArrayInitializer() : init);
+			return;
+		}
+		
+		ArrayCreation crea = new ArrayCreation();
+		int inits = 0;
+		JCTree type = node.getType();
+		while (type instanceof JCArrayTypeTree) {
+			inits++;
+			type = ((JCArrayTypeTree) type).getType();
+		}
+		
+		crea.rawComponentTypeReference(toTree(type, FlagKey.TYPE_REFERENCE));
+		if (node.getDimensions() != null) for (JCExpression dim : node.getDimensions()) {
+			crea.astDimensions().addToEnd(new ArrayDimension().rawDimension(toTree(dim)));
+		}
+		// new boolean [][][] {} in javac has one less dimension for some reason.
+		for (int i = 0; i < inits || (i == inits && init != null); i++) crea.astDimensions().addToEnd(new ArrayDimension());
+		crea.astInitializer(init);
+		set(node, crea);
+	}
+	
+	@Override public void visitIndexed(JCArrayAccess node) {
+		ArrayAccess aa = new ArrayAccess();
+		aa.rawIndexExpression(toTree(node.getIndex()));
+		aa.rawOperand(toTree(node.getExpression()));
+		set(node, aa);
 	}
 }

@@ -21,7 +21,7 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.util.Arrays;
@@ -29,7 +29,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import lombok.ast.CharLiteral;
+import lombok.ast.FloatingPointLiteral;
+import lombok.ast.IntegralLiteral;
 import lombok.ast.Node;
+import lombok.ast.StringLiteral;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.javac.JcTreeConverter;
 import lombok.ast.printer.SourcePrinter;
@@ -52,7 +56,8 @@ public class JcToLombokTest extends TreeBuilderRunner<Node> {
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(
-				DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[a-b]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+				DirDescriptor.of(new File("test/resources/idempotency"), true)
+						.withInclusion(Pattern.compile("^.*(?:[a-c]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
 //		return Arrays.asList(
 //				DirDescriptor.of(new File("test/resources/idempotency"), true),
 //				DirDescriptor.of(new File("test/resources/alias"), true),
@@ -66,6 +71,10 @@ public class JcToLombokTest extends TreeBuilderRunner<Node> {
 	
 	protected String convertToString(Source source, Node tree) {
 		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
+		formatter.skipProperty(IntegralLiteral.class, "value");
+		formatter.skipProperty(FloatingPointLiteral.class, "value");
+		formatter.skipProperty(CharLiteral.class, "value");
+		formatter.skipProperty(StringLiteral.class, "value");
 		tree.accept(new SourcePrinter(formatter));
 		return formatter.finish();
 	}
@@ -82,12 +91,9 @@ public class JcToLombokTest extends TreeBuilderRunner<Node> {
 		
 		Options.instance(context).put(OptionName.ENCODING, "UTF-8");
 		
-		JavaCompiler compiler = new JavaCompiler(context) {
-			@Override protected boolean keepComments() {
-				return true;
-			}
-		};
+		JavaCompiler compiler = new JavaCompiler(context);
 		compiler.genEndPos = true;
+		compiler.keepComments = true;
 		
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
 		return JcTreeConverter.convert(cu);
