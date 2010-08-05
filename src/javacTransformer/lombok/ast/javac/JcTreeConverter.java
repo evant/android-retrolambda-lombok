@@ -42,6 +42,7 @@ import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.ClassLiteral;
 import lombok.ast.CompilationUnit;
+import lombok.ast.ConstructorDeclaration;
 import lombok.ast.ConstructorInvocation;
 import lombok.ast.Continue;
 import lombok.ast.Default;
@@ -62,6 +63,7 @@ import lombok.ast.InstanceOf;
 import lombok.ast.IntegralLiteral;
 import lombok.ast.KeywordModifier;
 import lombok.ast.LabelledStatement;
+import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
@@ -70,6 +72,7 @@ import lombok.ast.NullLiteral;
 import lombok.ast.PackageDeclaration;
 import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
+import lombok.ast.Return;
 import lombok.ast.Select;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
@@ -92,6 +95,7 @@ import lombok.ast.VariableReference;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.Flags;
@@ -122,12 +126,14 @@ import com.sun.tools.javac.tree.JCTree.JCImport;
 import com.sun.tools.javac.tree.JCTree.JCInstanceOf;
 import com.sun.tools.javac.tree.JCTree.JCLabeledStatement;
 import com.sun.tools.javac.tree.JCTree.JCLiteral;
+import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import com.sun.tools.javac.tree.JCTree.JCMethodInvocation;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
 import com.sun.tools.javac.tree.JCTree.JCNewArray;
 import com.sun.tools.javac.tree.JCTree.JCNewClass;
 import com.sun.tools.javac.tree.JCTree.JCParens;
 import com.sun.tools.javac.tree.JCTree.JCPrimitiveTypeTree;
+import com.sun.tools.javac.tree.JCTree.JCReturn;
 import com.sun.tools.javac.tree.JCTree.JCSkip;
 import com.sun.tools.javac.tree.JCTree.JCStatement;
 import com.sun.tools.javac.tree.JCTree.JCSwitch;
@@ -148,6 +154,8 @@ public class JcTreeConverter extends JCTree.Visitor {
 		BLOCKS_ARE_INITIALIZERS,
 		SKIP_IS_DECL,
 		VARDEF_IS_DEFINITION,
+		NO_VARDECL_FOLDING,
+		CONTAINING_TYPE_NAME,
 		TYPE_REFERENCE;
 	}
 	
@@ -162,7 +170,6 @@ public class JcTreeConverter extends JCTree.Visitor {
 		return params.containsKey(key);
 	}
 	
-	@SuppressWarnings("unused")
 	private Object getFlag(FlagKey key) {
 		return params.get(key);
 	}
@@ -216,8 +223,13 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	private Node toVariableDefinition(java.util.List<JCVariableDecl> decls, FlagKey... keys) {
-		boolean createDeclaration = true;
-		for (FlagKey key : keys) if (key == FlagKey.VARDEF_IS_DEFINITION) createDeclaration = false;
+		Map<FlagKey, Object> map = Maps.newEnumMap(FlagKey.class);
+		for (FlagKey key : keys) map.put(key, key);
+		return toVariableDefinition(decls, map);
+	}
+	
+	private Node toVariableDefinition(java.util.List<JCVariableDecl> decls, Map<FlagKey, Object> keys) {
+		boolean createDeclaration = !keys.containsKey(FlagKey.VARDEF_IS_DEFINITION);
 		
 		if (decls == null || decls.isEmpty()) {
 			return createDeclaration ? new VariableDeclaration() : new VariableDefinition();
@@ -240,10 +252,13 @@ public class JcTreeConverter extends JCTree.Visitor {
 		
 		VariableDefinition def = new VariableDefinition();
 		def.astModifiers((Modifiers) toTree(first.mods));
+		int baseDims = countDims(baseType);
+		if ((first.mods.flags & Flags.VARARGS) != 0) {
+			def.astVarargs(true);
+			if (baseType instanceof JCArrayTypeTree) baseType = ((JCArrayTypeTree) baseType).elemtype;
+		}
 		def.rawTypeReference(toTree(baseType, FlagKey.TYPE_REFERENCE));
 		def.astVarargs((first.mods.flags & Flags.VARARGS) != 0);
-		
-		int baseDims = countDims(baseType);
 		
 		for (JCVariableDecl varDecl : decls) {
 			int extraDims = countDims(varDecl.vartype) - baseDims;
@@ -271,6 +286,12 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	private void fillList(List<? extends JCTree> nodes, RawListAccessor<?, ?> list, FlagKey... keys) {
+		Map<FlagKey, Object> map = Maps.newEnumMap(FlagKey.class);
+		for (FlagKey key : keys) map.put(key, key);
+		fillList(nodes, list, map);
+	}
+	
+	private void fillList(List<? extends JCTree> nodes, RawListAccessor<?, ?> list, Map<FlagKey, Object> keys) {
 		if (nodes == null) return;
 		
 		// int i, j; is represented with multiple JCVariableDeclarations, but in lombok.ast, it's 1 node. We need to
@@ -278,9 +299,11 @@ public class JcTreeConverter extends JCTree.Visitor {
 		// to convert them.
 		java.util.List<JCVariableDecl> varDeclQueue = new ArrayList<JCVariableDecl>();
 		
+		boolean fold = !keys.containsKey(FlagKey.NO_VARDECL_FOLDING);
+		
 		for (JCTree node : nodes) {
 			if (node instanceof JCVariableDecl) {
-				if (varDeclQueue.isEmpty() || varDeclQueue.get(0).mods == ((JCVariableDecl) node).mods) {
+				if (fold && (varDeclQueue.isEmpty() || varDeclQueue.get(0).mods == ((JCVariableDecl) node).mods)) {
 					varDeclQueue.add((JCVariableDecl) node);
 					continue;
 				} else {
@@ -366,6 +389,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 	
 	@Override public void visitClassDef(JCClassDecl node) {
 		long flags = node.mods.flags;
+		String name = node.getSimpleName().toString();
 		TypeDeclaration typeDecl;
 		if ((flags & (Flags.ENUM | Flags.INTERFACE)) == 0) {
 			ClassDeclaration classDecl = new ClassDeclaration();
@@ -374,14 +398,18 @@ public class JcTreeConverter extends JCTree.Visitor {
 			classDecl.rawExtending(toTree(node.extending, FlagKey.TYPE_REFERENCE));
 			fillList(node.typarams, classDecl.rawTypeVariables());
 			NormalTypeBody body = new NormalTypeBody();
-			fillList(node.defs, body.rawMembers(), FlagKey.BLOCKS_ARE_INITIALIZERS, FlagKey.SKIP_IS_DECL);
+			Map<FlagKey, Object> flagKeyMap = ImmutableMap.<FlagKey, Object>of(
+					FlagKey.CONTAINING_TYPE_NAME, name,
+					FlagKey.BLOCKS_ARE_INITIALIZERS, FlagKey.BLOCKS_ARE_INITIALIZERS,
+					FlagKey.SKIP_IS_DECL, FlagKey.SKIP_IS_DECL);
+			fillList(node.defs, body.rawMembers(), flagKeyMap);
 			classDecl.astBody(body);
 		} else {
 			visitTree(node);
 			return;
 		}
 		
-		typeDecl.astName(new Identifier().astValue(node.name.toString()));
+		typeDecl.astName(new Identifier().astValue(name));
 		typeDecl.astModifiers((Modifiers) toTree(node.mods));
 		set(node, typeDecl);
 	}
@@ -809,5 +837,35 @@ public class JcTreeConverter extends JCTree.Visitor {
 	
 	@Override public void visitWhileLoop(JCWhileLoop node) {
 		set(node, new While().rawCondition(toTree(node.getCondition())).rawStatement(toTree(node.getStatement())));
+	}
+	
+	@Override public void visitReturn(JCReturn node) {
+		set(node, new Return().rawValue(toTree(node.getExpression())));
+	}
+	
+	@Override public void visitMethodDef(JCMethodDecl node) {
+		String name = node.getName() == null ? null : node.getName().toString();
+		if ("<init>".equals(name)) {
+			ConstructorDeclaration cd = new ConstructorDeclaration();
+			cd.astModifiers((Modifiers) toTree(node.getModifiers()));
+			cd.rawBody(toTree(node.getBody()));
+			fillList(node.getThrows(), cd.rawThrownTypeReferences(), FlagKey.TYPE_REFERENCE);
+			fillList(node.getTypeParameters(), cd.rawTypeVariables());
+			fillList(node.getParameters(), cd.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
+			String typeName = (String) getFlag(FlagKey.CONTAINING_TYPE_NAME);
+			cd.astTypeName(new Identifier().astValue(typeName));
+			set(node, cd);
+			return;
+		}
+		
+		MethodDeclaration md = new MethodDeclaration();
+		md.rawBody(toTree(node.getBody()));
+		md.astModifiers((Modifiers) toTree(node.getModifiers()));
+		md.astMethodName(new Identifier().astValue(name));
+		fillList(node.getThrows(), md.rawThrownTypeReferences(), FlagKey.TYPE_REFERENCE);
+		fillList(node.getTypeParameters(), md.rawTypeVariables());
+		fillList(node.getParameters(), md.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
+		md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
+		set(node, md);
 	}
 }

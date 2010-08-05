@@ -1108,12 +1108,12 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitConstructorDeclaration(ConstructorDeclaration node) {
 		JCMethodDecl constrDef = treeMaker.MethodDef(
-				(JCModifiers)toTree(node.astModifiers()), 
+				(JCModifiers)toTree(node.astModifiers()),
 				table.init, null,
-				toList(JCTypeParameter.class, node.astTypeVariables()), 
-				toList(JCVariableDecl.class, node.astParameters()), 
-				toList(JCExpression.class, node.astThrownTypeReferences()), 
-				(JCBlock)toTree(node.astBody()), 
+				toList(JCTypeParameter.class, node.astTypeVariables()),
+				toList(JCVariableDecl.class, node.astParameters()),
+				toList(JCExpression.class, node.astThrownTypeReferences()),
+				(JCBlock)toTree(node.astBody()),
 				null
 		);
 		for (JCVariableDecl decl : constrDef.params) {
