@@ -23,7 +23,6 @@ package lombok.ast.javac;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.Map;
 
 import lombok.ast.AlternateConstructorInvocation;
@@ -587,9 +586,6 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	@Override
 	public boolean visitBinaryExpression(BinaryExpression node) {
 		BinaryOperator operator = node.astOperator();
-		if (posOfStructure(node, node.rawOperator(), true) == 96 && node.getPosition().getEnd() == 122) {
-			System.out.println("ARRIVED");
-		}
 		int start = posOfStructure(node, node.rawOperator(), true);
 		int end = node.getPosition().getEnd();
 		
@@ -1240,63 +1236,61 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 		return set(node, posNone(treeMaker.Block(0, List.<JCStatement>nil())));
 	}
 	
-	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);
-	static {
-		UNARY_OPERATORS.put(UnaryOperator.BINARY_NOT, JCTree.COMPL);
-		UNARY_OPERATORS.put(UnaryOperator.LOGICAL_NOT, JCTree.NOT); 
-		UNARY_OPERATORS.put(UnaryOperator.UNARY_PLUS, JCTree.POS);
-		UNARY_OPERATORS.put(UnaryOperator.PREFIX_INCREMENT, JCTree.PREINC); 
-		UNARY_OPERATORS.put(UnaryOperator.UNARY_MINUS, JCTree.NEG);
-		UNARY_OPERATORS.put(UnaryOperator.PREFIX_DECREMENT, JCTree.PREDEC); 
-		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_INCREMENT, JCTree.POSTINC); 
-		UNARY_OPERATORS.put(UnaryOperator.POSTFIX_DECREMENT, JCTree.POSTDEC);
-	}
+	static final BiMap<UnaryOperator, Integer> UNARY_OPERATORS = ImmutableBiMap.<UnaryOperator, Integer>builder()
+			.put(UnaryOperator.BINARY_NOT, JCTree.COMPL)
+			.put(UnaryOperator.LOGICAL_NOT, JCTree.NOT)
+			.put(UnaryOperator.UNARY_PLUS, JCTree.POS)
+			.put(UnaryOperator.PREFIX_INCREMENT, JCTree.PREINC)
+			.put(UnaryOperator.UNARY_MINUS, JCTree.NEG)
+			.put(UnaryOperator.PREFIX_DECREMENT, JCTree.PREDEC)
+			.put(UnaryOperator.POSTFIX_INCREMENT, JCTree.POSTINC)
+			.put(UnaryOperator.POSTFIX_DECREMENT, JCTree.POSTDEC)
+			.build();
 	
-	private static final EnumMap<BinaryOperator, Integer> BINARY_OPERATORS = Maps.newEnumMap(BinaryOperator.class);
-	static {
-		BINARY_OPERATORS.put(BinaryOperator.PLUS_ASSIGN, JCTree.PLUS_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.MINUS_ASSIGN, JCTree.MINUS_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY_ASSIGN, JCTree.MUL_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.DIVIDE_ASSIGN, JCTree.DIV_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.REMAINDER_ASSIGN, JCTree.MOD_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.AND_ASSIGN, JCTree.BITAND_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.XOR_ASSIGN, JCTree.BITXOR_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.OR_ASSIGN, JCTree.BITOR_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT_ASSIGN, JCTree.SL_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT_ASSIGN, JCTree.SR_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT_ASSIGN, JCTree.USR_ASG);
-		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_OR, JCTree.OR);
-		BINARY_OPERATORS.put(BinaryOperator.LOGICAL_AND, JCTree.AND);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_OR, JCTree.BITOR);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_XOR, JCTree.BITXOR);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_AND, JCTree.BITAND);
-		BINARY_OPERATORS.put(BinaryOperator.EQUALS, JCTree.EQ);
-		BINARY_OPERATORS.put(BinaryOperator.NOT_EQUALS, JCTree.NE);
-		BINARY_OPERATORS.put(BinaryOperator.GREATER, JCTree.GT);
-		BINARY_OPERATORS.put(BinaryOperator.GREATER_OR_EQUAL, JCTree.GE);
-		BINARY_OPERATORS.put(BinaryOperator.LESS, JCTree.LT);
-		BINARY_OPERATORS.put(BinaryOperator.LESS_OR_EQUAL, JCTree.LE);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_LEFT, JCTree.SL);
-		BINARY_OPERATORS.put(BinaryOperator.SHIFT_RIGHT, JCTree.SR);
-		BINARY_OPERATORS.put(BinaryOperator.BITWISE_SHIFT_RIGHT, JCTree.USR);
-		BINARY_OPERATORS.put(BinaryOperator.PLUS, JCTree.PLUS);
-		BINARY_OPERATORS.put(BinaryOperator.MINUS, JCTree.MINUS);
-		BINARY_OPERATORS.put(BinaryOperator.MULTIPLY, JCTree.MUL);
-		BINARY_OPERATORS.put(BinaryOperator.DIVIDE, JCTree.DIV);
-		BINARY_OPERATORS.put(BinaryOperator.REMAINDER, JCTree.MOD);
-	}
+	static final BiMap<BinaryOperator, Integer> BINARY_OPERATORS = ImmutableBiMap.<BinaryOperator, Integer>builder()
+			.put(BinaryOperator.PLUS_ASSIGN, JCTree.PLUS_ASG)
+			.put(BinaryOperator.MINUS_ASSIGN, JCTree.MINUS_ASG)
+			.put(BinaryOperator.MULTIPLY_ASSIGN, JCTree.MUL_ASG)
+			.put(BinaryOperator.DIVIDE_ASSIGN, JCTree.DIV_ASG)
+			.put(BinaryOperator.REMAINDER_ASSIGN, JCTree.MOD_ASG)
+			.put(BinaryOperator.AND_ASSIGN, JCTree.BITAND_ASG)
+			.put(BinaryOperator.XOR_ASSIGN, JCTree.BITXOR_ASG)
+			.put(BinaryOperator.OR_ASSIGN, JCTree.BITOR_ASG)
+			.put(BinaryOperator.SHIFT_LEFT_ASSIGN, JCTree.SL_ASG)
+			.put(BinaryOperator.SHIFT_RIGHT_ASSIGN, JCTree.SR_ASG)
+			.put(BinaryOperator.BITWISE_SHIFT_RIGHT_ASSIGN, JCTree.USR_ASG)
+			.put(BinaryOperator.LOGICAL_OR, JCTree.OR)
+			.put(BinaryOperator.LOGICAL_AND, JCTree.AND)
+			.put(BinaryOperator.BITWISE_OR, JCTree.BITOR)
+			.put(BinaryOperator.BITWISE_XOR, JCTree.BITXOR)
+			.put(BinaryOperator.BITWISE_AND, JCTree.BITAND)
+			.put(BinaryOperator.EQUALS, JCTree.EQ)
+			.put(BinaryOperator.NOT_EQUALS, JCTree.NE)
+			.put(BinaryOperator.GREATER, JCTree.GT)
+			.put(BinaryOperator.GREATER_OR_EQUAL, JCTree.GE)
+			.put(BinaryOperator.LESS, JCTree.LT)
+			.put(BinaryOperator.LESS_OR_EQUAL, JCTree.LE)
+			.put(BinaryOperator.SHIFT_LEFT, JCTree.SL)
+			.put(BinaryOperator.SHIFT_RIGHT, JCTree.SR)
+			.put(BinaryOperator.BITWISE_SHIFT_RIGHT, JCTree.USR)
+			.put(BinaryOperator.PLUS, JCTree.PLUS)
+			.put(BinaryOperator.MINUS, JCTree.MINUS)
+			.put(BinaryOperator.MULTIPLY, JCTree.MUL)
+			.put(BinaryOperator.DIVIDE, JCTree.DIV)
+			.put(BinaryOperator.REMAINDER, JCTree.MOD)
+			.build();
 	
 	static final BiMap<String, Integer> PRIMITIVES = ImmutableBiMap.<String, Integer>builder()
-		.put("byte", TypeTags.BYTE)
-		.put("char", TypeTags.CHAR)
-		.put("short", TypeTags.SHORT)
-		.put("int", TypeTags.INT)
-		.put("long", TypeTags.LONG)
-		.put("float", TypeTags.FLOAT)
-		.put("double", TypeTags.DOUBLE)
-		.put("boolean", TypeTags.BOOLEAN)
-		.put("void", TypeTags.VOID)
-		.build();
+			.put("byte", TypeTags.BYTE)
+			.put("char", TypeTags.CHAR)
+			.put("short", TypeTags.SHORT)
+			.put("int", TypeTags.INT)
+			.put("long", TypeTags.LONG)
+			.put("float", TypeTags.FLOAT)
+			.put("double", TypeTags.DOUBLE)
+			.put("boolean", TypeTags.BOOLEAN)
+			.put("void", TypeTags.VOID)
+			.build();
 	
 	static int primitiveTypeTag(String typeName) {
 		Integer primitive = PRIMITIVES.get(typeName);
