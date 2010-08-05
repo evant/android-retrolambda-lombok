@@ -634,7 +634,12 @@ public class JcTreeConverter extends JCTree.Visitor {
 		fillList(node.getTypeArguments(), inv.rawConstructorTypeArguments());
 		inv.rawTypeReference(toTree(node.getIdentifier(), FlagKey.TYPE_REFERENCE));
 		inv.rawQualifier(toTree(node.getEnclosingExpression()));
-		inv.rawAnonymousClassBody(toTree(node.getClassBody()));
+		Node n = toTree(node.getClassBody());
+		if (n instanceof TypeDeclaration) {
+			NormalTypeBody body = ((ClassDeclaration) n).astBody();
+			if (body != null) body.unparent();
+			inv.rawAnonymousClassBody(body);
+		}
 		set(node, inv);
 	}
 	
