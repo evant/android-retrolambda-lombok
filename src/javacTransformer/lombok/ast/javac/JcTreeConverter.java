@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 
+import lombok.ast.Annotation;
+import lombok.ast.AnnotationElement;
 import lombok.ast.ArrayAccess;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
@@ -100,6 +102,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCArrayAccess;
 import com.sun.tools.javac.tree.JCTree.JCArrayTypeTree;
 import com.sun.tools.javac.tree.JCTree.JCAssert;
@@ -867,5 +870,21 @@ public class JcTreeConverter extends JCTree.Visitor {
 		fillList(node.getParameters(), md.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
 		md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
 		set(node, md);
+	}
+	
+	@Override public void visitAnnotation(JCAnnotation node) {
+		Annotation a = new Annotation();
+		a.rawAnnotationTypeReference(toTree(node.getAnnotationType(), FlagKey.TYPE_REFERENCE));
+		for (JCExpression elem : node.getArguments()) {
+			AnnotationElement e = new AnnotationElement();
+			if (elem instanceof JCAssign) {
+				JCExpression rawName = ((JCAssign) elem).getVariable();
+				if (rawName instanceof JCIdent) e.astName(new Identifier().astValue(((JCIdent)rawName).getName().toString()));
+				elem = ((JCAssign) elem).getExpression();
+			}
+			e.rawValue(toTree(elem));
+			a.astElements().addToEnd(e);
+		}
+		set(node, a);
 	}
 }
