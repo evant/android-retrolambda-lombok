@@ -14,6 +14,12 @@ class C003_SimpleExpressions {
         int weird = -'a';
         boolean unary9 = !true;
         int unary10 = (int) 1.1;
+        int negativeInt = -10;
+        float negativeFloat = -20.5F;
+        byte negativeByte = -12;
+        short negativeShort = -32000;
+        long negativeLong = -111111L;
+        double negativeDouble = -8.5;
         Object constructor = new Object();
         Object memberAccess = java.lang.String.CASE_INSENSITIVE_ORDER;
         int p3a = 5 * 2;

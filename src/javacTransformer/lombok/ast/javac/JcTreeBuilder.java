@@ -77,7 +77,6 @@ import lombok.ast.InterfaceDeclaration;
 import lombok.ast.JavadocContainer;
 import lombok.ast.KeywordModifier;
 import lombok.ast.LabelledStatement;
-import lombok.ast.Literal;
 import lombok.ast.MethodDeclaration;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
@@ -507,7 +506,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	public boolean visitUnaryExpression(UnaryExpression node) {
 		Expression operand = node.astOperand();
 		UnaryOperator operator = node.astOperator();
-		if (operator == UnaryOperator.UNARY_MINUS && operand instanceof Literal && !(operand instanceof CharLiteral)) {
+		if (operator == UnaryOperator.UNARY_MINUS && operand instanceof IntegralLiteral) {
 			JCLiteral result = (JCLiteral) toTree(operand);
 			result.value = negative(result.value);
 			return set(node, setPos(operand, result));
