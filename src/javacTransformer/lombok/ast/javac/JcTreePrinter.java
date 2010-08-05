@@ -21,6 +21,7 @@
  */
 package lombok.ast.javac;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,6 +33,8 @@ import com.google.common.collect.MapMaker;
 import com.sun.tools.javac.code.BoundKind;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.TypeTags;
+import com.sun.tools.javac.main.JavaCompiler;
+import com.sun.tools.javac.main.OptionName;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCArrayAccess;
@@ -82,7 +85,9 @@ import com.sun.tools.javac.tree.JCTree.JCWhileLoop;
 import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.tree.JCTree.LetExpr;
 import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
+import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.List;
+import com.sun.tools.javac.util.Options;
 
 /**
  * Diagnostic tool that turns a {@code JCTree} (javac) based tree into a hierarchical dump that should make
@@ -146,6 +151,25 @@ public class JcTreePrinter extends JCTree.Visitor {
 	@Override
 	public String toString() {
 		return output.toString();
+	}
+	
+	public static void main(String[] args) throws IOException {
+		if (args.length == 0) {
+			System.out.println("Usage: Supply a file name to print.");
+			return;
+		}
+		Context context = new Context();
+		
+		Options.instance(context).put(OptionName.ENCODING, "UTF-8");
+		
+		JavaCompiler compiler = new JavaCompiler(context);
+		compiler.genEndPos = true;
+		compiler.keepComments = true;
+		
+		@SuppressWarnings("deprecation") JCCompilationUnit cu = compiler.parse(args[0]);
+		JcTreePrinter printer = new JcTreePrinter(true);
+		cu.accept(printer);
+		System.out.println(printer);
 	}
 	
 	private void printNode(JCTree tree) {
