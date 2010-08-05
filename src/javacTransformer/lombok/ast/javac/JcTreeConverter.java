@@ -29,28 +29,39 @@ import lombok.ast.ArrayAccess;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
 import lombok.ast.ArrayInitializer;
+import lombok.ast.Assert;
 import lombok.ast.BinaryExpression;
 import lombok.ast.BinaryOperator;
 import lombok.ast.Block;
 import lombok.ast.BooleanLiteral;
+import lombok.ast.Break;
+import lombok.ast.Case;
 import lombok.ast.Cast;
+import lombok.ast.Catch;
 import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.ClassLiteral;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorInvocation;
+import lombok.ast.Continue;
+import lombok.ast.Default;
+import lombok.ast.DoWhile;
 import lombok.ast.EmptyDeclaration;
 import lombok.ast.EmptyStatement;
 import lombok.ast.Expression;
 import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
+import lombok.ast.For;
+import lombok.ast.ForEach;
 import lombok.ast.Identifier;
+import lombok.ast.If;
 import lombok.ast.ImportDeclaration;
 import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceInitializer;
 import lombok.ast.InstanceOf;
 import lombok.ast.IntegralLiteral;
 import lombok.ast.KeywordModifier;
+import lombok.ast.LabelledStatement;
 import lombok.ast.MethodInvocation;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
@@ -63,7 +74,11 @@ import lombok.ast.Select;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.StringLiteral;
+import lombok.ast.Switch;
+import lombok.ast.Synchronized;
 import lombok.ast.This;
+import lombok.ast.Throw;
+import lombok.ast.Try;
 import lombok.ast.TypeDeclaration;
 import lombok.ast.TypeReference;
 import lombok.ast.TypeReferencePart;
@@ -74,6 +89,7 @@ import lombok.ast.VariableDeclaration;
 import lombok.ast.VariableDefinition;
 import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.VariableReference;
+import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
 import com.google.common.collect.Lists;
@@ -82,19 +98,29 @@ import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCArrayAccess;
 import com.sun.tools.javac.tree.JCTree.JCArrayTypeTree;
+import com.sun.tools.javac.tree.JCTree.JCAssert;
 import com.sun.tools.javac.tree.JCTree.JCAssign;
 import com.sun.tools.javac.tree.JCTree.JCAssignOp;
 import com.sun.tools.javac.tree.JCTree.JCBinary;
 import com.sun.tools.javac.tree.JCTree.JCBlock;
+import com.sun.tools.javac.tree.JCTree.JCBreak;
+import com.sun.tools.javac.tree.JCTree.JCCase;
+import com.sun.tools.javac.tree.JCTree.JCCatch;
 import com.sun.tools.javac.tree.JCTree.JCClassDecl;
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
 import com.sun.tools.javac.tree.JCTree.JCConditional;
+import com.sun.tools.javac.tree.JCTree.JCContinue;
+import com.sun.tools.javac.tree.JCTree.JCDoWhileLoop;
+import com.sun.tools.javac.tree.JCTree.JCEnhancedForLoop;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCExpressionStatement;
 import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
+import com.sun.tools.javac.tree.JCTree.JCForLoop;
 import com.sun.tools.javac.tree.JCTree.JCIdent;
+import com.sun.tools.javac.tree.JCTree.JCIf;
 import com.sun.tools.javac.tree.JCTree.JCImport;
 import com.sun.tools.javac.tree.JCTree.JCInstanceOf;
+import com.sun.tools.javac.tree.JCTree.JCLabeledStatement;
 import com.sun.tools.javac.tree.JCTree.JCLiteral;
 import com.sun.tools.javac.tree.JCTree.JCMethodInvocation;
 import com.sun.tools.javac.tree.JCTree.JCModifiers;
@@ -103,11 +129,17 @@ import com.sun.tools.javac.tree.JCTree.JCNewClass;
 import com.sun.tools.javac.tree.JCTree.JCParens;
 import com.sun.tools.javac.tree.JCTree.JCPrimitiveTypeTree;
 import com.sun.tools.javac.tree.JCTree.JCSkip;
+import com.sun.tools.javac.tree.JCTree.JCStatement;
+import com.sun.tools.javac.tree.JCTree.JCSwitch;
+import com.sun.tools.javac.tree.JCTree.JCSynchronized;
+import com.sun.tools.javac.tree.JCTree.JCThrow;
+import com.sun.tools.javac.tree.JCTree.JCTry;
 import com.sun.tools.javac.tree.JCTree.JCTypeApply;
 import com.sun.tools.javac.tree.JCTree.JCTypeCast;
 import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCUnary;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
+import com.sun.tools.javac.tree.JCTree.JCWhileLoop;
 import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.util.List;
 
@@ -665,5 +697,117 @@ public class JcTreeConverter extends JCTree.Visitor {
 		aa.rawIndexExpression(toTree(node.getIndex()));
 		aa.rawOperand(toTree(node.getExpression()));
 		set(node, aa);
+	}
+	
+	@Override public void visitAssert(JCAssert node) {
+		set(node, new Assert().rawAssertion(toTree(node.getCondition())).rawMessage(toTree(node.getDetail())));
+	}
+	
+	@Override public void visitDoLoop(JCDoWhileLoop node) {
+		set(node, new DoWhile().rawCondition(toTree(node.getCondition())).rawStatement(toTree(node.getStatement())));
+	}
+	
+	@Override public void visitContinue(JCContinue node) {
+		Continue c = new Continue();
+		if (node.getLabel() != null) {
+			c.astLabel(new Identifier().astValue(node.getLabel().toString()));
+		}
+		set(node, c);
+	}
+	
+	@Override public void visitBreak(JCBreak node) {
+		Break b = new Break();
+		if (node.getLabel() != null) {
+			b.astLabel(new Identifier().astValue(node.getLabel().toString()));
+		}
+		set(node, b);
+	}
+	
+	@Override public void visitForeachLoop(JCEnhancedForLoop node) {
+		ForEach fe = new ForEach();
+		fe.rawIterable(toTree(node.getExpression()));
+		fe.rawStatement(toTree(node.getStatement()));
+		fe.rawVariable(toTree(node.getVariable(), FlagKey.VARDEF_IS_DEFINITION));
+		set(node, fe);
+	}
+	
+	@Override public void visitIf(JCIf node) {
+		If i = new If();
+		i.rawCondition(toTree(node.getCondition()));
+		i.rawStatement(toTree(node.getThenStatement()));
+		i.rawElseStatement(toTree(node.getElseStatement()));
+		set(node, i);
+	}
+	
+	@Override public void visitLabelled(JCLabeledStatement node) {
+		Identifier lbl = new Identifier().astValue(node.getLabel().toString());
+		set(node, new LabelledStatement().rawStatement(toTree(node.getStatement())).astLabel(lbl));
+	}
+	
+	@Override public void visitForLoop(JCForLoop node) {
+		For f = new For();
+		f.rawCondition(toTree(node.getCondition()));
+		f.rawStatement(toTree(node.getStatement()));
+		for (JCExpressionStatement upd : node.getUpdate()) {
+			f.rawUpdates().addToEnd(toTree(upd.getExpression()));
+		}
+		List<JCStatement> initializers = node.getInitializer();
+		// Multiple vardefs in a row need to trigger the JCVD version AND be washed through fillList to be turned into 1 VD.
+		if (!initializers.isEmpty() && initializers.get(0) instanceof JCVariableDecl) {
+			Block tmp = new Block();
+			fillList(initializers, tmp.rawContents(), FlagKey.VARDEF_IS_DEFINITION);
+			Node varDecl = tmp.rawContents().first();
+			if (varDecl != null) varDecl.unparent();
+			f.rawVariableDeclaration(varDecl);
+		} else {
+			for (JCStatement init : initializers) {
+				if (init instanceof JCExpressionStatement) {
+					f.rawExpressionInits().addToEnd(toTree(((JCExpressionStatement) init).getExpression()));
+				} else {
+					f.rawExpressionInits().addToEnd(toTree(init));
+				}
+			}
+		}
+		set(node, f);
+	}
+	
+	@Override public void visitSwitch(JCSwitch node) {
+		Switch s = new Switch();
+		s.rawCondition(toTree(node.getExpression()));
+		Block b = new Block();
+		s.astBody(b);
+		for (JCCase c : node.getCases()) {
+			JCExpression rawExpr = c.getExpression();
+			if (rawExpr == null) b.rawContents().addToEnd(setPos(c, new Default()));
+			else b.rawContents().addToEnd(setPos(c, new Case().rawCondition(toTree(rawExpr))));
+			fillList(c.getStatements(), b.rawContents());
+		}
+		set(node, s);
+	}
+	
+	@Override public void visitSynchronized(JCSynchronized node) {
+		set(node, new Synchronized().rawLock(toTree(node.getExpression())).rawBody(toTree(node.getBlock())));
+	}
+	
+	@Override public void visitTry(JCTry node) {
+		Try t = new Try();
+		t.rawBody(toTree(node.getBlock()));
+		t.rawFinally(toTree(node.getFinallyBlock()));
+		fillList(node.getCatches(), t.rawCatches());
+		set(node, t);
+	}
+	
+	@Override public void visitCatch(JCCatch node) {
+		set(node, new Catch()
+				.rawExceptionDeclaration(toTree(node.getParameter(), FlagKey.VARDEF_IS_DEFINITION))
+				.rawBody(toTree(node.getBlock())));
+	}
+	
+	@Override public void visitThrow(JCThrow node) {
+		set(node, new Throw().rawThrowable(toTree(node.getExpression())));
+	}
+	
+	@Override public void visitWhileLoop(JCWhileLoop node) {
+		set(node, new While().rawCondition(toTree(node.getCondition())).rawStatement(toTree(node.getStatement())));
 	}
 }
