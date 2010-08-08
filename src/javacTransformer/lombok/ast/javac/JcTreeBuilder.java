@@ -141,6 +141,7 @@ import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.Context;
+import com.sun.tools.javac.util.JavacFileManager;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.Name.Table;
@@ -156,8 +157,18 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	private List<? extends JCTree> result = null;
 	
+	public JcTreeBuilder() {
+		this(null, createNewContext());
+	}
+	
+	private static Context createNewContext() {
+		Context c = new Context();
+		JavacFileManager.preRegister(c);
+		return c;
+	}
+	
 	public JcTreeBuilder(Source source, Context context) {
-		this(source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context), Maps.<JCTree, Integer>newHashMap());
+		this(source == null ? null : source.getSourceStructures(), TreeMaker.instance(context), Name.Table.instance(context), Maps.<JCTree, Integer>newHashMap());
 	}
 	
 	private JcTreeBuilder(Map<Node, Collection<SourceStructure>> structures, TreeMaker treeMaker, Table table, Map<JCTree, Integer> endPosTable) {
