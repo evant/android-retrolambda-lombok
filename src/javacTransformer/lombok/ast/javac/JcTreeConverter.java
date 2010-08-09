@@ -53,7 +53,9 @@ import lombok.ast.Default;
 import lombok.ast.DoWhile;
 import lombok.ast.EmptyDeclaration;
 import lombok.ast.EmptyStatement;
+import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
+import lombok.ast.EnumTypeBody;
 import lombok.ast.Expression;
 import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
@@ -292,13 +294,13 @@ public class JcTreeConverter extends JCTree.Visitor {
 		return dims;
 	}
 	
-	private void fillList(List<? extends JCTree> nodes, RawListAccessor<?, ?> list, FlagKey... keys) {
+	private void fillList(java.util.List<? extends JCTree> nodes, RawListAccessor<?, ?> list, FlagKey... keys) {
 		Map<FlagKey, Object> map = Maps.newEnumMap(FlagKey.class);
 		for (FlagKey key : keys) map.put(key, key);
 		fillList(nodes, list, map);
 	}
 	
-	private void fillList(List<? extends JCTree> nodes, RawListAccessor<?, ?> list, Map<FlagKey, Object> keys) {
+	private void fillList(java.util.List<? extends JCTree> nodes, RawListAccessor<?, ?> list, Map<FlagKey, Object> keys) {
 		if (nodes == null) return;
 		
 		// int i, j; is represented with multiple JCVariableDeclarations, but in lombok.ast, it's 1 node. We need to
@@ -399,6 +401,8 @@ public class JcTreeConverter extends JCTree.Visitor {
 		set(node, imp);
 	}
 	
+	private static final long ENUM_CONSTANT_FLAGS = Flags.PUBLIC | Flags.STATIC | Flags.FINAL | Flags.ENUM;
+	
 	@Override public void visitClassDef(JCClassDecl node) {
 		long flags = node.mods.flags;
 		String name = node.getSimpleName().toString();
@@ -435,8 +439,36 @@ public class JcTreeConverter extends JCTree.Visitor {
 		} else if ((flags & Flags.ENUM) != 0) {
 			EnumDeclaration enumDecl = new EnumDeclaration();
 			typeDecl = enumDecl;
-			visitTree(node);
-			return;
+			EnumTypeBody body = new EnumTypeBody();
+			fillList(node.implementing, enumDecl.rawImplementing(), FlagKey.TYPE_REFERENCE);
+			java.util.List<JCTree> defs = new ArrayList<JCTree>();
+			
+			for (JCTree def : node.defs) {
+				if (def instanceof JCVariableDecl) {
+					JCVariableDecl vd = (JCVariableDecl) def;
+					if (vd.mods != null && (vd.mods.flags & ENUM_CONSTANT_FLAGS) == ENUM_CONSTANT_FLAGS) {
+						// This is an enum constant, not a field of the enum class.
+						EnumConstant ec = new EnumConstant();
+						ec.astName(new Identifier().astValue(vd.getName().toString()));
+						fillList(vd.mods.annotations, ec.rawAnnotations());
+						if (vd.init instanceof JCNewClass) {
+							JCNewClass init = (JCNewClass) vd.init;
+							fillList(init.getArguments(), ec.rawArguments());
+							if (init.getClassBody() != null) {
+								NormalTypeBody constantBody = new NormalTypeBody();
+								fillList(init.getClassBody().getMembers(), constantBody.rawMembers());
+								ec.astBody(constantBody);
+							}
+						}
+						body.astConstants().addToEnd(ec);
+						continue;
+					}
+				}
+				
+				defs.add(def);
+			}
+			fillList(defs, body.rawMembers(), flagKeyMap);
+			enumDecl.astBody(body);
 		} else {
 			throw new IllegalStateException("Unknown type declaration: " + node);
 		}
@@ -660,7 +692,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 	@Override public void visitNewClass(JCNewClass node) {
 		ConstructorInvocation inv = new ConstructorInvocation();
 		fillList(node.getArguments(), inv.rawArguments());
-		fillList(node.getTypeArguments(), inv.rawConstructorTypeArguments());
+		fillList(node.getTypeArguments(), inv.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
 		inv.rawTypeReference(toTree(node.getIdentifier(), FlagKey.TYPE_REFERENCE));
 		inv.rawQualifier(toTree(node.getEnclosingExpression()));
 		Node n = toTree(node.getClassBody());
@@ -721,7 +753,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 			sel = ((JCFieldAccess) sel).getExpression();
 		}
 		inv.astName(id).rawOperand(toTree(sel));
-		fillList(node.getTypeArguments(), inv.rawMethodTypeArguments());
+		fillList(node.getTypeArguments(), inv.rawMethodTypeArguments(), FlagKey.TYPE_REFERENCE);
 		fillList(node.getArguments(), inv.rawArguments());
 		set(node, inv);
 	}

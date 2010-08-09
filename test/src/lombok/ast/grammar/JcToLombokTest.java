@@ -51,7 +51,7 @@ public class JcToLombokTest extends TreeBuilderRunner<JCTree> {
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(
 				DirDescriptor.of(new File("test/resources/idempotency"), true)
-						.withInclusion(Pattern.compile("^.*(?:[a-g]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+						.withInclusion(Pattern.compile("^.*(?:[a-h]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
 //		return Arrays.asList(
 //				DirDescriptor.of(new File("test/resources/idempotency"), true),
 //				DirDescriptor.of(new File("test/resources/alias"), true),
