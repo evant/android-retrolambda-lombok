@@ -24,7 +24,6 @@ package lombok.ast.grammar;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.regex.Pattern;
 
 import lombok.ast.Node;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;

@@ -45,6 +45,7 @@ import lombok.ast.Catch;
 import lombok.ast.CharLiteral;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.ClassLiteral;
+import lombok.ast.Comment;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.ConstructorInvocation;
@@ -69,6 +70,7 @@ import lombok.ast.InstanceInitializer;
 import lombok.ast.InstanceOf;
 import lombok.ast.IntegralLiteral;
 import lombok.ast.InterfaceDeclaration;
+import lombok.ast.JavadocContainer;
 import lombok.ast.KeywordModifier;
 import lombok.ast.LabelledStatement;
 import lombok.ast.MethodDeclaration;
@@ -279,7 +281,9 @@ public class JcTreeConverter extends JCTree.Visitor {
 		}
 		
 		if (createDeclaration) {
-			 return new VariableDeclaration().astDefinition(def);
+			VariableDeclaration decl = new VariableDeclaration().astDefinition(def);
+			addJavadoc(decl, first.mods);
+			return decl;
 		}
 		
 		return def;
@@ -475,7 +479,14 @@ public class JcTreeConverter extends JCTree.Visitor {
 		
 		typeDecl.astName(new Identifier().astValue(name));
 		typeDecl.astModifiers((Modifiers) toTree(node.mods));
+		addJavadoc(typeDecl, node.mods);
 		set(node, typeDecl);
+	}
+	
+	private void addJavadoc(JavadocContainer container, JCModifiers mods) {
+		if ((mods.flags & Flags.DEPRECATED) != 0) {
+			container.astJavadoc(new Comment().astBlockComment(true).astContent("*\n * @deprecated\n "));
+		}
 	}
 	
 	@Override public void visitModifiers(JCModifiers node) {
@@ -923,6 +934,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 			fillList(node.getParameters(), cd.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
 			String typeName = (String) getFlag(FlagKey.CONTAINING_TYPE_NAME);
 			cd.astTypeName(new Identifier().astValue(typeName));
+			addJavadoc(cd, node.mods);
 			set(node, cd);
 			return;
 		}
@@ -933,6 +945,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 			md.astMethodName(new Identifier().astValue(name));
 			md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
 			md.rawDefaultValue(toTree(node.getDefaultValue()));
+			addJavadoc(md, node.mods);
 			set(node, md);
 			return;
 		}
@@ -945,6 +958,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 		fillList(node.getTypeParameters(), md.rawTypeVariables());
 		fillList(node.getParameters(), md.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
 		md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
+		addJavadoc(md, node.mods);
 		set(node, md);
 	}
 	
