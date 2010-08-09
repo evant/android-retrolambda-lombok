@@ -26,7 +26,9 @@ import java.util.Collections;
 import java.util.Map;
 
 import lombok.ast.Annotation;
+import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
+import lombok.ast.AnnotationMethodDeclaration;
 import lombok.ast.ArrayAccess;
 import lombok.ast.ArrayCreation;
 import lombok.ast.ArrayDimension;
@@ -51,6 +53,7 @@ import lombok.ast.Default;
 import lombok.ast.DoWhile;
 import lombok.ast.EmptyDeclaration;
 import lombok.ast.EmptyStatement;
+import lombok.ast.EnumDeclaration;
 import lombok.ast.Expression;
 import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
@@ -63,6 +66,7 @@ import lombok.ast.InlineIfExpression;
 import lombok.ast.InstanceInitializer;
 import lombok.ast.InstanceOf;
 import lombok.ast.IntegralLiteral;
+import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
 import lombok.ast.LabelledStatement;
 import lombok.ast.MethodDeclaration;
@@ -97,7 +101,6 @@ import lombok.ast.VariableReference;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.Flags;
@@ -159,7 +162,8 @@ public class JcTreeConverter extends JCTree.Visitor {
 		VARDEF_IS_DEFINITION,
 		NO_VARDECL_FOLDING,
 		CONTAINING_TYPE_NAME,
-		TYPE_REFERENCE;
+		TYPE_REFERENCE,
+		METHODS_ARE_ANNMETHODS;
 	}
 	
 	private java.util.List<? extends Node> result;
@@ -325,6 +329,11 @@ public class JcTreeConverter extends JCTree.Visitor {
 		if (!varDeclQueue.isEmpty()) list.addToEnd(toVariableDefinition(varDeclQueue, keys));
 	}
 	
+	private static JCTree removeParens(JCTree node) {
+		if (!(node instanceof JCParens)) return node;
+		return ((JCParens) node).getExpression();
+	}
+	
 	public static Node convert(JCCompilationUnit cu) {
 		return convert(cu, cu.endPositions);
 	}
@@ -394,6 +403,11 @@ public class JcTreeConverter extends JCTree.Visitor {
 		long flags = node.mods.flags;
 		String name = node.getSimpleName().toString();
 		TypeDeclaration typeDecl;
+		Map<FlagKey, Object> flagKeyMap = Maps.newHashMap();
+		flagKeyMap.put(FlagKey.CONTAINING_TYPE_NAME, name);
+		flagKeyMap.put(FlagKey.BLOCKS_ARE_INITIALIZERS, FlagKey.BLOCKS_ARE_INITIALIZERS);
+		flagKeyMap.put(FlagKey.SKIP_IS_DECL, FlagKey.SKIP_IS_DECL);
+		
 		if ((flags & (Flags.ENUM | Flags.INTERFACE)) == 0) {
 			ClassDeclaration classDecl = new ClassDeclaration();
 			typeDecl = classDecl;
@@ -401,15 +415,30 @@ public class JcTreeConverter extends JCTree.Visitor {
 			classDecl.rawExtending(toTree(node.extending, FlagKey.TYPE_REFERENCE));
 			fillList(node.typarams, classDecl.rawTypeVariables());
 			NormalTypeBody body = new NormalTypeBody();
-			Map<FlagKey, Object> flagKeyMap = ImmutableMap.<FlagKey, Object>of(
-					FlagKey.CONTAINING_TYPE_NAME, name,
-					FlagKey.BLOCKS_ARE_INITIALIZERS, FlagKey.BLOCKS_ARE_INITIALIZERS,
-					FlagKey.SKIP_IS_DECL, FlagKey.SKIP_IS_DECL);
 			fillList(node.defs, body.rawMembers(), flagKeyMap);
 			classDecl.astBody(body);
-		} else {
+		} else if ((flags & Flags.ANNOTATION) != 0) {
+			AnnotationDeclaration annDecl = new AnnotationDeclaration();
+			typeDecl = annDecl;
+			NormalTypeBody body = new NormalTypeBody();
+			flagKeyMap.put(FlagKey.METHODS_ARE_ANNMETHODS, FlagKey.METHODS_ARE_ANNMETHODS);
+			fillList(node.defs, body.rawMembers(), flagKeyMap);
+			annDecl.astBody(body);
+		} else if ((flags & Flags.INTERFACE) != 0) {
+			InterfaceDeclaration itfDecl = new InterfaceDeclaration();
+			typeDecl = itfDecl;
+			fillList(node.typarams, itfDecl.rawTypeVariables());
+			fillList(node.implementing, itfDecl.rawExtending(), FlagKey.TYPE_REFERENCE);
+			NormalTypeBody body = new NormalTypeBody();
+			fillList(node.defs, body.rawMembers(), flagKeyMap);
+			itfDecl.astBody(body);
+		} else if ((flags & Flags.ENUM) != 0) {
+			EnumDeclaration enumDecl = new EnumDeclaration();
+			typeDecl = enumDecl;
 			visitTree(node);
 			return;
+		} else {
+			throw new IllegalStateException("Unknown type declaration: " + node);
 		}
 		
 		typeDecl.astName(new Identifier().astValue(name));
@@ -740,7 +769,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	@Override public void visitDoLoop(JCDoWhileLoop node) {
-		set(node, new DoWhile().rawCondition(toTree(node.getCondition())).rawStatement(toTree(node.getStatement())));
+		set(node, new DoWhile().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
 	}
 	
 	@Override public void visitContinue(JCContinue node) {
@@ -769,7 +798,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 	
 	@Override public void visitIf(JCIf node) {
 		If i = new If();
-		i.rawCondition(toTree(node.getCondition()));
+		i.rawCondition(toTree(removeParens(node.getCondition())));
 		i.rawStatement(toTree(node.getThenStatement()));
 		i.rawElseStatement(toTree(node.getElseStatement()));
 		set(node, i);
@@ -809,7 +838,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 	
 	@Override public void visitSwitch(JCSwitch node) {
 		Switch s = new Switch();
-		s.rawCondition(toTree(node.getExpression()));
+		s.rawCondition(toTree(removeParens(node.getExpression())));
 		Block b = new Block();
 		s.astBody(b);
 		for (JCCase c : node.getCases()) {
@@ -822,7 +851,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	@Override public void visitSynchronized(JCSynchronized node) {
-		set(node, new Synchronized().rawLock(toTree(node.getExpression())).rawBody(toTree(node.getBlock())));
+		set(node, new Synchronized().rawLock(toTree(removeParens(node.getExpression()))).rawBody(toTree(node.getBlock())));
 	}
 	
 	@Override public void visitTry(JCTry node) {
@@ -844,7 +873,7 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	@Override public void visitWhileLoop(JCWhileLoop node) {
-		set(node, new While().rawCondition(toTree(node.getCondition())).rawStatement(toTree(node.getStatement())));
+		set(node, new While().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
 	}
 	
 	@Override public void visitReturn(JCReturn node) {
@@ -863,6 +892,16 @@ public class JcTreeConverter extends JCTree.Visitor {
 			String typeName = (String) getFlag(FlagKey.CONTAINING_TYPE_NAME);
 			cd.astTypeName(new Identifier().astValue(typeName));
 			set(node, cd);
+			return;
+		}
+		
+		if (hasFlag(FlagKey.METHODS_ARE_ANNMETHODS)) {
+			AnnotationMethodDeclaration md = new AnnotationMethodDeclaration();
+			md.astModifiers((Modifiers) toTree(node.getModifiers()));
+			md.astMethodName(new Identifier().astValue(name));
+			md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
+			md.rawDefaultValue(toTree(node.getDefaultValue()));
+			set(node, md);
 			return;
 		}
 		

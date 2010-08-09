@@ -45,7 +45,7 @@ import com.sun.tools.javac.util.Options;
 @RunWith(RunForEachFileInDirRunner.class)
 public class JcToLombokTest extends TreeBuilderRunner<JCTree> {
 	public JcToLombokTest() {
-		super(false);
+		super(true);
 	}
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {

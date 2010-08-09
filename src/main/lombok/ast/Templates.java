@@ -852,7 +852,6 @@ class KeywordModifierTemplate {
 		.put("volatile", Modifier.VOLATILE)
 		.put("transient", Modifier.TRANSIENT)
 		.put("native", Modifier.NATIVE)
-		.put("interface", Modifier.INTERFACE)
 		.put("abstract", Modifier.ABSTRACT)
 		.put("strictfp", Modifier.STRICT)
 		.build();
