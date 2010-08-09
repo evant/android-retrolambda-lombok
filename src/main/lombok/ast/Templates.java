@@ -1328,6 +1328,26 @@ class EmptyDeclarationTemplate {
 	}
 	
 	@CopyMethod
+	static EmptyDeclaration astJavadoc(EmptyDeclaration self, Comment javadoc) {
+		return self;
+	}
+	
+	@CopyMethod
+	static EmptyDeclaration rawJavadoc(EmptyDeclaration self, Node javadoc) {
+		return self;
+	}
+	
+	@CopyMethod
+	static Comment astJavadoc(EmptyDeclaration self) {
+		return null;
+	}
+	
+	@CopyMethod
+	static Node rawJavadoc(EmptyDeclaration self) {
+		return null;
+	}
+	
+	@CopyMethod
 	static TypeBody astBody(EmptyDeclaration self) {
 		return null;
 	}

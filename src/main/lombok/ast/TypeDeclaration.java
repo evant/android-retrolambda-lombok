@@ -26,7 +26,12 @@ import lombok.ast.template.ParentAccessor;
 /**
  * Common interface shared by all type declaration nodes.
  */
-public interface TypeDeclaration extends Node, DescribedNode {
+public interface TypeDeclaration extends Node, DescribedNode, JavadocContainer {
+	Comment astJavadoc();
+	Node rawJavadoc();
+	TypeDeclaration astJavadoc(Comment comment);
+	TypeDeclaration rawJavadoc(Node comment);
+	
 	Modifiers astModifiers();
 	TypeDeclaration astModifiers(Modifiers modifiers);
 	
