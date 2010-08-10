@@ -21,35 +21,46 @@
  */
 package lombok.ast.grammar;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.regex.Pattern;
 
+import lombok.ast.CharLiteral;
+import lombok.ast.FloatingPointLiteral;
+import lombok.ast.IntegralLiteral;
 import lombok.ast.Node;
+import lombok.ast.StringLiteral;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
-import lombok.ast.javac.JcTreeBuilder;
 import lombok.ast.javac.JcTreeConverter;
-import lombok.ast.javac.JcTreePrinter;
+import lombok.ast.printer.SourcePrinter;
+import lombok.ast.printer.StructureFormatter;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.sun.tools.javac.main.JavaCompiler;
 import com.sun.tools.javac.main.OptionName;
-import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Options;
 
+/**
+ * Compares a lombok.ast AST parsed by lombok with a JCTree AST parsed by javac, converted to lombok.ast.
+ */
 @RunWith(RunForEachFileInDirRunner.class)
-public class JcToLombokTest extends TreeBuilderRunner<JCTree> {
-	public JcToLombokTest() {
-		super(true);
+public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
+	public JcTreeConverterType1Test() {
+		super(false);
 	}
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(
-				DirDescriptor.of(new File("test/resources/idempotency"), true));
+				DirDescriptor.of(new File("test/resources/alias"), true)
+						.withInclusion(Pattern.compile("^.*(?:[a]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
 //		return Arrays.asList(
 //				DirDescriptor.of(new File("test/resources/idempotency"), true),
 //				DirDescriptor.of(new File("test/resources/alias"), true),
@@ -61,14 +72,24 @@ public class JcToLombokTest extends TreeBuilderRunner<JCTree> {
 		return testCompiler(source);
 	}
 	
-	protected String convertToString(Source source, JCTree tree) {
-		JcTreePrinter printer = new JcTreePrinter(false);
-		tree.accept(printer);
-		String string = printer.toString();
-		return string;
+	protected String convertToString(Source source, Node tree) {
+		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
+		formatter.skipProperty(IntegralLiteral.class, "value");
+		formatter.skipProperty(FloatingPointLiteral.class, "value");
+		formatter.skipProperty(CharLiteral.class, "value");
+		formatter.skipProperty(StringLiteral.class, "value");
+		tree.accept(new SourcePrinter(formatter));
+		return formatter.finish();
 	}
 	
-	protected JCTree parseWithLombok(Source source) {
+	protected Node parseWithLombok(Source source) {
+		List<Node> nodes = source.getNodes();
+		assertEquals(1, nodes.size());
+		
+		return nodes.get(0);
+	}
+	
+	protected Node parseWithTargetCompiler(Source source) {
 		Context context = new Context();
 		
 		Options.instance(context).put(OptionName.ENCODING, "UTF-8");
@@ -78,22 +99,6 @@ public class JcToLombokTest extends TreeBuilderRunner<JCTree> {
 		compiler.keepComments = true;
 		
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
-		Node n = JcTreeConverter.convert(cu);
-		JcTreeBuilder builder = new JcTreeBuilder();
-		n.accept(builder);
-		return builder.get();
-	}
-	
-	protected JCTree parseWithTargetCompiler(Source source) {
-		Context context = new Context();
-		
-		Options.instance(context).put(OptionName.ENCODING, "UTF-8");
-		
-		JavaCompiler compiler = new JavaCompiler(context);
-		compiler.genEndPos = true;
-		compiler.keepComments = true;
-		
-		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
-		return cu;
+		return JcTreeConverter.convert(cu);
 	}
 }
