@@ -573,27 +573,66 @@ public class TemplateProcessor extends AbstractProcessor {
 			out.write("\t\treturn result;\n\t}\n\t\n");
 		}
 		
+		/* replaceChild */ {
+			out.write("\t@java.lang.Override public boolean replaceChild(Node original, Node replacement) throws lombok.ast.AstException {\n");
+			for (FieldData field : fields) {
+				if (!field.isAstNode()) continue;
+				if (!field.isList()) {
+					out.write("\t\tif (this.");
+					out.write(field.getName());
+					out.write(" == original) {\n");
+					if (!field.isForcedType()) {
+						out.write("\t\t\tthis.raw");
+						out.write(field.titleCasedName());
+						out.write("(replacement);\n");
+						out.write("\t\t\treturn true;\n");
+					} else {
+						out.write("\t\t\tif (replacement instanceof ");
+						out.write(field.getType());
+						out.write(") {\n");
+						out.write("\t\t\t\tthis.ast");
+						out.write(field.titleCasedName());
+						out.write("((");
+						out.write(field.getType());
+						out.write(") replacement);\n");
+						out.write("\t\t\t\treturn true;\n");
+						out.write("\t\t\t} else throw new lombok.ast.AstException(this, String.format(\n");
+						out.write("\t\t\t\t\t\"Cannot replace node: replacement must be of type %s but is of type %s\",\n");
+						out.write("\t\t\t\t\t\"");
+						out.write(field.getType());
+						out.write("\", replacement == null ? \"null\" : replacement.getClass().getName()));\n");
+					}
+					out.write("\t\t}\n");
+				} else {
+					out.write("\t\tif (this.raw");
+					out.write(field.titleCasedName());
+					out.write("().replace(original, replacement)) return true;\n");
+				}
+			}
+			out.write("\t\treturn false;\n\t}\n\t\n");
+		}
+		
 		/* detach */ {
-			out.write("\t@java.lang.Override public void detach(Node child) {\n");
+			out.write("\t@java.lang.Override public boolean detach(Node child) {\n");
 			for (FieldData field : fields) {
 				if (!field.isAstNode()) continue;
 				if (!field.isList()) {
 					out.write("\t\tif (this.");
 					out.write(field.getName());
 					out.write(" == child) {\n");
-					out.write("\t\t\tthis.disown((AbstractNode)child);\n");
+					out.write("\t\t\tthis.disown((AbstractNode) child);\n");
 					out.write("\t\t\tthis.");
 					out.write(field.getName());
 					out.write(" = null;\n");
-					out.write("\t\t\treturn;\n");
+					out.write("\t\t\treturn true;\n");
 					out.write("\t\t}\n");
 				} else {
-					out.write("\t\tthis.raw");
+					out.write("\t\tif (this.raw");
 					out.write(field.titleCasedName());
-					out.write("().remove(child);\n");
+					out.write("().remove(child)) return true;\n");
 				}
 			}
-			out.write("\t}\n\t\n");
+			out.write("\t\treturn false;\n\t}\n\t\n");
 		}
 		
 		/* accept */ {

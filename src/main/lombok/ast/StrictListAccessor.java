@@ -37,7 +37,7 @@ public interface StrictListAccessor<T extends Node, P extends Node> extends Iter
 	P addToEnd(T... node);
 	P addBefore(Node ref, T... node);
 	P addAfter(Node ref, T... node);
-	P replace(Node source, T replacement);
+	void replace(Node source, T replacement) throws NoSuchElementException;
 	void remove(Node source) throws NoSuchElementException;
 	RawListAccessor<T, P> asRawAccessor();
 }

@@ -57,6 +57,11 @@ abstract class AbstractNode implements Node {
 		return emptyList();
 	}
 	
+	@Override public boolean replace(Node replacement) throws AstException {
+		if (this.getParent() == null) return false;
+		return this.parent.replaceChild(this, replacement);
+	}
+	
 	@Override public void unparent() {
 		if (this.parent != null) this.parent.detach(this);
 	}
@@ -124,8 +129,14 @@ abstract class AbstractNode implements Node {
 		return formatter.finish();
 	}
 	
-	@Override public void detach(Node child) {
-		//Intentionally left blank - custom implementations are usually terminal nodes that can't have children.
+	@Override public boolean replaceChild(Node original, Node replacement) {
+		// Intentionally left blank - custom implementations are usually terminal nodes that can't have children.
+		return false;
+	}
+	
+	@Override public boolean detach(Node child) {
+		// Intentionally left blank - custom implementations are usually terminal nodes that can't have children.
+		return false;
 	}
 	
 	@Override public void addDanglingNode(Node dangling) {

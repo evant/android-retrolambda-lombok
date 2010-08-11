@@ -42,7 +42,16 @@ abstract class TemporaryNode implements Node {
 		return Collections.emptyList();
 	}
 	
-	@Override public void detach(Node child) {
+	@Override public boolean detach(Node child) {
+		return false;
+	}
+	
+	@Override public boolean replaceChild(Node original, Node replacement) {
+		return false;
+	}
+	
+	@Override public boolean replace(Node replacement) {
+		return false;
 	}
 	
 	@Override public void unparent() {

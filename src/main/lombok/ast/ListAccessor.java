@@ -97,7 +97,7 @@ class ListAccessor<T extends Node, P extends Node> {
 				throw new NoSuchElementException();
 			}
 			
-			@Override public P replace(Node source, T replacement) throws NoSuchElementException {
+			@Override public void replace(Node source, T replacement) throws NoSuchElementException {
 				throw new NoSuchElementException(listName + " does not contain: " + source);
 			}
 			
@@ -169,8 +169,8 @@ class ListAccessor<T extends Node, P extends Node> {
 				return false;
 			}
 			
-			@Override public P replace(Node source, Node replacement) throws NoSuchElementException {
-				throw new NoSuchElementException(listName + " does not contain: " + source);
+			@Override public boolean replace(Node source, Node replacement) throws NoSuchElementException {
+				return false;
 			}
 			
 			@Override public int size() {
@@ -243,11 +243,9 @@ class ListAccessor<T extends Node, P extends Node> {
 		
 		@Override
 		public P migrateAllFrom(RawListAccessor<?, ?> otherList) {
-			Iterator<Node> it = otherList.iterator();
-			while (it.hasNext()) {
-				AbstractNode n = (AbstractNode)it.next();
-				((AbstractNode)otherList.owner()).disown(n);
-				//TODO This doesn't actually remove the item from the other list!
+			while (!otherList.isEmpty()) {
+				AbstractNode n = (AbstractNode) otherList.first();
+				otherList.remove(n);
 				addToEnd(n);
 			}
 			
@@ -326,9 +324,10 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override
-		public P replace(Node source, Node replacement) throws NoSuchElementException {
+		public boolean replace(Node source, Node replacement) throws NoSuchElementException {
+			if (source == null) return false;
+			if (source.getParent() != parent) return false;
 			if (replacement != null) ((AbstractNode)replacement).ensureParentless();
-			parent.ensureParentage((AbstractNode)source);
 			
 			for (int i = 0; i < list.size(); i++) {
 				if (list.get(i) == source) {
@@ -341,11 +340,11 @@ class ListAccessor<T extends Node, P extends Node> {
 					}
 					if (replacement == null) list.remove(i);	//screws up for counter, but we return right after anyway, so it doesn't matter.
 					else list.set(i, (AbstractNode)replacement);
-					return returnAsParent;
+					return true;
 				}
 			}
 			
-			throw new NoSuchElementException(listName + " does not contain: " + source);
+			return false;
 		}
 		
 		@Override
@@ -412,11 +411,9 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public P migrateAllFrom(StrictListAccessor<? extends T, ?> otherList) {
-			Iterator<? extends T> it = otherList.iterator();
-			while (it.hasNext()) {
-				AbstractNode n = (AbstractNode)it.next();
-				((AbstractNode)otherList.owner()).disown(n);
-				//TODO This doesn't actually remove the item from the other list!
+			while (!otherList.isEmpty()) {
+				AbstractNode n = (AbstractNode) otherList.first();
+				otherList.remove(n);
 				raw.addToEnd(n);
 			}
 			
@@ -439,23 +436,22 @@ class ListAccessor<T extends Node, P extends Node> {
 			return raw.addAfter(ref, node);
 		}
 		
-		@Override public P replace(Node source, T replacement) throws NoSuchElementException {
-			return raw.replace(source, replacement);
+		@Override public void replace(Node source, T replacement) throws NoSuchElementException {
+			if (source == null) throw new NullPointerException();
+			if (source.getParent() != parent) throw new NoSuchElementException(listName + " is not the parent of: " + source);
+			
+			if (!raw.replace(source, replacement)) {
+				throw new NoSuchElementException(listName + " does not contain: " + source);
+			}
 		}
 		
 		@Override public void remove(Node source) throws NoSuchElementException {
 			if (source == null) throw new NullPointerException();
 			if (source.getParent() != parent) throw new NoSuchElementException(listName + " is not the parent of: " + source);
 			
-			for (int i = 0; i < list.size(); i++) {
-				if (list.get(i) == source) {
-					parent.disown((AbstractNode)source);
-					list.remove(i);
-					return;
-				}
+			if (!raw.remove(source)) {
+				throw new NoSuchElementException(listName + " does not contain: " + source);
 			}
-			
-			throw new NoSuchElementException(listName + " does not contain: " + source);
 		}
 		
 		@Override public RawListAccessor<T, P> asRawAccessor() {

@@ -35,7 +35,7 @@ public interface RawListAccessor<T extends Node, P extends Node> extends Iterabl
 	P addToEnd(Node... node);
 	P addBefore(Node ref, Node... node);
 	P addAfter(Node ref, Node... node);
-	P replace(Node source, Node replacement);
+	boolean replace(Node source, Node replacement);
 	boolean remove(Node source);
 	StrictListAccessor<T, P> asStrictAccessor();
 }
