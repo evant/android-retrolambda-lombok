@@ -21,14 +21,12 @@
  */
 package lombok.ast;
 
-import lombok.Getter;
-
 public class FloatingPointLiteral extends AbstractNode.WithParens implements Literal, Expression, DescribedNode {
 	private Double value;
 	private String rawValue;
 	private String errorReasonForValue = "Missing value";
-	@Getter private boolean markedAsFloat;
-	@Getter private LiteralType literalType = LiteralType.DECIMAL;
+	private boolean markedAsFloat;
+	private LiteralType literalType = LiteralType.DECIMAL;
 	
 	@Override
 	public boolean isStatementExpression() {
@@ -44,10 +42,25 @@ public class FloatingPointLiteral extends AbstractNode.WithParens implements Lit
 		return errorReasonForValue;
 	}
 	
-	public FloatingPointLiteral setLiteralType(LiteralType type) {
+	public LiteralType astLiteralType() {
+		return literalType;
+	}
+	
+	public FloatingPointLiteral astLiteralType(LiteralType type) {
 		if (type == null) throw new NullPointerException("type");
 		if (type == LiteralType.OCTAL) throw new IllegalArgumentException("there's no such thing as an octal floating point literal");
 		this.literalType = type;
+		updateRawValue();
+		
+		return this;
+	}
+	
+	public boolean astMarkedAsFloat() {
+		return markedAsFloat;
+	}
+	
+	public FloatingPointLiteral astMarkedAsFloat(boolean marked) {
+		this.markedAsFloat = marked;
 		updateRawValue();
 		
 		return this;

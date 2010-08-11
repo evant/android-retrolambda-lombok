@@ -23,16 +23,14 @@ package lombok.ast;
 
 import java.math.BigInteger;
 
-import lombok.Getter;
-
 public class IntegralLiteral extends AbstractNode.WithParens implements Literal, Expression, DescribedNode {
 	private static final String NEGATIVE_NUMBERS_NOT_POSSIBLE = "Negative integral literals don't exist; wrap in a UnaryExpression with operator MINUS";
 	
 	private Long value;
 	private String rawValue;
 	private String errorReasonForValue = "Missing value";
-	@Getter private boolean markedAsLong;
-	@Getter private LiteralType literalType = LiteralType.DECIMAL;
+	private boolean markedAsLong;
+	private LiteralType literalType = LiteralType.DECIMAL;
 	
 	@Override
 	public boolean isStatementExpression() {
@@ -70,9 +68,24 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 				((UnaryExpression)getParent()).astOperator() == UnaryOperator.UNARY_MINUS;
 	}
 	
-	public IntegralLiteral setLiteralType(LiteralType type) {
+	public LiteralType astLiteralType() {
+		return literalType;
+	}
+	
+	public IntegralLiteral astLiteralType(LiteralType type) {
 		if (type == null) throw new NullPointerException("type");
 		this.literalType = type;
+		updateRawValue();
+		
+		return this;
+	}
+	
+	public boolean astMarkedAsLong() {
+		return markedAsLong;
+	}
+	
+	public IntegralLiteral astMarkedAsLong(boolean marked) {
+		this.markedAsLong = marked;
 		updateRawValue();
 		
 		return this;

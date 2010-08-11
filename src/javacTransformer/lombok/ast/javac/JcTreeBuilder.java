@@ -446,7 +446,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitIntegralLiteral(IntegralLiteral node) {
-		if (node.isMarkedAsLong()) {
+		if (node.astMarkedAsLong()) {
 			return posSet(node, treeMaker.Literal(TypeTags.LONG, node.astLongValue()));
 		}
 		return posSet(node, treeMaker.Literal(TypeTags.INT, node.astIntValue()));
@@ -454,7 +454,7 @@ public class JcTreeBuilder extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitFloatingPointLiteral(FloatingPointLiteral node) {
-		if (node.isMarkedAsFloat()) {
+		if (node.astMarkedAsFloat()) {
 			return posSet(node, treeMaker.Literal(TypeTags.FLOAT, node.astFloatValue()));
 		}
 		return posSet(node, treeMaker.Literal(TypeTags.DOUBLE, node.astDoubleValue()));

@@ -963,13 +963,13 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 		if (node.astOperator() == UnaryOperator.UNARY_MINUS) {
 			if (node.astOperand() instanceof lombok.ast.IntegralLiteral && node.astOperand().getParens() == 0) {
 				lombok.ast.IntegralLiteral lit = (lombok.ast.IntegralLiteral)node.astOperand();
-				if (!lit.isMarkedAsLong() && lit.astIntValue() == Integer.MIN_VALUE) {
+				if (!lit.astMarkedAsLong() && lit.astIntValue() == Integer.MIN_VALUE) {
 					IntLiteralMinValue minLiteral = new IntLiteralMinValue();
 					minLiteral.sourceStart = start(node);
 					minLiteral.sourceEnd = end(node);
 					return set(node, minLiteral);
 				}
-				if (lit.isMarkedAsLong() && lit.astLongValue() == Long.MIN_VALUE) {
+				if (lit.astMarkedAsLong() && lit.astLongValue() == Long.MIN_VALUE) {
 					LongLiteralMinValue minLiteral = new LongLiteralMinValue();
 					minLiteral.sourceStart = start(node);
 					minLiteral.sourceEnd = end(node);
@@ -1296,7 +1296,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitIntegralLiteral(lombok.ast.IntegralLiteral node) {
-		if (node.isMarkedAsLong()) {
+		if (node.astMarkedAsLong()) {
 			return set(node, new LongLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 		}
 		return set(node, new IntLiteral(node.rawValue().toCharArray(), start(node), end(node)));
@@ -1304,7 +1304,7 @@ public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitFloatingPointLiteral(lombok.ast.FloatingPointLiteral node) {
-		if (node.isMarkedAsFloat()) {
+		if (node.astMarkedAsFloat()) {
 			return set(node, new FloatLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 		}
 		return set(node, new DoubleLiteral(node.rawValue().toCharArray(), start(node), end(node)));
