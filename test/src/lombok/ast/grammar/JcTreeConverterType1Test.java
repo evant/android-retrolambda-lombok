@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 import lombok.ast.BinaryExpression;
 import lombok.ast.BinaryOperator;
 import lombok.ast.CharLiteral;
+import lombok.ast.Comment;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.IntegralLiteral;
@@ -77,6 +78,15 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 	@Test
 	public boolean testJcTreeConverter(Source source) throws Exception {
 		return testCompiler(source);
+	}
+	
+	private void deleteComments(Node tree) {
+		tree.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitComment(Comment node) {
+				node.unparent();
+				return false;
+			}
+		});
 	}
 	
 	private void normalizeNumberLiterals(Node tree) {
@@ -128,6 +138,7 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 	protected String convertToString(Source source, Node tree) {
 		foldStringConcats(tree);
 		normalizeNumberLiterals(tree);
+		deleteComments(tree);
 		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
 		formatter.skipProperty(IntegralLiteral.class, "value");
 		formatter.skipProperty(FloatingPointLiteral.class, "value");

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 
+import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationElement;
@@ -87,6 +88,8 @@ import lombok.ast.Select;
 import lombok.ast.StaticInitializer;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.StringLiteral;
+import lombok.ast.Super;
+import lombok.ast.SuperConstructorInvocation;
 import lombok.ast.Switch;
 import lombok.ast.Synchronized;
 import lombok.ast.This;
@@ -551,6 +554,11 @@ public class JcTreeConverter extends JCTree.Visitor {
 			return;
 		}
 		
+		if ("super".equals(name)) {
+			set(node, new Super());
+			return;
+		}
+		
 		Identifier id = setPos(node, new Identifier().astValue(name));
 		
 		if (hasFlag(FlagKey.TYPE_REFERENCE)) {
@@ -577,6 +585,11 @@ public class JcTreeConverter extends JCTree.Visitor {
 		
 		if ("this".equals(name)) {
 			set(node, new This().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+			return;
+		}
+		
+		if ("super".equals(name)) {
+			set(node, new Super().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
 			return;
 		}
 		
@@ -747,8 +760,13 @@ public class JcTreeConverter extends JCTree.Visitor {
 	}
 	
 	@Override public void visitExec(JCExpressionStatement node) {
+		Node expr = toTree(node.getExpression());
+		if (expr instanceof SuperConstructorInvocation || expr instanceof AlternateConstructorInvocation) {
+			set(node, expr);
+			return;
+		}
 		ExpressionStatement exec = new ExpressionStatement();
-		exec.rawExpression(toTree(node.getExpression()));
+		exec.rawExpression(expr);
 		set(node, exec);
 	}
 	
@@ -757,10 +775,36 @@ public class JcTreeConverter extends JCTree.Visitor {
 		JCTree sel = node.getMethodSelect();
 		Identifier id = new Identifier();
 		if (sel instanceof JCIdent) {
-			setPos(sel, id.astValue(((JCIdent) sel).getName().toString()));
+			String name = ((JCIdent) sel).getName().toString();
+			if ("this".equals(name)) {
+				AlternateConstructorInvocation aci = new AlternateConstructorInvocation();
+				fillList(node.getTypeArguments(), aci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
+				fillList(node.getArguments(), aci.rawArguments());
+				set(node, aci);
+				return;
+			}
+			
+			if ("super".equals(name)) {
+				SuperConstructorInvocation sci = new SuperConstructorInvocation();
+				fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
+				fillList(node.getArguments(), sci.rawArguments());
+				set(node, sci);
+				return;
+			}
+			
+			setPos(sel, id.astValue(name));
 			sel = null;
 		} else if (sel instanceof JCFieldAccess) {
-			setPos(sel, id.astValue(((JCFieldAccess) sel).getIdentifier().toString()));
+			String name = ((JCFieldAccess) sel).getIdentifier().toString();
+			if ("super".equals(name)) {
+				SuperConstructorInvocation sci = new SuperConstructorInvocation();
+				fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
+				fillList(node.getArguments(), sci.rawArguments());
+				sci.rawQualifier(toTree(((JCFieldAccess) sel).getExpression()));
+				set(node, sci);
+				return;
+			}
+			setPos(sel, id.astValue(name));
 			sel = ((JCFieldAccess) sel).getExpression();
 		}
 		inv.astName(id).rawOperand(toTree(sel));
