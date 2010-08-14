@@ -21,12 +21,6 @@
  */
 package lombok.ast.grammar;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.regex.Pattern;
-
-import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.javac.JcTreeBuilder;
 import lombok.ast.javac.JcTreeConverter;
 import lombok.ast.javac.JcTreePrinter;
@@ -48,16 +42,6 @@ import com.sun.tools.javac.util.Options;
 public class JcTreeConverterType2Test extends TreeBuilderRunner<JCTree> {
 	public JcTreeConverterType2Test() {
 		super(true);
-	}
-	
-	@Override protected Collection<DirDescriptor> getDirDescriptors() {
-		return Arrays.asList(
-				DirDescriptor.of(new File("test/resources/alias"), true)
-						.withInclusion(Pattern.compile("^.*(?:[a-b]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
-//		return Arrays.asList(
-//				DirDescriptor.of(new File("test/resources/idempotency"), true),
-//				DirDescriptor.of(new File("test/resources/alias"), true),
-//				DirDescriptor.of(new File("test/resources/special"), true));
 	}
 	
 	@Test

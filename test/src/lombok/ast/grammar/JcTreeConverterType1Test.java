@@ -23,11 +23,7 @@ package lombok.ast.grammar;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import lombok.ast.BinaryExpression;
 import lombok.ast.BinaryOperator;
@@ -42,7 +38,6 @@ import lombok.ast.Position;
 import lombok.ast.StringLiteral;
 import lombok.ast.UnaryExpression;
 import lombok.ast.UnaryOperator;
-import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.javac.JcTreeConverter;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.StructureFormatter;
@@ -63,16 +58,6 @@ import com.sun.tools.javac.util.Options;
 public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 	public JcTreeConverterType1Test() {
 		super(false);
-	}
-	
-	@Override protected Collection<DirDescriptor> getDirDescriptors() {
-		return Arrays.asList(
-				DirDescriptor.of(new File("test/resources/alias"), true)
-						.withInclusion(Pattern.compile("^.*(?:[a]\\d{3}).*\\.java$", Pattern.CASE_INSENSITIVE)));
-//		return Arrays.asList(
-//				DirDescriptor.of(new File("test/resources/idempotency"), true),
-//				DirDescriptor.of(new File("test/resources/alias"), true),
-//				DirDescriptor.of(new File("test/resources/special"), true));
 	}
 	
 	@Test

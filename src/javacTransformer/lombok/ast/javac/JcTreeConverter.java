@@ -292,6 +292,7 @@ public class JcTreeConverter {
 		int baseDims = countDims(baseType);
 		if ((first.mods.flags & Flags.VARARGS) != 0) {
 			def.astVarargs(true);
+			positionInfo.put(new PosInfoKey(def, "..."), getPosition(baseType));
 			if (baseType instanceof JCArrayTypeTree) baseType = ((JCArrayTypeTree) baseType).elemtype;
 		}
 		def.rawTypeReference(toTree(baseType, FlagKey.TYPE_REFERENCE));
@@ -502,15 +503,18 @@ public class JcTreeConverter {
 						if (vd.mods != null && (vd.mods.flags & ENUM_CONSTANT_FLAGS) == ENUM_CONSTANT_FLAGS) {
 							// This is an enum constant, not a field of the enum class.
 							EnumConstant ec = new EnumConstant();
+							setPos(def, ec);
 							ec.astName(new Identifier().astValue(vd.getName().toString()));
 							fillList(vd.mods.annotations, ec.rawAnnotations());
 							if (vd.init instanceof JCNewClass) {
 								JCNewClass init = (JCNewClass) vd.init;
 								fillList(init.getArguments(), ec.rawArguments());
 								if (init.getClassBody() != null) {
-									NormalTypeBody constantBody = new NormalTypeBody();
+									NormalTypeBody constantBody = setPos(init, new NormalTypeBody());
 									fillList(init.getClassBody().getMembers(), constantBody.rawMembers());
 									ec.astBody(constantBody);
+								} else {
+									positionInfo.put(new PosInfoKey(ec, "newclass"), getPosition(init));
 								}
 							}
 							body.astConstants().addToEnd(ec);
@@ -625,17 +629,23 @@ public class JcTreeConverter {
 			}
 			
 			if ("this".equals(name)) {
-				set(node, new This().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+				This t = new This();
+				positionInfo.put(new PosInfoKey(t, "this"), getPosition(node));
+				set(node, t.rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
 				return;
 			}
 			
 			if ("super".equals(name)) {
-				set(node, new Super().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+				Super s = new Super();
+				positionInfo.put(new PosInfoKey(s, "super"), getPosition(node));
+				set(node, s.rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
 				return;
 			}
 			
 			if ("class".equals(name)) {
-				set(node, new ClassLiteral().rawTypeReference(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+				ClassLiteral c = new ClassLiteral();
+				positionInfo.put(new PosInfoKey(c, "class"), getPosition(node));
+				set(node, c.rawTypeReference(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
 				return;
 			}
 			
@@ -771,7 +781,7 @@ public class JcTreeConverter {
 			if (n instanceof TypeDeclaration) {
 				NormalTypeBody body = ((ClassDeclaration) n).astBody();
 				if (body != null) body.unparent();
-				inv.rawAnonymousClassBody(body);
+				inv.rawAnonymousClassBody(setPos(node.getClassBody(), body));
 			}
 			set(node, inv);
 		}
@@ -810,6 +820,7 @@ public class JcTreeConverter {
 		@Override public void visitExec(JCExpressionStatement node) {
 			Node expr = toTree(node.getExpression());
 			if (expr instanceof SuperConstructorInvocation || expr instanceof AlternateConstructorInvocation) {
+				positionInfo.put(new PosInfoKey(expr, "exec"), getPosition(node));
 				set(node, expr);
 				return;
 			}
@@ -829,6 +840,7 @@ public class JcTreeConverter {
 					fillList(node.getTypeArguments(), aci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
 					fillList(node.getArguments(), aci.rawArguments());
 					set(node, aci);
+					positionInfo.put(new PosInfoKey(aci, "this"), getPosition(sel));
 					return;
 				}
 				
@@ -837,6 +849,7 @@ public class JcTreeConverter {
 					fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
 					fillList(node.getArguments(), sci.rawArguments());
 					set(node, sci);
+					positionInfo.put(new PosInfoKey(sci, "super"), getPosition(sel));
 					return;
 				}
 				
@@ -1050,7 +1063,7 @@ public class JcTreeConverter {
 				fillList(node.getTypeParameters(), cd.rawTypeVariables());
 				fillList(node.getParameters(), cd.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
 				String typeName = (String) getFlag(FlagKey.CONTAINING_TYPE_NAME);
-				cd.astTypeName(new Identifier().astValue(typeName));
+				cd.astTypeName(setPos(node, new Identifier().astValue(typeName)));
 				addJavadoc(cd, node.mods);
 				set(node, cd);
 				return;
@@ -1059,7 +1072,7 @@ public class JcTreeConverter {
 			if (hasFlag(FlagKey.METHODS_ARE_ANNMETHODS)) {
 				AnnotationMethodDeclaration md = new AnnotationMethodDeclaration();
 				md.astModifiers((Modifiers) toTree(node.getModifiers()));
-				md.astMethodName(new Identifier().astValue(name));
+				md.astMethodName(setPos(node, new Identifier().astValue(name)));
 				md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
 				md.rawDefaultValue(toTree(node.getDefaultValue()));
 				addJavadoc(md, node.mods);
@@ -1070,7 +1083,7 @@ public class JcTreeConverter {
 			MethodDeclaration md = new MethodDeclaration();
 			md.rawBody(toTree(node.getBody()));
 			md.astModifiers((Modifiers) toTree(node.getModifiers()));
-			md.astMethodName(new Identifier().astValue(name));
+			md.astMethodName(setPos(node, new Identifier().astValue(name)));
 			fillList(node.getThrows(), md.rawThrownTypeReferences(), FlagKey.TYPE_REFERENCE);
 			fillList(node.getTypeParameters(), md.rawTypeVariables());
 			fillList(node.getParameters(), md.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
@@ -1086,7 +1099,7 @@ public class JcTreeConverter {
 				AnnotationElement e = new AnnotationElement();
 				if (elem instanceof JCAssign) {
 					JCExpression rawName = ((JCAssign) elem).getVariable();
-					if (rawName instanceof JCIdent) e.astName(new Identifier().astValue(((JCIdent)rawName).getName().toString()));
+					if (rawName instanceof JCIdent) e.astName(setPos(rawName, new Identifier().astValue(((JCIdent)rawName).getName().toString())));
 					elem = ((JCAssign) elem).getExpression();
 				}
 				e.rawValue(toTree(elem));

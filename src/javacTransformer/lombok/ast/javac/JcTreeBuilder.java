@@ -438,8 +438,14 @@ public class JcTreeBuilder {
 					body
 			);
 			
-			int start = posOfStructure(node, "(", true);
-			int end = body != null ? node.getPosition().getEnd() : posOfStructure(node, ")", false);
+			int start, end;
+			if (jcTreeCreatorPositionInfo == null) {
+				start = posOfStructure(node, "(", true);
+				end = body != null ? node.getPosition().getEnd() : posOfStructure(node, ")", false);
+			} else {
+				start = getJcPos(node, "newclass").getStart();
+				end = getJcPos(node, "newclass").getEnd();
+			}
 			if (body != null) body.pos = node.getPosition().getStart();
 			if (start != node.getPosition().getStart()) {
 				setPos(start, end, newClass);
@@ -566,19 +572,40 @@ public class JcTreeBuilder {
 		
 		@Override
 		public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
-			int thisStart = posOfStructure(node, "this", true);
-			int thisEnd = posOfStructure(node, "this", false);
-			if (!node.astConstructorTypeArguments().isEmpty()) {
-				thisStart = posOfStructure(node, "<", true);
+			int thisStart, thisEnd;
+			
+			if (jcTreeCreatorPositionInfo == null) {
+				thisStart = posOfStructure(node, "this", true);
+				thisEnd = posOfStructure(node, "this", false);
+				if (!node.astConstructorTypeArguments().isEmpty()) {
+					thisStart = posOfStructure(node, "<", true);
+				}
+			} else {
+				thisStart = getJcPos(node, "this").getStart();
+				thisEnd = getJcPos(node, "this").getEnd();
 			}
 			JCMethodInvocation invoke = treeMaker.Apply(
 					toList(JCExpression.class, node.astConstructorTypeArguments()), 
 					setPos(thisStart, thisEnd,
 							treeMaker.Ident(table._this)),
 					toList(JCExpression.class, node.astArguments()));
-			int start = posOfStructure(node, "(", true);
-			int end = posOfStructure(node, ")", false);
-			return posSet(node, treeMaker.Exec(setPos(start, end, invoke)));
+			int start, end;
+			if (jcTreeCreatorPositionInfo == null) {
+				start = posOfStructure(node, "(", true);
+				end = posOfStructure(node, ")", false);
+			} else {
+				start = node.getPosition().getStart();
+				end = node.getPosition().getEnd();
+			}
+			
+			JCExpressionStatement exec = treeMaker.Exec(setPos(start, end, invoke));
+			if (jcTreeCreatorPositionInfo != null) {
+				setPos(getJcPos(node, "exec").getStart(), getJcPos(node, "exec").getEnd(), exec);
+			} else {
+				setPos(node, exec);
+			}
+			
+			return set(node, exec);
 		}
 		
 		@Override
@@ -586,7 +613,7 @@ public class JcTreeBuilder {
 			JCExpression methodId;
 			if (node.astQualifier() == null) {
 				methodId = treeMaker.Ident(table._super);
-				methodId.pos = posOfStructure(node, "super", true);
+				methodId.pos = jcTreeCreatorPositionInfo == null ? posOfStructure(node, "super", true) : getJcPos(node, "super").getStart();
 			} else {
 				methodId = treeMaker.Select(
 						toExpression(node.astQualifier()),
@@ -598,9 +625,23 @@ public class JcTreeBuilder {
 					toList(JCExpression.class, node.astConstructorTypeArguments()), 
 					methodId, 
 					toList(JCExpression.class, node.astArguments()));
-			int start = posOfStructure(node, "(", Integer.MAX_VALUE, true);
-			int end = posOfStructure(node, ")", Integer.MAX_VALUE, false);
-			return posSet(node, treeMaker.Exec(setPos(start, end, invoke)));
+			int start, end;
+			if (jcTreeCreatorPositionInfo == null) {
+				start = posOfStructure(node, "(", Integer.MAX_VALUE, true);
+				end = posOfStructure(node, ")", Integer.MAX_VALUE, false);
+			} else {
+				start = node.getPosition().getStart();
+				end = node.getPosition().getEnd();
+			}
+			
+			JCExpressionStatement exec = treeMaker.Exec(setPos(start, end, invoke));
+			if (jcTreeCreatorPositionInfo != null) {
+				setPos(getJcPos(node, "exec").getStart(), getJcPos(node, "exec").getEnd(), exec);
+			} else {
+				setPos(node, exec);
+			}
+			
+			return set(node, exec);
 		}
 		
 		@Override
@@ -612,6 +653,10 @@ public class JcTreeBuilder {
 			} else {
 				tree = treeMaker.Ident(table._super);
 				tree.pos = posOfStructure(node, "super", true);
+			}
+			
+			if (jcTreeCreatorPositionInfo != null) {
+				tree.pos = getJcPos(node, "super").getStart();
 			}
 			return set(node, tree);
 		}
@@ -882,7 +927,7 @@ public class JcTreeBuilder {
 			
 			if (javadoc != null && javadoc.isMarkedDeprecated()) mods.flags |= Flags.DEPRECATED;
 			
-			if (node.isEmpty()) {
+			if (node.isEmpty() && jcTreeCreatorPositionInfo == null) {
 				//Workaround for a javac bug; start (but not end!) gets set of an empty modifiers object,
 				//but only if these represent the modifiers of a constructor or method that has type variables.
 				if (
@@ -935,7 +980,11 @@ public class JcTreeBuilder {
 			if (node.astVarargs()) {
 				mods.flags |= Flags.VARARGS;
 				vartype = addDimensions(node, vartype, 1);
-				setPos(posOfStructure(node, "...", true), posOfStructure(node, "...", false), vartype);
+				if (jcTreeCreatorPositionInfo == null) {
+					setPos(posOfStructure(node, "...", true), posOfStructure(node, "...", false), vartype);
+				} else {
+					setPos(getJcPos(node, "...").getStart(), getJcPos(node, "...").getEnd(), vartype);
+				}
 			}
 			
 			List<JCVariableDecl> defs = List.nil();
@@ -965,9 +1014,11 @@ public class JcTreeBuilder {
 			modifiers.flags |= Flags.INTERFACE | Flags.ANNOTATION;
 			int start = posOfStructure(node, "interface", true);
 			int end = node.getPosition().getEnd();
-			if (modifiers.pos == -1) modifiers.pos = posOfStructure(node, "@", true);
-			endPosTable.put(modifiers, posOfStructure(node, "@", false));
-				
+			if (jcTreeCreatorPositionInfo == null) {
+				if (modifiers.pos == -1) modifiers.pos = posOfStructure(node, "@", true);
+				endPosTable.put(modifiers, posOfStructure(node, "@", false));
+			}
+			
 			return set(node, setPos(start, end, treeMaker.ClassDef(
 					modifiers,
 					toName(node.astName()),
@@ -1247,13 +1298,19 @@ public class JcTreeBuilder {
 		@Override
 		public boolean visitThis(This node) {
 			JCTree tree;
-			int end = node.getPosition().getEnd(), start;
+			int start, end;
+			end = node.getPosition().getEnd();
 			if (node.astQualifier() != null) {
 				tree = treeMaker.Select((JCExpression) toTree(node.astQualifier()), table._this);
 				start = posOfStructure(node, ".", true);
 			} else {
 				tree = treeMaker.Ident(table._this);
 				start = node.getPosition().getStart();
+			}
+			
+			if (jcTreeCreatorPositionInfo != null) {
+				start = getJcPos(node, "this").getStart();
+				end = getJcPos(node, "this").getEnd();
 			}
 			return set(node, setPos(start, end, tree));
 		}
