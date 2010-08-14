@@ -1024,8 +1024,15 @@ public class JcTreeBuilder {
 		private JCExpression addDimensions(Node node, JCExpression type, int dimensions) {
 			JCExpression resultingType = type;
 			for (int i = 0; i < dimensions; i++) {
-				int start = posOfStructure(node, "[", dimensions - i - 1, true);
-				int end = posOfStructure(node, "]", false);
+				int start, end;
+				int currentDim = dimensions - i - 1;
+				if (jcTreeCreatorPositionInfo == null) {
+					start = posOfStructure(node, "[", currentDim, true);
+					end = posOfStructure(node, "]", false);
+				} else {
+					start = getJcPos(node, "[]" + i).getStart();
+					end = getJcPos(node, "[]" + i).getEnd();
+				}
 				resultingType = setPos(start, end, treeMaker.TypeArray(resultingType));
 			}
 			return resultingType;
@@ -1076,11 +1083,19 @@ public class JcTreeBuilder {
 				return type;
 			case EXTENDS:
 				typeBoundKind = treeMaker.TypeBoundKind(BoundKind.EXTENDS);
-				setPos(posOfStructure(node, "extends", true), posOfStructure(node, "extends", false), typeBoundKind);
+				if (jcTreeCreatorPositionInfo == null) {
+					setPos(posOfStructure(node, "extends", true), posOfStructure(node, "extends", false), typeBoundKind);
+				} else {
+					setPos(getJcPos(node, "extends").getStart(), getJcPos(node, "extends").getEnd(), typeBoundKind);
+				}
 				return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(typeBoundKind, type));
 			case SUPER:
 				typeBoundKind = treeMaker.TypeBoundKind(BoundKind.SUPER);
-				setPos(posOfStructure(node, "super", true), posOfStructure(node, "super", false), typeBoundKind);
+				if (jcTreeCreatorPositionInfo == null) {
+					setPos(posOfStructure(node, "super", true), posOfStructure(node, "super", false), typeBoundKind);
+				} else {
+					setPos(getJcPos(node, "super").getStart(), getJcPos(node, "super").getEnd(), typeBoundKind);
+				}
 				return setPos(type.pos, endPosTable.get(type), treeMaker.Wildcard(typeBoundKind, type));
 			default:
 				throw new IllegalStateException("Unexpected unbound wildcard: " + wildcardKind);
@@ -1096,7 +1111,11 @@ public class JcTreeBuilder {
 				return set(node, ident);
 			} else {
 				JCTypeApply typeApply = treeMaker.TypeApply(ident, typeArguments);
-				setPos(posOfStructure(node, "<", true), node.getPosition().getEnd(), typeApply);
+				if (jcTreeCreatorPositionInfo == null) {
+					setPos(posOfStructure(node, "<", true), node.getPosition().getEnd(), typeApply);
+				} else {
+					setPos(getJcPos(node, "<").getStart(), node.getPosition().getEnd(), typeApply);
+				}
 				return set(node, typeApply);
 			}
 		}

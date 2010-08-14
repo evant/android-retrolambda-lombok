@@ -257,7 +257,8 @@ public class JcTreeConverter {
 		boolean createDeclaration = !keys.containsKey(FlagKey.VARDEF_IS_DEFINITION);
 		
 		if (decls == null || decls.isEmpty()) {
-			return createDeclaration ? new VariableDeclaration() : new VariableDefinition();
+			VariableDefinition def = new VariableDefinition();
+			return createDeclaration ? new VariableDeclaration().astDefinition(def) : def;
 		}
 		
 		JCVariableDecl first = decls.get(0);
@@ -277,6 +278,8 @@ public class JcTreeConverter {
 		
 		VariableDefinition def = new VariableDefinition();
 		def.astModifiers((Modifiers) toTree(first.mods));
+		setPos(decls.get(decls.size()-1), def);
+		if (decls.size() > 1) def.setPosition(new Position(startPosFirst, def.getPosition().getEnd()));
 		int baseDims = countDims(baseType);
 		if ((first.mods.flags & Flags.VARARGS) != 0) {
 			def.astVarargs(true);
@@ -291,11 +294,20 @@ public class JcTreeConverter {
 			entry.astArrayDimensions(extraDims);
 			entry.astName(setPos(varDecl, new Identifier().astValue(varDecl.name.toString())));
 			entry.rawInitializer(toTree(varDecl.init));
+			setPos(varDecl, entry);
+			if (extraDims > 0) {
+				JCArrayTypeTree arrayType = (JCArrayTypeTree) varDecl.vartype;
+				for (int i = 0; i < extraDims; i++) {
+					if (arrayType != null) positionInfo.put(new PosInfoKey(entry, "[]" + (extraDims - i -1)), new Position(arrayType.pos, arrayType.getEndPosition(endPosTable)));
+					arrayType = arrayType.elemtype instanceof JCArrayTypeTree ? (JCArrayTypeTree) arrayType.elemtype : null;
+				}
+				}
 			def.astVariables().addToEnd(entry);
 		}
 		
 		if (createDeclaration) {
 			VariableDeclaration decl = new VariableDeclaration().astDefinition(def);
+			decl.setPosition(def.getPosition());
 			addJavadoc(decl, first.mods);
 			return decl;
 		}
@@ -624,6 +636,8 @@ public class JcTreeConverter {
 			TypeReference ref = (TypeReference) toTree(node.clazz, FlagKey.TYPE_REFERENCE);
 			TypeReferencePart last = ref.astParts().last();
 			fillList(node.arguments, last.rawTypeArguments(), FlagKey.TYPE_REFERENCE);
+			setPos(node, ref);
+			positionInfo.put(new PosInfoKey(last, "<"), new Position(node.pos, ref.getPosition().getEnd()));
 			set(node, ref);
 		}
 		
@@ -636,9 +650,12 @@ public class JcTreeConverter {
 				break;
 			case EXTENDS_WILDCARD:
 				ref.astWildcard(WildcardKind.EXTENDS);
+				// TODO ensure this also works on javac versions without the JCTree variant TypeBoundKind. Also don't forget super a few lines down.
+				positionInfo.put(new PosInfoKey(ref, "extends"), new Position(node.kind.pos, node.kind.getEndPosition(endPosTable)));
 				break;
 			case SUPER_WILDCARD:
 				ref.astWildcard(WildcardKind.SUPER);
+				positionInfo.put(new PosInfoKey(ref, "super"), new Position(node.kind.pos, node.kind.getEndPosition(endPosTable)));
 				break;
 			}
 			set(node, ref);
@@ -653,7 +670,9 @@ public class JcTreeConverter {
 		
 		@Override public void visitTypeArray(JCArrayTypeTree node) {
 			TypeReference ref = (TypeReference) toTree(node.getType(), FlagKey.TYPE_REFERENCE);
-			ref.astArrayDimensions(ref.astArrayDimensions() + 1);
+			int currentDim = ref.astArrayDimensions();
+			ref.astArrayDimensions(currentDim + 1);
+			positionInfo.put(new PosInfoKey(ref, "[]" + currentDim), new Position(node.pos, node.getEndPosition(endPosTable)));
 			set(node, ref);
 		}
 		

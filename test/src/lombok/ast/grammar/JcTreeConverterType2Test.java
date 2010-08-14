@@ -53,7 +53,7 @@ public class JcTreeConverterType2Test extends TreeBuilderRunner<JCTree> {
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(
 				DirDescriptor.of(new File("test/resources/alias"), true)
-						.withInclusion(Pattern.compile("^.*(?:[a]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+						.withInclusion(Pattern.compile("^.*(?:[a-b]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
 //		return Arrays.asList(
 //				DirDescriptor.of(new File("test/resources/idempotency"), true),
 //				DirDescriptor.of(new File("test/resources/alias"), true),
