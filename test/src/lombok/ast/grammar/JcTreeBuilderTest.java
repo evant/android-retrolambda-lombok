@@ -90,7 +90,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 		}
 		
 		JcTreeBuilder builder = new JcTreeBuilder(source, context);
-		nodes.get(0).accept(builder);
+		builder.convert(nodes.get(0));
 		return builder.get();
 	}
 	

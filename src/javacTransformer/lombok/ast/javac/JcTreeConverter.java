@@ -108,6 +108,7 @@ import lombok.ast.VariableReference;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.sun.tools.javac.code.Flags;
@@ -162,7 +163,7 @@ import com.sun.tools.javac.tree.JCTree.JCWhileLoop;
 import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.util.List;
 
-public class JcTreeConverter extends JCTree.Visitor {
+public class JcTreeConverter {
 	private enum FlagKey {
 		BLOCKS_ARE_INITIALIZERS,
 		SKIP_IS_DECL,
@@ -175,10 +176,20 @@ public class JcTreeConverter extends JCTree.Visitor {
 	
 	private java.util.List<? extends Node> result;
 	private Map<JCTree, Integer> endPosTable;
-	
-	private JcTreeConverter() {}
-	
+	private ConvertingVisitor visitor = new ConvertingVisitor();
 	private Map<FlagKey, Object> params;
+	private Map<PosInfoKey, Position> positionInfo;
+	
+	public JcTreeConverter() {
+		this.positionInfo = Maps.newHashMap();
+		this.params = ImmutableMap.of();
+	}
+	
+	public JcTreeConverter(Map<JCTree, Integer> endPosTable, Map<PosInfoKey, Position> positionInfo, Map<FlagKey, Object> params) {
+		this.endPosTable = endPosTable;
+		this.positionInfo = positionInfo;
+		this.params = params == null ? ImmutableMap.<FlagKey, Object>of() : params;
+	}
 	
 	private boolean hasFlag(FlagKey key) {
 		return params.containsKey(key);
@@ -186,10 +197,6 @@ public class JcTreeConverter extends JCTree.Visitor {
 	
 	private Object getFlag(FlagKey key) {
 		return params.get(key);
-	}
-	
-	@Override public void visitTree(JCTree node) {
-		throw new UnsupportedOperationException("visit" + node.getClass().getSimpleName() + " not implemented");
 	}
 	
 	java.util.List<? extends Node> getAll() {
@@ -224,15 +231,19 @@ public class JcTreeConverter extends JCTree.Visitor {
 	
 	private Node toTree(JCTree node, Map<FlagKey, Object> params) {
 		if (node == null) return null;
-		JcTreeConverter visitor = new JcTreeConverter();
-		visitor.endPosTable = endPosTable;
-		if (params != null) visitor.params = params;
-		node.accept(visitor);
+		JcTreeConverter newConverter = new JcTreeConverter(endPosTable, positionInfo, params);
+		node.accept(newConverter.visitor);
 		try {
-			return visitor.get();
+			return newConverter.get();
 		} catch (RuntimeException e) {
 			System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
 			throw e;
+		}
+	}
+	
+	private void addJavadoc(JavadocContainer container, JCModifiers mods) {
+		if ((mods.flags & Flags.DEPRECATED) != 0) {
+			container.astJavadoc(new Comment().astBlockComment(true).astContent("*\n * @deprecated\n "));
 		}
 	}
 	
@@ -343,21 +354,28 @@ public class JcTreeConverter extends JCTree.Visitor {
 		return ((JCParens) node).getExpression();
 	}
 	
-	public static Node convert(JCCompilationUnit cu) {
-		return convert(cu, cu.endPositions);
+	public void convert(JCCompilationUnit cu) {
+		convert(cu, cu.endPositions);
 	}
 	
-	public static Node convert(JCTree node, Map<JCTree, Integer> endPosTable) {
-		JcTreeConverter converter = new JcTreeConverter();
-		converter.endPosTable = endPosTable;
-		node.accept(converter);
-		return converter.get();
+	public void convert(JCTree node, Map<JCTree, Integer> endPosTable) {
+		this.endPosTable = endPosTable;
+		node.accept(visitor);
+	}
+	
+	public Node getResult() {
+		return get();
+	}
+	
+	public void transferPositionInfo(JcTreeBuilder builder) {
+		builder.setJcTreeConverterPositionInfo(positionInfo);
 	}
 	
 	private <N extends Node> N setPos(JCTree node, N astNode) {
 		if (astNode != null && node != null) {
 			int start = node.pos;
-			int end = node.getEndPosition(endPosTable);
+			Integer end_ = endPosTable.get(node);
+			int end = end_ == null ? node.getEndPosition(endPosTable) : end_;
 			if (start != com.sun.tools.javac.util.Position.NOPOS && end != com.sun.tools.javac.util.Position.NOPOS) {
 				astNode.setPosition(new Position(start, end));
 			}
@@ -376,649 +394,651 @@ public class JcTreeConverter extends JCTree.Visitor {
 		}
 	}
 	
-	@Override public void visitTopLevel(JCCompilationUnit node) {
-		CompilationUnit unit = new CompilationUnit();
-		if (node.pid != null) {
-			PackageDeclaration pkg = new PackageDeclaration();
-			fillWithIdentifiers(node.pid, pkg.astParts());
-			unit.astPackageDeclaration(setPos(node.pid, pkg));
-			fillList(node.packageAnnotations, pkg.rawAnnotations());
+	private class ConvertingVisitor extends JCTree.Visitor {
+		@Override public void visitTree(JCTree node) {
+			throw new UnsupportedOperationException("visit" + node.getClass().getSimpleName() + " not implemented");
 		}
 		
-		for (JCTree def : node.defs) {
-			if (def instanceof JCImport) {
-				unit.rawImportDeclarations().addToEnd(toTree(def));
-			} else {
-				unit.rawTypeDeclarations().addToEnd(toTree(def, FlagKey.SKIP_IS_DECL));
+		@Override public void visitTopLevel(JCCompilationUnit node) {
+			CompilationUnit unit = new CompilationUnit();
+			if (node.pid != null) {
+				PackageDeclaration pkg = new PackageDeclaration();
+				fillWithIdentifiers(node.pid, pkg.astParts());
+				unit.astPackageDeclaration(setPos(node.pid, pkg));
+				fillList(node.packageAnnotations, pkg.rawAnnotations());
 			}
-		}
-		
-		set(node, unit);
-	}
-	
-	@Override public void visitImport(JCImport node) {
-		ImportDeclaration imp = new ImportDeclaration();
-		fillWithIdentifiers(node.getQualifiedIdentifier(), imp.astParts());
-		Identifier last = imp.astParts().last();
-		if (last != null && "*".equals(last.astValue())) {
-			imp.astParts().remove(last);
-			imp.astStarImport(true);
-		}
-		imp.astStaticImport(node.isStatic());
-		set(node, imp);
-	}
-	
-	private static final long ENUM_CONSTANT_FLAGS = Flags.PUBLIC | Flags.STATIC | Flags.FINAL | Flags.ENUM;
-	
-	@Override public void visitClassDef(JCClassDecl node) {
-		long flags = node.mods.flags;
-		String name = node.getSimpleName().toString();
-		TypeDeclaration typeDecl;
-		Map<FlagKey, Object> flagKeyMap = Maps.newHashMap();
-		flagKeyMap.put(FlagKey.CONTAINING_TYPE_NAME, name);
-		flagKeyMap.put(FlagKey.BLOCKS_ARE_INITIALIZERS, FlagKey.BLOCKS_ARE_INITIALIZERS);
-		flagKeyMap.put(FlagKey.SKIP_IS_DECL, FlagKey.SKIP_IS_DECL);
-		
-		if ((flags & (Flags.ENUM | Flags.INTERFACE)) == 0) {
-			ClassDeclaration classDecl = new ClassDeclaration();
-			typeDecl = classDecl;
-			fillList(node.implementing, classDecl.rawImplementing(), FlagKey.TYPE_REFERENCE);
-			classDecl.rawExtending(toTree(node.extending, FlagKey.TYPE_REFERENCE));
-			fillList(node.typarams, classDecl.rawTypeVariables());
-			NormalTypeBody body = new NormalTypeBody();
-			fillList(node.defs, body.rawMembers(), flagKeyMap);
-			classDecl.astBody(body);
-		} else if ((flags & Flags.ANNOTATION) != 0) {
-			AnnotationDeclaration annDecl = new AnnotationDeclaration();
-			typeDecl = annDecl;
-			NormalTypeBody body = new NormalTypeBody();
-			flagKeyMap.put(FlagKey.METHODS_ARE_ANNMETHODS, FlagKey.METHODS_ARE_ANNMETHODS);
-			fillList(node.defs, body.rawMembers(), flagKeyMap);
-			annDecl.astBody(body);
-		} else if ((flags & Flags.INTERFACE) != 0) {
-			InterfaceDeclaration itfDecl = new InterfaceDeclaration();
-			typeDecl = itfDecl;
-			fillList(node.typarams, itfDecl.rawTypeVariables());
-			fillList(node.implementing, itfDecl.rawExtending(), FlagKey.TYPE_REFERENCE);
-			NormalTypeBody body = new NormalTypeBody();
-			fillList(node.defs, body.rawMembers(), flagKeyMap);
-			itfDecl.astBody(body);
-		} else if ((flags & Flags.ENUM) != 0) {
-			EnumDeclaration enumDecl = new EnumDeclaration();
-			typeDecl = enumDecl;
-			EnumTypeBody body = new EnumTypeBody();
-			fillList(node.implementing, enumDecl.rawImplementing(), FlagKey.TYPE_REFERENCE);
-			java.util.List<JCTree> defs = new ArrayList<JCTree>();
 			
 			for (JCTree def : node.defs) {
-				if (def instanceof JCVariableDecl) {
-					JCVariableDecl vd = (JCVariableDecl) def;
-					if (vd.mods != null && (vd.mods.flags & ENUM_CONSTANT_FLAGS) == ENUM_CONSTANT_FLAGS) {
-						// This is an enum constant, not a field of the enum class.
-						EnumConstant ec = new EnumConstant();
-						ec.astName(new Identifier().astValue(vd.getName().toString()));
-						fillList(vd.mods.annotations, ec.rawAnnotations());
-						if (vd.init instanceof JCNewClass) {
-							JCNewClass init = (JCNewClass) vd.init;
-							fillList(init.getArguments(), ec.rawArguments());
-							if (init.getClassBody() != null) {
-								NormalTypeBody constantBody = new NormalTypeBody();
-								fillList(init.getClassBody().getMembers(), constantBody.rawMembers());
-								ec.astBody(constantBody);
+				if (def instanceof JCImport) {
+					unit.rawImportDeclarations().addToEnd(toTree(def));
+				} else {
+					unit.rawTypeDeclarations().addToEnd(toTree(def, FlagKey.SKIP_IS_DECL));
+				}
+			}
+			
+			set(node, unit);
+		}
+		
+		@Override public void visitImport(JCImport node) {
+			ImportDeclaration imp = new ImportDeclaration();
+			fillWithIdentifiers(node.getQualifiedIdentifier(), imp.astParts());
+			Identifier last = imp.astParts().last();
+			if (last != null && "*".equals(last.astValue())) {
+				imp.astParts().remove(last);
+				imp.astStarImport(true);
+				positionInfo.put(new PosInfoKey(imp, ".*"), last.getPosition());
+			}
+			imp.astStaticImport(node.isStatic());
+			set(node, imp);
+		}
+		
+		private static final long ENUM_CONSTANT_FLAGS = Flags.PUBLIC | Flags.STATIC | Flags.FINAL | Flags.ENUM;
+		
+		@Override public void visitClassDef(JCClassDecl node) {
+			long flags = node.mods.flags;
+			String name = node.getSimpleName().toString();
+			TypeDeclaration typeDecl;
+			Map<FlagKey, Object> flagKeyMap = Maps.newHashMap();
+			flagKeyMap.put(FlagKey.CONTAINING_TYPE_NAME, name);
+			flagKeyMap.put(FlagKey.BLOCKS_ARE_INITIALIZERS, FlagKey.BLOCKS_ARE_INITIALIZERS);
+			flagKeyMap.put(FlagKey.SKIP_IS_DECL, FlagKey.SKIP_IS_DECL);
+			
+			if ((flags & (Flags.ENUM | Flags.INTERFACE)) == 0) {
+				ClassDeclaration classDecl = new ClassDeclaration();
+				typeDecl = classDecl;
+				fillList(node.implementing, classDecl.rawImplementing(), FlagKey.TYPE_REFERENCE);
+				classDecl.rawExtending(toTree(node.extending, FlagKey.TYPE_REFERENCE));
+				fillList(node.typarams, classDecl.rawTypeVariables());
+				NormalTypeBody body = new NormalTypeBody();
+				fillList(node.defs, body.rawMembers(), flagKeyMap);
+				classDecl.astBody(body);
+			} else if ((flags & Flags.ANNOTATION) != 0) {
+				AnnotationDeclaration annDecl = new AnnotationDeclaration();
+				typeDecl = annDecl;
+				NormalTypeBody body = new NormalTypeBody();
+				flagKeyMap.put(FlagKey.METHODS_ARE_ANNMETHODS, FlagKey.METHODS_ARE_ANNMETHODS);
+				fillList(node.defs, body.rawMembers(), flagKeyMap);
+				annDecl.astBody(body);
+			} else if ((flags & Flags.INTERFACE) != 0) {
+				InterfaceDeclaration itfDecl = new InterfaceDeclaration();
+				typeDecl = itfDecl;
+				fillList(node.typarams, itfDecl.rawTypeVariables());
+				fillList(node.implementing, itfDecl.rawExtending(), FlagKey.TYPE_REFERENCE);
+				NormalTypeBody body = new NormalTypeBody();
+				fillList(node.defs, body.rawMembers(), flagKeyMap);
+				itfDecl.astBody(body);
+			} else if ((flags & Flags.ENUM) != 0) {
+				EnumDeclaration enumDecl = new EnumDeclaration();
+				typeDecl = enumDecl;
+				EnumTypeBody body = new EnumTypeBody();
+				fillList(node.implementing, enumDecl.rawImplementing(), FlagKey.TYPE_REFERENCE);
+				java.util.List<JCTree> defs = new ArrayList<JCTree>();
+				
+				for (JCTree def : node.defs) {
+					if (def instanceof JCVariableDecl) {
+						JCVariableDecl vd = (JCVariableDecl) def;
+						if (vd.mods != null && (vd.mods.flags & ENUM_CONSTANT_FLAGS) == ENUM_CONSTANT_FLAGS) {
+							// This is an enum constant, not a field of the enum class.
+							EnumConstant ec = new EnumConstant();
+							ec.astName(new Identifier().astValue(vd.getName().toString()));
+							fillList(vd.mods.annotations, ec.rawAnnotations());
+							if (vd.init instanceof JCNewClass) {
+								JCNewClass init = (JCNewClass) vd.init;
+								fillList(init.getArguments(), ec.rawArguments());
+								if (init.getClassBody() != null) {
+									NormalTypeBody constantBody = new NormalTypeBody();
+									fillList(init.getClassBody().getMembers(), constantBody.rawMembers());
+									ec.astBody(constantBody);
+								}
 							}
+							body.astConstants().addToEnd(ec);
+							continue;
 						}
-						body.astConstants().addToEnd(ec);
-						continue;
+					}
+					
+					defs.add(def);
+				}
+				fillList(defs, body.rawMembers(), flagKeyMap);
+				enumDecl.astBody(body);
+			} else {
+				throw new IllegalStateException("Unknown type declaration: " + node);
+			}
+			
+			typeDecl.astName(new Identifier().astValue(name));
+			typeDecl.astModifiers((Modifiers) toTree(node.mods));
+			addJavadoc(typeDecl, node.mods);
+			set(node, typeDecl);
+		}
+		
+		@Override public void visitModifiers(JCModifiers node) {
+			Modifiers m = new Modifiers();
+			fillList(node.annotations, m.rawAnnotations());
+			for (KeywordModifier mod : KeywordModifier.fromReflectModifiers((int) node.flags)) m.astKeywords().addToEnd(mod);
+			set(node, m);
+		}
+		
+		@Override public void visitBlock(JCBlock node) {
+			Node n;
+			Block b = new Block();
+			fillList(node.stats, b.rawContents());
+			setPos(node, b);
+			if (hasFlag(FlagKey.BLOCKS_ARE_INITIALIZERS)) {
+				if ((node.flags & Flags.STATIC) != 0) {
+					n = setPos(node, new StaticInitializer().astBody(b));
+				} else {
+					// For some strange reason, solitary ; in a type body are represented not as JCSkips, but as JCBlocks with no endpos. Don't ask me why!
+					if (b.rawContents().isEmpty() && node.endpos == -1) {
+						n = setPos(node, new EmptyDeclaration());
+					} else {
+						n = setPos(node, new InstanceInitializer().astBody(b));
 					}
 				}
-				
-				defs.add(def);
-			}
-			fillList(defs, body.rawMembers(), flagKeyMap);
-			enumDecl.astBody(body);
-		} else {
-			throw new IllegalStateException("Unknown type declaration: " + node);
-		}
-		
-		typeDecl.astName(new Identifier().astValue(name));
-		typeDecl.astModifiers((Modifiers) toTree(node.mods));
-		addJavadoc(typeDecl, node.mods);
-		set(node, typeDecl);
-	}
-	
-	private void addJavadoc(JavadocContainer container, JCModifiers mods) {
-		if ((mods.flags & Flags.DEPRECATED) != 0) {
-			container.astJavadoc(new Comment().astBlockComment(true).astContent("*\n * @deprecated\n "));
-		}
-	}
-	
-	@Override public void visitModifiers(JCModifiers node) {
-		Modifiers m = new Modifiers();
-		fillList(node.annotations, m.rawAnnotations());
-		for (KeywordModifier mod : KeywordModifier.fromReflectModifiers((int) node.flags)) m.astKeywords().addToEnd(mod);
-		set(node, m);
-	}
-	
-	@Override public void visitBlock(JCBlock node) {
-		Node n;
-		Block b = new Block();
-		fillList(node.stats, b.rawContents());
-		if (hasFlag(FlagKey.BLOCKS_ARE_INITIALIZERS)) {
-			if ((node.flags & Flags.STATIC) != 0) {
-				n = setPos(node, new StaticInitializer().astBody(b));
 			} else {
-				// For some strange reason, solitary ; in a type body are represented not as JCSkips, but as JCBlocks with no endpos. Don't ask me why!
-				if (b.rawContents().isEmpty() && node.endpos == -1) {
-					n = setPos(node, new EmptyDeclaration());
-				} else {
-					n = setPos(node, new InstanceInitializer().astBody(b));
-				}
+				n = b;
 			}
-		} else {
-			n = b;
-		}
-		set(node, n);
-	}
-	
-	@Override public void visitSkip(JCSkip node) {
-		if (hasFlag(FlagKey.SKIP_IS_DECL)) {
-			set(node, new EmptyDeclaration());
-		} else {
-			set(node, new EmptyStatement());
-		}
-	}
-	
-	@Override public void visitVarDef(JCVariableDecl node) {
-		if (hasFlag(FlagKey.VARDEF_IS_DEFINITION)) {
-			set(node, toVariableDefinition(Collections.singletonList(node), FlagKey.VARDEF_IS_DEFINITION));
-		} else {
-			set(node, toVariableDefinition(Collections.singletonList(node)));
-		}
-	}
-	
-	@Override public void visitTypeIdent(JCPrimitiveTypeTree node) {
-		String primitiveType = JcTreeBuilder.PRIMITIVES.inverse().get(node.typetag);
-		
-		if (primitiveType == null) throw new IllegalArgumentException("Uknown primitive type tag: " + node.typetag);
-		
-		TypeReferencePart part = setPos(node, new TypeReferencePart().astIdentifier(setPos(node, new Identifier().astValue(primitiveType))));
-		
-		set(node, new TypeReference().astParts().addToEnd(part));
-	}
-	
-	@Override public void visitIdent(JCIdent node) {
-		String name = node.getName().toString();
-		
-		if ("this".equals(name)) {
-			set(node, new This());
-			return;
+			set(node, n);
 		}
 		
-		if ("super".equals(name)) {
-			set(node, new Super());
-			return;
+		@Override public void visitSkip(JCSkip node) {
+			if (hasFlag(FlagKey.SKIP_IS_DECL)) {
+				set(node, new EmptyDeclaration());
+			} else {
+				set(node, new EmptyStatement());
+			}
 		}
 		
-		Identifier id = setPos(node, new Identifier().astValue(name));
+		@Override public void visitVarDef(JCVariableDecl node) {
+			if (hasFlag(FlagKey.VARDEF_IS_DEFINITION)) {
+				set(node, toVariableDefinition(Collections.singletonList(node), FlagKey.VARDEF_IS_DEFINITION));
+			} else {
+				set(node, toVariableDefinition(Collections.singletonList(node)));
+			}
+		}
 		
-		if (hasFlag(FlagKey.TYPE_REFERENCE)) {
-			TypeReferencePart part = setPos(node, new TypeReferencePart().astIdentifier(id));
+		@Override public void visitTypeIdent(JCPrimitiveTypeTree node) {
+			String primitiveType = JcTreeBuilder.PRIMITIVES.inverse().get(node.typetag);
+			
+			if (primitiveType == null) throw new IllegalArgumentException("Uknown primitive type tag: " + node.typetag);
+			
+			TypeReferencePart part = setPos(node, new TypeReferencePart().astIdentifier(setPos(node, new Identifier().astValue(primitiveType))));
+			
 			set(node, new TypeReference().astParts().addToEnd(part));
-			return;
 		}
 		
-		set(node, new VariableReference().astIdentifier(id));
-	}
-	
-	@Override public void visitSelect(JCFieldAccess node) {
-		String name = node.getIdentifier().toString();
-		
-		Identifier id = setPos(node, new Identifier().astValue(name));
-		Node selected = toTree(node.selected, params);
-		
-		if (hasFlag(FlagKey.TYPE_REFERENCE)) {
-			TypeReference parent = (TypeReference) selected;
-			parent.astParts().addToEnd(setPos(node, new TypeReferencePart().astIdentifier(id)));
-			set(node, parent);
-			return;
-		}
-		
-		if ("this".equals(name)) {
-			set(node, new This().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
-			return;
-		}
-		
-		if ("super".equals(name)) {
-			set(node, new Super().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
-			return;
-		}
-		
-		if ("class".equals(name)) {
-			set(node, new ClassLiteral().rawTypeReference(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
-			return;
-		}
-		
-		set(node, new Select().astIdentifier(id).rawOperand(toTree(node.getExpression())));
-	}
-	
-	@Override public void visitTypeApply(JCTypeApply node) {
-		TypeReference ref = (TypeReference) toTree(node.clazz, FlagKey.TYPE_REFERENCE);
-		TypeReferencePart last = ref.astParts().last();
-		fillList(node.arguments, last.rawTypeArguments(), FlagKey.TYPE_REFERENCE);
-		set(node, ref);
-	}
-	
-	@Override public void visitWildcard(JCWildcard node) {
-		TypeReference ref = (TypeReference) toTree(node.getBound(), FlagKey.TYPE_REFERENCE);
-		if (ref == null) ref = new TypeReference();
-		switch (node.getKind()) {
-		case UNBOUNDED_WILDCARD:
-			ref.astWildcard(WildcardKind.UNBOUND);
-			break;
-		case EXTENDS_WILDCARD:
-			ref.astWildcard(WildcardKind.EXTENDS);
-			break;
-		case SUPER_WILDCARD:
-			ref.astWildcard(WildcardKind.SUPER);
-			break;
-		}
-		set(node, ref);
-	}
-	
-	@Override public void visitTypeParameter(JCTypeParameter node) {
-		TypeVariable var = new TypeVariable();
-		var.astName(setPos(node, new Identifier().astValue(node.name.toString())));
-		fillList(node.bounds, var.rawExtending(), FlagKey.TYPE_REFERENCE);
-		set(node, var);
-	}
-	
-	@Override public void visitTypeArray(JCArrayTypeTree node) {
-		TypeReference ref = (TypeReference) toTree(node.getType(), FlagKey.TYPE_REFERENCE);
-		ref.astArrayDimensions(ref.astArrayDimensions() + 1);
-		set(node, ref);
-	}
-	
-	@Override public void visitLiteral(JCLiteral node) {
-		Object val = node.getValue();
-		boolean negative = false;
-		Expression literal = null;
-		switch (node.getKind()) {
-		case INT_LITERAL:
-			int intValue = ((Number)val).intValue();
-			negative = intValue < 0;
-			if (intValue == Integer.MIN_VALUE) literal = new IntegralLiteral().astIntValue(Integer.MIN_VALUE);
-			else if (negative) literal = new IntegralLiteral().astIntValue(-intValue);
-			else literal = new IntegralLiteral().astIntValue(intValue);
-			break;
-		case LONG_LITERAL:
-			long longValue = ((Number)val).longValue();
-			negative = longValue < 0;
-			if (longValue == Long.MIN_VALUE) literal = new IntegralLiteral().astLongValue(Long.MIN_VALUE);
-			else if (negative) literal = new IntegralLiteral().astLongValue(-longValue);
-			else literal = new IntegralLiteral().astLongValue(longValue);
-			break;
-		case FLOAT_LITERAL:
-			set(node, new FloatingPointLiteral().astFloatValue(((Number)val).floatValue()));
-			return;
-		case DOUBLE_LITERAL:
-			set(node, new FloatingPointLiteral().astDoubleValue(((Number)val).doubleValue()));
-			return;
-		case BOOLEAN_LITERAL:
-			set(node, new BooleanLiteral().astValue((Boolean)val));
-			return;
-		case CHAR_LITERAL:
-			set(node, new CharLiteral().astValue((Character)val));
-			return;
-		case STRING_LITERAL:
-			set(node, new StringLiteral().astValue(val == null ? "" : val.toString()));
-			return;
-		case NULL_LITERAL:
-			set(node, new NullLiteral());
-			return;
-		}
-		
-		if (literal != null) {
-			if (negative) set(node, new UnaryExpression().astOperand(setPos(node, literal)).astOperator(UnaryOperator.UNARY_MINUS));
-			else set(node, literal);
-		} else {
-			throw new IllegalArgumentException("Unknown JCLiteral type tag:" + node.typetag);
-		}
-	}
-	
-	@Override public void visitParens(JCParens node) {
-		Expression expr = (Expression) toTree(node.getExpression());
-		expr.astParensPositions().add(new Position(node.pos, node.getEndPosition(endPosTable)));
-		set(node, expr);
-	}
-	
-	@Override public void visitTypeCast(JCTypeCast node) {
-		Cast cast = new Cast();
-		cast.rawOperand(toTree(node.getExpression()));
-		cast.rawTypeReference(toTree(node.getType(), FlagKey.TYPE_REFERENCE));
-		set(node, cast);
-	}
-	
-	@Override public void visitUnary(JCUnary node) {
-		UnaryExpression expr = new UnaryExpression();
-		expr.rawOperand(toTree(node.getExpression()));
-		expr.astOperator(JcTreeBuilder.UNARY_OPERATORS.inverse().get(node.getTag()));
-		set(node, expr);
-	}
-	
-	@Override public void visitBinary(JCBinary node) {
-		BinaryExpression expr = new BinaryExpression();
-		expr.rawLeft(toTree(node.getLeftOperand()));
-		expr.rawRight(toTree(node.getRightOperand()));
-		expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
-		set(node, expr);
-	}
-	
-	@Override public void visitNewClass(JCNewClass node) {
-		ConstructorInvocation inv = new ConstructorInvocation();
-		fillList(node.getArguments(), inv.rawArguments());
-		fillList(node.getTypeArguments(), inv.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
-		inv.rawTypeReference(toTree(node.getIdentifier(), FlagKey.TYPE_REFERENCE));
-		inv.rawQualifier(toTree(node.getEnclosingExpression()));
-		Node n = toTree(node.getClassBody());
-		if (n instanceof TypeDeclaration) {
-			NormalTypeBody body = ((ClassDeclaration) n).astBody();
-			if (body != null) body.unparent();
-			inv.rawAnonymousClassBody(body);
-		}
-		set(node, inv);
-	}
-	
-	@Override public void visitTypeTest(JCInstanceOf node) {
-		InstanceOf io = new InstanceOf();
-		io.rawTypeReference(toTree(node.getType(), FlagKey.TYPE_REFERENCE));
-		io.rawObjectReference(toTree(node.getExpression()));
-		set(node, io);
-	}
-	
-	@Override public void visitConditional(JCConditional node) {
-		InlineIfExpression iie = new InlineIfExpression();
-		iie.rawCondition(toTree(node.getCondition()));
-		iie.rawIfTrue(toTree(node.getTrueExpression()));
-		iie.rawIfFalse(toTree(node.getFalseExpression()));
-		set(node, iie);
-	}
-	
-	@Override public void visitAssign(JCAssign node) {
-		BinaryExpression expr = new BinaryExpression();
-		expr.rawRight(toTree(node.getExpression()));
-		expr.rawLeft(toTree(node.getVariable()));
-		expr.astOperator(BinaryOperator.ASSIGN);
-		set(node, expr);
-	}
-	
-	@Override public void visitAssignop(JCAssignOp node) {
-		BinaryExpression expr = new BinaryExpression();
-		expr.rawRight(toTree(node.getExpression()));
-		expr.rawLeft(toTree(node.getVariable()));
-		expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
-		set(node, expr);
-	}
-	
-	@Override public void visitExec(JCExpressionStatement node) {
-		Node expr = toTree(node.getExpression());
-		if (expr instanceof SuperConstructorInvocation || expr instanceof AlternateConstructorInvocation) {
-			set(node, expr);
-			return;
-		}
-		ExpressionStatement exec = new ExpressionStatement();
-		exec.rawExpression(expr);
-		set(node, exec);
-	}
-	
-	@Override public void visitApply(JCMethodInvocation node) {
-		MethodInvocation inv = new MethodInvocation();
-		JCTree sel = node.getMethodSelect();
-		Identifier id = new Identifier();
-		if (sel instanceof JCIdent) {
-			String name = ((JCIdent) sel).getName().toString();
+		@Override public void visitIdent(JCIdent node) {
+			String name = node.getName().toString();
+			
 			if ("this".equals(name)) {
-				AlternateConstructorInvocation aci = new AlternateConstructorInvocation();
-				fillList(node.getTypeArguments(), aci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
-				fillList(node.getArguments(), aci.rawArguments());
-				set(node, aci);
+				set(node, new This());
 				return;
 			}
 			
 			if ("super".equals(name)) {
-				SuperConstructorInvocation sci = new SuperConstructorInvocation();
-				fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
-				fillList(node.getArguments(), sci.rawArguments());
-				set(node, sci);
+				set(node, new Super());
 				return;
 			}
 			
-			setPos(sel, id.astValue(name));
-			sel = null;
-		} else if (sel instanceof JCFieldAccess) {
-			String name = ((JCFieldAccess) sel).getIdentifier().toString();
-			if ("super".equals(name)) {
-				SuperConstructorInvocation sci = new SuperConstructorInvocation();
-				fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
-				fillList(node.getArguments(), sci.rawArguments());
-				sci.rawQualifier(toTree(((JCFieldAccess) sel).getExpression()));
-				set(node, sci);
+			Identifier id = setPos(node, new Identifier().astValue(name));
+			
+			if (hasFlag(FlagKey.TYPE_REFERENCE)) {
+				TypeReferencePart part = setPos(node, new TypeReferencePart().astIdentifier(id));
+				set(node, new TypeReference().astParts().addToEnd(part));
 				return;
 			}
-			setPos(sel, id.astValue(name));
-			sel = ((JCFieldAccess) sel).getExpression();
-		}
-		inv.astName(id).rawOperand(toTree(sel));
-		fillList(node.getTypeArguments(), inv.rawMethodTypeArguments(), FlagKey.TYPE_REFERENCE);
-		fillList(node.getArguments(), inv.rawArguments());
-		set(node, inv);
-	}
-	
-	@Override public void visitNewArray(JCNewArray node) {
-		ArrayInitializer init = null;
-		
-		if (node.getInitializers() != null) {
-			init = setPos(node, new ArrayInitializer());
-			fillList(node.getInitializers(), init.rawExpressions());
+			
+			set(node, new VariableReference().astIdentifier(id));
 		}
 		
-		if (node.getType() == null) {
-			set(node, init == null ? new ArrayInitializer() : init);
-			return;
+		@Override public void visitSelect(JCFieldAccess node) {
+			String name = node.getIdentifier().toString();
+			
+			Identifier id = setPos(node, new Identifier().astValue(name));
+			Node selected = toTree(node.selected, params);
+			
+			if (hasFlag(FlagKey.TYPE_REFERENCE)) {
+				TypeReference parent = (TypeReference) selected;
+				parent.astParts().addToEnd(setPos(node, new TypeReferencePart().astIdentifier(id)));
+				set(node, parent);
+				return;
+			}
+			
+			if ("this".equals(name)) {
+				set(node, new This().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+				return;
+			}
+			
+			if ("super".equals(name)) {
+				set(node, new Super().rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+				return;
+			}
+			
+			if ("class".equals(name)) {
+				set(node, new ClassLiteral().rawTypeReference(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
+				return;
+			}
+			
+			set(node, new Select().astIdentifier(id).rawOperand(toTree(node.getExpression())));
 		}
 		
-		ArrayCreation crea = new ArrayCreation();
-		int inits = 0;
-		JCTree type = node.getType();
-		while (type instanceof JCArrayTypeTree) {
-			inits++;
-			type = ((JCArrayTypeTree) type).getType();
+		@Override public void visitTypeApply(JCTypeApply node) {
+			TypeReference ref = (TypeReference) toTree(node.clazz, FlagKey.TYPE_REFERENCE);
+			TypeReferencePart last = ref.astParts().last();
+			fillList(node.arguments, last.rawTypeArguments(), FlagKey.TYPE_REFERENCE);
+			set(node, ref);
 		}
 		
-		crea.rawComponentTypeReference(toTree(type, FlagKey.TYPE_REFERENCE));
-		if (node.getDimensions() != null) for (JCExpression dim : node.getDimensions()) {
-			crea.astDimensions().addToEnd(new ArrayDimension().rawDimension(toTree(dim)));
+		@Override public void visitWildcard(JCWildcard node) {
+			TypeReference ref = (TypeReference) toTree(node.getBound(), FlagKey.TYPE_REFERENCE);
+			if (ref == null) ref = new TypeReference();
+			switch (node.getKind()) {
+			case UNBOUNDED_WILDCARD:
+				ref.astWildcard(WildcardKind.UNBOUND);
+				break;
+			case EXTENDS_WILDCARD:
+				ref.astWildcard(WildcardKind.EXTENDS);
+				break;
+			case SUPER_WILDCARD:
+				ref.astWildcard(WildcardKind.SUPER);
+				break;
+			}
+			set(node, ref);
 		}
-		// new boolean [][][] {} in javac has one less dimension for some reason.
-		for (int i = 0; i < inits || (i == inits && init != null); i++) crea.astDimensions().addToEnd(new ArrayDimension());
-		crea.astInitializer(init);
-		set(node, crea);
-	}
-	
-	@Override public void visitIndexed(JCArrayAccess node) {
-		ArrayAccess aa = new ArrayAccess();
-		aa.rawIndexExpression(toTree(node.getIndex()));
-		aa.rawOperand(toTree(node.getExpression()));
-		set(node, aa);
-	}
-	
-	@Override public void visitAssert(JCAssert node) {
-		set(node, new Assert().rawAssertion(toTree(node.getCondition())).rawMessage(toTree(node.getDetail())));
-	}
-	
-	@Override public void visitDoLoop(JCDoWhileLoop node) {
-		set(node, new DoWhile().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
-	}
-	
-	@Override public void visitContinue(JCContinue node) {
-		Continue c = new Continue();
-		if (node.getLabel() != null) {
-			c.astLabel(new Identifier().astValue(node.getLabel().toString()));
+		
+		@Override public void visitTypeParameter(JCTypeParameter node) {
+			TypeVariable var = new TypeVariable();
+			var.astName(setPos(node, new Identifier().astValue(node.name.toString())));
+			fillList(node.bounds, var.rawExtending(), FlagKey.TYPE_REFERENCE);
+			set(node, var);
 		}
-		set(node, c);
-	}
-	
-	@Override public void visitBreak(JCBreak node) {
-		Break b = new Break();
-		if (node.getLabel() != null) {
-			b.astLabel(new Identifier().astValue(node.getLabel().toString()));
+		
+		@Override public void visitTypeArray(JCArrayTypeTree node) {
+			TypeReference ref = (TypeReference) toTree(node.getType(), FlagKey.TYPE_REFERENCE);
+			ref.astArrayDimensions(ref.astArrayDimensions() + 1);
+			set(node, ref);
 		}
-		set(node, b);
-	}
-	
-	@Override public void visitForeachLoop(JCEnhancedForLoop node) {
-		ForEach fe = new ForEach();
-		fe.rawIterable(toTree(node.getExpression()));
-		fe.rawStatement(toTree(node.getStatement()));
-		fe.rawVariable(toTree(node.getVariable(), FlagKey.VARDEF_IS_DEFINITION));
-		set(node, fe);
-	}
-	
-	@Override public void visitIf(JCIf node) {
-		If i = new If();
-		i.rawCondition(toTree(removeParens(node.getCondition())));
-		i.rawStatement(toTree(node.getThenStatement()));
-		i.rawElseStatement(toTree(node.getElseStatement()));
-		set(node, i);
-	}
-	
-	@Override public void visitLabelled(JCLabeledStatement node) {
-		Identifier lbl = new Identifier().astValue(node.getLabel().toString());
-		set(node, new LabelledStatement().rawStatement(toTree(node.getStatement())).astLabel(lbl));
-	}
-	
-	@Override public void visitForLoop(JCForLoop node) {
-		For f = new For();
-		f.rawCondition(toTree(node.getCondition()));
-		f.rawStatement(toTree(node.getStatement()));
-		for (JCExpressionStatement upd : node.getUpdate()) {
-			f.rawUpdates().addToEnd(toTree(upd.getExpression()));
+		
+		@Override public void visitLiteral(JCLiteral node) {
+			Object val = node.getValue();
+			boolean negative = false;
+			Expression literal = null;
+			switch (node.getKind()) {
+			case INT_LITERAL:
+				int intValue = ((Number)val).intValue();
+				negative = intValue < 0;
+				if (intValue == Integer.MIN_VALUE) literal = new IntegralLiteral().astIntValue(Integer.MIN_VALUE);
+				else if (negative) literal = new IntegralLiteral().astIntValue(-intValue);
+				else literal = new IntegralLiteral().astIntValue(intValue);
+				break;
+			case LONG_LITERAL:
+				long longValue = ((Number)val).longValue();
+				negative = longValue < 0;
+				if (longValue == Long.MIN_VALUE) literal = new IntegralLiteral().astLongValue(Long.MIN_VALUE);
+				else if (negative) literal = new IntegralLiteral().astLongValue(-longValue);
+				else literal = new IntegralLiteral().astLongValue(longValue);
+				break;
+			case FLOAT_LITERAL:
+				set(node, new FloatingPointLiteral().astFloatValue(((Number)val).floatValue()));
+				return;
+			case DOUBLE_LITERAL:
+				set(node, new FloatingPointLiteral().astDoubleValue(((Number)val).doubleValue()));
+				return;
+			case BOOLEAN_LITERAL:
+				set(node, new BooleanLiteral().astValue((Boolean)val));
+				return;
+			case CHAR_LITERAL:
+				set(node, new CharLiteral().astValue((Character)val));
+				return;
+			case STRING_LITERAL:
+				set(node, new StringLiteral().astValue(val == null ? "" : val.toString()));
+				return;
+			case NULL_LITERAL:
+				set(node, new NullLiteral());
+				return;
+			}
+			
+			if (literal != null) {
+				if (negative) set(node, new UnaryExpression().astOperand(setPos(node, literal)).astOperator(UnaryOperator.UNARY_MINUS));
+				else set(node, literal);
+			} else {
+				throw new IllegalArgumentException("Unknown JCLiteral type tag:" + node.typetag);
+			}
 		}
-		List<JCStatement> initializers = node.getInitializer();
-		// Multiple vardefs in a row need to trigger the JCVD version AND be washed through fillList to be turned into 1 VD.
-		if (!initializers.isEmpty() && initializers.get(0) instanceof JCVariableDecl) {
-			Block tmp = new Block();
-			fillList(initializers, tmp.rawContents(), FlagKey.VARDEF_IS_DEFINITION);
-			Node varDecl = tmp.rawContents().first();
-			if (varDecl != null) varDecl.unparent();
-			f.rawVariableDeclaration(varDecl);
-		} else {
-			for (JCStatement init : initializers) {
-				if (init instanceof JCExpressionStatement) {
-					f.rawExpressionInits().addToEnd(toTree(((JCExpressionStatement) init).getExpression()));
-				} else {
-					f.rawExpressionInits().addToEnd(toTree(init));
+		
+		@Override public void visitParens(JCParens node) {
+			Expression expr = (Expression) toTree(node.getExpression());
+			expr.astParensPositions().add(new Position(node.pos, node.getEndPosition(endPosTable)));
+			set(node, expr);
+		}
+		
+		@Override public void visitTypeCast(JCTypeCast node) {
+			Cast cast = new Cast();
+			cast.rawOperand(toTree(node.getExpression()));
+			cast.rawTypeReference(toTree(node.getType(), FlagKey.TYPE_REFERENCE));
+			set(node, cast);
+		}
+		
+		@Override public void visitUnary(JCUnary node) {
+			UnaryExpression expr = new UnaryExpression();
+			expr.rawOperand(toTree(node.getExpression()));
+			expr.astOperator(JcTreeBuilder.UNARY_OPERATORS.inverse().get(node.getTag()));
+			set(node, expr);
+		}
+		
+		@Override public void visitBinary(JCBinary node) {
+			BinaryExpression expr = new BinaryExpression();
+			expr.rawLeft(toTree(node.getLeftOperand()));
+			expr.rawRight(toTree(node.getRightOperand()));
+			expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
+			set(node, expr);
+		}
+		
+		@Override public void visitNewClass(JCNewClass node) {
+			ConstructorInvocation inv = new ConstructorInvocation();
+			fillList(node.getArguments(), inv.rawArguments());
+			fillList(node.getTypeArguments(), inv.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
+			inv.rawTypeReference(toTree(node.getIdentifier(), FlagKey.TYPE_REFERENCE));
+			inv.rawQualifier(toTree(node.getEnclosingExpression()));
+			Node n = toTree(node.getClassBody());
+			if (n instanceof TypeDeclaration) {
+				NormalTypeBody body = ((ClassDeclaration) n).astBody();
+				if (body != null) body.unparent();
+				inv.rawAnonymousClassBody(body);
+			}
+			set(node, inv);
+		}
+		
+		@Override public void visitTypeTest(JCInstanceOf node) {
+			InstanceOf io = new InstanceOf();
+			io.rawTypeReference(toTree(node.getType(), FlagKey.TYPE_REFERENCE));
+			io.rawObjectReference(toTree(node.getExpression()));
+			set(node, io);
+		}
+		
+		@Override public void visitConditional(JCConditional node) {
+			InlineIfExpression iie = new InlineIfExpression();
+			iie.rawCondition(toTree(node.getCondition()));
+			iie.rawIfTrue(toTree(node.getTrueExpression()));
+			iie.rawIfFalse(toTree(node.getFalseExpression()));
+			set(node, iie);
+		}
+		
+		@Override public void visitAssign(JCAssign node) {
+			BinaryExpression expr = new BinaryExpression();
+			expr.rawRight(toTree(node.getExpression()));
+			expr.rawLeft(toTree(node.getVariable()));
+			expr.astOperator(BinaryOperator.ASSIGN);
+			set(node, expr);
+		}
+		
+		@Override public void visitAssignop(JCAssignOp node) {
+			BinaryExpression expr = new BinaryExpression();
+			expr.rawRight(toTree(node.getExpression()));
+			expr.rawLeft(toTree(node.getVariable()));
+			expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
+			set(node, expr);
+		}
+		
+		@Override public void visitExec(JCExpressionStatement node) {
+			Node expr = toTree(node.getExpression());
+			if (expr instanceof SuperConstructorInvocation || expr instanceof AlternateConstructorInvocation) {
+				set(node, expr);
+				return;
+			}
+			ExpressionStatement exec = new ExpressionStatement();
+			exec.rawExpression(expr);
+			set(node, exec);
+		}
+		
+		@Override public void visitApply(JCMethodInvocation node) {
+			MethodInvocation inv = new MethodInvocation();
+			JCTree sel = node.getMethodSelect();
+			Identifier id = new Identifier();
+			if (sel instanceof JCIdent) {
+				String name = ((JCIdent) sel).getName().toString();
+				if ("this".equals(name)) {
+					AlternateConstructorInvocation aci = new AlternateConstructorInvocation();
+					fillList(node.getTypeArguments(), aci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
+					fillList(node.getArguments(), aci.rawArguments());
+					set(node, aci);
+					return;
+				}
+				
+				if ("super".equals(name)) {
+					SuperConstructorInvocation sci = new SuperConstructorInvocation();
+					fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
+					fillList(node.getArguments(), sci.rawArguments());
+					set(node, sci);
+					return;
+				}
+				
+				setPos(sel, id.astValue(name));
+				sel = null;
+			} else if (sel instanceof JCFieldAccess) {
+				String name = ((JCFieldAccess) sel).getIdentifier().toString();
+				if ("super".equals(name)) {
+					SuperConstructorInvocation sci = new SuperConstructorInvocation();
+					fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
+					fillList(node.getArguments(), sci.rawArguments());
+					sci.rawQualifier(toTree(((JCFieldAccess) sel).getExpression()));
+					set(node, sci);
+					return;
+				}
+				setPos(sel, id.astValue(name));
+				sel = ((JCFieldAccess) sel).getExpression();
+			}
+			inv.astName(id).rawOperand(toTree(sel));
+			fillList(node.getTypeArguments(), inv.rawMethodTypeArguments(), FlagKey.TYPE_REFERENCE);
+			fillList(node.getArguments(), inv.rawArguments());
+			set(node, inv);
+		}
+		
+		@Override public void visitNewArray(JCNewArray node) {
+			ArrayInitializer init = null;
+			
+			if (node.getInitializers() != null) {
+				init = setPos(node, new ArrayInitializer());
+				fillList(node.getInitializers(), init.rawExpressions());
+			}
+			
+			if (node.getType() == null) {
+				set(node, init == null ? new ArrayInitializer() : init);
+				return;
+			}
+			
+			ArrayCreation crea = new ArrayCreation();
+			int inits = 0;
+			JCTree type = node.getType();
+			while (type instanceof JCArrayTypeTree) {
+				inits++;
+				type = ((JCArrayTypeTree) type).getType();
+			}
+			
+			crea.rawComponentTypeReference(toTree(type, FlagKey.TYPE_REFERENCE));
+			if (node.getDimensions() != null) for (JCExpression dim : node.getDimensions()) {
+				crea.astDimensions().addToEnd(new ArrayDimension().rawDimension(toTree(dim)));
+			}
+			// new boolean [][][] {} in javac has one less dimension for some reason.
+			for (int i = 0; i < inits || (i == inits && init != null); i++) crea.astDimensions().addToEnd(new ArrayDimension());
+			crea.astInitializer(init);
+			set(node, crea);
+		}
+		
+		@Override public void visitIndexed(JCArrayAccess node) {
+			ArrayAccess aa = new ArrayAccess();
+			aa.rawIndexExpression(toTree(node.getIndex()));
+			aa.rawOperand(toTree(node.getExpression()));
+			set(node, aa);
+		}
+		
+		@Override public void visitAssert(JCAssert node) {
+			set(node, new Assert().rawAssertion(toTree(node.getCondition())).rawMessage(toTree(node.getDetail())));
+		}
+		
+		@Override public void visitDoLoop(JCDoWhileLoop node) {
+			set(node, new DoWhile().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
+		}
+		
+		@Override public void visitContinue(JCContinue node) {
+			Continue c = new Continue();
+			if (node.getLabel() != null) {
+				c.astLabel(new Identifier().astValue(node.getLabel().toString()));
+			}
+			set(node, c);
+		}
+		
+		@Override public void visitBreak(JCBreak node) {
+			Break b = new Break();
+			if (node.getLabel() != null) {
+				b.astLabel(new Identifier().astValue(node.getLabel().toString()));
+			}
+			set(node, b);
+		}
+		
+		@Override public void visitForeachLoop(JCEnhancedForLoop node) {
+			ForEach fe = new ForEach();
+			fe.rawIterable(toTree(node.getExpression()));
+			fe.rawStatement(toTree(node.getStatement()));
+			fe.rawVariable(toTree(node.getVariable(), FlagKey.VARDEF_IS_DEFINITION));
+			set(node, fe);
+		}
+		
+		@Override public void visitIf(JCIf node) {
+			If i = new If();
+			i.rawCondition(toTree(removeParens(node.getCondition())));
+			i.rawStatement(toTree(node.getThenStatement()));
+			i.rawElseStatement(toTree(node.getElseStatement()));
+			set(node, i);
+		}
+		
+		@Override public void visitLabelled(JCLabeledStatement node) {
+			Identifier lbl = new Identifier().astValue(node.getLabel().toString());
+			set(node, new LabelledStatement().rawStatement(toTree(node.getStatement())).astLabel(lbl));
+		}
+		
+		@Override public void visitForLoop(JCForLoop node) {
+			For f = new For();
+			f.rawCondition(toTree(node.getCondition()));
+			f.rawStatement(toTree(node.getStatement()));
+			for (JCExpressionStatement upd : node.getUpdate()) {
+				f.rawUpdates().addToEnd(toTree(upd.getExpression()));
+			}
+			List<JCStatement> initializers = node.getInitializer();
+			// Multiple vardefs in a row need to trigger the JCVD version AND be washed through fillList to be turned into 1 VD.
+			if (!initializers.isEmpty() && initializers.get(0) instanceof JCVariableDecl) {
+				Block tmp = new Block();
+				fillList(initializers, tmp.rawContents(), FlagKey.VARDEF_IS_DEFINITION);
+				Node varDecl = tmp.rawContents().first();
+				if (varDecl != null) varDecl.unparent();
+				f.rawVariableDeclaration(varDecl);
+			} else {
+				for (JCStatement init : initializers) {
+					if (init instanceof JCExpressionStatement) {
+						f.rawExpressionInits().addToEnd(toTree(((JCExpressionStatement) init).getExpression()));
+					} else {
+						f.rawExpressionInits().addToEnd(toTree(init));
+					}
 				}
 			}
-		}
-		set(node, f);
-	}
-	
-	@Override public void visitSwitch(JCSwitch node) {
-		Switch s = new Switch();
-		s.rawCondition(toTree(removeParens(node.getExpression())));
-		Block b = new Block();
-		s.astBody(b);
-		for (JCCase c : node.getCases()) {
-			JCExpression rawExpr = c.getExpression();
-			if (rawExpr == null) b.rawContents().addToEnd(setPos(c, new Default()));
-			else b.rawContents().addToEnd(setPos(c, new Case().rawCondition(toTree(rawExpr))));
-			fillList(c.getStatements(), b.rawContents());
-		}
-		set(node, s);
-	}
-	
-	@Override public void visitSynchronized(JCSynchronized node) {
-		set(node, new Synchronized().rawLock(toTree(removeParens(node.getExpression()))).rawBody(toTree(node.getBlock())));
-	}
-	
-	@Override public void visitTry(JCTry node) {
-		Try t = new Try();
-		t.rawBody(toTree(node.getBlock()));
-		t.rawFinally(toTree(node.getFinallyBlock()));
-		fillList(node.getCatches(), t.rawCatches());
-		set(node, t);
-	}
-	
-	@Override public void visitCatch(JCCatch node) {
-		set(node, new Catch()
-				.rawExceptionDeclaration(toTree(node.getParameter(), FlagKey.VARDEF_IS_DEFINITION))
-				.rawBody(toTree(node.getBlock())));
-	}
-	
-	@Override public void visitThrow(JCThrow node) {
-		set(node, new Throw().rawThrowable(toTree(node.getExpression())));
-	}
-	
-	@Override public void visitWhileLoop(JCWhileLoop node) {
-		set(node, new While().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
-	}
-	
-	@Override public void visitReturn(JCReturn node) {
-		set(node, new Return().rawValue(toTree(node.getExpression())));
-	}
-	
-	@Override public void visitMethodDef(JCMethodDecl node) {
-		String name = node.getName() == null ? null : node.getName().toString();
-		if ("<init>".equals(name)) {
-			ConstructorDeclaration cd = new ConstructorDeclaration();
-			cd.astModifiers((Modifiers) toTree(node.getModifiers()));
-			cd.rawBody(toTree(node.getBody()));
-			fillList(node.getThrows(), cd.rawThrownTypeReferences(), FlagKey.TYPE_REFERENCE);
-			fillList(node.getTypeParameters(), cd.rawTypeVariables());
-			fillList(node.getParameters(), cd.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
-			String typeName = (String) getFlag(FlagKey.CONTAINING_TYPE_NAME);
-			cd.astTypeName(new Identifier().astValue(typeName));
-			addJavadoc(cd, node.mods);
-			set(node, cd);
-			return;
+			set(node, f);
 		}
 		
-		if (hasFlag(FlagKey.METHODS_ARE_ANNMETHODS)) {
-			AnnotationMethodDeclaration md = new AnnotationMethodDeclaration();
+		@Override public void visitSwitch(JCSwitch node) {
+			Switch s = new Switch();
+			s.rawCondition(toTree(removeParens(node.getExpression())));
+			Block b = new Block();
+			s.astBody(b);
+			for (JCCase c : node.getCases()) {
+				JCExpression rawExpr = c.getExpression();
+				if (rawExpr == null) b.rawContents().addToEnd(setPos(c, new Default()));
+				else b.rawContents().addToEnd(setPos(c, new Case().rawCondition(toTree(rawExpr))));
+				fillList(c.getStatements(), b.rawContents());
+			}
+			set(node, s);
+		}
+		
+		@Override public void visitSynchronized(JCSynchronized node) {
+			set(node, new Synchronized().rawLock(toTree(removeParens(node.getExpression()))).rawBody(toTree(node.getBlock())));
+		}
+		
+		@Override public void visitTry(JCTry node) {
+			Try t = new Try();
+			t.rawBody(toTree(node.getBlock()));
+			t.rawFinally(toTree(node.getFinallyBlock()));
+			fillList(node.getCatches(), t.rawCatches());
+			set(node, t);
+		}
+		
+		@Override public void visitCatch(JCCatch node) {
+			set(node, new Catch()
+					.rawExceptionDeclaration(toTree(node.getParameter(), FlagKey.VARDEF_IS_DEFINITION))
+					.rawBody(toTree(node.getBlock())));
+		}
+		
+		@Override public void visitThrow(JCThrow node) {
+			set(node, new Throw().rawThrowable(toTree(node.getExpression())));
+		}
+		
+		@Override public void visitWhileLoop(JCWhileLoop node) {
+			set(node, new While().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
+		}
+		
+		@Override public void visitReturn(JCReturn node) {
+			set(node, new Return().rawValue(toTree(node.getExpression())));
+		}
+		
+		@Override public void visitMethodDef(JCMethodDecl node) {
+			String name = node.getName() == null ? null : node.getName().toString();
+			if ("<init>".equals(name)) {
+				ConstructorDeclaration cd = new ConstructorDeclaration();
+				cd.astModifiers((Modifiers) toTree(node.getModifiers()));
+				cd.rawBody(toTree(node.getBody()));
+				fillList(node.getThrows(), cd.rawThrownTypeReferences(), FlagKey.TYPE_REFERENCE);
+				fillList(node.getTypeParameters(), cd.rawTypeVariables());
+				fillList(node.getParameters(), cd.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
+				String typeName = (String) getFlag(FlagKey.CONTAINING_TYPE_NAME);
+				cd.astTypeName(new Identifier().astValue(typeName));
+				addJavadoc(cd, node.mods);
+				set(node, cd);
+				return;
+			}
+			
+			if (hasFlag(FlagKey.METHODS_ARE_ANNMETHODS)) {
+				AnnotationMethodDeclaration md = new AnnotationMethodDeclaration();
+				md.astModifiers((Modifiers) toTree(node.getModifiers()));
+				md.astMethodName(new Identifier().astValue(name));
+				md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
+				md.rawDefaultValue(toTree(node.getDefaultValue()));
+				addJavadoc(md, node.mods);
+				set(node, md);
+				return;
+			}
+			
+			MethodDeclaration md = new MethodDeclaration();
+			md.rawBody(toTree(node.getBody()));
 			md.astModifiers((Modifiers) toTree(node.getModifiers()));
 			md.astMethodName(new Identifier().astValue(name));
+			fillList(node.getThrows(), md.rawThrownTypeReferences(), FlagKey.TYPE_REFERENCE);
+			fillList(node.getTypeParameters(), md.rawTypeVariables());
+			fillList(node.getParameters(), md.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
 			md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
-			md.rawDefaultValue(toTree(node.getDefaultValue()));
 			addJavadoc(md, node.mods);
 			set(node, md);
-			return;
 		}
 		
-		MethodDeclaration md = new MethodDeclaration();
-		md.rawBody(toTree(node.getBody()));
-		md.astModifiers((Modifiers) toTree(node.getModifiers()));
-		md.astMethodName(new Identifier().astValue(name));
-		fillList(node.getThrows(), md.rawThrownTypeReferences(), FlagKey.TYPE_REFERENCE);
-		fillList(node.getTypeParameters(), md.rawTypeVariables());
-		fillList(node.getParameters(), md.rawParameters(), FlagKey.NO_VARDECL_FOLDING, FlagKey.VARDEF_IS_DEFINITION);
-		md.rawReturnTypeReference(toTree(node.getReturnType(), FlagKey.TYPE_REFERENCE));
-		addJavadoc(md, node.mods);
-		set(node, md);
-	}
-	
-	@Override public void visitAnnotation(JCAnnotation node) {
-		Annotation a = new Annotation();
-		a.rawAnnotationTypeReference(toTree(node.getAnnotationType(), FlagKey.TYPE_REFERENCE));
-		for (JCExpression elem : node.getArguments()) {
-			AnnotationElement e = new AnnotationElement();
-			if (elem instanceof JCAssign) {
-				JCExpression rawName = ((JCAssign) elem).getVariable();
-				if (rawName instanceof JCIdent) e.astName(new Identifier().astValue(((JCIdent)rawName).getName().toString()));
-				elem = ((JCAssign) elem).getExpression();
+		@Override public void visitAnnotation(JCAnnotation node) {
+			Annotation a = new Annotation();
+			a.rawAnnotationTypeReference(toTree(node.getAnnotationType(), FlagKey.TYPE_REFERENCE));
+			for (JCExpression elem : node.getArguments()) {
+				AnnotationElement e = new AnnotationElement();
+				if (elem instanceof JCAssign) {
+					JCExpression rawName = ((JCAssign) elem).getVariable();
+					if (rawName instanceof JCIdent) e.astName(new Identifier().astValue(((JCIdent)rawName).getName().toString()));
+					elem = ((JCAssign) elem).getExpression();
+				}
+				e.rawValue(toTree(elem));
+				a.astElements().addToEnd(e);
 			}
-			e.rawValue(toTree(elem));
-			a.astElements().addToEnd(e);
+			set(node, a);
 		}
-		set(node, a);
 	}
 }

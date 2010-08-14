@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
-import lombok.ast.Node;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.javac.JcTreeBuilder;
 import lombok.ast.javac.JcTreeConverter;
@@ -83,9 +82,11 @@ public class JcTreeConverterType2Test extends TreeBuilderRunner<JCTree> {
 		compiler.keepComments = true;
 		
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
-		Node n = JcTreeConverter.convert(cu);
+		JcTreeConverter converter = new JcTreeConverter();
 		JcTreeBuilder builder = new JcTreeBuilder();
-		n.accept(builder);
+		converter.convert(cu);
+		converter.transferPositionInfo(builder);
+		builder.convert(converter.getResult());
 		return builder.get();
 	}
 	

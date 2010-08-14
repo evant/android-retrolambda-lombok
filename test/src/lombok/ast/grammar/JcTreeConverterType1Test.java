@@ -65,15 +65,15 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		super(false);
 	}
 	
-//	@Override protected Collection<DirDescriptor> getDirDescriptors() {
+	@Override protected Collection<DirDescriptor> getDirDescriptors() {
+		return Arrays.asList(
+				DirDescriptor.of(new File("test/resources/alias"), true)
+						.withInclusion(Pattern.compile("^.*(?:[a]\\d{3}).*\\.java$", Pattern.CASE_INSENSITIVE)));
 //		return Arrays.asList(
-//				DirDescriptor.of(new File("test/resources/idempotency"), true)
-//						.withInclusion(Pattern.compile("^.*(?:[c]002_Ex).*\\.java$", Pattern.CASE_INSENSITIVE)));
-////		return Arrays.asList(
-////				DirDescriptor.of(new File("test/resources/idempotency"), true),
-////				DirDescriptor.of(new File("test/resources/alias"), true),
-////				DirDescriptor.of(new File("test/resources/special"), true));
-//	}
+//				DirDescriptor.of(new File("test/resources/idempotency"), true),
+//				DirDescriptor.of(new File("test/resources/alias"), true),
+//				DirDescriptor.of(new File("test/resources/special"), true));
+	}
 	
 	@Test
 	public boolean testJcTreeConverter(Source source) throws Exception {
@@ -165,6 +165,8 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		compiler.keepComments = true;
 		
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
-		return JcTreeConverter.convert(cu);
+		JcTreeConverter converter = new JcTreeConverter();
+		converter.convert(cu);
+		return converter.getResult();
 	}
 }
