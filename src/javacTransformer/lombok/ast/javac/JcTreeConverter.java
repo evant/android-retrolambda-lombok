@@ -253,6 +253,15 @@ public class JcTreeConverter {
 		return toVariableDefinition(decls, map);
 	}
 	
+	private Position getPosition(JCTree node) {
+		if (node == null) return Position.UNPLACED;
+		int start = node.pos;
+		Integer end_ = null;
+		if (endPosTable != null) end_ = endPosTable.get(node);
+		int end = end_ == null ? node.getEndPosition(endPosTable) : end_;
+		return new Position(start, end);
+	}
+	
 	private Node toVariableDefinition(java.util.List<JCVariableDecl> decls, Map<FlagKey, Object> keys) {
 		boolean createDeclaration = !keys.containsKey(FlagKey.VARDEF_IS_DEFINITION);
 		
@@ -298,7 +307,7 @@ public class JcTreeConverter {
 			if (extraDims > 0) {
 				JCArrayTypeTree arrayType = (JCArrayTypeTree) varDecl.vartype;
 				for (int i = 0; i < extraDims; i++) {
-					if (arrayType != null) positionInfo.put(new PosInfoKey(entry, "[]" + (extraDims - i -1)), new Position(arrayType.pos, arrayType.getEndPosition(endPosTable)));
+					if (arrayType != null) positionInfo.put(new PosInfoKey(entry, "[]" + (extraDims - i -1)), getPosition(arrayType));
 					arrayType = arrayType.elemtype instanceof JCArrayTypeTree ? (JCArrayTypeTree) arrayType.elemtype : null;
 				}
 				}
@@ -387,6 +396,7 @@ public class JcTreeConverter {
 		if (astNode != null && node != null) {
 			int start = node.pos;
 			Integer end_ = endPosTable.get(node);
+			if (node instanceof JCUnary) end_ = node.getEndPosition(endPosTable);
 			int end = end_ == null ? node.getEndPosition(endPosTable) : end_;
 			if (start != com.sun.tools.javac.util.Position.NOPOS && end != com.sun.tools.javac.util.Position.NOPOS) {
 				astNode.setPosition(new Position(start, end));
@@ -637,7 +647,7 @@ public class JcTreeConverter {
 			TypeReferencePart last = ref.astParts().last();
 			fillList(node.arguments, last.rawTypeArguments(), FlagKey.TYPE_REFERENCE);
 			setPos(node, ref);
-			positionInfo.put(new PosInfoKey(last, "<"), new Position(node.pos, ref.getPosition().getEnd()));
+			positionInfo.put(new PosInfoKey(last, "<"), getPosition(node));
 			set(node, ref);
 		}
 		
@@ -651,11 +661,11 @@ public class JcTreeConverter {
 			case EXTENDS_WILDCARD:
 				ref.astWildcard(WildcardKind.EXTENDS);
 				// TODO ensure this also works on javac versions without the JCTree variant TypeBoundKind. Also don't forget super a few lines down.
-				positionInfo.put(new PosInfoKey(ref, "extends"), new Position(node.kind.pos, node.kind.getEndPosition(endPosTable)));
+				positionInfo.put(new PosInfoKey(ref, "extends"), getPosition(node.kind));
 				break;
 			case SUPER_WILDCARD:
 				ref.astWildcard(WildcardKind.SUPER);
-				positionInfo.put(new PosInfoKey(ref, "super"), new Position(node.kind.pos, node.kind.getEndPosition(endPosTable)));
+				positionInfo.put(new PosInfoKey(ref, "super"), getPosition(node.kind));
 				break;
 			}
 			set(node, ref);
@@ -672,7 +682,7 @@ public class JcTreeConverter {
 			TypeReference ref = (TypeReference) toTree(node.getType(), FlagKey.TYPE_REFERENCE);
 			int currentDim = ref.astArrayDimensions();
 			ref.astArrayDimensions(currentDim + 1);
-			positionInfo.put(new PosInfoKey(ref, "[]" + currentDim), new Position(node.pos, node.getEndPosition(endPosTable)));
+			positionInfo.put(new PosInfoKey(ref, "[]" + currentDim), getPosition(node));
 			set(node, ref);
 		}
 		
@@ -725,7 +735,7 @@ public class JcTreeConverter {
 		
 		@Override public void visitParens(JCParens node) {
 			Expression expr = (Expression) toTree(node.getExpression());
-			expr.astParensPositions().add(new Position(node.pos, node.getEndPosition(endPosTable)));
+			expr.astParensPositions().add(getPosition(node));
 			set(node, expr);
 		}
 		
@@ -865,19 +875,27 @@ public class JcTreeConverter {
 			}
 			
 			ArrayCreation crea = new ArrayCreation();
-			int inits = 0;
 			JCTree type = node.getType();
+			java.util.List<Position> inits = Lists.newArrayList();
 			while (type instanceof JCArrayTypeTree) {
-				inits++;
+				inits.add(getPosition(type));
 				type = ((JCArrayTypeTree) type).getType();
 			}
 			
 			crea.rawComponentTypeReference(toTree(type, FlagKey.TYPE_REFERENCE));
 			if (node.getDimensions() != null) for (JCExpression dim : node.getDimensions()) {
-				crea.astDimensions().addToEnd(new ArrayDimension().rawDimension(toTree(dim)));
+				crea.astDimensions().addToEnd(setPos(dim, new ArrayDimension().rawDimension(toTree(dim))));
 			}
+			
+			if (init != null) crea.astDimensions().addToEnd(new ArrayDimension());
+			
 			// new boolean [][][] {} in javac has one less dimension for some reason.
-			for (int i = 0; i < inits || (i == inits && init != null); i++) crea.astDimensions().addToEnd(new ArrayDimension());
+			for (Position i : inits) {
+				ArrayDimension dim = new ArrayDimension();
+				dim.setPosition(i);
+				crea.astDimensions().addToEnd(dim);
+			}
+			
 			crea.astInitializer(init);
 			set(node, crea);
 		}
@@ -894,7 +912,10 @@ public class JcTreeConverter {
 		}
 		
 		@Override public void visitDoLoop(JCDoWhileLoop node) {
-			set(node, new DoWhile().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
+			DoWhile dw = new DoWhile();
+			JCExpression cond = node.getCondition();
+			positionInfo.put(new PosInfoKey(dw, "()"), getPosition(cond));
+			set(node, dw.rawCondition(toTree(removeParens(cond))).rawStatement(toTree(node.getStatement())));
 		}
 		
 		@Override public void visitContinue(JCContinue node) {
@@ -923,7 +944,9 @@ public class JcTreeConverter {
 		
 		@Override public void visitIf(JCIf node) {
 			If i = new If();
-			i.rawCondition(toTree(removeParens(node.getCondition())));
+			JCExpression cond = node.getCondition();
+			positionInfo.put(new PosInfoKey(i, "()"), getPosition(cond));
+			i.rawCondition(toTree(removeParens(cond)));
 			i.rawStatement(toTree(node.getThenStatement()));
 			i.rawElseStatement(toTree(node.getElseStatement()));
 			set(node, i);
@@ -939,7 +962,9 @@ public class JcTreeConverter {
 			f.rawCondition(toTree(node.getCondition()));
 			f.rawStatement(toTree(node.getStatement()));
 			for (JCExpressionStatement upd : node.getUpdate()) {
-				f.rawUpdates().addToEnd(toTree(upd.getExpression()));
+				Node updateNode = toTree(upd.getExpression());
+				positionInfo.put(new PosInfoKey(updateNode, "exec"), getPosition(upd));
+				f.rawUpdates().addToEnd(updateNode);
 			}
 			List<JCStatement> initializers = node.getInitializer();
 			// Multiple vardefs in a row need to trigger the JCVD version AND be washed through fillList to be turned into 1 VD.
@@ -952,7 +977,9 @@ public class JcTreeConverter {
 			} else {
 				for (JCStatement init : initializers) {
 					if (init instanceof JCExpressionStatement) {
-						f.rawExpressionInits().addToEnd(toTree(((JCExpressionStatement) init).getExpression()));
+						Node initNode = toTree(((JCExpressionStatement) init).getExpression());
+						positionInfo.put(new PosInfoKey(initNode, "exec"), getPosition(init));
+						f.rawExpressionInits().addToEnd(initNode);
 					} else {
 						f.rawExpressionInits().addToEnd(toTree(init));
 					}
@@ -963,7 +990,9 @@ public class JcTreeConverter {
 		
 		@Override public void visitSwitch(JCSwitch node) {
 			Switch s = new Switch();
-			s.rawCondition(toTree(removeParens(node.getExpression())));
+			JCExpression cond = node.getExpression();
+			positionInfo.put(new PosInfoKey(s, "()"), getPosition(cond));
+			s.rawCondition(toTree(removeParens(cond)));
 			Block b = new Block();
 			s.astBody(b);
 			for (JCCase c : node.getCases()) {
@@ -976,7 +1005,10 @@ public class JcTreeConverter {
 		}
 		
 		@Override public void visitSynchronized(JCSynchronized node) {
-			set(node, new Synchronized().rawLock(toTree(removeParens(node.getExpression()))).rawBody(toTree(node.getBlock())));
+			Synchronized s = new Synchronized();
+			JCExpression cond = node.getExpression();
+			positionInfo.put(new PosInfoKey(s, "()"), getPosition(cond));
+			set(node, s.rawLock(toTree(removeParens(cond))).rawBody(toTree(node.getBlock())));
 		}
 		
 		@Override public void visitTry(JCTry node) {
@@ -998,7 +1030,10 @@ public class JcTreeConverter {
 		}
 		
 		@Override public void visitWhileLoop(JCWhileLoop node) {
-			set(node, new While().rawCondition(toTree(removeParens(node.getCondition()))).rawStatement(toTree(node.getStatement())));
+			While w = new While();
+			JCExpression cond = node.getCondition();
+			positionInfo.put(new PosInfoKey(w, "()"), getPosition(cond));
+			set(node, w.rawCondition(toTree(removeParens(cond))).rawStatement(toTree(node.getStatement())));
 		}
 		
 		@Override public void visitReturn(JCReturn node) {

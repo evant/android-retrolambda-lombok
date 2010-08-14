@@ -552,11 +552,13 @@ public class JcTreeBuilder {
 			 * The pos of "++x" is the entire thing, but the pos of "x++" is only the symbol.
 			 * I guess the javac guys think consistency is overrated :(
 			 */
-			switch (operator) {
-			case POSTFIX_DECREMENT:
-			case POSTFIX_INCREMENT:
-				start = posOfStructure(node, node.astOperator().getSymbol(), true);
-				end = posOfStructure(node, node.astOperator().getSymbol(), false);
+			if (jcTreeCreatorPositionInfo == null) {
+				switch (operator) {
+				case POSTFIX_DECREMENT:
+				case POSTFIX_INCREMENT:
+					start = posOfStructure(node, node.astOperator().getSymbol(), true);
+					end = posOfStructure(node, node.astOperator().getSymbol(), false);
+				}
 			}
 			
 			return set(node, setPos(start, end, treeMaker.Unary(UNARY_OPERATORS.get(operator), toExpression(operand))));
@@ -710,7 +712,7 @@ public class JcTreeBuilder {
 			if (node.astOperand() == null) {
 				methodId = (JCExpression) toTree(node.astName());
 			} else {
-				int start = posOfStructure(node, ".", true);
+				int start = jcTreeCreatorPositionInfo == null ? posOfStructure(node, ".", true) : node.astName().getPosition().getStart();
 				int end = node.astName().getPosition().getEnd();
 				methodId = setPos(start, end, treeMaker.Select(
 						toExpression(node.astOperand()),
@@ -797,12 +799,22 @@ public class JcTreeBuilder {
 			return posSet(node, treeMaker.Continue(toName(node.astLabel())));
 		}
 		
+		private JCExpression reParen(Node node, JCExpression expr) {
+			int start, end;
+			
+			if (jcTreeCreatorPositionInfo == null) {
+				start = posOfStructure(node, "(", true);
+				end = posOfStructure(node, ")", false);
+			} else {
+				start = getJcPos(node, "()").getStart();
+				end = getJcPos(node, "()").getEnd();
+			}
+			return setPos(start, end, treeMaker.Parens(expr));
+		}
+		
 		@Override
 		public boolean visitDoWhile(DoWhile node) {
-			JCExpression expr = toExpression(node.astCondition());
-			int start = posOfStructure(node, "(", true);
-			int end = posOfStructure(node, ")", false);
-			expr = setPos(start, end, treeMaker.Parens(expr));
+			JCExpression expr = reParen(node, toExpression(node.astCondition()));
 			return posSet(node, treeMaker.DoLoop(toStatement(node.astStatement()), expr));
 		}
 		
@@ -816,13 +828,25 @@ public class JcTreeBuilder {
 			} else {
 				inits = List.nil();
 				for (Expression init : node.astExpressionInits()) {
-					inits = inits.append(setPos(init, treeMaker.Exec(toExpression(init))));
+					JCExpressionStatement exec = treeMaker.Exec(toExpression(init));
+					if (jcTreeCreatorPositionInfo != null) {
+						setPos(getJcPos(init, "exec").getStart(), getJcPos(init, "exec").getEnd(), exec);
+					} else {
+						setPos(init, exec);
+					}
+					inits = inits.append(exec);
 				}
 			}
 			
 			updates = List.nil();
 			for (Expression update : node.astUpdates()) {
-				updates = updates.append(setPos(update, treeMaker.Exec(toExpression(update))));
+				JCExpressionStatement exec = treeMaker.Exec(toExpression(update));
+				if (jcTreeCreatorPositionInfo != null) {
+					setPos(getJcPos(update, "exec").getStart(), getJcPos(update, "exec").getEnd(), exec);
+				} else {
+					setPos(update, exec);
+				}
+				updates = updates.append(exec);
 			}
 			
 			return posSet(node, treeMaker.ForLoop(inits, toExpression(node.astCondition()), updates, toStatement(node.astStatement())));
@@ -835,10 +859,7 @@ public class JcTreeBuilder {
 		
 		@Override
 		public boolean visitIf(If node) {
-			JCExpression expr = toExpression(node.astCondition());
-			int start = posOfStructure(node, "(", true);
-			int end = posOfStructure(node, ")", false);
-			expr = setPos(start, end, treeMaker.Parens(expr));
+			JCExpression expr = reParen(node, toExpression(node.astCondition()));
 			return posSet(node, treeMaker.If(expr, toStatement(node.astStatement()), toStatement(node.astElseStatement())));
 		}
 		
@@ -926,8 +947,10 @@ public class JcTreeBuilder {
 			}
 			
 			/* the endpos when multiple nodes are generated is after the comma for all but the last item, for some reason. */ {
-				for (int i = 0; i < defs.size() -1; i++) {
-					endPosTable.put(defs.get(i), posOfStructure(node, ",", i, false));
+				if (jcTreeCreatorPositionInfo == null) {
+					for (int i = 0; i < defs.size() -1; i++) {
+						endPosTable.put(defs.get(i), posOfStructure(node, ",", i, false));
+					}
 				}
 			}
 			
@@ -1203,10 +1226,7 @@ public class JcTreeBuilder {
 			
 			if (!preamble) cases = addCase(cases, currentPat, currentNode, stats);
 			
-			JCExpression expr = toExpression(node.astCondition());
-			int start = posOfStructure(node, "(", true);
-			int end = posOfStructure(node, ")", false);
-			expr = setPos(start, end, treeMaker.Parens(expr));
+			JCExpression expr = reParen(node, toExpression(node.astCondition()));
 			return posSet(node, treeMaker.Switch(expr, cases));
 		}
 	
@@ -1220,10 +1240,7 @@ public class JcTreeBuilder {
 		
 		@Override
 		public boolean visitSynchronized(Synchronized node) {
-			JCExpression expr = toExpression(node.astLock());
-			int start = posOfStructure(node, "(", true);
-			int end = posOfStructure(node, ")", false);
-			expr = setPos(start, end, treeMaker.Parens(expr));
+			JCExpression expr = reParen(node, toExpression(node.astLock()));
 			return posSet(node, treeMaker.Synchronized(expr, (JCBlock)toTree(node.astBody())));
 		}
 		
@@ -1262,10 +1279,7 @@ public class JcTreeBuilder {
 		
 		@Override
 		public boolean visitWhile(While node) {
-			JCExpression expr = toExpression(node.astCondition());
-			int start = posOfStructure(node, "(", true);
-			int end = posOfStructure(node, ")", false);
-			expr = setPos(start, end, treeMaker.Parens(expr));
+			JCExpression expr = reParen(node, toExpression(node.astCondition()));
 			return posSet(node, treeMaker.WhileLoop(expr, toStatement(node.astStatement())));
 		}
 		

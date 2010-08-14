@@ -187,7 +187,9 @@ public class JcTreePrinter extends JCTree.Visitor {
 			}
 			
 			if (includePositions) {
-				int endPos = tree.getEndPosition(endPosTable);
+				Integer endPos_ = null;
+				if (endPosTable != null) endPos_ = endPosTable.get(tree);
+				int endPos = endPos_ == null ? tree.getEndPosition(endPosTable) : endPos_;
 				int startPos = tree.pos;
 				if (tree instanceof JCTypeApply || tree instanceof JCWildcard || tree instanceof JCTypeParameter) {
 					// Javac itself actually has bugs in generating the right endpos. To make sure our tests that compare end pos don't fail,
