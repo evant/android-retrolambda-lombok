@@ -595,12 +595,16 @@ public class JcTreeConverter {
 			String name = node.getName().toString();
 			
 			if ("this".equals(name)) {
-				set(node, new This());
+				This t = new This();
+				set(node, t);
+				positionInfo.put(new PosInfoKey(t, "this"), getPosition(node));
 				return;
 			}
 			
 			if ("super".equals(name)) {
-				set(node, new Super());
+				Super s = new Super();
+				set(node, s);
+				positionInfo.put(new PosInfoKey(s, "super"), getPosition(node));
 				return;
 			}
 			
@@ -863,6 +867,7 @@ public class JcTreeConverter {
 					fillList(node.getArguments(), sci.rawArguments());
 					sci.rawQualifier(toTree(((JCFieldAccess) sel).getExpression()));
 					set(node, sci);
+					positionInfo.put(new PosInfoKey(sci, "super"), getPosition(sel));
 					return;
 				}
 				setPos(sel, id.astValue(name));

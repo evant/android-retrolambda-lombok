@@ -618,7 +618,11 @@ public class JcTreeBuilder {
 				methodId = treeMaker.Select(
 						toExpression(node.astQualifier()),
 						table._super);
-				setPos(posOfStructure(node, ".", true), posOfStructure(node, "super", false), methodId);
+				if (jcTreeCreatorPositionInfo == null) {
+					setPos(posOfStructure(node, ".", true), posOfStructure(node, "super", false), methodId);
+				} else {
+					setPos(getJcPos(node, "super").getStart(), getJcPos(node, "super").getEnd(), methodId);
+				}
 			}
 			
 			JCMethodInvocation invoke = treeMaker.Apply(
@@ -647,20 +651,24 @@ public class JcTreeBuilder {
 		@Override
 		public boolean visitSuper(Super node) {
 			JCTree tree;
+			int start, end;
+			end = node.getPosition().getEnd();
 			if (node.astQualifier() != null) {
 				tree = treeMaker.Select((JCExpression) toTree(node.astQualifier()), table._super);
-				setPos(posOfStructure(node, ".", true), posOfStructure(node, "super", false), tree);
+				start = posOfStructure(node, ".", true);
+				end = posOfStructure(node, ".", false);
 			} else {
 				tree = treeMaker.Ident(table._super);
-				tree.pos = posOfStructure(node, "super", true);
+				start = posOfStructure(node, "super", true);
 			}
 			
 			if (jcTreeCreatorPositionInfo != null) {
-				tree.pos = getJcPos(node, "super").getStart();
+				start = getJcPos(node, "super").getStart();
+				end = getJcPos(node, "super").getEnd();
 			}
-			return set(node, tree);
+			
+			return set(node, setPos(start, end, tree));
 		}
-		
 		
 		@Override
 		public boolean visitBinaryExpression(BinaryExpression node) {
