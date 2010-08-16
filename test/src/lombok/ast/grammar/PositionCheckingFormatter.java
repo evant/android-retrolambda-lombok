@@ -34,9 +34,10 @@ import lombok.ast.printer.TextFormatter;
 public class PositionCheckingFormatter extends TextFormatter {
 	private Stack<Node> nodeStack = new Stack<Node>();
 	private List<AstException> problems = Lists.newArrayList();
+	private Source source;
 	
 	public PositionCheckingFormatter(Source source) {
-		super(source);
+		this.source = source;
 		if ("\r\n".equals(System.getProperty("line.separator", "\n")) && source.getRawInput().contains("\r\n")) {
 			setNewlineText("\r\n");
 		}
@@ -102,7 +103,7 @@ public class PositionCheckingFormatter extends TextFormatter {
 	private static final int RANGE = 12;
 	private void reportError(Node node, String description, int actualPos, int repPos) {
 		int delta = repPos - actualPos;
-		String raw = getSource().getRawInput();
+		String raw = source.getRawInput();
 		String actualPrefix = getCharsBeforePosition(actualPos, raw);
 		String actualPostfix = getCharsAfterPosition(actualPos, raw);
 		String reportedPrefix = getCharsBeforePosition(repPos, raw);

@@ -32,7 +32,7 @@ public interface TypeDeclaration extends Node, DescribedNode, JavadocContainer {
 	TypeDeclaration astJavadoc(Comment comment);
 	TypeDeclaration rawJavadoc(Node comment);
 	
-	Modifiers astModifiers();
+	@ParentAccessor Modifiers astModifiers();
 	TypeDeclaration astModifiers(Modifiers modifiers);
 	
 	Identifier astName();

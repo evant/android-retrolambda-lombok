@@ -53,7 +53,7 @@ public class AliasTest extends RunForEachFileInDirRunner.SourceFileBasedTester {
 		}
 		
 		Node node = actual.getNodes().get(0);
-		TextFormatter formatter = new TextFormatter(actual);
+		TextFormatter formatter = new TextFormatter();
 		node.accept(new SourcePrinter(formatter));
 		String actualString = formatter.finish();
 		

@@ -249,7 +249,7 @@ class AnnotationValueArrayTemplate {
 @GenerateAstNode
 class ModifiersTemplate {
 	@ParentAccessor List<KeywordModifier> keywords;
-	List<Annotation> annotations;
+	@ParentAccessor List<Annotation> annotations;
 	
 	/**
 	 * Returns the keyword-based modifiers the way {@link java.lang.reflect.Modifiers} works.
@@ -361,13 +361,22 @@ class ModifiersTemplate {
 class VariableDeclarationTemplate {
 	Comment javadoc;
 	@ParentAccessor @Mandatory VariableDefinition definition;
+	
+	@CopyMethod
+	static StrictListAccessor<VariableDefinitionEntry,VariableDeclaration> getVariableDefinitionEntries(VariableDeclaration self) {
+		VariableDefinition def = self.astDefinition();
+		if (def != null) {
+			return def.variablesAccessor.wrap(self).asStrict();
+		}
+		return ListAccessor.emptyStrict("variableDefinitionEntries", self);
+	}
 }
 
 // TODO add adopt() to non-NCONs.
 
 @GenerateAstNode
 class VariableDefinitionTemplate {
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	@Mandatory TypeReference typeReference;
 	@ParentAccessor List<VariableDefinitionEntry> variables;
 	
@@ -622,6 +631,15 @@ class TypeReferenceTemplate {
 	@CopyMethod(isStatic = true)
 	static TypeReference VOID() {
 		return new TypeReference().astParts().addToEnd(new TypeReferencePart().astIdentifier(Identifier.of("void")));
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference fromName(String name) {
+		TypeReference ref = new TypeReference();
+		for (String part : name.split("\\.")) {
+			ref.astParts().addToEnd(new TypeReferencePart().astIdentifier(Identifier.of(part)));
+		}
+		return ref;
 	}
 	
 	@CopyMethod
@@ -904,6 +922,11 @@ class KeywordModifierTemplate {
 	@CopyMethod(isStatic=true)
 	static KeywordModifier PRIVATE() {
 		return new KeywordModifier().astName("private");
+	}
+	
+	@CopyMethod(isStatic=true)
+	static KeywordModifier FINAL() {
+		return new KeywordModifier().astName("final");
 	}
 }
 
@@ -1194,7 +1217,7 @@ class CommentTemplate {
 class AnnotationMethodDeclarationTemplate {
 	Comment javadoc;
 	
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	@Mandatory TypeReference returnTypeReference;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier methodName;
@@ -1210,7 +1233,7 @@ class AnnotationMethodDeclarationTemplate {
 class MethodDeclarationTemplate {
 	Comment javadoc;
 	
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
 	@ParentAccessor("ReturnType") @Mandatory TypeReference returnTypeReference;
@@ -1229,7 +1252,7 @@ class MethodDeclarationTemplate {
 class ConstructorDeclarationTemplate {
 	Comment javadoc;
 	
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	List<TypeVariable> typeVariables;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier typeName;
@@ -1275,7 +1298,7 @@ class EnumTypeBodyTemplate {
 class AnnotationDeclarationTemplate {
 	Comment javadoc;
 	
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	@Mandatory NormalTypeBody body;
@@ -1367,7 +1390,7 @@ class EmptyDeclarationTemplate {
 class ClassDeclarationTemplate {
 	Comment javadoc;
 	
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	@Mandatory NormalTypeBody body;
 	List<TypeVariable> typeVariables;
@@ -1389,7 +1412,7 @@ class ClassDeclarationTemplate {
 class InterfaceDeclarationTemplate {
 	Comment javadoc;
 	
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	@Mandatory NormalTypeBody body;
 	List<TypeVariable> typeVariables;
@@ -1424,7 +1447,7 @@ class EnumConstantTemplate {
 class EnumDeclarationTemplate {
 	Comment javadoc;
 	
-	@Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
+	@ParentAccessor @Mandatory("new lombok.ast.Modifiers()") @ForcedType Modifiers modifiers;
 	@Mandatory("new lombok.ast.Identifier()") @ForcedType Identifier name;
 	@ParentAccessor @Mandatory EnumTypeBody body;
 	List<TypeReference> implementing;

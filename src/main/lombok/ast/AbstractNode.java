@@ -123,7 +123,7 @@ abstract class AbstractNode implements Node {
 	}
 	
 	@Override public String toString() {
-		TextFormatter formatter = new TextFormatter(null);
+		TextFormatter formatter = new TextFormatter();
 		SourcePrinter printer = new SourcePrinter(formatter);
 		accept(printer);
 		return formatter.finish();

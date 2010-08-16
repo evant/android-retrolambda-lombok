@@ -53,7 +53,7 @@ public class IdempotencyTest extends RunForEachFileInDirRunner.SourceFileBasedTe
 		}
 		
 		Node node = source.getNodes().get(0);
-		TextFormatter formatter = new TextFormatter(source);
+		TextFormatter formatter = new TextFormatter();
 		node.accept(new SourcePrinter(formatter));
 		String actual = fixLineEndings(formatter.finish());
 		String original = fixLineEndings(source.getRawInput());

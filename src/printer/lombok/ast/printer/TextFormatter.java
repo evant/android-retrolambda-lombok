@@ -24,9 +24,7 @@ package lombok.ast.printer;
 import java.util.List;
 import java.util.Stack;
 
-import lombok.Getter;
 import lombok.ast.Node;
-import lombok.ast.grammar.Source;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -34,15 +32,10 @@ import com.google.common.collect.Lists;
 public class TextFormatter implements SourceFormatter {
 	private static final String INDENT = "    ";
 	private String newlineText = "\n";
-	@Getter private final Source source;
 	private final StringBuilder sb = new StringBuilder();
 	private final List<String> errors = Lists.newArrayList();
 	private int indent;
 	private boolean suppress, newline;
-	
-	public TextFormatter(Source source) {
-		this.source = source;
-	}
 	
 	protected void setNewlineText(String newlineText) {
 		this.newlineText = newlineText;

@@ -68,6 +68,22 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 				((UnaryExpression)getParent()).astOperator() == UnaryOperator.UNARY_MINUS;
 	}
 	
+	public static Expression ofInt(int value) {
+		IntegralLiteral v = new IntegralLiteral();
+		if (value < 0) {
+			return new UnaryExpression().astOperator(UnaryOperator.UNARY_MINUS).astOperand(v.astIntValue(-value));
+		}
+		return v.astIntValue(value);
+	}
+	
+	public static Expression ofLong(long value) {
+		IntegralLiteral v = new IntegralLiteral();
+		if (value < 0) {
+			return new UnaryExpression().astOperator(UnaryOperator.UNARY_MINUS).astOperand(v.astLongValue(-value));
+		}
+		return v.astLongValue(value);
+	}
+	
 	public LiteralType astLiteralType() {
 		return literalType;
 	}

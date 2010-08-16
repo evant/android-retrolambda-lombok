@@ -40,4 +40,9 @@ public class Ast {
 	public static String getVersion() {
 		return Version.getVersion();
 	}
+	
+	public static CompilationUnit upToTop(Node node) {
+		while (node != null && !(node instanceof CompilationUnit)) node = node.getParent();
+		return (CompilationUnit) node;
+	}
 }
