@@ -652,11 +652,12 @@ public class JcTreeBuilder {
 		public boolean visitSuper(Super node) {
 			JCTree tree;
 			int start, end;
-			end = node.getPosition().getEnd();
+//			end = node.getPosition().getEnd();
+			end = -1;
 			if (node.astQualifier() != null) {
 				tree = treeMaker.Select((JCExpression) toTree(node.astQualifier()), table._super);
 				start = posOfStructure(node, ".", true);
-				end = posOfStructure(node, ".", false);
+				end = posOfStructure(node, "super", false);
 			} else {
 				tree = treeMaker.Ident(table._super);
 				start = posOfStructure(node, "super", true);
