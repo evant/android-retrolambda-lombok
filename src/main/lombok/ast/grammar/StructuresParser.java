@@ -44,17 +44,20 @@ public class StructuresParser extends BaseParser<Node> {
 				set(actions.posify(value())));
 	}
 	
+	public Rule typeBodyMember() {
+		return FirstOf(
+				anyTypeDeclaration(),
+				fieldDeclaration(),
+				methodDeclaration(),
+				constructorDeclaration(),
+				staticInitializer(),
+				instanceInitializer(),
+				emptyDeclaration());
+	}
+	
 	Rule typeBodyDeclarations() {
 		return Sequence(
-				ZeroOrMore(FirstOf(
-						anyTypeDeclaration(),
-						fieldDeclaration(),
-						methodDeclaration(),
-						constructorDeclaration(),
-						staticInitializer(),
-						instanceInitializer(),
-						emptyDeclaration()
-						).label("member")).label("members"),
+				ZeroOrMore(typeBodyMember().label("member")).label("members"),
 				set(actions.createNormalTypeBody(values("members/member"))));
 	}
 	
