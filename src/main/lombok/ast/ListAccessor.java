@@ -266,8 +266,8 @@ class ListAccessor<T extends Node, P extends Node> {
 		
 		@Override
 		public P addToStart(Node... node) {
-			for (Node n : node) {
-				AbstractNode child = (AbstractNode)n;
+			for (int i = node.length - 1; i >= 0; i--) {
+				AbstractNode child = (AbstractNode)node[i];
 				if (child != null) {
 					parent.adopt(child);
 					fixEscaped();
@@ -543,7 +543,7 @@ class ListAccessor<T extends Node, P extends Node> {
 		final ListAccessor<T, P> original = this;
 		
 		return new ListAccessor<T, Q>(parent, tClass, listName, returnThisAsParent) {
-			final RawListAccessor<T, Q> raw = 				new RawListAccessor<T, Q>() {
+			final RawListAccessor<T, Q> raw = new RawListAccessor<T, Q>() {
 				final RawListAccessor<T, P> orig = original.asRaw();
 				
 				@Override public Iterator<Node> iterator() {
@@ -711,6 +711,10 @@ class ListAccessor<T extends Node, P extends Node> {
 			
 			@Override Iterable<AbstractNode> asIterable() {
 				return original.asIterable();
+			}
+			
+			@Override List<AbstractNode> backingList() {
+				return original.backingList();
 			}
 		};
 	}
