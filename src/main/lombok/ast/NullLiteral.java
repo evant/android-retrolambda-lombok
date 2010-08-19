@@ -62,7 +62,7 @@ public class NullLiteral extends AbstractNode.WithParens implements Literal, Exp
 	
 	@Override
 	public void accept(AstVisitor visitor) {
-		visitor.visitNullLiteral(this);
+		if (!visitor.visitNullLiteral(this)) visitor.endVisit(this);
 	}
 	
 	@Override

@@ -30,6 +30,9 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 		return false;
 	}
 	
+	public void endVisit(Node node) {
+	}
+	
 	//Basics
 	@Override public boolean visitTypeReference(TypeReference node) {return visitNode(node);}
 	@Override public boolean visitTypeReferencePart(TypeReferencePart node) {return visitNode(node);}

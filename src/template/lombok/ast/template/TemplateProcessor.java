@@ -654,6 +654,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				out.write(field.getName());
 				out.write(".accept(visitor);\n");
 			}
+			out.write("\t\tvisitor.endVisit(this);\n");
 			out.write("\t}\n\t\n");
 		}
 		

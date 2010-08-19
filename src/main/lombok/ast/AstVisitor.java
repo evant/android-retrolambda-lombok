@@ -24,10 +24,13 @@ package lombok.ast;
 /**
  * Implement this class and hand yourself to the {@link lombok.ast.Node#accept(AstVisitor)} method to get
  * a specific method called for each type of {@code Node}.
- * 
+ * <p>
  * For each method, return {@code true} to indicate you've handled the type, and {@code false} to
  * indicate you haven't. The difference is: If you return {@code false} the children of the node
  * you didn't handle get passed to the implementation of this class instead.
+ * <p>
+ * If you return {@code false}, then after all children visit calls have been performed, the
+ * {@link #endVisit(Node)} method is called to signal all children have been visited.
  * 
  * @see ForwardingAstVisitor
  */
@@ -117,4 +120,11 @@ public abstract class AstVisitor {
 	//Various
 	public abstract boolean visitParseArtefact(Node node);
 	public abstract boolean visitComment(Comment node);
+	
+	/**
+	 * If a <em>visitX<em> method return {@code false}, then first all children are visited, and then this {@code endVisit} method is called.
+	 * <p>
+	 * NB: If {@code true} is returned from a <em>visitX</em> method, no {@code endVisit} call is made for that {@code Node}.
+	 */
+	public abstract void endVisit(Node node);
 }
