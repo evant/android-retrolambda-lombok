@@ -366,7 +366,7 @@ class VariableDeclarationTemplate {
 	static StrictListAccessor<VariableDefinitionEntry,VariableDeclaration> getVariableDefinitionEntries(VariableDeclaration self) {
 		VariableDefinition def = self.astDefinition();
 		if (def != null) {
-			return def.variablesAccessor.wrap(self).asStrict();
+			return def.variables.wrap(self).asStrict();
 		}
 		return ListAccessor.emptyStrict("variableDefinitionEntries", self);
 	}
@@ -683,7 +683,7 @@ class TypeReferenceTemplate {
 	@CopyMethod
 	static StrictListAccessor<TypeReference, TypeReference> getTypeArguments(TypeReference self) {
 		try {
-			return self.astParts().last().typeArgumentsAccessor.wrap(self).asStrict();
+			return self.astParts().last().typeArguments.wrap(self).asStrict();
 		} catch (Exception e) {
 			return ListAccessor.emptyStrict("typeArguments", self);
 		}

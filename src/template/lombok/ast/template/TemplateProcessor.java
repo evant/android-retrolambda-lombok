@@ -525,7 +525,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(" {\n");
 		for (FieldData field : fields) {
 			if (field.isList()) {
-				generateFieldsForList(out, className, typeName, fields.size(), field);
+				generateFieldForList(out, className, typeName, fields.size(), field);
 				continue;
 			}
 			
@@ -593,7 +593,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				} else {
 					out.write("\t\tresult.addAll(this.");
 					out.write(data.getName());
-					out.write(");\n");
+					out.write(".backingList());\n");
 				}
 			}
 			out.write("\t\treturn result;\n\t}\n\t\n");
@@ -671,7 +671,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (field.isList()) {
 					out.write("\t\tfor (lombok.ast.Node child : this.");
 					out.write(field.getName());
-					out.write(") {\n\t\t\tchild.accept(visitor);\n\t\t}\n");
+					out.write(".asIterable()) {\n\t\t\tchild.accept(visitor);\n\t\t}\n");
 					continue;
 				}
 				out.write("\t\tif (this.");
@@ -715,7 +715,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				} else if (field.isList()) {
 					out.write("\t\tfor (Node n : this.");
 					out.write(field.getName());
-					out.write(") {\n\t\t\tresult.raw");
+					out.write(".backingList()) {\n\t\t\tresult.raw");
 					out.write(field.titleCasedName());
 					out.write("().addToEnd(n == null ? null : n.copy());\n\t\t}\n");
 				} else {
@@ -815,21 +815,16 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write("\t\treturn out;\n\t}\n\t\n");
 	}
 	
-	private void generateFieldsForList(Writer out, String className, String typeName, int fieldsSize, FieldData field) throws IOException {
-		out.write("\tprivate final java.util.List<lombok.ast.AbstractNode> ");
-		out.write(field.getName());
-		out.write(" = new java.util.ArrayList<lombok.ast.AbstractNode>();\n");
-		
-		// lombok.ast.ListAccessor<CatchBlock, Try> catchesAccessor = ListAccessor.of(catches, this, CatchBlock.class, "Try.catches");
+	private void generateFieldForList(Writer out, String className, String typeName, int fieldsSize, FieldData field) throws IOException {
+		// lombok.ast.ListAccessor<CatchBlock, Try> catches = ListAccessor.of(this, CatchBlock.class, "Try.catches");
 		out.write("\tlombok.ast.ListAccessor<");
 		out.write(field.getType());
 		out.write(", ");
 		out.write(className);
 		out.write("> ");
 		out.write(field.getName());
-		out.write("Accessor = ListAccessor.of(");
-		out.write(field.getName());
-		out.write(", this, ");
+		out.write(" = ListAccessor.of(");
+		out.write("this, ");
 		out.write(field.getType());
 		out.write(".class, \"");
 		out.write(typeName);
@@ -1082,7 +1077,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
-		out.write("Accessor.asRaw();\n\t}\n\t\n");
+		out.write(".asRaw();\n\t}\n\t\n");
 		
 		out.write("\tpublic lombok.ast.StrictListAccessor<");
 		out.write(field.getType());
@@ -1092,7 +1087,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
-		out.write("Accessor.asStrict();\n\t}\n\t\n");
+		out.write(".asStrict();\n\t}\n\t\n");
 	}
 	
 	private void generateFieldsForNode(Writer out, FieldData field) throws IOException {
