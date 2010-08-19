@@ -26,12 +26,14 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -60,6 +62,8 @@ import lombok.Data;
 @SupportedAnnotationTypes({"lombok.ast.template.GenerateAstNode", "lombok.ast.template.SyntaxCheck", "lombok.ast.template.ParentAccessor"})
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class TemplateProcessor extends AbstractProcessor {
+	private static final Pattern COUNT_FINDER = Pattern.compile("^(.*?)(-?\\d+)$");
+	
 	private SyntaxValidityCheckerGenerator validityGenerator;
 	
 	@Data
@@ -156,6 +160,8 @@ public class TemplateProcessor extends AbstractProcessor {
 	static class FieldData {
 		/** Name of the field */
 		private final String name;
+		/** The order of this field. */
+		private final int count;
 		/** If {@code true} then this field would always contain a non-null value in a legal AST. */
 		private final boolean mandatory;
 		/** Terminals such as string literals may have their own internal parser. If so, this field contains name of method that goes from raw to value. */
@@ -190,7 +196,15 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		FieldData(VariableElement field) {
-			this.name = String.valueOf(field.getSimpleName());
+			String name = String.valueOf(field.getSimpleName());
+			Matcher m = COUNT_FINDER.matcher(name);
+			if (m.matches()) {
+				this.name = m.group(1);
+				this.count = Integer.parseInt(m.group(2));
+			} else {
+				this.name = name;
+				this.count = 0;
+			}
 			Mandatory mandatory = field.getAnnotation(Mandatory.class);
 			this.element = field;
 			this.mandatory = mandatory != null;
@@ -232,6 +246,8 @@ public class TemplateProcessor extends AbstractProcessor {
 	
 	private static String titleCasedName(String in) {
 		String n = in.replace("_", "");
+		Matcher m = COUNT_FINDER.matcher(n);
+		if (m.matches()) n = m.group(1);
 		return n.isEmpty() ? "" : Character.toTitleCase(n.charAt(0)) + n.substring(1);
 	}
 	
@@ -420,6 +436,16 @@ public class TemplateProcessor extends AbstractProcessor {
 					}
 				}
 			}
+			
+			Collections.sort(fields, new Comparator<FieldData>() {
+				@Override public int compare(FieldData f1, FieldData f2) {
+					int c1 = f1.getCount();
+					int c2 = f2.getCount();
+					if (c1 < c2) return -1;
+					if (c1 > c2) return +1;
+					return f1.getName().compareTo(f2.getName());
+				}
+			});
 			
 			/* Analyze all methods of template class and mixins */ {
 				Set<String> covered = new HashSet<String>();

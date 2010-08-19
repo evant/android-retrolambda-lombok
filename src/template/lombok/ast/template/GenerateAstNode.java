@@ -30,7 +30,10 @@ import java.lang.annotation.Target;
  * Tells the templating system to take the annotated type and use it to generate a {@link lombok.ast.AbstractNode} subclass.
  * <p>
  *     See the other annotations in this package for the various ways you can configure the way the class is generated.
- * </p>
+ * </p><p>
+ *     Each field in the class is treated as a subnode. Any field name may end in a number, in which case that number indicates its relative ordering to the other fields.
+ *     unnumbered fields are considered to have order number '0'. Fields with the same order number are compared lexically. The generated {@code accept} method will for example
+ *     walk through the fields in this order.
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
