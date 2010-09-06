@@ -65,7 +65,7 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		return testCompiler(source);
 	}
 	
-	private void deleteComments(Node tree) {
+	private static void deleteComments(Node tree) {
 		tree.accept(new ForwardingAstVisitor() {
 			@Override public boolean visitComment(Comment node) {
 				node.unparent();
@@ -74,7 +74,7 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		});
 	}
 	
-	private void normalizeNumberLiterals(Node tree) {
+	private static void normalizeNumberLiterals(Node tree) {
 		tree.accept(new ForwardingAstVisitor() {
 			@Override public boolean visitIntegralLiteral(IntegralLiteral node) {
 				long v = node.astMarkedAsLong() ? node.astLongValue() : node.astIntValue();
@@ -99,7 +99,7 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		});
 	}
 	
-	private void foldStringConcats(Node tree) {
+	private static void foldStringConcats(Node tree) {
 		tree.accept(new ForwardingAstVisitor() {
 			@Override public boolean visitBinaryExpression(BinaryExpression node) {
 				if (node.rawLeft() != null) node.rawLeft().accept(this);
@@ -125,8 +125,6 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		normalizeNumberLiterals(tree);
 		deleteComments(tree);
 		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
-		formatter.skipProperty(IntegralLiteral.class, "value");
-		formatter.skipProperty(FloatingPointLiteral.class, "value");
 		formatter.skipProperty(CharLiteral.class, "value");
 		formatter.skipProperty(StringLiteral.class, "value");
 		tree.accept(new SourcePrinter(formatter));

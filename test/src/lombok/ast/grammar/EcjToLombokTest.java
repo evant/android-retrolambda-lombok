@@ -29,7 +29,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import lombok.ast.BinaryExpression;
+import lombok.ast.BinaryOperator;
+import lombok.ast.CharLiteral;
+import lombok.ast.EmptyDeclaration;
+import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
+import lombok.ast.Position;
+import lombok.ast.StringLiteral;
 import lombok.ast.ecj.EcjTreeConverter;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.printer.SourcePrinter;
@@ -55,8 +62,8 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList (
-//		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[a-z]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
-		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[D]002_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[a-d]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+//		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[D]002_).*\\.java$", Pattern.CASE_INSENSITIVE)));
 //		return Arrays.asList(
 //				DirDescriptor.of(new File("test/resources/idempotency"), true),
 //				DirDescriptor.of(new File("test/resources/alias"), true),
@@ -78,9 +85,49 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	}
 	
 	protected String convertToString(Source source, Node tree) {
+		deleteEmptyDeclarations(tree);
+		foldStringConcats(tree);
 		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
+		formatter.skipProperty(CharLiteral.class, "value");
+		formatter.skipProperty(StringLiteral.class, "value");
 		tree.accept(new SourcePrinter(formatter));
 		return formatter.finish();
+	}
+	
+	private static void deleteEmptyDeclarations(Node node) {
+		node.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitEmptyDeclaration(EmptyDeclaration node) {
+				node.unparent();
+				return true;
+			}
+		});
+	}
+	
+	private static void foldStringConcats(Node tree) {
+		tree.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitBinaryExpression(BinaryExpression node) {
+				if (node.rawLeft() != null) node.rawLeft().accept(this);
+				if (node.rawRight() != null) node.rawRight().accept(this);
+				String left = null, right = null;
+				if (node.astOperator() != BinaryOperator.PLUS || node.getParent() == null) return false;
+				boolean leftIsChar = false;
+				if (node.rawLeft() instanceof StringLiteral) left = ((StringLiteral) node.rawLeft()).astValue();
+				if (node.rawLeft() instanceof CharLiteral) {
+					left = "" + ((CharLiteral) node.rawLeft()).astValue();
+					leftIsChar = true;
+				}
+				if (node.rawRight() instanceof StringLiteral) right = ((StringLiteral) node.rawRight()).astValue();
+				if (!leftIsChar && node.rawRight() instanceof CharLiteral) right = "" + ((CharLiteral) node.rawRight()).astValue();
+				if (left == null || right == null) return false;
+				
+				int start = node.rawLeft().getPosition().getStart();
+				int end = node.rawRight().getPosition().getEnd();
+				
+				node.getParent().replaceChild(node, new StringLiteral().astValue(left + right).setPosition(new Position(start, end)));
+				
+				return false;
+			}
+		});
 	}
 	
 	protected Node parseWithLombok(Source source) {

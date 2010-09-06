@@ -787,16 +787,13 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		set(node, setPosition(node, select));
 	}
 	
-	
 	@Override public void visitExtendedStringLiteral(ExtendedStringLiteral node) {
-		/*
-		 * TODO: ECJ merge appended string literals, find out if there is a 
-		 * way to check the original sources...
-		 */
+		// While there's a node for it, this node has no further information about the separate parts,
+		// so we are forced to produce a single string literal.
 		
-		set(node, (Node)null);
+		visitStringLiteral(node);
 	}
-
+	
 	@Override public void visitMessageSend(MessageSend node) {
 		MethodInvocation inv = new MethodInvocation();
 		fillList(node.arguments, inv.rawArguments());
