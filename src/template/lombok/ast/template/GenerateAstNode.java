@@ -34,6 +34,7 @@ import java.lang.annotation.Target;
  *     Each field in the class is treated as a subnode. Any field name may end in a number, in which case that number indicates its relative ordering to the other fields.
  *     unnumbered fields are considered to have order number '0'. Fields with the same order number are compared lexically. The generated {@code accept} method will for example
  *     walk through the fields in this order.
+ * </p>
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.TYPE)
