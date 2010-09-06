@@ -124,6 +124,16 @@ public class Resolver {
 		String name = typeReference.getTypeName();
 		if (name.equals(wanted)) return true;
 		
+		/* checks array dimensions */ {
+			int dims1 = typeReference.astArrayDimensions();
+			int dims2 = 0;
+			while (wanted.endsWith("[]")) {
+				dims2++;
+				wanted = wanted.substring(0, wanted.length() - 2);
+			}
+			if (dims1 != dims2) return false;
+		}
+		
 		int dot = wanted.lastIndexOf('.');
 		String wantedPkg = dot == -1 ? "" : wanted.substring(0, dot);
 		String wantedName = dot == -1 ? wanted : wanted.substring(dot + 1);
