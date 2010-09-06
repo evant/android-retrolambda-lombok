@@ -352,6 +352,11 @@ class ModifiersTemplate {
 	}
 	
 	@CopyMethod
+	static boolean isTransient(Modifiers m) {
+		return 0 != (getEffectiveModifierFlags(m) & java.lang.reflect.Modifier.TRANSIENT);
+	}
+	
+	@CopyMethod
 	static boolean isEmpty(Modifiers m) {
 		return m.rawKeywords().isEmpty() && m.rawAnnotations().isEmpty();
 	}
@@ -628,7 +633,51 @@ class TypeReferenceTemplate {
 	
 	@CopyMethod(isStatic = true)
 	static TypeReference VOID() {
-		return new TypeReference().astParts().addToEnd(new TypeReferencePart().astIdentifier(Identifier.of("void")));
+		return newPrimitive("void");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference BOOLEAN() {
+		return newPrimitive("boolean");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference INT() {
+		return newPrimitive("int");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference LONG() {
+		return newPrimitive("long");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference SHORT() {
+		return newPrimitive("short");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference BYTE() {
+		return newPrimitive("byte");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference CHAR() {
+		return newPrimitive("char");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference DOUBLE() {
+		return newPrimitive("double");
+	}
+	
+	@CopyMethod(isStatic = true)
+	static TypeReference FLOAT() {
+		return newPrimitive("float");
+	}
+	
+	private static TypeReference newPrimitive(String primitiveName) {
+		return new TypeReference().astParts().addToEnd(new TypeReferencePart().astIdentifier(Identifier.of(primitiveName)));
 	}
 	
 	@CopyMethod(isStatic = true)
@@ -646,6 +695,56 @@ class TypeReferenceTemplate {
 		try {
 			String name = self.astParts().first().astIdentifier().astValue();
 			return name.indexOf(' ') == -1 && PRIMITIVE_NAMES.contains(" " + name + " ");
+		} catch (NullPointerException e) {
+			return false;
+		}
+	}
+	
+	@CopyMethod
+	static boolean isBoolean(TypeReference self) {
+		return isPrimitive(self, "boolean");
+	}
+	
+	@CopyMethod
+	static boolean isInt(TypeReference self) {
+		return isPrimitive(self, "int");
+	}
+	
+	@CopyMethod
+	static boolean isLong(TypeReference self) {
+		return isPrimitive(self, "long");
+	}
+	
+	@CopyMethod
+	static boolean isShort(TypeReference self) {
+		return isPrimitive(self, "short");
+	}
+	
+	@CopyMethod
+	static boolean isByte(TypeReference self) {
+		return isPrimitive(self, "byte");
+	}
+	
+	@CopyMethod
+	static boolean isChar(TypeReference self) {
+		return isPrimitive(self, "char");
+	}
+	
+	@CopyMethod
+	static boolean isDouble(TypeReference self) {
+		return isPrimitive(self, "double");
+	}
+	
+	@CopyMethod
+	static boolean isFloat(TypeReference self) {
+		return isPrimitive(self, "float");
+	}
+	
+	private static boolean isPrimitive(TypeReference ref, String primitiveName) {
+		if (ref.astArrayDimensions() > 0 || ref.rawParts().size() != 1) return false;
+		try {
+			String name = ref.astParts().first().astIdentifier().astValue();
+			return name.equals(primitiveName);
 		} catch (NullPointerException e) {
 			return false;
 		}
