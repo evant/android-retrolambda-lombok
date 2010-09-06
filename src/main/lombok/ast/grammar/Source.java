@@ -140,6 +140,37 @@ public class Source {
 		postProcess();
 	}
 	
+	public void parseMember() {
+		if (parsed) return;
+		preProcess();
+		ParserGroup group = new ParserGroup(this);
+		parsingResult = RecoveringParseRunner.run(group.structures.typeBodyMember(), preprocessed);
+		postProcess();
+	}
+	
+	public void parseStatement() {
+		if (parsed) return;
+		preProcess();
+		ParserGroup group = new ParserGroup(this);
+		parsingResult = RecoveringParseRunner.run(group.statements.anyStatement(), preprocessed);
+		postProcess();
+	}
+	
+	public void parseExpression() {
+		if (parsed) return;
+		preProcess();
+		ParserGroup group = new ParserGroup(this);
+		parsingResult = RecoveringParseRunner.run(group.expressions.anyExpression(), preprocessed);
+		postProcess();
+	}
+	public void parseVariableDefinition() {
+		if (parsed) return;
+		preProcess();
+		ParserGroup group = new ParserGroup(this);
+		parsingResult = RecoveringParseRunner.run(group.structures.variableDefinition(), preprocessed);
+		postProcess();
+	}
+	
 	private void postProcess() {
 		nodes.add(parsingResult.parseTreeRoot.getValue());
 		for (ParseError error : parsingResult.parseErrors) {

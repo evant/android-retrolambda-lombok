@@ -21,26 +21,33 @@
  */
 package lombok.ast;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.google.common.collect.Lists;
-
 class ListAccessor<T extends Node, P extends Node> {
-	private final List<AbstractNode> list;
+	private List<AbstractNode> list;
 	private final AbstractNode parent;
 	private final Class<T> tClass;
 	private final String listName;
 	private final P returnAsParent;
+	private boolean escaped;
 	
-	private ListAccessor(List<AbstractNode> list, AbstractNode parent, Class<T> tClass, String listName, P returnAsParent) {
-		this.list = list;
+	private ListAccessor(AbstractNode parent, Class<T> tClass, String listName, P returnAsParent) {
+		this.list = new ArrayList<AbstractNode>();
 		this.parent = parent;
 		this.tClass = tClass;
 		this.listName = listName;
 		this.returnAsParent = returnAsParent;
+	}
+	
+	private void fixEscaped() {
+		if (escaped) {
+			list = new ArrayList<AbstractNode>(list);
+			escaped = false;
+		}
 	}
 	
 	public static <T extends Node, P extends Node> StrictListAccessor<T, P> emptyStrict(final String listName, final P returnAsParent) {
@@ -200,7 +207,12 @@ class ListAccessor<T extends Node, P extends Node> {
 		
 		@Override
 		public void clear() {
-			list.clear();
+			if (escaped) {
+				list = new ArrayList<AbstractNode>();
+				escaped = false;
+			} else {
+				list.clear();
+			}
 		}
 		
 		@Override
@@ -254,10 +266,11 @@ class ListAccessor<T extends Node, P extends Node> {
 		
 		@Override
 		public P addToStart(Node... node) {
-			for (Node n : node) {
-				AbstractNode child = (AbstractNode)n;
+			for (int i = node.length - 1; i >= 0; i--) {
+				AbstractNode child = (AbstractNode)node[i];
 				if (child != null) {
 					parent.adopt(child);
+					fixEscaped();
 					list.add(0, child);
 				}
 			}
@@ -270,6 +283,7 @@ class ListAccessor<T extends Node, P extends Node> {
 				AbstractNode child = (AbstractNode)n;
 				if (child != null) {
 					parent.adopt(child);
+					fixEscaped();
 					list.add(child);
 				}
 			}
@@ -289,6 +303,7 @@ class ListAccessor<T extends Node, P extends Node> {
 						if (child != null) {
 							child.ensureParentless();
 							parent.adopt(child);
+							fixEscaped();
 							list.add(i + j, child);
 							j++;
 						}
@@ -312,6 +327,7 @@ class ListAccessor<T extends Node, P extends Node> {
 						if (child != null) {
 							child.ensureParentless();
 							parent.adopt(child);
+							fixEscaped();
 							list.add(i + j + 1, child);
 							j++;
 						}
@@ -338,6 +354,7 @@ class ListAccessor<T extends Node, P extends Node> {
 						parent.adopt((AbstractNode)source);
 						throw e;
 					}
+					fixEscaped();
 					if (replacement == null) list.remove(i);	//screws up for counter, but we return right after anyway, so it doesn't matter.
 					else list.set(i, (AbstractNode)replacement);
 					return true;
@@ -355,6 +372,7 @@ class ListAccessor<T extends Node, P extends Node> {
 			for (int i = 0; i < list.size(); i++) {
 				if (list.get(i) == source) {
 					parent.disown((AbstractNode)source);
+					fixEscaped();
 					list.remove(i);
 					return true;
 				}
@@ -369,7 +387,21 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public Iterator<Node> iterator() {
-			return Collections.unmodifiableList(Lists.<Node>newArrayList(list)).iterator();
+			final Iterator<AbstractNode> it = list.iterator();
+			escaped = true;
+			return new Iterator<Node>() {
+				@Override public boolean hasNext() {
+					return it.hasNext();
+				}
+				
+				@Override public Node next() {
+					return it.next();
+				}
+				
+				@Override public void remove() {
+					throw new UnsupportedOperationException("Iterator is read only");
+				}
+			};
 		}
 	};
 	
@@ -383,7 +415,12 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public void clear() {
-			list.clear();
+			if (escaped) {
+				list = new ArrayList<AbstractNode>();
+				escaped = false;
+			} else {
+				list.clear();
+			}
 		}
 		
 		@Override public boolean isEmpty() {
@@ -459,25 +496,227 @@ class ListAccessor<T extends Node, P extends Node> {
 		}
 		
 		@Override public Iterator<T> iterator() {
-			List<T> out = Lists.newArrayList();
+			final Iterator<AbstractNode> it = list.iterator();
+			escaped = true;
 			
-			for (Object o : list) {
-				if (!tClass.isInstance(o)) throw new AstException(parent, String.format(
-						"%s contains an element that isn't of the appropriate type(%s): %s",
-						listName, tClass.getSimpleName(), o.getClass().getSimpleName()));
-				out.add(tClass.cast(o));
-			}
-			
-			return Collections.unmodifiableList(out).iterator();
+			return new Iterator<T>() {
+				T next = null;
+				
+				{
+					advance();
+				}
+				
+				private void advance() {
+					while (it.hasNext()) {
+						Node potential = it.next();
+						if (tClass.isInstance(potential)) {
+							next = tClass.cast(potential);
+							return;
+						}
+					}
+					next = null;
+				}
+				
+				@Override public boolean hasNext() {
+					return next != null;
+				}
+				
+				@Override public T next() {
+					if (next == null) throw new NoSuchElementException("No more elements");
+					T node = next;
+					advance();
+					return node;
+				}
+				
+				@Override public void remove() {
+					throw new UnsupportedOperationException("Iterator is read only");
+				}
+			};
 		}
 	};
 	
-	static <T extends Node, P extends AbstractNode> ListAccessor<T, P> of(List<AbstractNode> list, P parent, Class<T> tClass, String listName) {
-		return new ListAccessor<T, P>(list, parent, tClass, listName, parent);
+	static <T extends Node, P extends AbstractNode> ListAccessor<T, P> of(P parent, Class<T> tClass, String listName) {
+		return new ListAccessor<T, P>(parent, tClass, listName, parent);
 	}
 	
-	<Q extends Node> ListAccessor<T, Q> wrap(Q returnThisAsParent) {
-		return new ListAccessor<T, Q>(list, parent, tClass, listName, returnThisAsParent);
+	<Q extends Node> ListAccessor<T, Q> wrap(final Q returnThisAsParent) {
+		final ListAccessor<T, P> original = this;
+		
+		return new ListAccessor<T, Q>(parent, tClass, listName, returnThisAsParent) {
+			final RawListAccessor<T, Q> raw = new RawListAccessor<T, Q>() {
+				final RawListAccessor<T, P> orig = original.asRaw();
+				
+				@Override public Iterator<Node> iterator() {
+					return orig.iterator();
+				}
+				
+				@Override public Q up() {
+					return returnThisAsParent;
+				}
+				
+				@Override public Node owner() {
+					return orig.owner();
+				}
+				
+				@Override public void clear() {
+					orig.clear();
+				}
+				
+				@Override public boolean isEmpty() {
+					return orig.isEmpty();
+				}
+				
+				@Override public int size() {
+					return orig.size();
+				}
+				
+				@Override public Node first() {
+					return orig.first();
+				}
+				
+				@Override public Node last() {
+					return orig.last();
+				}
+				
+				@Override public boolean contains(Node source) {
+					return orig.contains(source);
+				}
+				
+				@Override public Q migrateAllFrom(RawListAccessor<?, ?> otherList) {
+					orig.migrateAllFrom(otherList);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addToStart(Node... node) {
+					orig.addToStart(node);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addToEnd(Node... node) {
+					orig.addToEnd(node);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addBefore(Node ref, Node... node) {
+					orig.addBefore(ref, node);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addAfter(Node ref, Node... node) {
+					orig.addAfter(ref, node);
+					return returnThisAsParent;
+				}
+				
+				@Override public boolean replace(Node source, Node replacement) {
+					return orig.replace(source, replacement);
+				}
+				
+				@Override public boolean remove(Node source) {
+					return orig.remove(source);
+				}
+				
+				@Override public StrictListAccessor<T, Q> asStrictAccessor() {
+					return asStrict();
+				}
+			};
+			
+			final StrictListAccessor<T, Q> strict = new StrictListAccessor<T, Q>() {
+				final StrictListAccessor<T, P> orig = original.asStrict();
+				
+				@Override public Iterator<T> iterator() {
+					return orig.iterator();
+				}
+				
+				@Override public Q up() {
+					return returnThisAsParent;
+				}
+				
+				@Override public Node owner() {
+					return orig.owner();
+				}
+				
+				@Override public void clear() {
+					orig.clear();
+				}
+				
+				@Override public boolean isEmpty() {
+					return orig.isEmpty();
+				}
+				
+				@Override public int size() {
+					return orig.size();
+				}
+				
+				@Override public T first() {
+					return orig.first();
+				}
+				
+				@Override public T last() {
+					return orig.last();
+				}
+				
+				@Override public boolean contains(Node source) {
+					return orig.contains(source);
+				}
+				
+				@Override public Q migrateAllFrom(StrictListAccessor<? extends T, ?> otherList) {
+					orig.migrateAllFrom(otherList);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addToStart(T... node) {
+					orig.addToStart(node);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addToEnd(T... node) {
+					orig.addToEnd(node);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addBefore(Node ref, T... node) {
+					orig.addBefore(ref, node);
+					return returnThisAsParent;
+				}
+				
+				@Override public Q addAfter(Node ref, T... node) {
+					orig.addAfter(ref, node);
+					return returnThisAsParent;
+				}
+				
+				@Override public void replace(Node source, T replacement) throws NoSuchElementException {
+					orig.replace(source, replacement);
+				}
+				
+				@Override public void remove(Node source) throws NoSuchElementException {
+					orig.remove(source);
+				}
+				
+				@Override public RawListAccessor<T, Q> asRawAccessor() {
+					return asRaw();
+				}
+			};
+			
+			@Override <Q2 extends Node> ListAccessor<T, Q2> wrap(Q2 returnThisAsParent) {
+				return original.wrap(returnThisAsParent);
+			}
+			
+			@Override StrictListAccessor<T, Q> asStrict() {
+				return strict;
+			}
+			
+			@Override RawListAccessor<T, Q> asRaw() {
+				return raw;
+			}
+			
+			@Override Iterable<AbstractNode> asIterable() {
+				return original.asIterable();
+			}
+			
+			@Override List<AbstractNode> backingList() {
+				return original.backingList();
+			}
+		};
 	}
 	
 	StrictListAccessor<T, P> asStrict() {
@@ -486,5 +725,14 @@ class ListAccessor<T extends Node, P extends Node> {
 	
 	RawListAccessor<T, P> asRaw() {
 		return raw;
+	}
+	
+	Iterable<AbstractNode> asIterable() {
+		escaped = true;
+		return list;
+	}
+	
+	List<AbstractNode> backingList() {
+		return list;
 	}
 }

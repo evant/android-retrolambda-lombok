@@ -26,12 +26,14 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -60,6 +62,8 @@ import lombok.Data;
 @SupportedAnnotationTypes({"lombok.ast.template.GenerateAstNode", "lombok.ast.template.SyntaxCheck", "lombok.ast.template.ParentAccessor"})
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class TemplateProcessor extends AbstractProcessor {
+	private static final Pattern COUNT_FINDER = Pattern.compile("^(.*?)(-?\\d+)$");
+	
 	private SyntaxValidityCheckerGenerator validityGenerator;
 	
 	@Data
@@ -156,6 +160,8 @@ public class TemplateProcessor extends AbstractProcessor {
 	static class FieldData {
 		/** Name of the field */
 		private final String name;
+		/** The order of this field. */
+		private final int count;
 		/** If {@code true} then this field would always contain a non-null value in a legal AST. */
 		private final boolean mandatory;
 		/** Terminals such as string literals may have their own internal parser. If so, this field contains name of method that goes from raw to value. */
@@ -190,7 +196,15 @@ public class TemplateProcessor extends AbstractProcessor {
 		}
 		
 		FieldData(VariableElement field) {
-			this.name = String.valueOf(field.getSimpleName());
+			String name = String.valueOf(field.getSimpleName());
+			Matcher m = COUNT_FINDER.matcher(name);
+			if (m.matches()) {
+				this.name = m.group(1);
+				this.count = Integer.parseInt(m.group(2));
+			} else {
+				this.name = name;
+				this.count = 0;
+			}
 			Mandatory mandatory = field.getAnnotation(Mandatory.class);
 			this.element = field;
 			this.mandatory = mandatory != null;
@@ -232,6 +246,8 @@ public class TemplateProcessor extends AbstractProcessor {
 	
 	private static String titleCasedName(String in) {
 		String n = in.replace("_", "");
+		Matcher m = COUNT_FINDER.matcher(n);
+		if (m.matches()) n = m.group(1);
 		return n.isEmpty() ? "" : Character.toTitleCase(n.charAt(0)) + n.substring(1);
 	}
 	
@@ -421,6 +437,16 @@ public class TemplateProcessor extends AbstractProcessor {
 				}
 			}
 			
+			Collections.sort(fields, new Comparator<FieldData>() {
+				@Override public int compare(FieldData f1, FieldData f2) {
+					int c1 = f1.getCount();
+					int c2 = f2.getCount();
+					if (c1 < c2) return -1;
+					if (c1 > c2) return +1;
+					return f1.getName().compareTo(f2.getName());
+				}
+			});
+			
 			/* Analyze all methods of template class and mixins */ {
 				Set<String> covered = new HashSet<String>();
 				for (TypeElement base : bases) {
@@ -499,7 +525,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(" {\n");
 		for (FieldData field : fields) {
 			if (field.isList()) {
-				generateFieldsForList(out, className, typeName, fields.size(), field);
+				generateFieldForList(out, className, typeName, fields.size(), field);
 				continue;
 			}
 			
@@ -567,7 +593,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				} else {
 					out.write("\t\tresult.addAll(this.");
 					out.write(data.getName());
-					out.write(");\n");
+					out.write(".backingList());\n");
 				}
 			}
 			out.write("\t\treturn result;\n\t}\n\t\n");
@@ -645,7 +671,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				if (field.isList()) {
 					out.write("\t\tfor (lombok.ast.Node child : this.");
 					out.write(field.getName());
-					out.write(") {\n\t\t\tchild.accept(visitor);\n\t\t}\n");
+					out.write(".asIterable()) {\n\t\t\tchild.accept(visitor);\n\t\t}\n");
 					continue;
 				}
 				out.write("\t\tif (this.");
@@ -654,6 +680,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				out.write(field.getName());
 				out.write(".accept(visitor);\n");
 			}
+			out.write("\t\tvisitor.endVisit(this);\n");
 			out.write("\t}\n\t\n");
 		}
 		
@@ -688,7 +715,7 @@ public class TemplateProcessor extends AbstractProcessor {
 				} else if (field.isList()) {
 					out.write("\t\tfor (Node n : this.");
 					out.write(field.getName());
-					out.write(") {\n\t\t\tresult.raw");
+					out.write(".backingList()) {\n\t\t\tresult.raw");
 					out.write(field.titleCasedName());
 					out.write("().addToEnd(n == null ? null : n.copy());\n\t\t}\n");
 				} else {
@@ -788,21 +815,16 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write("\t\treturn out;\n\t}\n\t\n");
 	}
 	
-	private void generateFieldsForList(Writer out, String className, String typeName, int fieldsSize, FieldData field) throws IOException {
-		out.write("\tprivate final java.util.List<lombok.ast.AbstractNode> ");
-		out.write(field.getName());
-		out.write(" = new java.util.ArrayList<lombok.ast.AbstractNode>();\n");
-		
-		// lombok.ast.ListAccessor<CatchBlock, Try> catchesAccessor = ListAccessor.of(catches, this, CatchBlock.class, "Try.catches");
+	private void generateFieldForList(Writer out, String className, String typeName, int fieldsSize, FieldData field) throws IOException {
+		// lombok.ast.ListAccessor<CatchBlock, Try> catches = ListAccessor.of(this, CatchBlock.class, "Try.catches");
 		out.write("\tlombok.ast.ListAccessor<");
 		out.write(field.getType());
 		out.write(", ");
 		out.write(className);
 		out.write("> ");
 		out.write(field.getName());
-		out.write("Accessor = ListAccessor.of(");
-		out.write(field.getName());
-		out.write(", this, ");
+		out.write(" = ListAccessor.of(");
+		out.write("this, ");
 		out.write(field.getType());
 		out.write(".class, \"");
 		out.write(typeName);
@@ -1055,7 +1077,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
-		out.write("Accessor.asRaw();\n\t}\n\t\n");
+		out.write(".asRaw();\n\t}\n\t\n");
 		
 		out.write("\tpublic lombok.ast.StrictListAccessor<");
 		out.write(field.getType());
@@ -1065,7 +1087,7 @@ public class TemplateProcessor extends AbstractProcessor {
 		out.write(field.titleCasedName());
 		out.write("() {\n\t\treturn this.");
 		out.write(field.getName());
-		out.write("Accessor.asStrict();\n\t}\n\t\n");
+		out.write(".asStrict();\n\t}\n\t\n");
 	}
 	
 	private void generateFieldsForNode(Writer out, FieldData field) throws IOException {

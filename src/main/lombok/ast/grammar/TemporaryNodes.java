@@ -35,7 +35,7 @@ abstract class TemporaryNode implements Node {
 	private Position position = Position.UNPLACED;
 	
 	@Override public void accept(AstVisitor visitor) {
-		visitor.visitParseArtefact(this);
+		if (!visitor.visitParseArtefact(this)) visitor.endVisit(this);
 	}
 	
 	@Override public List<Node> getChildren() {
