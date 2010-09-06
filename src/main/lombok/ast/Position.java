@@ -30,8 +30,8 @@ import lombok.Data;
  */
 @Data
 public final class Position {
-	private int start, end;
-	private Node generatedBy;
+	private final int start, end;
+	private final Node generatedBy;
 	
 	public static Position UNPLACED = new Position(-1, -1);
 	
@@ -57,5 +57,13 @@ public final class Position {
 	
 	public Position withGeneratedBy(Node generatedBy) {
 		return new Position(start, end, generatedBy);
+	}
+	
+	public Position withEnd(int position) {
+		return new Position(start, position, generatedBy);
+	}
+	
+	public Position withStart(int position) {
+		return new Position(position, end, generatedBy);
 	}
 }
