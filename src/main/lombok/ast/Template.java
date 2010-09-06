@@ -44,10 +44,22 @@ public class Template<T extends Node> {
 		return process(s, "method", MethodDeclaration.class);
 	}
 	
+	public static ConstructorDeclaration parseConstructor(String source) throws AstException {
+		Source s = new Source(source, "constructorSnippet");
+		s.parseMember();
+		return process(s, "constructor", ConstructorDeclaration.class);
+	}
+	
 	public static VariableDeclaration parseField(String source) throws AstException {
 		Source s = new Source(source, "fieldSnippet");
 		s.parseMember();
 		return process(s, "field", VariableDeclaration.class);
+	}
+	
+	public static VariableDefinition parseVariableDefinition(String source) throws AstException {
+		Source s = new Source(source, "vardefSnippet");
+		s.parseMember();
+		return process(s, "vardef", VariableDefinition.class);
 	}
 	
 	public static Statement parseStatement(String source) throws AstException {
@@ -78,7 +90,7 @@ public class Template<T extends Node> {
 	private int replacementsPointer = 0;
 	
 	private static class ReplacementOrder {
-		String identifierToReplace, statementToReplace, expressionToReplace;
+		String identifierToReplace, statementToReplace, expressionToReplace, typeReferenceToReplace;
 		List<? extends Node> replacement;
 		Position position;
 		
@@ -90,7 +102,7 @@ public class Template<T extends Node> {
 			return order;
 		}
 		
-		static ReplacementOrder forStatement(String label, List<Statement> replacements, Position position) {
+		static ReplacementOrder forStatement(String label, List<? extends Node> replacements, Position position) {
 			ReplacementOrder order = new ReplacementOrder();
 			order.statementToReplace = label;
 			order.replacement = replacements == null ? Collections.<Node>emptyList() : replacements;
@@ -98,9 +110,17 @@ public class Template<T extends Node> {
 			return order;
 		}
 		
-		static ReplacementOrder forExpression(String identifier, Expression replacement, Position position) {
+		static ReplacementOrder forExpression(String identifier, Node replacement, Position position) {
 			ReplacementOrder order = new ReplacementOrder();
 			order.expressionToReplace = identifier;
+			order.replacement = Collections.singletonList(replacement);
+			order.position = position;
+			return order;
+		}
+		
+		static ReplacementOrder forTypeReference(String identifier, Node replacement, Position position) {
+			ReplacementOrder order = new ReplacementOrder();
+			order.typeReferenceToReplace = identifier;
 			order.replacement = Collections.singletonList(replacement);
 			order.position = position;
 			return order;
@@ -108,6 +128,11 @@ public class Template<T extends Node> {
 	}
 	
 	private final AstVisitor visitor = new ForwardingAstVisitor() {
+		@Override public boolean visitNode(Node node) {
+			node.setPosition(new Position(location, location, responsible));
+			return false;
+		}
+		
 		@Override public void endVisit(Node node) {
 			node.setPosition(new Position(node.getPosition().getStart(), location, responsible));
 		}
@@ -202,9 +227,30 @@ public class Template<T extends Node> {
 			return visitNode(node);
 		}
 		
-		@Override public boolean visitNode(Node node) {
-			node.setPosition(new Position(location, location, responsible));
-			return false;
+		@Override public boolean visitTypeReference(TypeReference node) {
+			ReplacementOrder order = currentOrder();
+			if (order != null && node.astParts().size() == 1 && node.astParts().last().rawTypeArguments().isEmpty() &&
+					node.astParts().last().astIdentifier().astValue().equals(order.typeReferenceToReplace)) {
+				
+				Node replacement = order.replacement.get(0);
+				int startLoc, endLoc;
+				if (order.position == null) {
+					if (order.replacement.isEmpty() || replacement.getPosition().getStart() < 0) startLoc = location;
+					else startLoc = replacement.getPosition().getStart();
+					if (order.replacement.isEmpty() || replacement.getPosition().getEnd() < 0) endLoc = location;
+					else endLoc = replacement.getPosition().getEnd();
+				} else {
+					startLoc = order.position.getStart();
+					endLoc = order.position.getEnd();
+				}
+				if (replacement.getPosition().isUnplaced()) Ast.setAllPositions(replacement, new Position(startLoc, endLoc, responsible));
+				location = endLoc;
+				node.replace(replacement);
+				replacementsPointer++;
+				return true;
+			}
+			
+			return visitNode(node);
 		}
 	};
 	
@@ -231,31 +277,40 @@ public class Template<T extends Node> {
 		return replaceIdentifier(placeholder, replacement, null);
 	}
 	
-	public Template<T> replaceStatement(String placeholder, Statement replacement, Position p) {
-		this.replacements.add(ReplacementOrder.forStatement(placeholder, Collections.singletonList(replacement), p));
+	public Template<T> replaceStatement(String placeholder, Node replacement, Position p) {
+		this.replacements.add(ReplacementOrder.forStatement(placeholder, replacement == null ? Collections.<Statement>emptyList() : Collections.singletonList(replacement), p));
 		return this;
 	}
 	
-	public Template<T> replaceStatement(String placeholder, Statement replacement) {
+	public Template<T> replaceStatement(String placeholder, Node replacement) {
 		return replaceStatement(placeholder, replacement, null);
 	}
 	
-	public Template<T> replaceStatement(String placeholder, List<Statement> replacement, Position p) {
+	public Template<T> replaceStatement(String placeholder, List<? extends Node> replacement, Position p) {
 		this.replacements.add(ReplacementOrder.forStatement(placeholder, replacement, p));
 		return this;
 	}
 	
-	public Template<T> replaceStatement(String placeholder, List<Statement> replacement) {
+	public Template<T> replaceStatement(String placeholder, List<? extends Node> replacement) {
 		return replaceStatement(placeholder, replacement, null);
 	}
 	
-	public Template<T> replaceExpression(String placeholder, Expression replacement, Position p) {
+	public Template<T> replaceExpression(String placeholder, Node replacement, Position p) {
 		this.replacements.add(ReplacementOrder.forExpression(placeholder, replacement, p));
 		return this;
 	}
 	
-	public Template<T> replaceExpression(String placeholder, Expression replacement) {
+	public Template<T> replaceExpression(String placeholder, Node replacement) {
 		return replaceExpression(placeholder, replacement, null);
+	}
+	
+	public Template<T> replaceTypeReference(String placeholder, Node replacement, Position p) {
+		this.replacements.add(ReplacementOrder.forTypeReference(placeholder, replacement, p));
+		return this;
+	}
+	
+	public Template<T> replaceTypeReference(String placeholder, Node replacement) {
+		return replaceTypeReference(placeholder, replacement, null);
 	}
 	
 	public T finish() {

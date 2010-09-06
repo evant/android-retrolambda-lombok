@@ -163,6 +163,13 @@ public class Source {
 		parsingResult = RecoveringParseRunner.run(group.expressions.anyExpression(), preprocessed);
 		postProcess();
 	}
+	public void parseVariableDefinition() {
+		if (parsed) return;
+		preProcess();
+		ParserGroup group = new ParserGroup(this);
+		parsingResult = RecoveringParseRunner.run(group.structures.variableDefinition(), preprocessed);
+		postProcess();
+	}
 	
 	private void postProcess() {
 		nodes.add(parsingResult.parseTreeRoot.getValue());
