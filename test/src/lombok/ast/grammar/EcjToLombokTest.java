@@ -62,8 +62,9 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	
 	@Override protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList (
-		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[a-d]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
-//		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[D]002_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+			DirDescriptor.of(new File("test/resources/idempotency"), true));
+//		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[A-Z]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
+//		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[H]010_).*\\.java$", Pattern.CASE_INSENSITIVE)));
 //		return Arrays.asList(
 //				DirDescriptor.of(new File("test/resources/idempotency"), true),
 //				DirDescriptor.of(new File("test/resources/alias"), true),

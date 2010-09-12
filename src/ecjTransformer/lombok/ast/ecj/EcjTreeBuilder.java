@@ -155,7 +155,7 @@ import com.google.common.collect.Maps;
  */
 public class EcjTreeBuilder extends lombok.ast.ForwardingAstVisitor {
 	private static final int VISIBILITY_MASK = 7;
-	private static final char[] PACKAGE_INFO = "package-info".toCharArray();
+	static final char[] PACKAGE_INFO = "package-info".toCharArray();
 	
 	private final Map<lombok.ast.Node, Collection<SourceStructure>> sourceStructures;
 	private List<? extends ASTNode> result = null;
