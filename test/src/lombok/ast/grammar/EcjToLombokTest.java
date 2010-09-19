@@ -21,24 +21,27 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import lombok.ast.BinaryExpression;
 import lombok.ast.BinaryOperator;
+import lombok.ast.Block;
 import lombok.ast.CharLiteral;
+import lombok.ast.Comment;
 import lombok.ast.EmptyDeclaration;
+import lombok.ast.For;
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
 import lombok.ast.Position;
 import lombok.ast.StringLiteral;
+import lombok.ast.TypeBody;
+import lombok.ast.TypeReference;
+import lombok.ast.VariableDeclaration;
+import lombok.ast.VariableDefinition;
+import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.ecj.EcjTreeConverter;
-import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.StructureFormatter;
 
@@ -60,17 +63,6 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 		super(false);
 	}
 	
-	@Override protected Collection<DirDescriptor> getDirDescriptors() {
-		return Arrays.asList (
-			DirDescriptor.of(new File("test/resources/idempotency"), true));
-//		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[A-Z]\\d{3}_).*\\.java$", Pattern.CASE_INSENSITIVE)));
-//		DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*(?:[H]010_).*\\.java$", Pattern.CASE_INSENSITIVE)));
-//		return Arrays.asList(
-//				DirDescriptor.of(new File("test/resources/idempotency"), true),
-//				DirDescriptor.of(new File("test/resources/alias"), true),
-//				DirDescriptor.of(new File("test/resources/special"), true));
-	}
-	
 	@Test
 	public boolean testEcjTreeConverter(Source source) throws Exception {
 		return testCompiler(source);
@@ -88,6 +80,9 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	protected String convertToString(Source source, Node tree) {
 		deleteEmptyDeclarations(tree);
 		foldStringConcats(tree);
+		splitVariableDefinitionEntries(tree);
+		simplifyArrayDecls(tree);
+		deleteComments(tree);
 		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
 		formatter.skipProperty(CharLiteral.class, "value");
 		formatter.skipProperty(StringLiteral.class, "value");
@@ -95,6 +90,102 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 		return formatter.finish();
 	}
 	
+	private static void deleteComments(Node tree) {
+		tree.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitComment(Comment node) {
+				node.unparent();
+				return false;
+			}
+		});
+	}
+	
+	private void splitVariableDefinitionEntries(Node node) {
+		node.accept(new ForwardingAstVisitor() {
+			
+			@Override public boolean visitVariableDefinition(VariableDefinition node) {
+				
+				if (node.astVariables().size() == 1) {
+					return true;
+				}
+				Node parent = node.getParent();
+				if (!(parent instanceof VariableDeclaration || parent instanceof For)) {
+					return true;
+				}
+				
+				if (parent instanceof VariableDeclaration) {
+					splitVariableDeclaration((VariableDeclaration)parent);
+				}
+				
+				if (parent instanceof For) {
+					splitFor((For)parent, node);
+				}
+				return true;
+			}
+
+			private void splitVariableDeclaration(VariableDeclaration varDecl) {
+				VariableDefinition varDef = varDecl.astDefinition();
+				Node upFromDecl = varDecl.getParent();
+				if (!(upFromDecl instanceof Block || upFromDecl instanceof TypeBody)) {
+					return;
+				}
+				
+				for (VariableDefinitionEntry varDefEntry : varDef.astVariables()) {
+					if (upFromDecl instanceof Block) {
+						VariableDeclaration splitDecl = new VariableDeclaration().astDefinition(splitAndUnparentVariableDeclaration(varDef, varDefEntry));
+						((Block)upFromDecl).astContents().addBefore(varDecl, splitDecl);
+					}
+					else if (upFromDecl instanceof TypeBody) {
+						VariableDeclaration splitDecl = new VariableDeclaration().astDefinition(splitAndUnparentVariableDeclaration(varDef, varDefEntry));
+						((TypeBody)upFromDecl).astMembers().addBefore(varDecl, splitDecl);
+					}
+				}
+				varDecl.unparent();
+			}
+			
+			private void splitFor(For forStat, VariableDefinition varDef) {
+				for (VariableDefinitionEntry varDefEntry : varDef.astVariables()) {
+					VariableDefinition splitVarDef = splitAndUnparentVariableDeclaration(varDef, varDefEntry);
+					
+					/* 
+					 * TODO: The way the convertor adds multiple varDefs in a
+					 * for is mimiced, though it does not seem to be a correct
+					 * AST. Verify this and rewrite both the convertor and
+					 * the normalizer
+					 */
+					forStat.rawExpressionInits().addToEnd(splitVarDef);				
+				}
+				forStat.astVariableDeclaration().unparent();
+			}
+
+			private VariableDefinition splitAndUnparentVariableDeclaration(VariableDefinition def, VariableDefinitionEntry varDefEntry) {
+				varDefEntry.unparent();
+				VariableDefinition copy = def.copy();
+				copy.astVariables().clear();
+				copy.astVariables().addToEnd(varDefEntry);
+				return copy;
+			}
+		});
+	}
+	
+	/*
+	 * Dependant on splitVariableDefinitionEntries().
+	 */
+	private void simplifyArrayDecls(Node node) {
+		node.accept(new ForwardingAstVisitor() {
+			@Override public boolean visitVariableDefinition(VariableDefinition node) {
+				VariableDefinitionEntry varDefEntry = node.astVariables().first();
+				int arrayDimensions = varDefEntry.astArrayDimensions();
+				if (arrayDimensions == 0) {
+					return true;
+				}
+				varDefEntry.astArrayDimensions(0);
+				TypeReference typeRef = node.astTypeReference();
+				typeRef.astArrayDimensions(typeRef.astArrayDimensions() + arrayDimensions);
+				return true;
+			}
+		});
+	}
+
 	private static void deleteEmptyDeclarations(Node node) {
 		node.accept(new ForwardingAstVisitor() {
 			@Override public boolean visitEmptyDeclaration(EmptyDeclaration node) {
