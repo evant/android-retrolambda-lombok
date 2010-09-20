@@ -834,9 +834,11 @@ public class EcjTreeBuilder {
 				decl.sourceEnd = end(type.astName());
 				decl.declarationSourceStart = jstart(type);
 				decl.declarationSourceEnd = end(type);
-				if (!(type instanceof AnnotationDeclaration) || !type.astModifiers().isEmpty() || type.rawJavadoc() != null)
-						decl.modifiersSourceStart = jstart(type.astModifiers());
-				else decl.modifiersSourceStart = -1;
+				if (!(type instanceof AnnotationDeclaration) || !type.astModifiers().isEmpty() || type.rawJavadoc() != null) {
+					decl.modifiersSourceStart = jstart(type.astModifiers());
+				} else {
+					decl.modifiersSourceStart = -1;
+				}
 			}
 			decl.bodyStart = start(members.owner()) + 1;
 			decl.bodyEnd = end(members.owner());
