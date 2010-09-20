@@ -62,6 +62,7 @@ import lombok.ast.InterfaceDeclaration;
 import lombok.ast.KeywordModifier;
 import lombok.ast.LabelledStatement;
 import lombok.ast.MethodInvocation;
+import lombok.ast.Modifiers;
 import lombok.ast.Node;
 import lombok.ast.NormalTypeBody;
 import lombok.ast.Position;
@@ -286,13 +287,17 @@ public class EcjTreeConverter {
 	}
 	
 	private lombok.ast.Identifier toIdentifier(char[] token, int start, int end) {
-		return toIdentifier(token, new Position(start, end + 1));
+		return toIdentifier(token, toPosition(start, end));
 	}
 	
 	private lombok.ast.Identifier toIdentifier(char[] token, Position pos) {
 		lombok.ast.Identifier id = lombok.ast.Identifier.of(token == null ? "" : new String(token));
 		id.setPosition(pos);
 		return id;
+	}
+	
+	private Position toPosition(int start, int end) {
+		return new Position(start, end + 1);
 	}
 	
 	private Position toPosition(long pos) {
@@ -303,10 +308,11 @@ public class EcjTreeConverter {
 		return (((long) start) << 32) | (0xFFFFFFFFL & end);
 	}
 	
-	private lombok.ast.Modifiers toModifiers(int modifiers, Annotation[] annotations) {
+	private lombok.ast.Modifiers toModifiers(int modifiers, Annotation[] annotations, int start, int end) {
 		lombok.ast.Modifiers m = new lombok.ast.Modifiers();
 		for (KeywordModifier mod : KeywordModifier.fromReflectModifiers(modifiers)) m.astKeywords().addToEnd(mod);
 		fillList(annotations, m.rawAnnotations());
+		m.setPosition(new Position(start, end));
 		return m;
 	}
 	
@@ -330,9 +336,9 @@ public class EcjTreeConverter {
 			list.addToEnd(toIdentifier(tokens[i], positions[i]));
 		}
 	}
-
+	
 	private <N extends lombok.ast.Node> N setPosition(ASTNode node, N lombokNode) {
-		lombokNode.setPosition(new Position(node.sourceStart, node.sourceEnd));
+		lombokNode.setPosition(toPosition(node.sourceStart, node.sourceEnd));
 		return lombokNode;
 	}
 	
@@ -359,6 +365,7 @@ public class EcjTreeConverter {
 				lombok.ast.PackageDeclaration pkg = new lombok.ast.PackageDeclaration();
 				fillIdentifiers(node.tokens, node.sourcePositions, pkg.astParts());
 				fillList(node.annotations, pkg.rawAnnotations());
+				pkg.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
 				set(node, pkg);
 				return;
 			}
@@ -367,6 +374,7 @@ public class EcjTreeConverter {
 			fillIdentifiers(node.tokens, node.sourcePositions, imp.astParts());
 			imp.astStarImport((node.bits & ASTNode.OnDemand) != 0);
 			imp.astStaticImport((node.modifiers & ClassFileConstants.AccStatic) != 0);
+			imp.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
 			set(node, imp);
 		}
 		
@@ -427,8 +435,9 @@ public class EcjTreeConverter {
 				}
 			}
 			decl.astJavadoc((Comment) toTree(node.javadoc));
-			decl.astModifiers(toModifiers(node.modifiers, node.annotations));
+			decl.astModifiers(toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
 			decl.astName(toIdentifier(node.name, node.sourceStart, node.sourceEnd));
+			decl.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
 			
 			set(node, decl);
 			return;
@@ -439,6 +448,7 @@ public class EcjTreeConverter {
 			List<ASTNode> orderedList = createOrderedMemberList(node);
 			fillList(orderedList.toArray(new ASTNode[0]), body.rawMembers());
 			fillList(node.fields, body.rawConstants(), FlagKey.AS_ENUM);
+			body.setPosition(toPosition(node.bodyStart - 1, node.bodyEnd));
 			return body;
 		}
 		
@@ -455,6 +465,7 @@ public class EcjTreeConverter {
 			NormalTypeBody body = new NormalTypeBody();
 			List<ASTNode> orderedList = createOrderedMemberList(node);
 			fillList(orderedList.toArray(new ASTNode[0]), body.rawMembers());
+			body.setPosition(toPosition(node.bodyStart - 1, node.bodyEnd));
 			return body;
 		}
 		
@@ -521,7 +532,7 @@ public class EcjTreeConverter {
 		
 		public void handleAbstractVariableDefinition(AbstractVariableDeclaration node) {
 			VariableDefinition varDef = createVariableDefinition(node);
-				
+			setPosition(node, varDef);
 			if (hasFlag(FlagKey.AS_DEFINITION)) {
 				set(node, varDef);
 				return;
@@ -533,12 +544,13 @@ public class EcjTreeConverter {
 			}
 			
 			decl.astDefinition(varDef);
-			set(node, decl);
+			
+			set(node, setPosition(node, decl));
 		}
 		
 		private VariableDefinition createVariableDefinition(AbstractVariableDeclaration node) {
 			VariableDefinition varDef = new VariableDefinition();
-			varDef.astModifiers(toModifiers(node.modifiers,node.annotations));
+			varDef.astModifiers(toModifiers(node.modifiers,node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
 			varDef.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
 			varDef.astVarargs((node.type.bits & ASTNode.IsVarArgs) != 0);
 			
@@ -1061,7 +1073,7 @@ public class EcjTreeConverter {
 			block.astContents().addToEnd((lombok.ast.Statement)toTree(node.constructorCall, FlagKey.AS_STATEMENT));
 			constr.astBody(block);
 			constr.astJavadoc((Comment) toTree(node.javadoc));
-			constr.astModifiers(toModifiers(node.modifiers, node.annotations));
+			constr.astModifiers(toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
 			fillList(node.arguments, constr.rawParameters());
 			fillList(node.typeParameters, constr.rawTypeVariables());
 			fillList(node.thrownExceptions, constr.rawThrownTypeReferences());
@@ -1093,13 +1105,12 @@ public class EcjTreeConverter {
 			lombok.ast.MethodDeclaration decl = new lombok.ast.MethodDeclaration();
 			decl.astMethodName(toIdentifier(node.selector, node.sourceStart, node.sourceEnd));
 			decl.astJavadoc((Comment) toTree(node.javadoc));
-			decl.astModifiers(toModifiers(node.modifiers, node.annotations));
+			Modifiers modifiers = toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart);
+			decl.astModifiers(modifiers);
 			decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
 			
 			boolean semiColonBody = ((node.modifiers & ExtraCompilerModifiers.AccSemicolonBody) != 0);
-			if (!toModifiers(node.modifiers, node.annotations).isAbstract() && !node.isNative() && !semiColonBody) {
-				decl.astBody(toBlock(node.statements));
-			}
+			if (!modifiers.isAbstract() && !node.isNative() && !semiColonBody) decl.astBody(toBlock(node.statements));
 			fillList(node.arguments, decl.rawParameters());
 			fillList(node.typeParameters, decl.rawTypeVariables());
 			fillList(node.thrownExceptions, decl.rawThrownTypeReferences());
@@ -1111,7 +1122,7 @@ public class EcjTreeConverter {
 			lombok.ast.AnnotationMethodDeclaration decl = new lombok.ast.AnnotationMethodDeclaration();
 			decl.astMethodName(toIdentifier(node.selector, node.sourceStart, node.sourceEnd));
 			decl.astJavadoc((Comment) toTree(node.javadoc));
-			decl.astModifiers(toModifiers(node.modifiers, node.annotations));
+			decl.astModifiers(toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
 			decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
 			decl.astDefaultValue((lombok.ast.Expression) toTree(node.defaultValue));
 			
