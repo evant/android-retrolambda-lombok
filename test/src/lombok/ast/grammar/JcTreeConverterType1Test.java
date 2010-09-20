@@ -149,7 +149,7 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
 		JcTreeConverter converter = new JcTreeConverter();
-		converter.convert(cu);
+		converter.visit(cu);
 		return converter.getResult();
 	}
 }

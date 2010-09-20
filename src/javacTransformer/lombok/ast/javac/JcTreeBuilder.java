@@ -243,7 +243,7 @@ public class JcTreeBuilder {
 		return List.<T>nil().appendList(all);
 	}
 	
-	public void convert(Node node) {
+	public void visit(Node node) {
 		node.accept(visitor);
 	}
 	

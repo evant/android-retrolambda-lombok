@@ -51,7 +51,7 @@ public class JcTreeConverterType2Test extends TreeBuilderRunner<JCTree> {
 	
 	protected String convertToString(Source source, JCTree tree) {
 		JcTreePrinter printer = new JcTreePrinter(true);
-		tree.accept(printer);
+		printer.visit(tree);
 		String string = printer.toString();
 		return string;
 	}
@@ -68,9 +68,9 @@ public class JcTreeConverterType2Test extends TreeBuilderRunner<JCTree> {
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
 		JcTreeConverter converter = new JcTreeConverter();
 		JcTreeBuilder builder = new JcTreeBuilder();
-		converter.convert(cu);
+		converter.visit(cu);
 		converter.transferPositionInfo(builder);
-		builder.convert(converter.getResult());
+		builder.visit(converter.getResult());
 		return builder.get();
 	}
 	

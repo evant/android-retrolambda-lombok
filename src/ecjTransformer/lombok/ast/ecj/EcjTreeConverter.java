@@ -183,12 +183,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class EcjTreeConverter extends EcjTreeVisitor {
+public class EcjTreeConverter {
 	private enum FlagKey {
 		IMPORTDECLARATION_IS_PACKAGE,
 		NAMEREFERENCE_IS_TYPE,
 		AS_STATEMENT,
-		AS_DEFINITION, AS_ENUM,
+		AS_DEFINITION,
+		AS_ENUM,
 	}
 	
 	private List<? extends Node> result = null;
@@ -200,8 +201,6 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		}
 	};
 	
-	private EcjTreeConverter() {}
-	
 	private boolean hasFlag(FlagKey key) {
 		return params.containsKey(key);
 	}
@@ -211,11 +210,11 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		return params.get(key);
 	}
 	
-	List<? extends Node> getAll() {
+	public List<? extends Node> getAll() {
 		return result;
 	}
 	
-	Node get() {
+	public Node get() {
 		if (result.isEmpty()) {
 			return null;
 		}
@@ -256,11 +255,11 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 	
 	private Node toTree(ASTNode node, Map<FlagKey, Object> params) {
 		if (node == null) return null;
-		EcjTreeConverter visitor = new EcjTreeConverter();
-		if (params != null) visitor.params = params;
-		visitor.visitEcjNode(node);
+		EcjTreeConverter newConverter = new EcjTreeConverter();
+		if (params != null) newConverter.params = params;
+		newConverter.visit(node);
 		try {
-			return visitor.get();
+			return newConverter.get();
 		} catch (RuntimeException e) {
 			System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
 			throw e;
@@ -273,15 +272,13 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		for (ASTNode node : nodes) list.addToEnd(toTree(node, keys));
 	}
 	
-	private void fillUtilityList(List<ASTNode> list, ASTNode...nodes) {
-		if (nodes == null || nodes.length == 0) {
-			return;
-		}
+	private void fillUtilityList(List<ASTNode> list, ASTNode... nodes) {
+		if (nodes == null || nodes.length == 0) return;
 		for (ASTNode statement : nodes) if (statement != null) list.add(statement);
 	}
 	
-	public static Node convert(ASTNode node) {
-		return new EcjTreeConverter().toTree(node);
+	public void visit(ASTNode node) {
+		visitor.visitEcjNode(node);
 	}
 	
 	private lombok.ast.Identifier toIdentifier(char[] token) {
@@ -317,303 +314,298 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		return lombokNode;
 	}
 	
-	@Override public void visitCompilationUnitDeclaration(CompilationUnitDeclaration node) {
-		lombok.ast.CompilationUnit unit = new lombok.ast.CompilationUnit();
-		unit.rawPackageDeclaration(toTree(node.currentPackage, FlagKey.IMPORTDECLARATION_IS_PACKAGE));
-		fillList(node.imports, unit.rawImportDeclarations());
-		
-		TypeDeclaration[] newTypes = null;
-		if (node.types != null && node.types.length >= 1 && CharOperation.equals(EcjTreeBuilder.PACKAGE_INFO, node.types[0].name)) {
-			newTypes = new TypeDeclaration[node.types.length - 1];
-			System.arraycopy(node.types, 1, newTypes, 0, node.types.length - 1);
+	private final EcjTreeVisitor visitor = new EcjTreeVisitor() {
+		@Override public void visitCompilationUnitDeclaration(CompilationUnitDeclaration node) {
+			lombok.ast.CompilationUnit unit = new lombok.ast.CompilationUnit();
+			unit.rawPackageDeclaration(toTree(node.currentPackage, FlagKey.IMPORTDECLARATION_IS_PACKAGE));
+			fillList(node.imports, unit.rawImportDeclarations());
+			
+			TypeDeclaration[] newTypes = null;
+			if (node.types != null && node.types.length > 0 && CharOperation.equals(EcjTreeBuilder.PACKAGE_INFO, node.types[0].name)) {
+				newTypes = new TypeDeclaration[node.types.length - 1];
+				System.arraycopy(node.types, 1, newTypes, 0, node.types.length - 1);
+			} else {
+				newTypes = node.types;
+			}
+			
+			fillList(newTypes, unit.rawTypeDeclarations());
+			set(node, unit);
 		}
-		else {
-			newTypes = node.types;
+		
+		@Override public void visitImportReference(ImportReference node) {
+			if (hasFlag(FlagKey.IMPORTDECLARATION_IS_PACKAGE)) {
+				lombok.ast.PackageDeclaration pkg = new lombok.ast.PackageDeclaration();
+				fillIdentifiers(node.tokens, pkg.astParts());
+				fillList(node.annotations, pkg.rawAnnotations());
+				set(node, pkg);
+				return;
+			}
+			
+			lombok.ast.ImportDeclaration imp = new lombok.ast.ImportDeclaration();
+			fillIdentifiers(node.tokens, imp.astParts());
+			imp.astStarImport((node.bits & ASTNode.OnDemand) != 0);
+			imp.astStaticImport((node.modifiers & ClassFileConstants.AccStatic) != 0);
+			set(node, imp);
 		}
 		
-		fillList(newTypes, unit.rawTypeDeclarations());
-		set(node, unit);
-	}
-	
-
-	@Override public void visitImportReference(ImportReference node) {
-		if (hasFlag(FlagKey.IMPORTDECLARATION_IS_PACKAGE)) {
-			lombok.ast.PackageDeclaration pkg = new lombok.ast.PackageDeclaration();
-			fillIdentifiers(node.tokens, pkg.astParts());
-			fillList(node.annotations, pkg.rawAnnotations());
-			set(node, pkg);
+		@Override public void visitInitializer(Initializer node) {
+			if ((node.modifiers & ClassFileConstants.AccStatic) != 0) {
+				lombok.ast.StaticInitializer staticInit = new lombok.ast.StaticInitializer();
+				staticInit.astBody((lombok.ast.Block) toTree(node.block));
+				set(node, staticInit);
+				return;
+			}
+			else if (node.modifiers == 0) {
+				lombok.ast.InstanceInitializer instanceInit = new lombok.ast.InstanceInitializer();
+				instanceInit.astBody((lombok.ast.Block) toTree(node.block));
+				set(node, instanceInit);
+				return;
+			}
+		}
+		
+		@Override 
+		public void visitTypeDeclaration(TypeDeclaration node) {
+			lombok.ast.TypeDeclaration decl = null;
+			switch (TypeDeclaration.kind(node.modifiers)) {
+				case TypeDeclaration.CLASS_DECL: {
+					lombok.ast.ClassDeclaration cDecl = new lombok.ast.ClassDeclaration();
+					
+					cDecl.rawExtending(toTree(node.superclass));
+					cDecl.astBody(createNormalTypeBody(node));
+					fillList(node.superInterfaces, cDecl.rawImplementing());
+					fillList(node.typeParameters, cDecl.rawTypeVariables());
+					
+					decl = cDecl;
+					break;
+				}
+				case TypeDeclaration.INTERFACE_DECL: {
+					InterfaceDeclaration iDecl = new InterfaceDeclaration();
+					iDecl.astBody(createNormalTypeBody(node));
+					fillList(node.superInterfaces, iDecl.rawExtending());
+					fillList(node.typeParameters, iDecl.rawTypeVariables());
+					
+					decl = iDecl;
+					break;
+				}
+				case TypeDeclaration.ENUM_DECL: {
+					EnumDeclaration eDecl = new lombok.ast.EnumDeclaration();
+					EnumTypeBody enumTypeBody = createEnumTypeBody(node);
+					
+					fillList(node.superInterfaces, eDecl.rawImplementing());
+					eDecl.astBody(enumTypeBody);
+					decl = eDecl;
+					break;
+				}
+				case TypeDeclaration.ANNOTATION_TYPE_DECL: {
+					AnnotationDeclaration aDecl = new AnnotationDeclaration();
+					aDecl.astBody(createNormalTypeBody(node));
+					
+					decl = aDecl;
+					break;
+				}
+			}
+			decl.astJavadoc((Comment) toTree(node.javadoc));
+			decl.astModifiers(toModifiers(node.modifiers, node.annotations));
+			decl.astName(toIdentifier(node.name));
+			
+			set(node, decl);
 			return;
 		}
 		
-		lombok.ast.ImportDeclaration imp = new lombok.ast.ImportDeclaration();
-		fillIdentifiers(node.tokens, imp.astParts());
-		imp.astStarImport((node.bits & ASTNode.OnDemand) != 0);
-		imp.astStaticImport((node.modifiers & ClassFileConstants.AccStatic) != 0);
-		set(node, imp);
-	}
-	
-	@Override public void visitInitializer(Initializer node) {
-		if ((node.modifiers & ClassFileConstants.AccStatic) != 0) {
-			lombok.ast.StaticInitializer staticInit = new lombok.ast.StaticInitializer();
-			staticInit.astBody((lombok.ast.Block) toTree(node.block));
-			set(node, staticInit);
-			return;
+		private EnumTypeBody createEnumTypeBody(TypeDeclaration node) {
+			EnumTypeBody body = new EnumTypeBody();
+			List<ASTNode> orderedList = createOrderedMemberList(node);
+			fillList(orderedList.toArray(new ASTNode[0]), body.rawMembers());
+			fillList(node.fields, body.rawConstants(), FlagKey.AS_ENUM);
+			return body;
 		}
-		else if (node.modifiers == 0) {
-			lombok.ast.InstanceInitializer instanceInit = new lombok.ast.InstanceInitializer();			
-			instanceInit.astBody((lombok.ast.Block) toTree(node.block));
-			set(node, instanceInit);
-			return;
-		}
-	}
-	
-	@Override 
-	public void visitTypeDeclaration(TypeDeclaration node) {
-		lombok.ast.TypeDeclaration decl = null;
-		switch (TypeDeclaration.kind(node.modifiers)) {
-			case TypeDeclaration.CLASS_DECL: {
-				lombok.ast.ClassDeclaration cDecl = new lombok.ast.ClassDeclaration();
-				
-				cDecl.rawExtending(toTree(node.superclass));
-				cDecl.astBody(createNormalTypeBody(node));
-				fillList(node.superInterfaces, cDecl.rawImplementing());
-				fillList(node.typeParameters, cDecl.rawTypeVariables());
-				
-				decl = cDecl;
-				break;
-			}
-			case TypeDeclaration.INTERFACE_DECL: {
-				InterfaceDeclaration iDecl = new InterfaceDeclaration();
-				iDecl.astBody(createNormalTypeBody(node));
-				fillList(node.superInterfaces, iDecl.rawExtending());
-				fillList(node.typeParameters, iDecl.rawTypeVariables());
-				
-				decl = iDecl;
-				break;
-			}
-			case TypeDeclaration.ENUM_DECL: {
-				EnumDeclaration eDecl = new lombok.ast.EnumDeclaration();
-				EnumTypeBody enumTypeBody = createEnumTypeBody(node);
-				
-				fillList(node.superInterfaces, eDecl.rawImplementing());
-				eDecl.astBody(enumTypeBody);
-				decl = eDecl;
-				break;
-			}
-			case TypeDeclaration.ANNOTATION_TYPE_DECL: {
-				AnnotationDeclaration aDecl = new AnnotationDeclaration();
-				aDecl.astBody(createNormalTypeBody(node));
-				
-				decl = aDecl;
-				break;
-			}
-		}
-		decl.astJavadoc((Comment) toTree(node.javadoc));
-		decl.astModifiers(toModifiers(node.modifiers, node.annotations));
-		decl.astName(toIdentifier(node.name));
 		
-		set(node, decl);
-		return;
-	}
-	
-	private EnumTypeBody createEnumTypeBody(TypeDeclaration node) {
-		EnumTypeBody body = new EnumTypeBody();
-		List<ASTNode> orderedList = createOrderedMemberList(node);
-		fillList(orderedList.toArray(new ASTNode[0]), body.rawMembers());
-		fillList(node.fields, body.rawConstants(), FlagKey.AS_ENUM);
-		return body;
-	}
-
-	private List<ASTNode> createOrderedMemberList(TypeDeclaration node) {
-		List<ASTNode> orderedList = new ArrayList<ASTNode>();
-		fillUtilityList(orderedList, node.fields);
-		fillUtilityList(orderedList, node.methods);
-		fillUtilityList(orderedList, node.memberTypes);
-		Collections.sort(orderedList, ASTNODE_ORDER);
-		return orderedList;
-	}
-
-	private NormalTypeBody createNormalTypeBody(TypeDeclaration node) {
-		NormalTypeBody body = new NormalTypeBody();
-		List<ASTNode> orderedList = createOrderedMemberList(node);
-		fillList(orderedList.toArray(new ASTNode[0]), body.rawMembers());
-		return body;
-	}
-	
-	@Override public void visitTypeParameter(TypeParameter node) {
-		TypeVariable var = new TypeVariable();
-		var.astName(toIdentifier(node.name));
-		var.astExtending().addToEnd((lombok.ast.TypeReference)toTree(node.type));
-		fillList(node.bounds, var.rawExtending());
-		
-		setPosition(node, var);
-		set(node, var);
-	}
-
-	@Override public void visitEmptyStatement(EmptyStatement node) {
-		lombok.ast.EmptyStatement statement = new lombok.ast.EmptyStatement();
-		setPosition(node, statement);
-		set(node, statement);
-	}
-	
-	@Override public void visitLocalDeclaration(LocalDeclaration node) {
-		handleAbstractVariableDefinition(node);
-	}
-	
-	@Override public void visitFieldDeclaration(FieldDeclaration node) {
-		if (hasFlag(FlagKey.AS_ENUM) && node.initialization instanceof AllocationExpression) {
-			handleEnumConstant(node);
-			return;
+		private List<ASTNode> createOrderedMemberList(TypeDeclaration node) {
+			List<ASTNode> orderedList = new ArrayList<ASTNode>();
+			fillUtilityList(orderedList, node.fields);
+			fillUtilityList(orderedList, node.methods);
+			fillUtilityList(orderedList, node.memberTypes);
+			Collections.sort(orderedList, ASTNODE_ORDER);
+			return orderedList;
 		}
-		if(!hasFlag(FlagKey.AS_ENUM) && !(node.initialization instanceof AllocationExpression)) {
+		
+		private NormalTypeBody createNormalTypeBody(TypeDeclaration node) {
+			NormalTypeBody body = new NormalTypeBody();
+			List<ASTNode> orderedList = createOrderedMemberList(node);
+			fillList(orderedList.toArray(new ASTNode[0]), body.rawMembers());
+			return body;
+		}
+		
+		@Override public void visitTypeParameter(TypeParameter node) {
+			TypeVariable var = new TypeVariable();
+			var.astName(toIdentifier(node.name));
+			var.astExtending().addToEnd((lombok.ast.TypeReference)toTree(node.type));
+			fillList(node.bounds, var.rawExtending());
+			
+			setPosition(node, var);
+			set(node, var);
+		}
+		
+		@Override public void visitEmptyStatement(EmptyStatement node) {
+			lombok.ast.EmptyStatement statement = new lombok.ast.EmptyStatement();
+			setPosition(node, statement);
+			set(node, statement);
+		}
+		
+		@Override public void visitLocalDeclaration(LocalDeclaration node) {
 			handleAbstractVariableDefinition(node);
-			return;
 		}
-		/*
-		 * Either an enumconstant during fieldparsing, or a field during enumconstant parsing
-		 */
-		set(node, (Node)null);
-	}
-	
-	@Override public void visitFieldReference(FieldReference node) {
-		Select select = new Select();
-		select.astIdentifier(toIdentifier(node.token));
-		select.astOperand((lombok.ast.Expression) toTree(node.receiver));
 		
-		set(node, select);
-	}
-	
-	private void handleEnumConstant(FieldDeclaration node) {
-		AllocationExpression init = (AllocationExpression)node.initialization;
+		@Override public void visitFieldDeclaration(FieldDeclaration node) {
+			if (hasFlag(FlagKey.AS_ENUM) && node.initialization instanceof AllocationExpression) {
+				handleEnumConstant(node);
+				return;
+			}
+			if(!hasFlag(FlagKey.AS_ENUM) && !(node.initialization instanceof AllocationExpression)) {
+				handleAbstractVariableDefinition(node);
+				return;
+			}
+			/*
+			 * Either an enumconstant during fieldparsing, or a field during enumconstant parsing
+			 */
+			set(node, (Node) null);
+		}
 		
-		EnumConstant constant = new EnumConstant();
-		constant.astJavadoc((Comment) toTree(node.javadoc));
-		constant.astName(toIdentifier(node.name));
-		fillList(init.arguments, constant.rawArguments());
-		fillList(node.annotations, constant.rawAnnotations());
-		
-		if (node.initialization instanceof QualifiedAllocationExpression) {
-			QualifiedAllocationExpression qualifiedNode = ((QualifiedAllocationExpression)node.initialization);
-			NormalTypeBody body = createNormalTypeBody(qualifiedNode.anonymousType);
-			constant.astBody(body);
+		@Override public void visitFieldReference(FieldReference node) {
+			Select select = new Select();
+			select.astIdentifier(toIdentifier(node.token));
+			select.astOperand((lombok.ast.Expression) toTree(node.receiver));
 			
+			set(node, select);
 		}
 		
-		set(node, constant);
-	}
-
-	public void handleAbstractVariableDefinition(AbstractVariableDeclaration node) {
-		VariableDefinition varDef = createVariableDefinition(node);
+		private void handleEnumConstant(FieldDeclaration node) {
+			AllocationExpression init = (AllocationExpression)node.initialization;
 			
-		if (hasFlag(FlagKey.AS_DEFINITION)) {
-			set(node, varDef);
-			return;
+			EnumConstant constant = new EnumConstant();
+			constant.astJavadoc((Comment) toTree(node.javadoc));
+			constant.astName(toIdentifier(node.name));
+			fillList(init.arguments, constant.rawArguments());
+			fillList(node.annotations, constant.rawAnnotations());
+			
+			if (node.initialization instanceof QualifiedAllocationExpression) {
+				QualifiedAllocationExpression qualifiedNode = ((QualifiedAllocationExpression)node.initialization);
+				NormalTypeBody body = createNormalTypeBody(qualifiedNode.anonymousType);
+				constant.astBody(body);
+			}
+			
+			set(node, constant);
 		}
-		VariableDeclaration decl = new VariableDeclaration();
 		
-		if (node instanceof FieldDeclaration) {
-			decl.astJavadoc((Comment) toTree(((FieldDeclaration)node).javadoc));
+		public void handleAbstractVariableDefinition(AbstractVariableDeclaration node) {
+			VariableDefinition varDef = createVariableDefinition(node);
+				
+			if (hasFlag(FlagKey.AS_DEFINITION)) {
+				set(node, varDef);
+				return;
+			}
+			
+			VariableDeclaration decl = new VariableDeclaration();
+			if (node instanceof FieldDeclaration) {
+				decl.astJavadoc((Comment) toTree(((FieldDeclaration)node).javadoc));
+			}
+			
+			decl.astDefinition(varDef);
+			set(node, decl);
 		}
 		
-		decl.astDefinition(varDef);
-		set(node, decl);
-	}
-
-	private VariableDefinition createVariableDefinition(AbstractVariableDeclaration node) {
-		VariableDefinition varDef = new VariableDefinition();
-		varDef.astModifiers(toModifiers(node.modifiers,node.annotations));
-		varDef.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
-		varDef.astVarargs((node.type.bits & ASTNode.IsVarArgs) != 0);
+		private VariableDefinition createVariableDefinition(AbstractVariableDeclaration node) {
+			VariableDefinition varDef = new VariableDefinition();
+			varDef.astModifiers(toModifiers(node.modifiers,node.annotations));
+			varDef.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
+			varDef.astVarargs((node.type.bits & ASTNode.IsVarArgs) != 0);
+			
+			VariableDefinitionEntry varDefEntry = new VariableDefinitionEntry();
+			varDefEntry.astInitializer((lombok.ast.Expression) toTree(node.initialization));
+			varDefEntry.astName(toIdentifier(node.name));
+			varDef.astVariables().addToEnd(varDefEntry);
+			return varDef;
+		}
 		
-		VariableDefinitionEntry varDefEntry = new VariableDefinitionEntry();
-		varDefEntry.astInitializer((lombok.ast.Expression) toTree(node.initialization));
-		varDefEntry.astName(toIdentifier(node.name));
-		varDef.astVariables().addToEnd(varDefEntry);
-		return varDef;
-	}
-	
-	@Override public void visitBlock(Block node) {
-		set(node, setPosition(node, toBlock(node.statements)));
-	}
-
-	@Override public void visitSingleTypeReference(SingleTypeReference node) {
-		lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
-		ref.astParts().addToEnd(createSingleTypeReferencePart(node));
-		setPosition(node, ref);
-		set(node, ref);
-	}
-
-	private TypeReferencePart createSingleTypeReferencePart(SingleTypeReference node) {
-		TypeReferencePart part = new TypeReferencePart();
-		part.astIdentifier(toIdentifier(node.token));
-		return part;
-	}
-	
-	private TypeReferencePart createParameterizedSingleTypeReferencePart(ParameterizedSingleTypeReference node) {
-		TypeReferencePart part = createTypeReferencePart(node.token, node.typeArguments);
-		return part;
-	}
-	
-	private void fillTypeReferenceParts(char[][] tokens, StrictListAccessor<lombok.ast.TypeReferencePart, ?> list) {
-		if (tokens == null) return;
-		for (char[] token : tokens) {
+		@Override public void visitBlock(Block node) {
+			set(node, setPosition(node, toBlock(node.statements)));
+		}
+		
+		@Override public void visitSingleTypeReference(SingleTypeReference node) {
+			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
+			ref.astParts().addToEnd(createSingleTypeReferencePart(node));
+			setPosition(node, ref);
+			set(node, ref);
+		}
+		
+		private TypeReferencePart createSingleTypeReferencePart(SingleTypeReference node) {
+			TypeReferencePart part = new TypeReferencePart();
+			part.astIdentifier(toIdentifier(node.token));
+			return part;
+		}
+		
+		private TypeReferencePart createParameterizedSingleTypeReferencePart(ParameterizedSingleTypeReference node) {
+			TypeReferencePart part = createTypeReferencePart(node.token, node.typeArguments);
+			return part;
+		}
+		
+		private void fillTypeReferenceParts(char[][] tokens, StrictListAccessor<lombok.ast.TypeReferencePart, ?> list) {
+			if (tokens == null) return;
+			for (char[] token : tokens) {
+				TypeReferencePart part = new TypeReferencePart();
+				part.astIdentifier(toIdentifier(token));
+				list.addToEnd(part);
+			}
+		}
+		
+		@Override public void visitQualifiedTypeReference(QualifiedTypeReference node) {
+			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
+			fillTypeReferenceParts(node.tokens, ref.astParts());
+			set(node, ref);
+		}
+		
+		private void fillTypeReferenceParts(char[][] tokens, TypeReference[][] typeArguments, StrictListAccessor<lombok.ast.TypeReferencePart, ?> list) {
+			if (tokens == null) return;
+			for (int i = 0; i < typeArguments.length; i++) {
+				TypeReference[] typeReferences = typeArguments[i];
+				TypeReferencePart part = createTypeReferencePart(tokens[i], typeReferences);
+				list.addToEnd(part);
+			}
+		}
+		
+		private TypeReferencePart createTypeReferencePart(char[] token) {
+			return createTypeReferencePart(token, null);
+		}
+		
+		private TypeReferencePart createTypeReferencePart(char[] token, TypeReference[] typeReferences) {
 			TypeReferencePart part = new TypeReferencePart();
 			part.astIdentifier(toIdentifier(token));
-			list.addToEnd(part);
-		}
-	}
-	
-	@Override public void visitQualifiedTypeReference(QualifiedTypeReference node) {
-		lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
-		fillTypeReferenceParts(node.tokens, ref.astParts());
-		set(node, ref);
-	}
-	
-	private void fillTypeReferenceParts(char[][] tokens, TypeReference[][] typeArguments, StrictListAccessor<lombok.ast.TypeReferencePart, ?> list) {
-		if (tokens == null) return;
-		for (int i = 0; i < typeArguments.length ; i++) {
-			TypeReference[] typeReferences = typeArguments[i];
-			TypeReferencePart part = createTypeReferencePart(tokens[i], typeReferences);
-			list.addToEnd(part);
-		}
-	}
-	
-	private TypeReferencePart createTypeReferencePart(char[] token) {
-		return createTypeReferencePart(token, null);
-	}
-
-	private TypeReferencePart createTypeReferencePart(char[] token, TypeReference[] typeReferences) {
-		TypeReferencePart part = new TypeReferencePart();
-		part.astIdentifier(toIdentifier(token));
-		if (typeReferences != null) fillList(typeReferences, part.rawTypeArguments());
-		return part;
-	}
-	
-	@Override public void visitParameterizedQualifiedTypeReference(ParameterizedQualifiedTypeReference node) {
-		lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
-		ref.astArrayDimensions(node.dimensions());
-		fillTypeReferenceParts(node.tokens, node.typeArguments, ref.astParts());
-		set(node, setPosition(node, ref));
-	}
-	
-	@Override public void visitWildcard(Wildcard node) {
-		
-		lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
-		
-		TypeReferencePart part;
-		if (node.bound instanceof ParameterizedSingleTypeReference) {
-			part = createParameterizedSingleTypeReferencePart((ParameterizedSingleTypeReference)node.bound);
-		}
-		else if (node.bound instanceof SingleTypeReference) {
-			part = createSingleTypeReferencePart((SingleTypeReference)node.bound);
-		}
-		else {
-			part = new TypeReferencePart();
+			if (typeReferences != null) fillList(typeReferences, part.rawTypeArguments());
+			return part;
 		}
 		
-		ref.astParts().addToEnd(part);
+		@Override public void visitParameterizedQualifiedTypeReference(ParameterizedQualifiedTypeReference node) {
+			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
+			ref.astArrayDimensions(node.dimensions());
+			fillTypeReferenceParts(node.tokens, node.typeArguments, ref.astParts());
+			set(node, setPosition(node, ref));
+		}
 		
-		switch (node.kind) {
+		@Override public void visitWildcard(Wildcard node) {
+			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
+			
+			TypeReferencePart part;
+			if (node.bound instanceof ParameterizedSingleTypeReference) {
+				part = createParameterizedSingleTypeReferencePart((ParameterizedSingleTypeReference)node.bound);
+			} else if (node.bound instanceof SingleTypeReference) {
+				part = createSingleTypeReferencePart((SingleTypeReference)node.bound);
+			} else {
+				part = new TypeReferencePart();
+			}
+			
+			ref.astParts().addToEnd(part);
+			
+			switch (node.kind) {
 			case Wildcard.UNBOUND: 
 				ref.astWildcard(WildcardKind.UNBOUND);
 				break;
@@ -622,549 +614,549 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 				break;
 			case Wildcard.SUPER:
 				ref.astWildcard(WildcardKind.SUPER);
-		}
-		setPosition(node, ref);
-		set(node, ref);
-	}
-	
-	@Override public void visitParameterizedSingleTypeReference(ParameterizedSingleTypeReference node) {
-		lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
-		TypeReferencePart part = new TypeReferencePart();
-		part.astIdentifier(toIdentifier(node.token));
-		ref.astParts().addToEnd(part);
-		fillList(node.typeArguments, part.rawTypeArguments());
-		set(node, ref);
-	}
-	
-	@Override public void visitArrayTypeReference(ArrayTypeReference node) {
-		lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
-		ref.astArrayDimensions(((node.bits & ASTNode.IsVarArgs) == 0) ? node.dimensions : node.dimensions - 1);
-		TypeReferencePart part = new TypeReferencePart();
-		part.astIdentifier(toIdentifier(node.token));
-		ref.astParts().addToEnd(part);
-		set(node, ref);
-	}
-	
-	@Override public void visitArrayQualifiedTypeReference(ArrayQualifiedTypeReference node) {
-		lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
-		fillTypeReferenceParts(node.tokens, ref.astParts());
-		ref.astArrayDimensions(node.dimensions());
-		set(node, setPosition(node, ref));
-	}
-	
-	private lombok.ast.Node addUnaryMinusAsParent(boolean condition, lombok.ast.Expression expression) {
-		if (condition) {
-			return new lombok.ast.UnaryExpression().astOperand(expression).astOperator(UnaryOperator.UNARY_MINUS);
-		}
-		return expression;
-	}
-	
-	@Override public void visitIntLiteral(IntLiteral node) {
-		String rawValue = String.valueOf(node.source());
-		boolean negative = rawValue.startsWith("-");
-		IntegralLiteral integral = new IntegralLiteral().rawValue(negative ? rawValue.substring(1) : rawValue);
-		set(node, setPosition(node, addUnaryMinusAsParent(negative, integral)));
-	}
-	
-	@Override public void visitIntLiteralMinValue(IntLiteralMinValue node) {
-		visitIntLiteral(node);
-	}
-		
-	@Override public void visitLongLiteral(LongLiteral node) {
-		String rawValue = String.valueOf(node.source());
-		boolean negative = rawValue.startsWith("-");
-		IntegralLiteral integral = new IntegralLiteral().rawValue(negative ? rawValue.substring(1) : rawValue);
-		set(node, setPosition(node, addUnaryMinusAsParent(negative, integral)));
-	}
-	
-	@Override public void visitLongLiteralMinValue(LongLiteralMinValue node) {
-		visitLongLiteral(node);
-	}
-	
-	@Override public void visitFloatLiteral(FloatLiteral node) {
-		set(node, setPosition(node, new FloatingPointLiteral().rawValue(String.valueOf(node.source()))));
-	}
-	
-	@Override public void visitDoubleLiteral(DoubleLiteral node) {
-		set(node, setPosition(node, new FloatingPointLiteral().rawValue(String.valueOf(node.source()))));
-	}
-	
-	@Override public void visitTrueLiteral(TrueLiteral node) {
-		set(node, setPosition(node, new BooleanLiteral().astValue(true)));
-	}
-	
-	@Override public void visitFalseLiteral(FalseLiteral node) {
-		set(node, setPosition(node, new BooleanLiteral().astValue(false)));
-	}
-	
-	@Override public void visitNullLiteral(NullLiteral node) {
-		set(node, setPosition(node, new lombok.ast.NullLiteral()));
-	}
-	
-	@Override public void visitCharLiteral(CharLiteral node) {
-		set(node, setPosition(node, new lombok.ast.CharLiteral().rawValue(String.valueOf(node.source()))));
-	}
-	
-	@Override public void visitStringLiteral(StringLiteral node) {
-		set(node, setPosition(node, new lombok.ast.StringLiteral().astValue(String.valueOf(node.source()))));
-	}
-	
-	@Override public void visitStringLiteralConcatenation(StringLiteralConcatenation node) {
-		visitStringLiteral(node);
-	}
-	
-	@Override public void visitExtendedStringLiteral(ExtendedStringLiteral node) {
-		// While there's a node for it, this node has no further information about the separate parts,
-		// so we are forced to produce a single string literal.
-		
-		visitStringLiteral(node);
-	}
-	
-	@Override public void visitSingleNameReference(SingleNameReference node) {
-		if (hasFlag(FlagKey.NAMEREFERENCE_IS_TYPE)) {
-			set(node, setPosition(node, new lombok.ast.TypeReference().astParts().addToEnd(createTypeReferencePart(node.token))));
-			return;
-		}
-		set(node, setPosition(node, new VariableReference().astIdentifier(toIdentifier(node.token))));
-	}
-	
-	@Override public void visitCastExpression(CastExpression node) {
-		Node result = toTree(node.type, FlagKey.NAMEREFERENCE_IS_TYPE);
-		Cast cast = new Cast().astTypeReference((lombok.ast.TypeReference) result);
-		cast.astOperand((lombok.ast.Expression)toTree(node.expression));
-		set(node, setPosition(node, cast));
-	}
-	
-	@Override public void visitThisReference(ThisReference node) {
-		set(node, node.isImplicitThis() ? null : setPosition(node, new This()));
-	}
-	
-	@Override public void visitQualifiedThisReference(QualifiedThisReference node) {
-		set(node, setPosition(node, new This().astQualifier((lombok.ast.TypeReference) toTree(node.qualification))));
-	}
-	
-	@Override public void visitSuperReference(SuperReference node) {
-		set(node, setPosition(node, new Super()));
-	}
-	
-	@Override public void visitQualifiedSuperReference(QualifiedSuperReference node) {
-		set(node, setPosition(node, new Super().astQualifier((lombok.ast.TypeReference) toTree(node.qualification))));
-	}
-	
-	@Override public void visitClassLiteralAccess(ClassLiteralAccess node) {
-		ClassLiteral literal = new ClassLiteral().astTypeReference((lombok.ast.TypeReference) toTree(node.type));
-		set(node, setPosition(node, literal));
-	}
-	
-	@Override public void visitArrayAllocationExpression(ArrayAllocationExpression node) {
-		ArrayCreation creation = new ArrayCreation();
-		creation.astInitializer((lombok.ast.ArrayInitializer) toTree(node.initializer));
-		fillDimensions(node.dimensions, creation.rawDimensions());
-		creation.astComponentTypeReference((lombok.ast.TypeReference) toTree(node.type));
-		set(node, setPosition(node, creation));
-	}
-	
-	@Override public void visitArrayInitializer(ArrayInitializer node) {
-		lombok.ast.ArrayInitializer init = new lombok.ast.ArrayInitializer();
-		fillList(node.expressions, init.rawExpressions());
-		set(node, setPosition(node, init));
-	}
-	
-	@Override public void visitAssignment(Assignment node) {
-		lombok.ast.BinaryExpression bin = new lombok.ast.BinaryExpression();
-		bin.astLeft((lombok.ast.Expression) toTree(node.lhs));
-		bin.astRight(((lombok.ast.Expression) toTree(node.expression)));
-		bin.astOperator(BinaryOperator.ASSIGN);
-		set(node, bin);
-	}
-	
-	@Override public void visitArrayReference(ArrayReference node) {
-		ArrayAccess access = new ArrayAccess();
-		access.astOperand((lombok.ast.Expression) toTree(node.receiver));
-		access.astIndexExpression((lombok.ast.Expression) toTree(node.position));
-		set(node, setPosition(node, access));
-	}
-	
-	@Override public void visitUnaryExpression(UnaryExpression node) {
-		lombok.ast.UnaryExpression unary = new lombok.ast.UnaryExpression();
-		int operatorId = ((node.bits & ASTNode.OperatorMASK) >> ASTNode.OperatorSHIFT);
-		unary.astOperator(GENERIC_UNARY_OPERATORS.get(operatorId));
-		unary.astOperand((lombok.ast.Expression) toTree(node.expression));
-		set(node, setPosition(node, unary));
-	}
-	
-	@Override public void visitPrefixExpression(PrefixExpression node) {
-		lombok.ast.UnaryExpression unary = fillUnaryOperator(node, new lombok.ast.UnaryExpression());
-		unary.astOperand((lombok.ast.Expression) toTree(node.lhs));
-		set(node, setPosition(node, unary));
-	}
-	
-	@Override public void visitPostfixExpression(PostfixExpression node) {
-		lombok.ast.UnaryExpression unary = fillUnaryOperator(node, new lombok.ast.UnaryExpression());
-		unary.astOperand(((lombok.ast.Expression) toTree(node.lhs)));
-		set(node, setPosition(node, unary));
-	}
-	
-	@Override public void visitBinaryExpression(BinaryExpression node) {
-		lombok.ast.BinaryExpression bin = new lombok.ast.BinaryExpression();
-		int operatorId = ((node.bits & ASTNode.OperatorMASK) >> ASTNode.OperatorSHIFT);
-		bin.astOperator(GENERIC_BINARY_OPERATORS.get(operatorId));
-		bin.astLeft(((lombok.ast.Expression) toTree(node.left)));
-		bin.astRight(((lombok.ast.Expression) toTree(node.right)));
-		set(node, setPosition(node, bin));
-	}
-	
-	@Override public void visitCombinedBinaryExpression(CombinedBinaryExpression node) {
-		visitBinaryExpression(node);
-	}
-	
-	@Override public void visitCompoundAssignment(CompoundAssignment node) {
-		lombok.ast.BinaryExpression bin = new lombok.ast.BinaryExpression();
-		int operatorId = node.operator;
-		bin.astOperator(ASSIGN_BINARY_OPERATORS.get(operatorId));
-		bin.astLeft((lombok.ast.Expression) toTree(node.lhs));
-		bin.astRight((lombok.ast.Expression) toTree(node.expression));
-		set(node, setPosition(node, bin));
-	}
-	
-	@Override public void visitEqualExpression(EqualExpression node) {
-		visitBinaryExpression(node);
-	}
-
-	@Override public void visitInstanceOfExpression(InstanceOfExpression node) {
-		InstanceOf instanceOf = new InstanceOf();
-		instanceOf.astObjectReference((lombok.ast.Expression) toTree(node.expression));
-		instanceOf.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
-		set(node, setPosition(node, instanceOf));
-	}
-	
-	@Override public void visitAND_AND_Expression(AND_AND_Expression node) {
-		visitBinaryExpression(node);
-	}
-	
-	@Override public void visitOR_OR_Expression(OR_OR_Expression node) {
-		visitBinaryExpression(node);
-	}
-	
-	@Override public void visitConditionalExpression(ConditionalExpression node) {
-		InlineIfExpression inlineIf = new InlineIfExpression()
-			.astCondition((lombok.ast.Expression) toTree(node.condition))
-			.astIfTrue((lombok.ast.Expression) toTree(node.valueIfTrue))
-			.astIfFalse((lombok.ast.Expression) toTree(node.valueIfFalse));
-		
-		set(node, setPosition(node, inlineIf));
-	}
-	
-	@Override public void visitAllocationExpression(AllocationExpression node) {
-		ConstructorInvocation constr = new ConstructorInvocation();
-		constr.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
-		fillList(node.arguments, constr.rawArguments());
-		fillList(node.typeArguments, constr.rawConstructorTypeArguments());
-		
-		set(node, setPosition(node, constr));
-	}
-	
-	@Override public void visitQualifiedAllocationExpression(QualifiedAllocationExpression node) {
-		ConstructorInvocation constr = new ConstructorInvocation();
-		constr.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
-		NormalTypeBody body = createNormalTypeBody(node.anonymousType);
-		constr.astAnonymousClassBody(body);
-
-		set(node, setPosition(node, constr));
-	}
-
-	private lombok.ast.Expression toSelect(char[][] tokens) {
-		if (tokens.length < 2) {
-			return null;
+			}
+			setPosition(node, ref);
+			set(node, ref);
 		}
 		
-		lombok.ast.Expression current = new VariableReference().astIdentifier(toIdentifier(tokens[0]));
-		
-		for (int i = 1; i < tokens.length; i++) {
-			Select select = new Select().astIdentifier(toIdentifier(tokens[i]));
-			select.astOperand(current);
-			current = select;
+		@Override public void visitParameterizedSingleTypeReference(ParameterizedSingleTypeReference node) {
+			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
+			TypeReferencePart part = new TypeReferencePart();
+			part.astIdentifier(toIdentifier(node.token));
+			ref.astParts().addToEnd(part);
+			fillList(node.typeArguments, part.rawTypeArguments());
+			set(node, ref);
 		}
 		
-		return current;
-	}
-	
-	@Override public void visitQualifiedNameReference(QualifiedNameReference node) {
-		if (hasFlag(FlagKey.NAMEREFERENCE_IS_TYPE)) {
+		@Override public void visitArrayTypeReference(ArrayTypeReference node) {
+			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
+			ref.astArrayDimensions(((node.bits & ASTNode.IsVarArgs) == 0) ? node.dimensions : node.dimensions - 1);
+			TypeReferencePart part = new TypeReferencePart();
+			part.astIdentifier(toIdentifier(node.token));
+			ref.astParts().addToEnd(part);
+			set(node, ref);
+		}
+		
+		@Override public void visitArrayQualifiedTypeReference(ArrayQualifiedTypeReference node) {
 			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
 			fillTypeReferenceParts(node.tokens, ref.astParts());
+			ref.astArrayDimensions(node.dimensions());
 			set(node, setPosition(node, ref));
-			return;
 		}
-		lombok.ast.Expression select = toSelect(node.tokens);
-		set(node, setPosition(node, select));
-	}
-	
-	@Override public void visitMessageSend(MessageSend node) {
-		MethodInvocation inv = new MethodInvocation();
-		fillList(node.arguments, inv.rawArguments());
-		fillList(node.typeArguments, inv.rawMethodTypeArguments());
-		inv.astOperand(((lombok.ast.Expression) toTree(node.receiver)));
-		inv.astName(toIdentifier(node.selector));
-		set(node, inv);
-	}
-	
-	@Override public void visitAssertStatement(AssertStatement node) {
-		Assert asrt = new Assert();
-		asrt.astAssertion(((lombok.ast.Expression) toTree(node.assertExpression)));
-		asrt.astMessage(((lombok.ast.Expression) toTree(node.exceptionArgument)));
-		set(node, setPosition(node, asrt));
-	}
-	
-	@Override public void visitDoStatement(DoStatement node) {
-		DoWhile doWhile = new DoWhile();
-		doWhile.astCondition(((lombok.ast.Expression) toTree(node.condition)));
-		doWhile.astStatement((lombok.ast.Statement)toTree(node.action, FlagKey.AS_STATEMENT));
-		set(node, setPosition(node, doWhile));
-	}
-	
-	@Override public void visitForeachStatement(ForeachStatement node) {
-		ForEach forEach = new ForEach();
-		forEach.astIterable(((lombok.ast.Expression) toTree(node.collection)));
-		forEach.astVariable((VariableDefinition) toTree(node.elementVariable, FlagKey.AS_DEFINITION));
-		forEach.astStatement((lombok.ast.Statement)toTree(node.action, FlagKey.AS_STATEMENT));
-		set(node, setPosition(node, forEach));
-	}
-	
-	@Override public void visitIfStatement(IfStatement node) {
-		If ifStatement = new lombok.ast.If().astCondition(((lombok.ast.Expression) toTree(node.condition)));
-		ifStatement.astStatement((lombok.ast.Statement) toTree(node.thenStatement, FlagKey.AS_STATEMENT));
-		ifStatement.astElseStatement((lombok.ast.Statement) toTree(node.elseStatement, FlagKey.AS_STATEMENT));
-		set(node, setPosition(node, ifStatement));
-	}
-	
-	@Override public void visitForStatement(ForStatement node) {
-		For forStat = new lombok.ast.For();
-		forStat.astCondition(((lombok.ast.Expression) toTree(node.condition)));
-		forStat.astStatement((lombok.ast.Statement) toTree(node.action, FlagKey.AS_STATEMENT));
-		fillList(node.increments, forStat.rawUpdates());
-		fillList(node.initializations, forStat.rawExpressionInits(), FlagKey.AS_DEFINITION);
 		
-		set(node, setPosition(node, forStat));
-	}
-	
-	@Override public void visitLabeledStatement(LabeledStatement node) {
-		LabelledStatement label = new lombok.ast.LabelledStatement();
-		label.astLabel(toIdentifier(node.label));
-		label.astStatement((lombok.ast.Statement) toTree(node.statement, FlagKey.AS_STATEMENT));
-		set(node, setPosition(node, label));
-	}
-	
-
-	@Override public void visitContinueStatement(ContinueStatement node) {
-		Continue cnt = new Continue();
-		if (node.label != null) cnt.astLabel(toIdentifier(node.label)); 
-		set(node, setPosition(node, cnt));
-	}
-	
-	@Override public void visitBreakStatement(BreakStatement node) {
-		Break brk = new Break();
-		if (node.label != null) brk.astLabel(toIdentifier(node.label)); 
-		set(node, setPosition(node, brk));
-	}
-	
-	@Override public void visitSwitchStatement(SwitchStatement node) {
-		Switch switchStat = new Switch();
-		switchStat.astCondition((lombok.ast.Expression) toTree(node.expression));
-		switchStat.astBody(toBlock(node.statements));
-		set(node, setPosition(node, switchStat));
-	}
-	
-	@Override public void visitCaseStatement(CaseStatement node) {
-		if (node.constantExpression == null) {
-			Default defaultStat = new lombok.ast.Default();
-			//TODO still have fix drunked positioning. 
-			set(node, setPosition(node, defaultStat));
-			return;
+		private lombok.ast.Node addUnaryMinusAsParent(boolean condition, lombok.ast.Expression expression) {
+			if (condition) {
+				return new lombok.ast.UnaryExpression().astOperand(expression).astOperator(UnaryOperator.UNARY_MINUS);
+			}
+			return expression;
 		}
-		Case caseStat = new Case();
-		caseStat.astCondition((lombok.ast.Expression) toTree(node.constantExpression));
-		set(node, setPosition(node, caseStat));
-	}
-
-	@Override public void visitSynchronizedStatement(SynchronizedStatement node) {
-		Synchronized synch = new Synchronized();
-		synch.astLock((lombok.ast.Expression) toTree(node.expression));
-		synch.astBody((lombok.ast.Block) toTree(node.block));
-		set(node, setPosition(node, synch));
-	}
-	
-	@Override public void visitTryStatement(TryStatement node) {
-		Try tryStat = new Try();
-		tryStat.astBody((lombok.ast.Block) toTree(node.tryBlock));
-		tryStat.astFinally((lombok.ast.Block) toTree(node.finallyBlock));
 		
-		toCatches(node.catchArguments, node.catchBlocks, tryStat.astCatches());
-		set(node, setPosition(node, tryStat));
-	}
-	
-	private void toCatches(Argument[] catchArguments, Block[] catchBlocks, StrictListAccessor<Catch, Try> astCatches) {
-		if (catchArguments == null || catchBlocks == null || (catchBlocks.length != catchArguments.length)) {
-			return;
+		@Override public void visitIntLiteral(IntLiteral node) {
+			String rawValue = String.valueOf(node.source());
+			boolean negative = rawValue.startsWith("-");
+			IntegralLiteral integral = new IntegralLiteral().rawValue(negative ? rawValue.substring(1) : rawValue);
+			set(node, setPosition(node, addUnaryMinusAsParent(negative, integral)));
+		}
+		
+		@Override public void visitIntLiteralMinValue(IntLiteralMinValue node) {
+			visitIntLiteral(node);
+		}
+		
+		@Override public void visitLongLiteral(LongLiteral node) {
+			String rawValue = String.valueOf(node.source());
+			boolean negative = rawValue.startsWith("-");
+			IntegralLiteral integral = new IntegralLiteral().rawValue(negative ? rawValue.substring(1) : rawValue);
+			set(node, setPosition(node, addUnaryMinusAsParent(negative, integral)));
+		}
+		
+		@Override public void visitLongLiteralMinValue(LongLiteralMinValue node) {
+			visitLongLiteral(node);
+		}
+		
+		@Override public void visitFloatLiteral(FloatLiteral node) {
+			set(node, setPosition(node, new FloatingPointLiteral().rawValue(String.valueOf(node.source()))));
+		}
+		
+		@Override public void visitDoubleLiteral(DoubleLiteral node) {
+			set(node, setPosition(node, new FloatingPointLiteral().rawValue(String.valueOf(node.source()))));
+		}
+		
+		@Override public void visitTrueLiteral(TrueLiteral node) {
+			set(node, setPosition(node, new BooleanLiteral().astValue(true)));
+		}
+		
+		@Override public void visitFalseLiteral(FalseLiteral node) {
+			set(node, setPosition(node, new BooleanLiteral().astValue(false)));
+		}
+		
+		@Override public void visitNullLiteral(NullLiteral node) {
+			set(node, setPosition(node, new lombok.ast.NullLiteral()));
+		}
+		
+		@Override public void visitCharLiteral(CharLiteral node) {
+			set(node, setPosition(node, new lombok.ast.CharLiteral().rawValue(String.valueOf(node.source()))));
+		}
+		
+		@Override public void visitStringLiteral(StringLiteral node) {
+			set(node, setPosition(node, new lombok.ast.StringLiteral().astValue(String.valueOf(node.source()))));
+		}
+		
+		@Override public void visitStringLiteralConcatenation(StringLiteralConcatenation node) {
+			visitStringLiteral(node);
+		}
+		
+		@Override public void visitExtendedStringLiteral(ExtendedStringLiteral node) {
+			// While there's a node for it, this node has no further information about the separate parts,
+			// so we are forced to produce a single string literal.
+			
+			visitStringLiteral(node);
+		}
+		
+		@Override public void visitSingleNameReference(SingleNameReference node) {
+			if (hasFlag(FlagKey.NAMEREFERENCE_IS_TYPE)) {
+				set(node, setPosition(node, new lombok.ast.TypeReference().astParts().addToEnd(createTypeReferencePart(node.token))));
+				return;
+			}
+			set(node, setPosition(node, new VariableReference().astIdentifier(toIdentifier(node.token))));
+		}
+		
+		@Override public void visitCastExpression(CastExpression node) {
+			Node result = toTree(node.type, FlagKey.NAMEREFERENCE_IS_TYPE);
+			Cast cast = new Cast().astTypeReference((lombok.ast.TypeReference) result);
+			cast.astOperand((lombok.ast.Expression)toTree(node.expression));
+			set(node, setPosition(node, cast));
+		}
+		
+		@Override public void visitThisReference(ThisReference node) {
+			set(node, node.isImplicitThis() ? null : setPosition(node, new This()));
+		}
+		
+		@Override public void visitQualifiedThisReference(QualifiedThisReference node) {
+			set(node, setPosition(node, new This().astQualifier((lombok.ast.TypeReference) toTree(node.qualification))));
+		}
+		
+		@Override public void visitSuperReference(SuperReference node) {
+			set(node, setPosition(node, new Super()));
+		}
+		
+		@Override public void visitQualifiedSuperReference(QualifiedSuperReference node) {
+			set(node, setPosition(node, new Super().astQualifier((lombok.ast.TypeReference) toTree(node.qualification))));
+		}
+		
+		@Override public void visitClassLiteralAccess(ClassLiteralAccess node) {
+			ClassLiteral literal = new ClassLiteral().astTypeReference((lombok.ast.TypeReference) toTree(node.type));
+			set(node, setPosition(node, literal));
+		}
+		
+		@Override public void visitArrayAllocationExpression(ArrayAllocationExpression node) {
+			ArrayCreation creation = new ArrayCreation();
+			creation.astInitializer((lombok.ast.ArrayInitializer) toTree(node.initializer));
+			fillDimensions(node.dimensions, creation.rawDimensions());
+			creation.astComponentTypeReference((lombok.ast.TypeReference) toTree(node.type));
+			set(node, setPosition(node, creation));
+		}
+		
+		@Override public void visitArrayInitializer(ArrayInitializer node) {
+			lombok.ast.ArrayInitializer init = new lombok.ast.ArrayInitializer();
+			fillList(node.expressions, init.rawExpressions());
+			set(node, setPosition(node, init));
+		}
+		
+		@Override public void visitAssignment(Assignment node) {
+			lombok.ast.BinaryExpression bin = new lombok.ast.BinaryExpression();
+			bin.astLeft((lombok.ast.Expression) toTree(node.lhs));
+			bin.astRight(((lombok.ast.Expression) toTree(node.expression)));
+			bin.astOperator(BinaryOperator.ASSIGN);
+			set(node, bin);
+		}
+		
+		@Override public void visitArrayReference(ArrayReference node) {
+			ArrayAccess access = new ArrayAccess();
+			access.astOperand((lombok.ast.Expression) toTree(node.receiver));
+			access.astIndexExpression((lombok.ast.Expression) toTree(node.position));
+			set(node, setPosition(node, access));
+		}
+		
+		@Override public void visitUnaryExpression(UnaryExpression node) {
+			lombok.ast.UnaryExpression unary = new lombok.ast.UnaryExpression();
+			int operatorId = ((node.bits & ASTNode.OperatorMASK) >> ASTNode.OperatorSHIFT);
+			unary.astOperator(GENERIC_UNARY_OPERATORS.get(operatorId));
+			unary.astOperand((lombok.ast.Expression) toTree(node.expression));
+			set(node, setPosition(node, unary));
+		}
+		
+		@Override public void visitPrefixExpression(PrefixExpression node) {
+			lombok.ast.UnaryExpression unary = fillUnaryOperator(node, new lombok.ast.UnaryExpression());
+			unary.astOperand((lombok.ast.Expression) toTree(node.lhs));
+			set(node, setPosition(node, unary));
+		}
+		
+		@Override public void visitPostfixExpression(PostfixExpression node) {
+			lombok.ast.UnaryExpression unary = fillUnaryOperator(node, new lombok.ast.UnaryExpression());
+			unary.astOperand(((lombok.ast.Expression) toTree(node.lhs)));
+			set(node, setPosition(node, unary));
+		}
+		
+		@Override public void visitBinaryExpression(BinaryExpression node) {
+			lombok.ast.BinaryExpression bin = new lombok.ast.BinaryExpression();
+			int operatorId = ((node.bits & ASTNode.OperatorMASK) >> ASTNode.OperatorSHIFT);
+			bin.astOperator(GENERIC_BINARY_OPERATORS.get(operatorId));
+			bin.astLeft(((lombok.ast.Expression) toTree(node.left)));
+			bin.astRight(((lombok.ast.Expression) toTree(node.right)));
+			set(node, setPosition(node, bin));
+		}
+		
+		@Override public void visitCombinedBinaryExpression(CombinedBinaryExpression node) {
+			visitBinaryExpression(node);
+		}
+		
+		@Override public void visitCompoundAssignment(CompoundAssignment node) {
+			lombok.ast.BinaryExpression bin = new lombok.ast.BinaryExpression();
+			int operatorId = node.operator;
+			bin.astOperator(ASSIGN_BINARY_OPERATORS.get(operatorId));
+			bin.astLeft((lombok.ast.Expression) toTree(node.lhs));
+			bin.astRight((lombok.ast.Expression) toTree(node.expression));
+			set(node, setPosition(node, bin));
+		}
+		
+		@Override public void visitEqualExpression(EqualExpression node) {
+			visitBinaryExpression(node);
 		}
 	
-		for (int i = 0; i < catchBlocks.length; i++) {
-			Catch cat = new Catch();
-			cat.astExceptionDeclaration((VariableDefinition) toTree(catchArguments[i]));
-			cat.astBody((lombok.ast.Block) toTree(catchBlocks[i]));
-			astCatches.addToEnd(cat);
+		@Override public void visitInstanceOfExpression(InstanceOfExpression node) {
+			InstanceOf instanceOf = new InstanceOf();
+			instanceOf.astObjectReference((lombok.ast.Expression) toTree(node.expression));
+			instanceOf.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
+			set(node, setPosition(node, instanceOf));
 		}
-	}
+		
+		@Override public void visitAND_AND_Expression(AND_AND_Expression node) {
+			visitBinaryExpression(node);
+		}
+		
+		@Override public void visitOR_OR_Expression(OR_OR_Expression node) {
+			visitBinaryExpression(node);
+		}
+		
+		@Override public void visitConditionalExpression(ConditionalExpression node) {
+			InlineIfExpression inlineIf = new InlineIfExpression()
+				.astCondition((lombok.ast.Expression) toTree(node.condition))
+				.astIfTrue((lombok.ast.Expression) toTree(node.valueIfTrue))
+				.astIfFalse((lombok.ast.Expression) toTree(node.valueIfFalse));
+			
+			set(node, setPosition(node, inlineIf));
+		}
+		
+		@Override public void visitAllocationExpression(AllocationExpression node) {
+			ConstructorInvocation constr = new ConstructorInvocation();
+			constr.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
+			fillList(node.arguments, constr.rawArguments());
+			fillList(node.typeArguments, constr.rawConstructorTypeArguments());
+			
+			set(node, setPosition(node, constr));
+		}
+		
+		@Override public void visitQualifiedAllocationExpression(QualifiedAllocationExpression node) {
+			ConstructorInvocation constr = new ConstructorInvocation();
+			constr.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
+			NormalTypeBody body = createNormalTypeBody(node.anonymousType);
+			constr.astAnonymousClassBody(body);
 	
-	@Override public void visitArgument(Argument node) {
-		VariableDefinition varDef = createVariableDefinition(node);
-		set(node, setPosition(node, varDef));
-	}
+			set(node, setPosition(node, constr));
+		}
 	
-	@Override public void visitThrowStatement(ThrowStatement node) {
-		Throw throwStat = new Throw();
-		throwStat.astThrowable((lombok.ast.Expression) toTree(node.exception));
-		set(node, setPosition(node, throwStat));
-	}
+		private lombok.ast.Expression toSelect(char[][] tokens) {
+			if (tokens.length < 2) {
+				return null;
+			}
+			
+			lombok.ast.Expression current = new VariableReference().astIdentifier(toIdentifier(tokens[0]));
+			
+			for (int i = 1; i < tokens.length; i++) {
+				Select select = new Select().astIdentifier(toIdentifier(tokens[i]));
+				select.astOperand(current);
+				current = select;
+			}
+			
+			return current;
+		}
+		
+		@Override public void visitQualifiedNameReference(QualifiedNameReference node) {
+			if (hasFlag(FlagKey.NAMEREFERENCE_IS_TYPE)) {
+				lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
+				fillTypeReferenceParts(node.tokens, ref.astParts());
+				set(node, setPosition(node, ref));
+				return;
+			}
+			lombok.ast.Expression select = toSelect(node.tokens);
+			set(node, setPosition(node, select));
+		}
+		
+		@Override public void visitMessageSend(MessageSend node) {
+			MethodInvocation inv = new MethodInvocation();
+			fillList(node.arguments, inv.rawArguments());
+			fillList(node.typeArguments, inv.rawMethodTypeArguments());
+			inv.astOperand(((lombok.ast.Expression) toTree(node.receiver)));
+			inv.astName(toIdentifier(node.selector));
+			set(node, inv);
+		}
+		
+		@Override public void visitAssertStatement(AssertStatement node) {
+			Assert asrt = new Assert();
+			asrt.astAssertion(((lombok.ast.Expression) toTree(node.assertExpression)));
+			asrt.astMessage(((lombok.ast.Expression) toTree(node.exceptionArgument)));
+			set(node, setPosition(node, asrt));
+		}
+		
+		@Override public void visitDoStatement(DoStatement node) {
+			DoWhile doWhile = new DoWhile();
+			doWhile.astCondition(((lombok.ast.Expression) toTree(node.condition)));
+			doWhile.astStatement((lombok.ast.Statement)toTree(node.action, FlagKey.AS_STATEMENT));
+			set(node, setPosition(node, doWhile));
+		}
+		
+		@Override public void visitForeachStatement(ForeachStatement node) {
+			ForEach forEach = new ForEach();
+			forEach.astIterable(((lombok.ast.Expression) toTree(node.collection)));
+			forEach.astVariable((VariableDefinition) toTree(node.elementVariable, FlagKey.AS_DEFINITION));
+			forEach.astStatement((lombok.ast.Statement)toTree(node.action, FlagKey.AS_STATEMENT));
+			set(node, setPosition(node, forEach));
+		}
+		
+		@Override public void visitIfStatement(IfStatement node) {
+			If ifStatement = new lombok.ast.If().astCondition(((lombok.ast.Expression) toTree(node.condition)));
+			ifStatement.astStatement((lombok.ast.Statement) toTree(node.thenStatement, FlagKey.AS_STATEMENT));
+			ifStatement.astElseStatement((lombok.ast.Statement) toTree(node.elseStatement, FlagKey.AS_STATEMENT));
+			set(node, setPosition(node, ifStatement));
+		}
+		
+		@Override public void visitForStatement(ForStatement node) {
+			For forStat = new lombok.ast.For();
+			forStat.astCondition(((lombok.ast.Expression) toTree(node.condition)));
+			forStat.astStatement((lombok.ast.Statement) toTree(node.action, FlagKey.AS_STATEMENT));
+			fillList(node.increments, forStat.rawUpdates());
+			fillList(node.initializations, forStat.rawExpressionInits(), FlagKey.AS_DEFINITION);
+			
+			set(node, setPosition(node, forStat));
+		}
+		
+		@Override public void visitLabeledStatement(LabeledStatement node) {
+			LabelledStatement label = new lombok.ast.LabelledStatement();
+			label.astLabel(toIdentifier(node.label));
+			label.astStatement((lombok.ast.Statement) toTree(node.statement, FlagKey.AS_STATEMENT));
+			set(node, setPosition(node, label));
+		}
+		
+		@Override public void visitContinueStatement(ContinueStatement node) {
+			Continue cnt = new Continue();
+			if (node.label != null) cnt.astLabel(toIdentifier(node.label));
+			set(node, setPosition(node, cnt));
+		}
+		
+		@Override public void visitBreakStatement(BreakStatement node) {
+			Break brk = new Break();
+			if (node.label != null) brk.astLabel(toIdentifier(node.label));
+			set(node, setPosition(node, brk));
+		}
+		
+		@Override public void visitSwitchStatement(SwitchStatement node) {
+			Switch switchStat = new Switch();
+			switchStat.astCondition((lombok.ast.Expression) toTree(node.expression));
+			switchStat.astBody(toBlock(node.statements));
+			set(node, setPosition(node, switchStat));
+		}
+		
+		@Override public void visitCaseStatement(CaseStatement node) {
+			if (node.constantExpression == null) {
+				Default defaultStat = new lombok.ast.Default();
+				//TODO still have fix drunken positioning.
+				set(node, setPosition(node, defaultStat));
+				return;
+			}
+			Case caseStat = new Case();
+			caseStat.astCondition((lombok.ast.Expression) toTree(node.constantExpression));
+			set(node, setPosition(node, caseStat));
+		}
 	
-	@Override public void visitWhileStatement(WhileStatement node) {
-		While whileStat = new While();
-		whileStat.astCondition((lombok.ast.Expression) toTree(node.condition));
-		whileStat.astStatement((lombok.ast.Statement) toTree(node.action, FlagKey.AS_STATEMENT));
-		set(node, setPosition(node, whileStat));
-	}
-	
-	@Override public void visitConstructorDeclaration(ConstructorDeclaration node) {
-		if ((node.bits & ASTNode.IsDefaultConstructor) != 0) {
+		@Override public void visitSynchronizedStatement(SynchronizedStatement node) {
+			Synchronized synch = new Synchronized();
+			synch.astLock((lombok.ast.Expression) toTree(node.expression));
+			synch.astBody((lombok.ast.Block) toTree(node.block));
+			set(node, setPosition(node, synch));
+		}
+		
+		@Override public void visitTryStatement(TryStatement node) {
+			Try tryStat = new Try();
+			tryStat.astBody((lombok.ast.Block) toTree(node.tryBlock));
+			tryStat.astFinally((lombok.ast.Block) toTree(node.finallyBlock));
+			
+			toCatches(node.catchArguments, node.catchBlocks, tryStat.astCatches());
+			set(node, setPosition(node, tryStat));
+		}
+		
+		private void toCatches(Argument[] catchArguments, Block[] catchBlocks, StrictListAccessor<Catch, Try> astCatches) {
+			if (catchArguments == null || catchBlocks == null || (catchBlocks.length != catchArguments.length)) {
+				return;
+			}
+		
+			for (int i = 0; i < catchBlocks.length; i++) {
+				Catch cat = new Catch();
+				cat.astExceptionDeclaration((VariableDefinition) toTree(catchArguments[i]));
+				cat.astBody((lombok.ast.Block) toTree(catchBlocks[i]));
+				astCatches.addToEnd(cat);
+			}
+		}
+		
+		@Override public void visitArgument(Argument node) {
+			VariableDefinition varDef = createVariableDefinition(node);
+			set(node, setPosition(node, varDef));
+		}
+		
+		@Override public void visitThrowStatement(ThrowStatement node) {
+			Throw throwStat = new Throw();
+			throwStat.astThrowable((lombok.ast.Expression) toTree(node.exception));
+			set(node, setPosition(node, throwStat));
+		}
+		
+		@Override public void visitWhileStatement(WhileStatement node) {
+			While whileStat = new While();
+			whileStat.astCondition((lombok.ast.Expression) toTree(node.condition));
+			whileStat.astStatement((lombok.ast.Statement) toTree(node.action, FlagKey.AS_STATEMENT));
+			set(node, setPosition(node, whileStat));
+		}
+		
+		@Override public void visitConstructorDeclaration(ConstructorDeclaration node) {
+			if ((node.bits & ASTNode.IsDefaultConstructor) != 0) {
+				set(node, (Node)null);
+				return;
+			}
+			
+			lombok.ast.ConstructorDeclaration constr = new lombok.ast.ConstructorDeclaration();
+			constr.astTypeName(toIdentifier(node.selector));
+			lombok.ast.Block block = toBlock(node.statements);
+			block.astContents().addToEnd((lombok.ast.Statement)toTree(node.constructorCall, FlagKey.AS_STATEMENT));
+			constr.astBody(block);
+			constr.astJavadoc((Comment) toTree(node.javadoc));
+			constr.astModifiers(toModifiers(node.modifiers, node.annotations));
+			fillList(node.arguments, constr.rawParameters());
+			fillList(node.typeParameters, constr.rawTypeVariables());
+			fillList(node.thrownExceptions, constr.rawThrownTypeReferences());
+			set(node, setPosition(node, constr));
+		}
+		
+		@Override public void visitExplicitConstructorCall(ExplicitConstructorCall node) {
+			if (node.isImplicitSuper()) {
+				set(node, (Node)null);	
+				return;
+			}
+			
+			if (node.isSuperAccess()) {
+				SuperConstructorInvocation sup = new SuperConstructorInvocation();
+				fillList(node.arguments, sup.rawArguments());
+				fillList(node.typeArguments, sup.rawConstructorTypeArguments());
+				sup.astQualifier((lombok.ast.Expression) toTree(node.qualification));
+				set(node, setPosition(node, sup));
+				return;
+			}
+			
+			AlternateConstructorInvocation inv = new AlternateConstructorInvocation();
+			fillList(node.arguments, inv.rawArguments());
+			fillList(node.typeArguments, inv.rawConstructorTypeArguments());
+			set(node, setPosition(node, inv));
+		}
+		
+		@Override public void visitMethodDeclaration(MethodDeclaration node) {
+			lombok.ast.MethodDeclaration decl = new lombok.ast.MethodDeclaration();
+			decl.astMethodName(toIdentifier(node.selector));
+			decl.astJavadoc((Comment) toTree(node.javadoc));
+			decl.astModifiers(toModifiers(node.modifiers, node.annotations));
+			decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
+			
+			boolean semiColonBody = ((node.modifiers & ExtraCompilerModifiers.AccSemicolonBody) != 0);
+			if (!toModifiers(node.modifiers, node.annotations).isAbstract() && !node.isNative() && !semiColonBody) {
+				decl.astBody(toBlock(node.statements));
+			}
+			fillList(node.arguments, decl.rawParameters());
+			fillList(node.typeParameters, decl.rawTypeVariables());
+			fillList(node.thrownExceptions, decl.rawThrownTypeReferences());
+			
+			set(node, setPosition(node, decl));
+		}
+		
+		@Override public void visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
+			lombok.ast.AnnotationMethodDeclaration decl = new lombok.ast.AnnotationMethodDeclaration();
+			decl.astMethodName(toIdentifier(node.selector));
+			decl.astJavadoc((Comment) toTree(node.javadoc));
+			decl.astModifiers(toModifiers(node.modifiers, node.annotations));
+			decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
+			decl.astDefaultValue((lombok.ast.Expression) toTree(node.defaultValue));
+			
+			set(node, setPosition(node, decl));
+		}
+		
+		@Override public void visitReturnStatement(ReturnStatement node) {
+			Return returnStat = new Return();
+			returnStat.astValue((lombok.ast.Expression) toTree(node.expression));
+			set(node, setPosition(node, returnStat));
+		}
+		
+		@Override public void visitClinit(Clinit node) {
+			//currently doing nothing...
 			set(node, (Node)null);
-			return;
 		}
 		
-		lombok.ast.ConstructorDeclaration constr = new lombok.ast.ConstructorDeclaration();
-		constr.astTypeName(toIdentifier(node.selector));
-		lombok.ast.Block block = toBlock(node.statements);
-		block.astContents().addToEnd((lombok.ast.Statement)toTree(node.constructorCall, FlagKey.AS_STATEMENT));
-		constr.astBody(block);
-		constr.astJavadoc((Comment) toTree(node.javadoc));
-		constr.astModifiers(toModifiers(node.modifiers, node.annotations));
-		fillList(node.arguments, constr.rawParameters());
-		fillList(node.typeParameters, constr.rawTypeVariables());
-		fillList(node.thrownExceptions, constr.rawThrownTypeReferences());
-		set(node, setPosition(node, constr));
-	}
-	
-	@Override public void visitExplicitConstructorCall(ExplicitConstructorCall node) {
-		if (node.isImplicitSuper()) {
-			set(node, (Node)null);	
-			return;
+		@Override public void visitMarkerAnnotation(MarkerAnnotation node) {
+			set(node, setPosition(node, createAnnotation(node)));
 		}
 		
-		if (node.isSuperAccess()) {
-			SuperConstructorInvocation sup = new SuperConstructorInvocation();
-			fillList(node.arguments, sup.rawArguments());
-			fillList(node.typeArguments, sup.rawConstructorTypeArguments());
-			sup.astQualifier((lombok.ast.Expression) toTree(node.qualification));
-			set(node, setPosition(node, sup));
-			return;
+		@Override public void visitSingleMemberAnnotation(SingleMemberAnnotation node) {
+			lombok.ast.Annotation annot = createAnnotation(node);
+			AnnotationElement element = new AnnotationElement();
+			element.astValue((AnnotationValue) toTree(node.memberValue));
+			annot.astElements().addToEnd(element);
+			set(node, setPosition(node, annot));
 		}
 		
-		AlternateConstructorInvocation inv = new AlternateConstructorInvocation();
-		fillList(node.arguments, inv.rawArguments());
-		fillList(node.typeArguments, inv.rawConstructorTypeArguments());
-		set(node, setPosition(node, inv));
-	}
-	
-	@Override public void visitMethodDeclaration(MethodDeclaration node) {
-		lombok.ast.MethodDeclaration decl = new lombok.ast.MethodDeclaration();
-		decl.astMethodName(toIdentifier(node.selector));
-		decl.astJavadoc((Comment) toTree(node.javadoc));
-		decl.astModifiers(toModifiers(node.modifiers, node.annotations));
-		decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
-		
-		boolean semiColonBody = ((node.modifiers & ExtraCompilerModifiers.AccSemicolonBody) != 0);
-		if (!toModifiers(node.modifiers, node.annotations).isAbstract() && !node.isNative() && !semiColonBody) {
-			decl.astBody(toBlock(node.statements));
+		@Override public void visitNormalAnnotation(NormalAnnotation node) {
+			lombok.ast.Annotation annot = createAnnotation(node);
+			fillList(node.memberValuePairs, annot.rawElements());
+			set(node, setPosition(node, annot));
 		}
-		fillList(node.arguments, decl.rawParameters());
-		fillList(node.typeParameters, decl.rawTypeVariables());
-		fillList(node.thrownExceptions, decl.rawThrownTypeReferences());
-		
-		set(node, setPosition(node, decl));
-	}
 	
-	@Override public void visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
-		lombok.ast.AnnotationMethodDeclaration decl = new lombok.ast.AnnotationMethodDeclaration();
-		decl.astMethodName(toIdentifier(node.selector));
-		decl.astJavadoc((Comment) toTree(node.javadoc));
-		decl.astModifiers(toModifiers(node.modifiers, node.annotations));
-		decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
-		decl.astDefaultValue((lombok.ast.Expression) toTree(node.defaultValue));
-		
-		set(node, setPosition(node, decl));
-	}
-	
-	@Override public void visitReturnStatement(ReturnStatement node) {
-		Return returnStat = new Return();
-		returnStat.astValue((lombok.ast.Expression) toTree(node.expression));
-		set(node, setPosition(node, returnStat));
-	}
-	
-	@Override public void visitClinit(Clinit node) {
-		//currently doing nothing...
-		set(node, (Node)null);
-	}
-	
-	@Override public void visitMarkerAnnotation(MarkerAnnotation node) {
-		set(node, setPosition(node, createAnnotation(node)));
-	}
-	
-	@Override public void visitSingleMemberAnnotation(SingleMemberAnnotation node) {
-		lombok.ast.Annotation annot = createAnnotation(node);
-		AnnotationElement element = new AnnotationElement();
-		element.astValue((AnnotationValue) toTree(node.memberValue));
-		annot.astElements().addToEnd(element);
-		set(node, setPosition(node, annot));
-	}
-	
-	@Override public void visitNormalAnnotation(NormalAnnotation node) {
-		lombok.ast.Annotation annot = createAnnotation(node);
-		fillList(node.memberValuePairs, annot.rawElements());
-		set(node, setPosition(node, annot));
-	}
-
-	private lombok.ast.Annotation createAnnotation(Annotation node) {
-		lombok.ast.Annotation annotation = new lombok.ast.Annotation();
-		annotation.astAnnotationTypeReference((lombok.ast.TypeReference) toTree(node.type));
-		return annotation;
-	}
-	
-	@Override public void visitMemberValuePair(MemberValuePair node) {
-		AnnotationElement element = new AnnotationElement();
-		element.astName(toIdentifier(node.name));
-		element.astValue((AnnotationValue) toTree(node.value));
-		set(node, setPosition(node, element));
-	}
-	
-	@Override public void visitJavadoc(Javadoc node) {
-		if (node == null) {
-			set(node, (Node)null);
-			return;
+		private lombok.ast.Annotation createAnnotation(Annotation node) {
+			lombok.ast.Annotation annotation = new lombok.ast.Annotation();
+			annotation.astAnnotationTypeReference((lombok.ast.TypeReference) toTree(node.type));
+			return annotation;
 		}
 		
-		Comment comment = new Comment();
-		comment.astContent(node.toString());
-		set(node, setPosition(node, comment));
-	}
-	
-	private lombok.ast.UnaryExpression fillUnaryOperator(CompoundAssignment ecjNode, lombok.ast.UnaryExpression node) {
-		if (ecjNode instanceof PrefixExpression) {
-			return node.astOperator(UNARY_PREFIX_OPERATORS.get(ecjNode.operator));
+		@Override public void visitMemberValuePair(MemberValuePair node) {
+			AnnotationElement element = new AnnotationElement();
+			element.astName(toIdentifier(node.name));
+			element.astValue((AnnotationValue) toTree(node.value));
+			set(node, setPosition(node, element));
 		}
-		if (ecjNode instanceof PostfixExpression) {
-			return node.astOperator(UNARY_POSTFIX_OPERATORS.get(ecjNode.operator));
+		
+		@Override public void visitJavadoc(Javadoc node) {
+			if (node == null) {
+				set(node, (Node)null);
+				return;
+			}
+			
+			Comment comment = new Comment();
+			comment.astContent(node.toString());
+			set(node, setPosition(node, comment));
 		}
-		return node;
-	}
+		
+		private lombok.ast.UnaryExpression fillUnaryOperator(CompoundAssignment ecjNode, lombok.ast.UnaryExpression node) {
+			if (ecjNode instanceof PrefixExpression) {
+				return node.astOperator(UNARY_PREFIX_OPERATORS.get(ecjNode.operator));
+			}
+			if (ecjNode instanceof PostfixExpression) {
+				return node.astOperator(UNARY_POSTFIX_OPERATORS.get(ecjNode.operator));
+			}
+			return node;
+		}
+	};
 	
 	static final Map<Integer, UnaryOperator> UNARY_PREFIX_OPERATORS = Maps.newHashMap();
 	static {
@@ -1222,6 +1214,4 @@ public class EcjTreeConverter extends EcjTreeVisitor {
 		ASSIGN_BINARY_OPERATORS.put(OperatorIds.RIGHT_SHIFT, BinaryOperator.SHIFT_RIGHT_ASSIGN);
 		ASSIGN_BINARY_OPERATORS.put(OperatorIds.UNSIGNED_RIGHT_SHIFT, BinaryOperator.BITWISE_SHIFT_RIGHT_ASSIGN);
 	}
-	
-	
 }

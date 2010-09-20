@@ -93,7 +93,7 @@ import com.sun.tools.javac.util.Options;
  * Diagnostic tool that turns a {@code JCTree} (javac) based tree into a hierarchical dump that should make
  * it easy to analyse the exact structure of the AST.
  */
-public class JcTreePrinter extends JCTree.Visitor {
+public class JcTreePrinter {
 	private final StringBuilder output = new StringBuilder();
 	private final boolean includePositions;
 	private final boolean includeObjectRefs;
@@ -168,7 +168,7 @@ public class JcTreePrinter extends JCTree.Visitor {
 		
 		@SuppressWarnings("deprecation") JCCompilationUnit cu = compiler.parse(args[0]);
 		JcTreePrinter printer = new JcTreePrinter(true);
-		cu.accept(printer);
+		printer.visit(cu);
 		System.out.println(printer);
 	}
 	
@@ -298,9 +298,9 @@ public class JcTreePrinter extends JCTree.Visitor {
 	
 	private void child(String rel, JCTree node) {
 		this.rel = rel;
-		if (node != null)
-			node.accept(this);
-		else {
+		if (node != null) {
+			node.accept(visitor);
+		} else {
 			printNode("NULL");
 			indent--;
 		}
@@ -324,493 +324,499 @@ public class JcTreePrinter extends JCTree.Visitor {
 		}
 	}
 	
-	public void visitTopLevel(JCCompilationUnit tree) {
-		printNode(tree);
-		this.endPosTable = tree.endPositions;
-		child("pid", tree.pid);
-		children("defs", tree.defs);
-		indent--;
+	public void visit(JCTree tree) {
+		tree.accept(visitor);
 	}
 	
-	public void visitImport(JCImport tree) {
-		printNode(tree);
-		property("staticImport", tree.staticImport);
-		child("qualid", tree.qualid);
-		indent--;
-	}
-	
-	public void visitClassDef(JCClassDecl tree) {
-		printNode(tree);
-		modsOfEnum = (tree.mods != null && (tree.mods.flags & Flags.ENUM) != 0);
-		child("mods", tree.mods);
-		property("name", tree.name);
-		children("typarams", tree.typarams);
-		child("extends", tree.extending);
-		children("implementing", tree.implementing);
-		children("defs", tree.defs);
-		indent--;
-	}
-	
-	public void visitMethodDef(JCMethodDecl tree) {
-		printNode(tree);
-		property("name", tree.name);
-		child("mods", tree.mods);
-		children("typarams", tree.typarams);
-		children("params", tree.params);
-		children("thrown", tree.thrown);
-		child("default", tree.defaultValue);
-		child("body", tree.body);
-		indent--;
-	}
-	
-	public void visitVarDef(JCVariableDecl tree) {
-		printNode(tree);
-		child("mods", tree.mods);
-		child("vartype", tree.vartype);
-		property("name", tree.name);
-		child("init", tree.init);
-		indent--;
-	}
-	
-	public void visitSkip(JCSkip tree) {
-		printNode(tree);
-		indent--;
-	}
-	
-	public void visitBlock(JCBlock tree) {
-		printNode(tree);
-		property("flags", "0x" + Long.toString(tree.flags, 0x10));
-		children("stats", tree.stats);
-		indent--;
-	}
-	
-	public void visitDoLoop(JCDoWhileLoop tree) {
-		printNode(tree);
-		child("body", tree.body);
-		child("cond", tree.cond);
-		indent--;
-	}
-	
-	public void visitWhileLoop(JCWhileLoop tree) {
-		printNode(tree);
-		child("cond", tree.cond);
-		child("body", tree.body);
-		indent--;
-	}
-	
-	public void visitForLoop(JCForLoop tree) {
-		printNode(tree);
-		children("init", tree.init);
-		child("cond", tree.cond);
-		children("step", tree.step);
-		child("body", tree.body);
-		indent--;
-	}
-	
-	public void visitForeachLoop(JCEnhancedForLoop tree) {
-		printNode(tree);
-		child("var", tree.var);
-		child("expr", tree.expr);
-		child("body", tree.body);
-		indent--;
-	}
-	
-	public void visitLabelled(JCLabeledStatement tree) {
-		printNode(tree);
-		property("label", tree.label);
-		child("body", tree.body);
-		indent--;
-	}
-	
-	public void visitSwitch(JCSwitch tree) {
-		printNode(tree);
-		child("selector", tree.selector);
-		children("cases", tree.cases);
-		indent--;
-	}
-	
-	public void visitCase(JCCase tree) {
-		printNode(tree);
-		child("pat", tree.pat);
-		children("stats", tree.stats);
-		indent--;
-	}
-	
-	public void visitSynchronized(JCSynchronized tree) {
-		printNode(tree);
-		child("lock", tree.lock);
-		child("body", tree.body);
-		indent--;
-	}
-	
-	public void visitTry(JCTry tree) {
-		printNode(tree);
-		child("body", tree.body);
-		children("catchers", tree.catchers);
-		child("finalizer", tree.finalizer);
-		indent--;
-	}
-	
-	public void visitCatch(JCCatch tree) {
-		printNode(tree);
-		child("param", tree.param);
-		child("body", tree.body);
-		indent--;
-	}
-	
-	public void visitConditional(JCConditional tree) {
-		printNode(tree);
-		child("cond", tree.cond);
-		child("truepart", tree.truepart);
-		child("falsepart", tree.falsepart);
-		indent--;
-	}
-	
-	public void visitIf(JCIf tree) {
-		printNode(tree);
-		child("cond", tree.cond);
-		child("thenpart", tree.thenpart);
-		child("elsepart", tree.elsepart);
-		indent--;
-	}
-	
-	public void visitExec(JCExpressionStatement tree) {
-		printNode(tree);
-		child("expr", tree.expr);
-		indent--;
-	}
-	
-	public void visitBreak(JCBreak tree) {
-		printNode(tree);
-		property("label", tree.label);
-		indent--;
-	}
-	
-	public void visitContinue(JCContinue tree) {
-		printNode(tree);
-		property("label", tree.label);
-		indent--;
-	}
-	
-	public void visitReturn(JCReturn tree) {
-		printNode(tree);
-		child("expr", tree.expr);
-		indent--;
-	}
-	
-	public void visitThrow(JCThrow tree) {
-		printNode(tree);
-		child("expr", tree.expr);
-		indent--;
-	}
-	
-	public void visitAssert(JCAssert tree) {
-		printNode(tree);
-		child("cond", tree.cond);
-		child("detail", tree.detail);
-		indent--;
-	}
-	
-	public void visitApply(JCMethodInvocation tree) {
-		printNode(tree);
-		children("typeargs", tree.typeargs);
-		child("meth", tree.meth);
-		children("args", tree.args);
-		indent--;
-	}
-	
-	public void visitNewClass(JCNewClass tree) {
-		printNode(tree);
-		child("encl", tree.encl);
-		children("typeargs", tree.typeargs);
-		child("clazz", tree.clazz);
-		children("args", tree.args);
-		child("def", tree.def);
-		indent--;
-	}
-	
-	public void visitNewArray(JCNewArray tree) {
-		printNode(tree);
-		child("elemtype", tree.elemtype);
-		children("dims", tree.dims);
-		children("elems", tree.elems);
-		indent--;
-	}
-	
-	public void visitParens(JCParens tree) {
-		printNode(tree);
-		child("expr", tree.expr);
-		indent--;
-	}
-	
-	public void visitAssign(JCAssign tree) {
-		printNode(tree);
-		child("lhs", tree.lhs);
-		child("rhs", tree.rhs);
-		indent--;
-	}
-	
-	public String operatorName(int tag) {
-		switch (tag) {
-		case JCTree.POS:
-			return "+";
-		case JCTree.NEG:
-			return "-";
-		case JCTree.NOT:
-			return "!";
-		case JCTree.COMPL:
-			return "~";
-		case JCTree.PREINC:
-			return "++X";
-		case JCTree.PREDEC:
-			return "--X";
-		case JCTree.POSTINC:
-			return "X++";
-		case JCTree.POSTDEC:
-			return "X--";
-		case JCTree.NULLCHK:
-			return "<*nullchk*>";
-		case JCTree.OR:
-			return "||";
-		case JCTree.AND:
-			return "&&";
-		case JCTree.EQ:
-			return "==";
-		case JCTree.NE:
-			return "!=";
-		case JCTree.LT:
-			return "<";
-		case JCTree.GT:
-			return ">";
-		case JCTree.LE:
-			return "<=";
-		case JCTree.GE:
-			return ">=";
-		case JCTree.BITOR:
-			return "|";
-		case JCTree.BITXOR:
-			return "^";
-		case JCTree.BITAND:
-			return "&";
-		case JCTree.SL:
-			return "<<";
-		case JCTree.SR:
-			return ">>";
-		case JCTree.USR:
-			return ">>>";
-		case JCTree.PLUS:
-			return "+";
-		case JCTree.MINUS:
-			return "-";
-		case JCTree.MUL:
-			return "*";
-		case JCTree.DIV:
-			return "/";
-		case JCTree.MOD:
-			return "%";
-		case JCTree.PLUS_ASG:
-			return "+=";
-		case JCTree.MINUS_ASG:
-			return "-=";
-		case JCTree.MUL_ASG:
-			return "*=";
-		case JCTree.DIV_ASG:
-			return "/=";
-		case JCTree.MOD_ASG:
-			return "%=";
-		case JCTree.BITAND_ASG:
-			return "&=";
-		case JCTree.BITXOR_ASG:
-			return "^=";
-		case JCTree.BITOR_ASG:
-			return "|=";
-		case JCTree.SL_ASG:
-			return "<<=";
-		case JCTree.SR_ASG:
-			return ">>=";
-		case JCTree.USR_ASG:
-			return ">>>=";
-		case JCTree.TYPETEST:
-			return "instanceof";
-		default:
-			throw new Error("Unexpected operator: " + tag);
-		}
-	}
-	
-	public void visitAssignop(JCAssignOp tree) {
-		printNode(tree);
-		child("lhs", tree.lhs);
-		property("(operator)", operatorName(getTag(tree) - JCTree.ASGOffset) + "=");
-		child("rhs", tree.rhs);
-		indent--;
-	}
-	
-	public void visitUnary(JCUnary tree) {
-		printNode(tree);
-		child("arg", tree.arg);
-		property("(operator)", operatorName(getTag(tree)));
-		indent--;
-	}
-	
-	public void visitBinary(JCBinary tree) {
-		printNode(tree);
-		child("lhs", tree.lhs);
-		property("(operator)", operatorName(getTag(tree)));
-		child("rhs", tree.rhs);
-		indent--;
-	}
-	
-	public void visitTypeCast(JCTypeCast tree) {
-		printNode(tree);
-		child("clazz", tree.clazz);
-		child("expr", tree.expr);
-		indent--;
-	}
-	
-	public void visitTypeTest(JCInstanceOf tree) {
-		printNode(tree);
-		child("expr", tree.expr);
-		child("clazz", tree.clazz);
-		indent--;
-	}
-	
-	public void visitIndexed(JCArrayAccess tree) {
-		printNode(tree);
-		child("indexed", tree.indexed);
-		child("index", tree.index);
-		indent--;
-	}
-	
-	public void visitSelect(JCFieldAccess tree) {
-		printNode(tree);
-		child("selected", tree.selected);
-		property("name", tree.name);
-		indent--;
-	}
-	
-	public void visitIdent(JCIdent tree) {
-		printNode(tree);
-		property("name", tree.name);
-		indent--;
-	}
-	
-	public String literalName(int typeTag) {
-		switch (typeTag) {
-		case TypeTags.BYTE:
-			return "BYTE";
-		case TypeTags.SHORT:
-			return "SHORT";
-		case TypeTags.INT:
-			return "INT";
-		case TypeTags.LONG:
-			return "LONG";
-		case TypeTags.FLOAT:
-			return "FLOAT";
-		case TypeTags.DOUBLE:
-			return "DOUBLE";
-		case TypeTags.CHAR:
-			return "CHAR";
-		case TypeTags.BOOLEAN:
-			return "BOOLEAN";
-		case TypeTags.VOID:
-			return "VOID";
-		case TypeTags.CLASS:
-			return "CLASS/STRING";
-		case TypeTags.BOT:
-			return "BOT";
-		default:
-			return "ERROR(" + typeTag + ")";
-		}
-	}
-	
-	public void visitLiteral(JCLiteral tree) {
-		printNode(tree);
-		property("typetag", literalName(tree.typetag));
-		property("value", tree.value);
-		indent--;
-	}
-	
-	public void visitTypeIdent(JCPrimitiveTypeTree tree) {
-		printNode(tree);
-		property("typetag", literalName(tree.typetag));
-		indent--;
-	}
-	
-	public void visitTypeArray(JCArrayTypeTree tree) {
-		printNode(tree);
-		child("elemtype", tree.elemtype);
-		indent--;
-	}
-	
-	public void visitTypeApply(JCTypeApply tree) {
-		printNode(tree);
-		child("clazz", tree.clazz);
-		children("arguments", tree.arguments);
-		indent--;
-	}
-	
-	public void visitTypeParameter(JCTypeParameter tree) {
-		printNode(tree);
-		property("name", tree.name);
-		children("bounds", tree.bounds);
-		indent--;
-	}
-	
-	public void visitWildcard(JCWildcard tree) {
-		printNode(tree);
-		Object o;
-		
-		try {
-			o = tree.getClass().getField("kind").get(tree);
-		} catch (Exception e) {
-			throw new RuntimeException("There's no field at all named 'kind' in JCWildcard? This is not a javac I understand.", e);
+	private final JCTree.Visitor visitor = new JCTree.Visitor() {
+		@Override public void visitTopLevel(JCCompilationUnit tree) {
+			printNode(tree);
+			endPosTable = tree.endPositions;
+			child("pid", tree.pid);
+			children("defs", tree.defs);
+			indent--;
 		}
 		
-		if (o instanceof JCTree) {
-			child("kind", (JCTree)o);
-		} else if (o instanceof BoundKind) {
-			property("kind", String.valueOf(o));
+		@Override public void visitImport(JCImport tree) {
+			printNode(tree);
+			property("staticImport", tree.staticImport);
+			child("qualid", tree.qualid);
+			indent--;
 		}
-		child("inner", tree.inner);
-		indent--;
-	}
-	
-	public void visitTypeBoundKind(TypeBoundKind tree) {
-		printNode(tree);
-		property("kind", String.valueOf(tree.kind));
-		indent--;
-	}
-	
-	public void visitErroneous(JCErroneous tree) {
-		printNode(tree);
-		children("errs", tree.errs);
-		indent--;
-	}
-	
-	public void visitLetExpr(LetExpr tree) {
-		printNode(tree);
-		children("defs", tree.defs);
-		child("expr", tree.expr);
-		indent--;
-	}
-	
-	public void visitModifiers(JCModifiers tree) {
-		printNode(tree);
-		children("annotations", tree.annotations);
-		property("flags", "0x" + Long.toString(tree.flags, 0x10));
-		indent--;
-	}
-	
-	public void visitAnnotation(JCAnnotation tree) {
-		printNode(tree);
-		child("annotationType", tree.annotationType);
-		children("args", tree.args);
-		indent--;
-	}
-	
-	public void visitTree(JCTree tree) {
-		String typeName = tree == null ? "NULL" : tree.getClass().getSimpleName();
-		printNode("UNKNOWN(" + typeName + ")");
-		indent--;
-	}
+		
+		@Override public void visitClassDef(JCClassDecl tree) {
+			printNode(tree);
+			modsOfEnum = (tree.mods != null && (tree.mods.flags & Flags.ENUM) != 0);
+			child("mods", tree.mods);
+			property("name", tree.name);
+			children("typarams", tree.typarams);
+			child("extends", tree.extending);
+			children("implementing", tree.implementing);
+			children("defs", tree.defs);
+			indent--;
+		}
+		
+		@Override public void visitMethodDef(JCMethodDecl tree) {
+			printNode(tree);
+			property("name", tree.name);
+			child("mods", tree.mods);
+			children("typarams", tree.typarams);
+			children("params", tree.params);
+			children("thrown", tree.thrown);
+			child("default", tree.defaultValue);
+			child("body", tree.body);
+			indent--;
+		}
+		
+		@Override public void visitVarDef(JCVariableDecl tree) {
+			printNode(tree);
+			child("mods", tree.mods);
+			child("vartype", tree.vartype);
+			property("name", tree.name);
+			child("init", tree.init);
+			indent--;
+		}
+		
+		@Override public void visitSkip(JCSkip tree) {
+			printNode(tree);
+			indent--;
+		}
+		
+		@Override public void visitBlock(JCBlock tree) {
+			printNode(tree);
+			property("flags", "0x" + Long.toString(tree.flags, 0x10));
+			children("stats", tree.stats);
+			indent--;
+		}
+		
+		@Override public void visitDoLoop(JCDoWhileLoop tree) {
+			printNode(tree);
+			child("body", tree.body);
+			child("cond", tree.cond);
+			indent--;
+		}
+		
+		@Override public void visitWhileLoop(JCWhileLoop tree) {
+			printNode(tree);
+			child("cond", tree.cond);
+			child("body", tree.body);
+			indent--;
+		}
+		
+		@Override public void visitForLoop(JCForLoop tree) {
+			printNode(tree);
+			children("init", tree.init);
+			child("cond", tree.cond);
+			children("step", tree.step);
+			child("body", tree.body);
+			indent--;
+		}
+		
+		@Override public void visitForeachLoop(JCEnhancedForLoop tree) {
+			printNode(tree);
+			child("var", tree.var);
+			child("expr", tree.expr);
+			child("body", tree.body);
+			indent--;
+		}
+		
+		@Override public void visitLabelled(JCLabeledStatement tree) {
+			printNode(tree);
+			property("label", tree.label);
+			child("body", tree.body);
+			indent--;
+		}
+		
+		@Override public void visitSwitch(JCSwitch tree) {
+			printNode(tree);
+			child("selector", tree.selector);
+			children("cases", tree.cases);
+			indent--;
+		}
+		
+		@Override public void visitCase(JCCase tree) {
+			printNode(tree);
+			child("pat", tree.pat);
+			children("stats", tree.stats);
+			indent--;
+		}
+		
+		@Override public void visitSynchronized(JCSynchronized tree) {
+			printNode(tree);
+			child("lock", tree.lock);
+			child("body", tree.body);
+			indent--;
+		}
+		
+		@Override public void visitTry(JCTry tree) {
+			printNode(tree);
+			child("body", tree.body);
+			children("catchers", tree.catchers);
+			child("finalizer", tree.finalizer);
+			indent--;
+		}
+		
+		@Override public void visitCatch(JCCatch tree) {
+			printNode(tree);
+			child("param", tree.param);
+			child("body", tree.body);
+			indent--;
+		}
+		
+		@Override public void visitConditional(JCConditional tree) {
+			printNode(tree);
+			child("cond", tree.cond);
+			child("truepart", tree.truepart);
+			child("falsepart", tree.falsepart);
+			indent--;
+		}
+		
+		@Override public void visitIf(JCIf tree) {
+			printNode(tree);
+			child("cond", tree.cond);
+			child("thenpart", tree.thenpart);
+			child("elsepart", tree.elsepart);
+			indent--;
+		}
+		
+		@Override public void visitExec(JCExpressionStatement tree) {
+			printNode(tree);
+			child("expr", tree.expr);
+			indent--;
+		}
+		
+		@Override public void visitBreak(JCBreak tree) {
+			printNode(tree);
+			property("label", tree.label);
+			indent--;
+		}
+		
+		@Override public void visitContinue(JCContinue tree) {
+			printNode(tree);
+			property("label", tree.label);
+			indent--;
+		}
+		
+		@Override public void visitReturn(JCReturn tree) {
+			printNode(tree);
+			child("expr", tree.expr);
+			indent--;
+		}
+		
+		@Override public void visitThrow(JCThrow tree) {
+			printNode(tree);
+			child("expr", tree.expr);
+			indent--;
+		}
+		
+		@Override public void visitAssert(JCAssert tree) {
+			printNode(tree);
+			child("cond", tree.cond);
+			child("detail", tree.detail);
+			indent--;
+		}
+		
+		@Override public void visitApply(JCMethodInvocation tree) {
+			printNode(tree);
+			children("typeargs", tree.typeargs);
+			child("meth", tree.meth);
+			children("args", tree.args);
+			indent--;
+		}
+		
+		@Override public void visitNewClass(JCNewClass tree) {
+			printNode(tree);
+			child("encl", tree.encl);
+			children("typeargs", tree.typeargs);
+			child("clazz", tree.clazz);
+			children("args", tree.args);
+			child("def", tree.def);
+			indent--;
+		}
+		
+		@Override public void visitNewArray(JCNewArray tree) {
+			printNode(tree);
+			child("elemtype", tree.elemtype);
+			children("dims", tree.dims);
+			children("elems", tree.elems);
+			indent--;
+		}
+		
+		@Override public void visitParens(JCParens tree) {
+			printNode(tree);
+			child("expr", tree.expr);
+			indent--;
+		}
+		
+		@Override public void visitAssign(JCAssign tree) {
+			printNode(tree);
+			child("lhs", tree.lhs);
+			child("rhs", tree.rhs);
+			indent--;
+		}
+		
+		public String operatorName(int tag) {
+			switch (tag) {
+			case JCTree.POS:
+				return "+";
+			case JCTree.NEG:
+				return "-";
+			case JCTree.NOT:
+				return "!";
+			case JCTree.COMPL:
+				return "~";
+			case JCTree.PREINC:
+				return "++X";
+			case JCTree.PREDEC:
+				return "--X";
+			case JCTree.POSTINC:
+				return "X++";
+			case JCTree.POSTDEC:
+				return "X--";
+			case JCTree.NULLCHK:
+				return "<*nullchk*>";
+			case JCTree.OR:
+				return "||";
+			case JCTree.AND:
+				return "&&";
+			case JCTree.EQ:
+				return "==";
+			case JCTree.NE:
+				return "!=";
+			case JCTree.LT:
+				return "<";
+			case JCTree.GT:
+				return ">";
+			case JCTree.LE:
+				return "<=";
+			case JCTree.GE:
+				return ">=";
+			case JCTree.BITOR:
+				return "|";
+			case JCTree.BITXOR:
+				return "^";
+			case JCTree.BITAND:
+				return "&";
+			case JCTree.SL:
+				return "<<";
+			case JCTree.SR:
+				return ">>";
+			case JCTree.USR:
+				return ">>>";
+			case JCTree.PLUS:
+				return "+";
+			case JCTree.MINUS:
+				return "-";
+			case JCTree.MUL:
+				return "*";
+			case JCTree.DIV:
+				return "/";
+			case JCTree.MOD:
+				return "%";
+			case JCTree.PLUS_ASG:
+				return "+=";
+			case JCTree.MINUS_ASG:
+				return "-=";
+			case JCTree.MUL_ASG:
+				return "*=";
+			case JCTree.DIV_ASG:
+				return "/=";
+			case JCTree.MOD_ASG:
+				return "%=";
+			case JCTree.BITAND_ASG:
+				return "&=";
+			case JCTree.BITXOR_ASG:
+				return "^=";
+			case JCTree.BITOR_ASG:
+				return "|=";
+			case JCTree.SL_ASG:
+				return "<<=";
+			case JCTree.SR_ASG:
+				return ">>=";
+			case JCTree.USR_ASG:
+				return ">>>=";
+			case JCTree.TYPETEST:
+				return "instanceof";
+			default:
+				throw new Error("Unexpected operator: " + tag);
+			}
+		}
+		
+		@Override public void visitAssignop(JCAssignOp tree) {
+			printNode(tree);
+			child("lhs", tree.lhs);
+			property("(operator)", operatorName(getTag(tree) - JCTree.ASGOffset) + "=");
+			child("rhs", tree.rhs);
+			indent--;
+		}
+		
+		@Override public void visitUnary(JCUnary tree) {
+			printNode(tree);
+			child("arg", tree.arg);
+			property("(operator)", operatorName(getTag(tree)));
+			indent--;
+		}
+		
+		@Override public void visitBinary(JCBinary tree) {
+			printNode(tree);
+			child("lhs", tree.lhs);
+			property("(operator)", operatorName(getTag(tree)));
+			child("rhs", tree.rhs);
+			indent--;
+		}
+		
+		@Override public void visitTypeCast(JCTypeCast tree) {
+			printNode(tree);
+			child("clazz", tree.clazz);
+			child("expr", tree.expr);
+			indent--;
+		}
+		
+		@Override public void visitTypeTest(JCInstanceOf tree) {
+			printNode(tree);
+			child("expr", tree.expr);
+			child("clazz", tree.clazz);
+			indent--;
+		}
+		
+		@Override public void visitIndexed(JCArrayAccess tree) {
+			printNode(tree);
+			child("indexed", tree.indexed);
+			child("index", tree.index);
+			indent--;
+		}
+		
+		@Override public void visitSelect(JCFieldAccess tree) {
+			printNode(tree);
+			child("selected", tree.selected);
+			property("name", tree.name);
+			indent--;
+		}
+		
+		@Override public void visitIdent(JCIdent tree) {
+			printNode(tree);
+			property("name", tree.name);
+			indent--;
+		}
+		
+		public String literalName(int typeTag) {
+			switch (typeTag) {
+			case TypeTags.BYTE:
+				return "BYTE";
+			case TypeTags.SHORT:
+				return "SHORT";
+			case TypeTags.INT:
+				return "INT";
+			case TypeTags.LONG:
+				return "LONG";
+			case TypeTags.FLOAT:
+				return "FLOAT";
+			case TypeTags.DOUBLE:
+				return "DOUBLE";
+			case TypeTags.CHAR:
+				return "CHAR";
+			case TypeTags.BOOLEAN:
+				return "BOOLEAN";
+			case TypeTags.VOID:
+				return "VOID";
+			case TypeTags.CLASS:
+				return "CLASS/STRING";
+			case TypeTags.BOT:
+				return "BOT";
+			default:
+				return "ERROR(" + typeTag + ")";
+			}
+		}
+		
+		@Override public void visitLiteral(JCLiteral tree) {
+			printNode(tree);
+			property("typetag", literalName(tree.typetag));
+			property("value", tree.value);
+			indent--;
+		}
+		
+		@Override public void visitTypeIdent(JCPrimitiveTypeTree tree) {
+			printNode(tree);
+			property("typetag", literalName(tree.typetag));
+			indent--;
+		}
+		
+		@Override public void visitTypeArray(JCArrayTypeTree tree) {
+			printNode(tree);
+			child("elemtype", tree.elemtype);
+			indent--;
+		}
+		
+		@Override public void visitTypeApply(JCTypeApply tree) {
+			printNode(tree);
+			child("clazz", tree.clazz);
+			children("arguments", tree.arguments);
+			indent--;
+		}
+		
+		@Override public void visitTypeParameter(JCTypeParameter tree) {
+			printNode(tree);
+			property("name", tree.name);
+			children("bounds", tree.bounds);
+			indent--;
+		}
+		
+		@Override public void visitWildcard(JCWildcard tree) {
+			printNode(tree);
+			Object o;
+			
+			try {
+				o = tree.getClass().getField("kind").get(tree);
+			} catch (Exception e) {
+				throw new RuntimeException("There's no field at all named 'kind' in JCWildcard? This is not a javac I understand.", e);
+			}
+			
+			if (o instanceof JCTree) {
+				child("kind", (JCTree)o);
+			} else if (o instanceof BoundKind) {
+				property("kind", String.valueOf(o));
+			}
+			child("inner", tree.inner);
+			indent--;
+		}
+		
+		@Override public void visitTypeBoundKind(TypeBoundKind tree) {
+			printNode(tree);
+			property("kind", String.valueOf(tree.kind));
+			indent--;
+		}
+		
+		@Override public void visitErroneous(JCErroneous tree) {
+			printNode(tree);
+			children("errs", tree.errs);
+			indent--;
+		}
+		
+		@Override public void visitLetExpr(LetExpr tree) {
+			printNode(tree);
+			children("defs", tree.defs);
+			child("expr", tree.expr);
+			indent--;
+		}
+		
+		@Override public void visitModifiers(JCModifiers tree) {
+			printNode(tree);
+			children("annotations", tree.annotations);
+			property("flags", "0x" + Long.toString(tree.flags, 0x10));
+			indent--;
+		}
+		
+		@Override public void visitAnnotation(JCAnnotation tree) {
+			printNode(tree);
+			child("annotationType", tree.annotationType);
+			children("args", tree.args);
+			indent--;
+		}
+		
+		@Override public void visitTree(JCTree tree) {
+			String typeName = tree == null ? "NULL" : tree.getClass().getSimpleName();
+			printNode("UNKNOWN(" + typeName + ")");
+			indent--;
+		}
+	};
 }

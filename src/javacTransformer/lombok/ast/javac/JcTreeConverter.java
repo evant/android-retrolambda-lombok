@@ -376,11 +376,11 @@ public class JcTreeConverter {
 		return ((JCParens) node).getExpression();
 	}
 	
-	public void convert(JCCompilationUnit cu) {
-		convert(cu, cu.endPositions);
+	public void visit(JCCompilationUnit cu) {
+		visit(cu, cu.endPositions);
 	}
 	
-	public void convert(JCTree node, Map<JCTree, Integer> endPosTable) {
+	public void visit(JCTree node, Map<JCTree, Integer> endPosTable) {
 		this.endPosTable = endPosTable;
 		node.accept(visitor);
 	}

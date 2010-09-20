@@ -46,7 +46,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Multimap;
 
-public class EcjTreePrinter extends EcjTreeVisitor {
+public class EcjTreePrinter {
 	private static final Multimap<Class<?>, ComponentField> visitedClasses = ArrayListMultimap.create();
 	private static final List<String> POSITION_FIELDNAMES = ImmutableList.of(
 			"sourceStart",
@@ -86,32 +86,37 @@ public class EcjTreePrinter extends EcjTreeVisitor {
 		return printer.content.toString();
 	}
 	
-	@Override
-	public void visitAny(ASTNode node) {
-		Collection<ComponentField> fields = findFields(node);
-		for (ComponentField f : fields) {
-			Object value;
-			
-			if (node instanceof ConditionalExpression) ((ConditionalExpression)node).valueIfTrue.sourceEnd = -2;
-			if ("originalSourceEnd".equals(f.field.getName()) && node instanceof ArrayTypeReference) {
-				//workaround for eclipse arbitrarily skipping this field and setting it.
-				value = -2;
-			} else {
-				value = readField(f.field, node);
+	public void visit(ASTNode node) {
+		visitor.visitEcjNode(node);
+	}
+	
+	private final EcjTreeVisitor visitor = new EcjTreeVisitor() {
+		@Override public void visitAny(ASTNode node) {
+			Collection<ComponentField> fields = findFields(node);
+			for (ComponentField f : fields) {
+				Object value;
+				
+				if (node instanceof ConditionalExpression) ((ConditionalExpression)node).valueIfTrue.sourceEnd = -2;
+				if ("originalSourceEnd".equals(f.field.getName()) && node instanceof ArrayTypeReference) {
+					//workaround for eclipse arbitrarily skipping this field and setting it.
+					value = -2;
+				} else {
+					value = readField(f.field, node);
+				}
+				if (value == null) {
+					continue;
+				}
+				f.print(printer, this, value);
 			}
-			if (value == null) {
-				continue;
-			}
-			f.print(printer, this, value);
 		}
-	}
-	
-	//TODO all the javadocy nodes need to be as methods in EcjTreeVisitor.
-	
-	@Override
-	public void visitOther(ASTNode node) {
-		visitAny(node);
-	}
+		
+		//TODO all the javadocy nodes need to be as methods in EcjTreeVisitor.
+		
+		@Override
+		public void visitOther(ASTNode node) {
+			visitAny(node);
+		}
+	};
 	
 	@SneakyThrows(IllegalAccessException.class)
 	private Object readField(Field field, ASTNode node) {

@@ -52,7 +52,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 	
 	protected String convertToString(Source source, JCTree tree) {
 		JcTreePrinter printer = new JcTreePrinter(true);
-		tree.accept(printer);
+		printer.visit(tree);
 		String string = printer.toString();
 		return string;
 	}
@@ -90,7 +90,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 		}
 		
 		JcTreeBuilder builder = new JcTreeBuilder(source, context);
-		builder.convert(nodes.get(0));
+		builder.visit(nodes.get(0));
 		return builder.get();
 	}
 	
