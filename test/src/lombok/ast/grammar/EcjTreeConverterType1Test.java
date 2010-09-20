@@ -58,8 +58,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(RunForEachFileInDirRunner.class)
-public class EcjToLombokTest extends TreeBuilderRunner<Node> {
-	public EcjToLombokTest() {
+public class EcjTreeConverterType1Test extends TreeBuilderRunner<Node> {
+	public EcjTreeConverterType1Test() {
 		super(false);
 	}
 	
@@ -121,7 +121,7 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 				}
 				return true;
 			}
-
+			
 			private void splitVariableDeclaration(VariableDeclaration varDecl) {
 				VariableDefinition varDef = varDecl.astDefinition();
 				Node upFromDecl = varDecl.getParent();
@@ -147,16 +147,16 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 					VariableDefinition splitVarDef = splitAndUnparentVariableDeclaration(varDef, varDefEntry);
 					
 					/* 
-					 * TODO: The way the convertor adds multiple varDefs in a
-					 * for is mimiced, though it does not seem to be a correct
-					 * AST. Verify this and rewrite both the convertor and
+					 * TODO: The way the converter adds multiple varDefs in a
+					 * for is mimicked, though it does not seem to be a correct
+					 * AST. Verify this and rewrite both the converter and
 					 * the normalizer
 					 */
-					forStat.rawExpressionInits().addToEnd(splitVarDef);				
+					forStat.rawExpressionInits().addToEnd(splitVarDef);
 				}
 				forStat.astVariableDeclaration().unparent();
 			}
-
+			
 			private VariableDefinition splitAndUnparentVariableDeclaration(VariableDefinition def, VariableDefinitionEntry varDefEntry) {
 				varDefEntry.unparent();
 				VariableDefinition copy = def.copy();
@@ -168,7 +168,7 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 	}
 	
 	/*
-	 * Dependant on splitVariableDefinitionEntries().
+	 * Dependent on splitVariableDefinitionEntries().
 	 */
 	private void simplifyArrayDecls(Node node) {
 		node.accept(new ForwardingAstVisitor() {
@@ -185,7 +185,7 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 			}
 		});
 	}
-
+	
 	private static void deleteEmptyDeclarations(Node node) {
 		node.accept(new ForwardingAstVisitor() {
 			@Override public boolean visitEmptyDeclaration(EmptyDeclaration node) {
@@ -243,6 +243,8 @@ public class EcjToLombokTest extends TreeBuilderRunner<Node> {
 		
 		if (cud.hasErrors()) return null;
 		
-		return EcjTreeConverter.convert(cud);
+		EcjTreeConverter converter = new EcjTreeConverter();
+		converter.visit(cud);
+		return converter.get();
 	}
 }
