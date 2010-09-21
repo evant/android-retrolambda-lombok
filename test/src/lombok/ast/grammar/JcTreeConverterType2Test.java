@@ -49,11 +49,15 @@ public class JcTreeConverterType2Test extends TreeBuilderRunner<JCTree> {
 		return testCompiler(source);
 	}
 	
-	protected String convertToString(Source source, JCTree tree) {
+	protected String convertToString(JCTree tree) {
 		JcTreePrinter printer = new JcTreePrinter(true);
 		printer.visit(tree);
 		String string = printer.toString();
 		return string;
+	}
+	
+	protected boolean checkForLombokAstParseFailure() {
+		return false;
 	}
 	
 	protected JCTree parseWithLombok(Source source) {

@@ -45,7 +45,6 @@ import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
 import lombok.ast.UnaryOperator;
 import lombok.ast.VariableReference;
-import lombok.ast.grammar.Source;
 import lombok.ast.grammar.SourceStructure;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
@@ -161,7 +160,7 @@ public class EcjTreeBuilder {
 	
 	private final Map<lombok.ast.Node, Collection<SourceStructure>> sourceStructures;
 	private List<? extends ASTNode> result = null;
-	private final lombok.ast.grammar.Source source;
+	private final String rawInput;
 	private final ProblemReporter reporter;
 	private final CompilationResult compilationResult;
 	private final CompilerOptions options;
@@ -220,7 +219,15 @@ public class EcjTreeBuilder {
 	}
 	
 	public EcjTreeBuilder(lombok.ast.grammar.Source source, CompilerOptions options) {
-		this(source, new ProblemReporter(new IErrorHandlingPolicy() {
+		this(source, createDefaultProblemReporter(options), new CompilationResult(source.getName().toCharArray(), 0, 0, 0));
+	}
+	
+	public EcjTreeBuilder(String rawInput, String name, CompilerOptions options) {
+		this(rawInput, createDefaultProblemReporter(options), new CompilationResult(name.toCharArray(), 0, 0, 0));
+	}
+	
+	private static ProblemReporter createDefaultProblemReporter(CompilerOptions options) {
+		return new ProblemReporter(new IErrorHandlingPolicy() {
 			public boolean proceedOnErrors() {
 				return true;
 			}
@@ -228,21 +235,29 @@ public class EcjTreeBuilder {
 			public boolean stopOnFirstError() {
 				return false;
 			}
-		}, options, new DefaultProblemFactory(Locale.ENGLISH)), new CompilationResult(source.getName().toCharArray(), 0, 0, 0));
+		}, options, new DefaultProblemFactory(Locale.ENGLISH));
 	}
 	
 	public EcjTreeBuilder(lombok.ast.grammar.Source source, ProblemReporter reporter, CompilationResult compilationResult) {
 		this.options = reporter.options;
 		this.sourceStructures = source.getSourceStructures();
-		this.source = source;
+		this.rawInput = source.getRawInput();
+		this.reporter = reporter;
+		this.compilationResult = compilationResult;
+	}
+	
+	public EcjTreeBuilder(String rawInput, ProblemReporter reporter, CompilationResult compilationResult) {
+		this.options = reporter.options;
+		this.sourceStructures = null;
+		this.rawInput = rawInput;
 		this.reporter = reporter;
 		this.compilationResult = compilationResult;
 	}
 	
 	private EcjTreeBuilder(EcjTreeBuilder parent) {
-		this.source = parent.source;
 		this.reporter = parent.reporter;
 		this.options = parent.options;
+		this.rawInput = parent.rawInput;
 		this.compilationResult = parent.compilationResult;
 		this.sourceStructures = parent.sourceStructures;
 	}
@@ -413,7 +428,7 @@ public class EcjTreeBuilder {
 	private final AstVisitor visitor = new ForwardingAstVisitor() {
 		@Override
 		public boolean visitCompilationUnit(lombok.ast.CompilationUnit node) {
-			int sourceLength = source.getRawInput() == null ? 0 : source.getRawInput().length();
+			int sourceLength = rawInput == null ? 0 : rawInput.length();
 			CompilationUnitDeclaration cud = new CompilationUnitDeclaration(reporter, compilationResult, sourceLength);
 			cud.bits |= ASTNode.HasAllMethodBodies;
 			
@@ -458,6 +473,7 @@ public class EcjTreeBuilder {
 			List<ASTNode> result = Lists.newArrayList();
 			if (value != null) result.add(value);
 			EcjTreeBuilder.this.result = result;
+			
 			return true;
 		}
 		
@@ -1145,7 +1161,7 @@ public class EcjTreeBuilder {
 			Expression typeRef = toExpression(node.astTypeReference());
 			if (typeRef.getClass() == SingleTypeReference.class && !node.astTypeReference().isPrimitive()) {
 				SingleTypeReference str = (SingleTypeReference) typeRef;
-				//Why you ask? I don't know. It seems dumb. Ask the ecj guys.
+				//Why a SingleNameReference instead of a SingleTypeReference you ask? I don't know. It seems dumb. Ask the ecj guys.
 				typeRef = new SingleNameReference(str.token, 0);
 				typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
 				typeRef.sourceStart = str.sourceStart;
@@ -1157,8 +1173,10 @@ public class EcjTreeBuilder {
 				typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
 			}
 			CastExpression expr = new CastExpression(toExpression(node.astOperand()), typeRef);
-			typeRef.sourceStart = posOfStructure(node, "(", 0, true) + 1;
-			typeRef.sourceEnd = posOfStructure(node, ")", 0, true) - 1;
+			if (sourceStructures != null) {
+				typeRef.sourceStart = posOfStructure(node, "(", 0, true) + 1;
+				typeRef.sourceEnd = posOfStructure(node, ")", 0, true) - 1;
+			}
 			expr.sourceStart = start(node);
 			expr.sourceEnd = end(node);
 			return set(node, expr);
@@ -1750,7 +1768,7 @@ public class EcjTreeBuilder {
 			if (!node.isJavadoc()) {
 				throw new RuntimeException("Only javadoc expected here");
 			}
-			return set(node, new JustJavadocParser().parse(source, node.getPosition().getStart(), node.getPosition().getEnd()));
+			return set(node, new JustJavadocParser().parse(rawInput, node.getPosition().getStart(), node.getPosition().getEnd()));
 		}
 		
 		@Override
@@ -1805,11 +1823,12 @@ public class EcjTreeBuilder {
 		// Only works for TypeBody, EnumTypeBody and Block
 		private boolean isUndocumented(lombok.ast.Node block) {
 			if (block == null) return false;
+			if (rawInput == null) return false;
 			
 			lombok.ast.Position pos = block.getPosition();
 			if (pos.isUnplaced() || pos.size() < 3) return true;
 			
-			String content = source.getRawInput().substring(pos.getStart() + 1, pos.getEnd() - 1);
+			String content = rawInput.substring(pos.getStart() + 1, pos.getEnd() - 1);
 			return content.trim().isEmpty();
 		}
 	};
@@ -1819,11 +1838,11 @@ public class EcjTreeBuilder {
 			super(null);
 		}
 		
-		Javadoc parse(Source source, int from, int to) {
+		Javadoc parse(String rawInput, int from, int to) {
 			// Eclipse crashes if there's no character following the javadoc.
 			char[] rawContent = new char[to + 1];
 			Arrays.fill(rawContent, 0, from, ' ');
-			System.arraycopy(source.getRawInput().substring(from, to).toCharArray(), 0, rawContent, from, to - from);
+			System.arraycopy(rawInput.substring(from, to).toCharArray(), 0, rawContent, from, to - from);
 			rawContent[to] = ' ';
 			this.sourceLevel = ClassFileConstants.JDK1_6;
 			this.scanner.setSource(rawContent);
@@ -1873,8 +1892,11 @@ public class EcjTreeBuilder {
 		long[] pos = new long[parts.size()];
 		int idx = 0;
 		for (lombok.ast.Node n : parts) {
-			if (n instanceof lombok.ast.TypeReferencePart) pos[idx++] = pos(((lombok.ast.TypeReferencePart)n).astIdentifier());
-			else pos[idx++] = pos(n);
+			if (n instanceof lombok.ast.TypeReferencePart) {
+				pos[idx++] = pos(((lombok.ast.TypeReferencePart) n).astIdentifier());
+			} else {
+				pos[idx++] = pos(n);
+			}
 		}
 		return pos;
 	}

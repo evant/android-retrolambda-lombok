@@ -21,10 +21,16 @@
  */
 package lombok.ast.grammar;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.regex.Pattern;
+
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreeBuilder;
 import lombok.ast.ecj.EcjTreeConverter;
 import lombok.ast.ecj.EcjTreePrinter;
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
@@ -53,11 +59,15 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 		return testCompiler(source);
 	}
 	
-	protected String convertToString(Source source, ASTNode tree) {
+	protected String convertToString(ASTNode tree) {
 		EcjTreePrinter printer = new EcjTreePrinter(true);
 		printer.visit(tree);
 		String string = printer.toString();
 		return string;
+	}
+	
+	protected boolean checkForLombokAstParseFailure() {
+		return false;
 	}
 	
 	protected CompilerOptions ecjCompilerOptions() {
@@ -87,7 +97,7 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 		converter.visit(cud);
 		Node lombokized = converter.get();
 		
-		EcjTreeBuilder builder = new EcjTreeBuilder(source, ecjCompilerOptions());
+		EcjTreeBuilder builder = new EcjTreeBuilder(source.getRawInput(), source.getName(), ecjCompilerOptions());
 		builder.visit(lombokized);
 		return builder.get();
 	}

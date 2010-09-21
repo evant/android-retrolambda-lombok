@@ -120,7 +120,7 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		});
 	}
 	
-	protected String convertToString(Source source, Node tree) {
+	protected String convertToString(Node tree) {
 		foldStringConcats(tree);
 		normalizeNumberLiterals(tree);
 		deleteComments(tree);

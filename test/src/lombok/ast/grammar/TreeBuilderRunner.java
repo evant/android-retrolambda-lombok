@@ -53,22 +53,24 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 			// at all will do error reporting.
 			return false;
 		}
-		String targetString = convertToString(source, parsedWithTargetCompiler);
+		String targetString = convertToString(parsedWithTargetCompiler);
 		
-		source.parseCompilationUnit();
-		if (!source.getProblems().isEmpty()) {
-			StringBuilder message = new StringBuilder();
-			for (ParseProblem p : source.getProblems()) {
-				message.append(p.toString());
-				message.append("\n");
+		if (checkForLombokAstParseFailure()) {
+			source.parseCompilationUnit();
+			if (!source.getProblems().isEmpty()) {
+				StringBuilder message = new StringBuilder();
+				for (ParseProblem p : source.getProblems()) {
+					message.append(p.toString());
+					message.append("\n");
+				}
+				printDebugInformation(source, targetString, null);
+				fail(message.toString());
 			}
-			printDebugInformation(source, targetString, null);
-			fail(message.toString());
 		}
 		
 		String lombokString;
 		try {
-			lombokString = fixLineEndings(convertToString(source, parseWithLombok(source)));
+			lombokString = fixLineEndings(convertToString(parseWithLombok(source)));
 		} catch (Exception e) {
 			printDebugInformation(source, targetString, null);
 			throw e;
@@ -95,6 +97,10 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		return true;
 	}
 	
+	protected boolean checkForLombokAstParseFailure() {
+		return true;
+	}
+	
 	protected void printDebugInformation(Source source, String targetString, String lombokString) {
 		String name = source.getName();
 		System.out.printf("==== Processing %s ====\n", name);
@@ -108,7 +114,7 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		System.out.printf("======= End of %s =======\n", name);
 	}
 	
-	protected abstract String convertToString(Source source, N tree) throws Exception;
+	protected abstract String convertToString(N tree) throws Exception;
 	
 	protected abstract N parseWithLombok(Source source) throws Exception;
 	

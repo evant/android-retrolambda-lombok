@@ -77,7 +77,7 @@ public class EcjTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		return options;
 	}
 	
-	protected String convertToString(Source source, Node tree) {
+	protected String convertToString(Node tree) {
 		deleteEmptyDeclarations(tree);
 		foldStringConcats(tree);
 		splitVariableDefinitionEntries(tree);
