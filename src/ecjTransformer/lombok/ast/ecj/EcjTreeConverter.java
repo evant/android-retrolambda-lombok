@@ -382,13 +382,13 @@ public class EcjTreeConverter {
 			if ((node.modifiers & ClassFileConstants.AccStatic) != 0) {
 				lombok.ast.StaticInitializer staticInit = new lombok.ast.StaticInitializer();
 				staticInit.astBody((lombok.ast.Block) toTree(node.block));
+				staticInit.setPosition(toPosition(node.declarationSourceStart, node.sourceEnd));
 				set(node, staticInit);
 				return;
-			}
-			else if (node.modifiers == 0) {
+			} else {
 				lombok.ast.InstanceInitializer instanceInit = new lombok.ast.InstanceInitializer();
 				instanceInit.astBody((lombok.ast.Block) toTree(node.block));
-				set(node, instanceInit);
+				set(node, setPosition(node, instanceInit));
 				return;
 			}
 		}
@@ -532,7 +532,7 @@ public class EcjTreeConverter {
 		
 		public void handleAbstractVariableDefinition(AbstractVariableDeclaration node) {
 			VariableDefinition varDef = createVariableDefinition(node);
-			setPosition(node, varDef);
+			varDef.setPosition(toPosition(node.declarationSourceStart, node.sourceEnd));
 			if (hasFlag(FlagKey.AS_DEFINITION)) {
 				set(node, varDef);
 				return;
@@ -544,13 +544,14 @@ public class EcjTreeConverter {
 			}
 			
 			decl.astDefinition(varDef);
+			decl.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
 			
-			set(node, setPosition(node, decl));
+			set(node, decl);
 		}
 		
 		private VariableDefinition createVariableDefinition(AbstractVariableDeclaration node) {
 			VariableDefinition varDef = new VariableDefinition();
-			varDef.astModifiers(toModifiers(node.modifiers,node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
+			varDef.astModifiers(toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
 			varDef.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
 			varDef.astVarargs((node.type.bits & ASTNode.IsVarArgs) != 0);
 			
@@ -671,7 +672,7 @@ public class EcjTreeConverter {
 			TypeReferencePart part = new TypeReferencePart();
 			part.astIdentifier(toIdentifier(node.token, node.sourceStart, node.sourceEnd));
 			ref.astParts().addToEnd(part);
-			set(node, ref);
+			set(node, setPosition(node, ref));
 		}
 		
 		@Override public void visitArrayQualifiedTypeReference(ArrayQualifiedTypeReference node) {
