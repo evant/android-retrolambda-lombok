@@ -856,7 +856,9 @@ public class EcjTreeConverter {
 			if (tokens.length < 2) return null;
 			if (tokens.length != positions.length) throw new IllegalStateException("bug");
 			
-			lombok.ast.Expression current = new VariableReference().astIdentifier(toIdentifier(tokens[0], positions[0]));
+			lombok.ast.Identifier current0 = toIdentifier(tokens[0], positions[0]);
+			lombok.ast.Expression current = new lombok.ast.VariableReference().astIdentifier(current0);
+			current.setPosition(current0.getPosition());
 			
 			for (int i = 1; i < tokens.length; i++) {
 				lombok.ast.Select select = new lombok.ast.Select().astIdentifier(toIdentifier(tokens[i], positions[i]));
