@@ -180,7 +180,15 @@ public class EcjTreeConverter {
 		if (value instanceof lombok.ast.Expression && hasFlag(FlagKey.AS_STATEMENT)) {
 			lombok.ast.ExpressionStatement stat = new lombok.ast.ExpressionStatement();
 			stat.astExpression((lombok.ast.Expression)value);
-			set(node, stat);
+			int start = node.sourceStart;
+			int end = node.sourceEnd;
+			try {
+				end = (Integer)node.getClass().getField("statementEnd").get(node);
+			} catch (Exception e) {
+				// Not all these classes may have a statementEnd.
+			}
+			
+			set(node, stat.setPosition(new Position(start, end + 1)));
 			return;
 		}
 		
