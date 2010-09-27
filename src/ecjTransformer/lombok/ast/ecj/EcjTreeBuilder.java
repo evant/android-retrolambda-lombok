@@ -41,6 +41,7 @@ import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.JavadocContainer;
 import lombok.ast.KeywordModifier;
 import lombok.ast.Modifiers;
+import lombok.ast.Node;
 import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
 import lombok.ast.UnaryOperator;
@@ -160,6 +161,7 @@ public class EcjTreeBuilder {
 	
 	private final Map<lombok.ast.Node, Collection<SourceStructure>> sourceStructures;
 	private List<? extends ASTNode> result = null;
+	private Map<PosInfoKey, Position> ecjTreeCreatorPositionInfo;
 	private final String rawInput;
 	private final ProblemReporter reporter;
 	private final CompilationResult compilationResult;
@@ -260,6 +262,16 @@ public class EcjTreeBuilder {
 		this.rawInput = parent.rawInput;
 		this.compilationResult = parent.compilationResult;
 		this.sourceStructures = parent.sourceStructures;
+		this.ecjTreeCreatorPositionInfo = parent.ecjTreeCreatorPositionInfo;
+	}
+	
+	void setEcjTreeConverterPositionInfo(Map<PosInfoKey, Position> ecjTreeCreatorPositionInfo) {
+		this.ecjTreeCreatorPositionInfo = ecjTreeCreatorPositionInfo;
+	}
+	
+	private Position getEcjPos(Node node, String key) {
+		Position p = ecjTreeCreatorPositionInfo == null ? null : ecjTreeCreatorPositionInfo.get(new PosInfoKey(node, key));
+		return p == null ? node.getPosition() : p;
 	}
 	
 	private EcjTreeBuilder create() {
@@ -1173,7 +1185,10 @@ public class EcjTreeBuilder {
 				typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
 			}
 			CastExpression expr = new CastExpression(toExpression(node.astOperand()), typeRef);
-			if (sourceStructures != null) {
+			if (ecjTreeCreatorPositionInfo != null) {
+				typeRef.sourceStart = getEcjPos(node, "type").getStart();
+				typeRef.sourceEnd = getEcjPos(node, "type").getEnd();
+			} else if (sourceStructures != null) {
 				typeRef.sourceStart = posOfStructure(node, "(", 0, true) + 1;
 				typeRef.sourceEnd = posOfStructure(node, ")", 0, true) - 1;
 			}

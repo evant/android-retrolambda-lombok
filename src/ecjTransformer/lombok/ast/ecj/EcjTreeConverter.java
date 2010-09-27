@@ -143,6 +143,7 @@ public class EcjTreeConverter {
 	
 	private List<? extends Node> result = null;
 	private Map<FlagKey, Object> params = ImmutableMap.of();
+	private Map<PosInfoKey, Position> positionInfo = Maps.newHashMap();
 	
 	private static final Comparator<ASTNode> ASTNODE_ORDER = new Comparator<ASTNode>() {
 		@Override public int compare(ASTNode nodeOne, ASTNode nodeTwo) {
@@ -183,6 +184,13 @@ public class EcjTreeConverter {
 			return;
 		}
 		
+		if (value instanceof lombok.ast.Expression) {
+			int parenCount = (node.bits & ASTNode.ParenthesizedMASK) >> ASTNode.ParenthesizedSHIFT;
+			for (int i = 0; i < parenCount; i++) {
+				((lombok.ast.Expression) value).astParensPositions().add(value.getPosition());
+			}
+		}
+		
 		List<Node> result = Lists.newArrayList();
 		if (value != null) result.add(value);
 		this.result = result;
@@ -206,6 +214,7 @@ public class EcjTreeConverter {
 		if (node == null) return null;
 		EcjTreeConverter newConverter = new EcjTreeConverter();
 		if (params != null) newConverter.params = params;
+		newConverter.positionInfo = positionInfo;
 		newConverter.visit(node);
 		try {
 			return newConverter.get();
@@ -213,6 +222,14 @@ public class EcjTreeConverter {
 			System.err.printf("Node '%s' (%s) did not produce any results\n", node, node.getClass().getSimpleName());
 			throw e;
 		}
+	}
+	
+	private void setPosInfo(Node lombokNode, String key, Position info) {
+		positionInfo.put(new PosInfoKey(lombokNode, key), info);
+	}
+	
+	public void transferPositionInfo(EcjTreeBuilder builder) {
+		builder.setEcjTreeConverterPositionInfo(positionInfo);
 	}
 	
 	private void fillList(ASTNode[] nodes, RawListAccessor<?, ?> list, FlagKey... keys) {
@@ -568,6 +585,7 @@ public class EcjTreeConverter {
 			lombok.ast.TypeReferencePart part = new lombok.ast.TypeReferencePart();
 			part.astIdentifier(toIdentifier(token, pos));
 			if (typeReferences != null) fillList(typeReferences, part.rawTypeArguments());
+			part.setPosition(toPosition(pos));
 			return part;
 		}
 		
@@ -711,6 +729,7 @@ public class EcjTreeConverter {
 			Node result = toTree(node.type, FlagKey.NAMEREFERENCE_IS_TYPE);
 			lombok.ast.Cast cast = new lombok.ast.Cast().astTypeReference((lombok.ast.TypeReference) result);
 			cast.astOperand((lombok.ast.Expression)toTree(node.expression));
+			setPosInfo(cast, "type", new Position(node.type.sourceStart, node.type.sourceEnd));
 			set(node, setPosition(node, cast));
 		}
 		
@@ -754,6 +773,7 @@ public class EcjTreeConverter {
 			bin.astLeft((lombok.ast.Expression) toTree(node.lhs));
 			bin.astRight(((lombok.ast.Expression) toTree(node.expression)));
 			bin.astOperator(BinaryOperator.ASSIGN);
+			setPosition(node, bin);
 			set(node, bin);
 		}
 		
@@ -886,6 +906,7 @@ public class EcjTreeConverter {
 			fillList(node.typeArguments, inv.rawMethodTypeArguments());
 			inv.astOperand(((lombok.ast.Expression) toTree(node.receiver)));
 			inv.astName(toIdentifier(node.selector, node.nameSourcePosition));
+			setPosition(node, inv);
 			set(node, inv);
 		}
 		
