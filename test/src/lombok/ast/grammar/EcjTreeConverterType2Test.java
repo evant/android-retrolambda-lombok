@@ -36,6 +36,8 @@ import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ExtendedStringLiteral;
+import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
@@ -61,8 +63,11 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 	
 	protected String convertToString(ASTNode tree) {
 		EcjTreePrinter printer = new EcjTreePrinter(true);
+		printer.skipProperty(StringLiteral.class, "lineNumber");
+		printer.skipProperty(ExtendedStringLiteral.class, "lineNumber");
 		printer.visit(tree);
 		String string = printer.toString();
+		string = string.replace("ExtendedStringLiteral", "StringLiteral");
 		return string;
 	}
 	

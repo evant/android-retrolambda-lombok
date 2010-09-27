@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.SneakyThrows;
 
@@ -45,6 +46,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 public class EcjTreePrinter {
 	private static final Multimap<Class<?>, ComponentField> visitedClasses = ArrayListMultimap.create();
@@ -72,6 +74,7 @@ public class EcjTreePrinter {
 			);
 	
 	private final Printer printer;
+	private Set<String> propertySkipList = Sets.newHashSet();
 	
 	public EcjTreePrinter(boolean printPositions) {
 		printer = new Printer(printPositions);
@@ -90,10 +93,16 @@ public class EcjTreePrinter {
 		visitor.visitEcjNode(node);
 	}
 	
+	public EcjTreePrinter skipProperty(Class<? extends ASTNode> type, String propertyName) {
+		propertySkipList.add(type.getSimpleName() + "/" + propertyName);
+		return this;
+	}
+	
 	private final EcjTreeVisitor visitor = new EcjTreeVisitor() {
 		@Override public void visitAny(ASTNode node) {
 			Collection<ComponentField> fields = findFields(node);
 			for (ComponentField f : fields) {
+				if (propertySkipList.contains(node.getClass().getSimpleName() + "/" + f.field.getName())) continue;
 				Object value;
 				
 				if (node instanceof ConditionalExpression) ((ConditionalExpression)node).valueIfTrue.sourceEnd = -2;
@@ -130,9 +139,7 @@ public class EcjTreePrinter {
 		}
 		List<ComponentField> fields = Lists.newArrayList();
 		for (Field f : findAllFields(clazz)) {
-			if ((f.getModifiers() & Modifier.STATIC) != 0) {
-				continue;
-			}
+			if ((f.getModifiers() & Modifier.STATIC) != 0) continue;
 			fields.add(new ComponentField(f));
 		}
 		Collections.sort(fields);

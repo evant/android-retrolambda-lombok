@@ -42,7 +42,7 @@ public class TextFormatter implements SourceFormatter {
 	}
 	
 	private TextFormatter a(String text) {
-		if (text.length() == 0) return this;
+		if (text == null || text.length() == 0) return this;
 		if (newline) printIndent();
 		newline = false;
 		sb.append(text);

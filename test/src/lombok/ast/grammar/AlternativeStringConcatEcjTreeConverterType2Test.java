@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * Copyright © 2010 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,9 +21,8 @@
  */
 package lombok.ast.grammar;
 
-import static java.util.Collections.singleton;
-
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
@@ -31,17 +30,17 @@ import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
-@RunWith(RunForEachFileInDirRunner.class)
-public class AlternativeStringConcatEcjTreeBuilderTest extends EcjTreeBuilderTest {
-	@Override protected Collection<DirDescriptor> getDirDescriptors() {
-		return singleton(DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*StringConcatExpressions.java$", Pattern.CASE_INSENSITIVE)));
+public class AlternativeStringConcatEcjTreeConverterType2Test extends EcjTreeConverterType2Test {
+	@Test
+	public boolean testEcjTreeConverter(Source source) throws Exception {
+		return testCompiler(source);
 	}
 	
-	@Test
-	public boolean testAlternativeStringConcatEcjCompiler(Source source) throws Exception {
-		return testCompiler(source);
+	@Override protected Collection<DirDescriptor> getDirDescriptors() {
+		return Arrays.asList(
+			DirDescriptor.of(new File("test/resources/idempotency"), true).withInclusion(Pattern.compile("^.*StringConcatExpressions.java$", Pattern.CASE_INSENSITIVE))
+		);
 	}
 	
 	@Override protected CompilerOptions ecjCompilerOptions() {
