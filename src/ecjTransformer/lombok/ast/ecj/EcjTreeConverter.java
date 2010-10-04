@@ -22,6 +22,7 @@
 package lombok.ast.ecj;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -139,6 +140,7 @@ public class EcjTreeConverter {
 		AS_STATEMENT,
 		AS_DEFINITION,
 		AS_ENUM,
+		NO_VARDECL_FOLDING,
 	}
 	
 	private List<? extends Node> result = null;
@@ -241,9 +243,42 @@ public class EcjTreeConverter {
 	}
 	
 	private void fillList(ASTNode[] nodes, RawListAccessor<?, ?> list, FlagKey... keys) {
+		Map<FlagKey, Object> map = Maps.newEnumMap(FlagKey.class);
+		for (FlagKey key : keys) map.put(key, key);
+		fillList(nodes, list, map);
+	}
+	
+	private void fillList(ASTNode[] nodes, RawListAccessor<?, ?> list, Map<FlagKey, Object> params) {
 		if (nodes == null) return;
 		
-		for (ASTNode node : nodes) list.addToEnd(toTree(node, keys));
+		// int i, j; is represented with multiple AVDs, but in lombok.ast, it's 1 node. We need to
+		// gather up sequential AVD nodes, check if the start position of each type is equal, and convert
+		// them to one VariableDefinition by calling a special method.
+		java.util.List<AbstractVariableDeclaration> varDeclQueue = new ArrayList<AbstractVariableDeclaration>();
+		
+		boolean fold = !params.containsKey(FlagKey.NO_VARDECL_FOLDING);
+		
+		for (ASTNode node : nodes) {
+			if ((node instanceof FieldDeclaration || node instanceof LocalDeclaration) &&
+					((AbstractVariableDeclaration)node).type != null) {
+				
+				if (fold && (varDeclQueue.isEmpty() || varDeclQueue.get(0).type.sourceStart == node.sourceStart)) {
+					varDeclQueue.add((AbstractVariableDeclaration) node);
+					continue;
+				} else {
+					if (!varDeclQueue.isEmpty()) list.addToEnd(toVariableDefinition(varDeclQueue, params));
+					varDeclQueue.clear();
+					varDeclQueue.add((AbstractVariableDeclaration) node);
+					continue;
+				}
+			}
+			
+			if (!varDeclQueue.isEmpty()) list.addToEnd(toVariableDefinition(varDeclQueue, params));
+			varDeclQueue.clear();
+			list.addToEnd(toTree(node, params));
+		}
+		
+		if (!varDeclQueue.isEmpty()) list.addToEnd(toVariableDefinition(varDeclQueue, params));
 	}
 	
 	private void fillUtilityList(List<ASTNode> list, ASTNode... nodes) {
@@ -253,6 +288,60 @@ public class EcjTreeConverter {
 	
 	public void visit(ASTNode node) {
 		visitor.visitEcjNode(node);
+	}
+	
+	private Node toVariableDefinition(List<AbstractVariableDeclaration> decls, FlagKey... keys) {
+		Map<FlagKey, Object> map = Maps.newEnumMap(FlagKey.class);
+		for (FlagKey key : keys) map.put(key, key);
+		return toVariableDefinition(decls, map);
+	}
+	
+	private Node toVariableDefinition(List<AbstractVariableDeclaration> decls, Map<FlagKey, Object> params) {
+		lombok.ast.VariableDefinition def = createVariableDefinition(decls, params);
+		AbstractVariableDeclaration first = decls.get(0);
+		def.setPosition(toPosition(first.declarationSourceStart, first.sourceEnd));
+		
+		if (params.containsKey(FlagKey.AS_DEFINITION)) return def;
+		
+		lombok.ast.VariableDeclaration decl = new lombok.ast.VariableDeclaration();
+		if (first instanceof FieldDeclaration) {
+			decl.astJavadoc((lombok.ast.Comment) toTree(((FieldDeclaration)first).javadoc));
+		}
+		
+		decl.astDefinition(def);
+		decl.setPosition(toPosition(first.declarationSourceStart, first.declarationSourceEnd));
+		return decl;
+	}
+	
+	private lombok.ast.VariableDefinition createVariableDefinition(List<AbstractVariableDeclaration> decls, Map<FlagKey, Object> params) {
+		int dims = Integer.MAX_VALUE;
+		TypeReference winner = null;
+		for (AbstractVariableDeclaration decl : decls) {
+			TypeReference tr = decl.type;
+			if (tr == null) System.err.println("***" + decl);
+			int newDims = tr.dimensions();
+			if (newDims < dims) {
+				dims = newDims;
+				winner = tr;
+			}
+			if (dims == 0) break;
+		}
+		
+		AbstractVariableDeclaration first = decls.get(0);
+		lombok.ast.VariableDefinition varDef = new lombok.ast.VariableDefinition();
+		varDef.astModifiers(toModifiers(first.modifiers, first.annotations, first.modifiersSourceStart, first.declarationSourceStart));
+		varDef.astTypeReference((lombok.ast.TypeReference) toTree(winner));
+		varDef.astVarargs((first.type.bits & ASTNode.IsVarArgs) != 0);
+		
+		for (AbstractVariableDeclaration decl : decls) {
+			lombok.ast.VariableDefinitionEntry varDefEntry = new lombok.ast.VariableDefinitionEntry();
+			varDefEntry.astInitializer((lombok.ast.Expression) toTree(decl.initialization));
+			varDefEntry.astName(toIdentifier(decl.name, decl.sourceStart, decl.sourceEnd));
+			int delta = decl.type.dimensions() - winner.dimensions();
+			varDefEntry.astArrayDimensions(delta);
+			varDef.astVariables().addToEnd(varDefEntry);
+		}
+		return varDef;
 	}
 	
 	private lombok.ast.Identifier toIdentifier(char[] token, long pos) {
@@ -459,22 +548,23 @@ public class EcjTreeConverter {
 		}
 		
 		@Override public void visitLocalDeclaration(LocalDeclaration node) {
-			handleAbstractVariableDefinition(node);
+			set(node, toVariableDefinition(Arrays.<AbstractVariableDeclaration>asList(node), params));
 		}
 		
+		// TODO make sure we have a test for: private Object someField = new AICL() {};
+		
 		@Override public void visitFieldDeclaration(FieldDeclaration node) {
-			if (hasFlag(FlagKey.AS_ENUM) && node.initialization instanceof AllocationExpression) {
-				handleEnumConstant(node);
+			if (hasFlag(FlagKey.AS_ENUM)) {
+				if (node.initialization instanceof AllocationExpression) {
+					handleEnumConstant(node);
+				} else {
+					// Even just public enum c {A, B, C}; has 'new A()' as allocation expression - so this can't happen.
+					set(node, (Node) null);
+				}
 				return;
 			}
-			if(!hasFlag(FlagKey.AS_ENUM) && !(node.initialization instanceof AllocationExpression)) {
-				handleAbstractVariableDefinition(node);
-				return;
-			}
-			/*
-			 * Either an enumconstant during fieldparsing, or a field during enumconstant parsing
-			 */
-			set(node, (Node) null);
+			
+			set(node, toVariableDefinition(Arrays.<AbstractVariableDeclaration>asList(node)));
 		}
 		
 		@Override public void visitFieldReference(FieldReference node) {
@@ -503,40 +593,9 @@ public class EcjTreeConverter {
 			set(node, constant);
 		}
 		
-		public void handleAbstractVariableDefinition(AbstractVariableDeclaration node) {
-			lombok.ast.VariableDefinition varDef = createVariableDefinition(node);
-			varDef.setPosition(toPosition(node.declarationSourceStart, node.sourceEnd));
-			if (hasFlag(FlagKey.AS_DEFINITION)) {
-				set(node, varDef);
-				return;
-			}
-			
-			lombok.ast.VariableDeclaration decl = new lombok.ast.VariableDeclaration();
-			if (node instanceof FieldDeclaration) {
-				decl.astJavadoc((lombok.ast.Comment) toTree(((FieldDeclaration)node).javadoc));
-			}
-			
-			decl.astDefinition(varDef);
-			decl.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
-			
-			set(node, decl);
-		}
-		
-		private lombok.ast.VariableDefinition createVariableDefinition(AbstractVariableDeclaration node) {
-			lombok.ast.VariableDefinition varDef = new lombok.ast.VariableDefinition();
-			varDef.astModifiers(toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
-			varDef.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
-			varDef.astVarargs((node.type.bits & ASTNode.IsVarArgs) != 0);
-			
-			lombok.ast.VariableDefinitionEntry varDefEntry = new lombok.ast.VariableDefinitionEntry();
-			varDefEntry.astInitializer((lombok.ast.Expression) toTree(node.initialization));
-			varDefEntry.astName(toIdentifier(node.name, node.sourceStart, node.sourceEnd));
-			varDef.astVariables().addToEnd(varDefEntry);
-			return varDef;
-		}
-		
 		@Override public void visitBlock(Block node) {
-			set(node, setPosition(node, toBlock(node.statements)));
+			lombok.ast.Block lombokNode = toBlock(node.statements);
+			set(node, setPosition(node, lombokNode));
 		}
 		
 		@Override public void visitSingleTypeReference(SingleTypeReference node) {
@@ -1041,7 +1100,8 @@ public class EcjTreeConverter {
 		}
 		
 		@Override public void visitArgument(Argument node) {
-			lombok.ast.VariableDefinition varDef = createVariableDefinition(node);
+			lombok.ast.VariableDefinition varDef = (lombok.ast.VariableDefinition) toVariableDefinition(
+					Arrays.<AbstractVariableDeclaration>asList(node), FlagKey.NO_VARDECL_FOLDING, FlagKey.AS_DEFINITION);
 			set(node, setPosition(node, varDef));
 		}
 		
@@ -1108,7 +1168,7 @@ public class EcjTreeConverter {
 			
 			boolean semiColonBody = ((node.modifiers & ExtraCompilerModifiers.AccSemicolonBody) != 0);
 			if (!modifiers.isAbstract() && !node.isNative() && !semiColonBody) decl.astBody(toBlock(node.statements));
-			fillList(node.arguments, decl.rawParameters());
+			fillList(node.arguments, decl.rawParameters(), FlagKey.NO_VARDECL_FOLDING);
 			fillList(node.typeParameters, decl.rawTypeVariables());
 			fillList(node.thrownExceptions, decl.rawThrownTypeReferences());
 			

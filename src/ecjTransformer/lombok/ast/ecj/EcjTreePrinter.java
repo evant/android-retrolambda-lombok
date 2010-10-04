@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import lombok.Data;
 import lombok.SneakyThrows;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
@@ -75,6 +76,7 @@ public class EcjTreePrinter {
 	
 	private final Printer printer;
 	private Set<String> propertySkipList = Sets.newHashSet();
+	private List<ReferenceTrackingSkip> referenceTrackingSkipList = Lists.newArrayList();
 	
 	public EcjTreePrinter(boolean printPositions) {
 		printer = new Printer(printPositions);
@@ -98,6 +100,17 @@ public class EcjTreePrinter {
 		return this;
 	}
 	
+	@Data
+	private static class ReferenceTrackingSkip {
+		private final Class<? extends ASTNode> parent;
+		private final Class<?> type;
+	}
+	
+	public EcjTreePrinter skipReferenceTracking(Class<? extends ASTNode> parent, Class<?> type) {
+		referenceTrackingSkipList.add(new ReferenceTrackingSkip(parent, type));
+		return this;
+	}
+	
 	private final EcjTreeVisitor visitor = new EcjTreeVisitor() {
 		@Override public void visitAny(ASTNode node) {
 			Collection<ComponentField> fields = findFields(node);
@@ -115,7 +128,15 @@ public class EcjTreePrinter {
 				if (value == null) {
 					continue;
 				}
-				f.print(printer, this, value);
+				
+				boolean trackRef = true;
+				for (ReferenceTrackingSkip skip : referenceTrackingSkipList) {
+					if (skip.getParent() != null && !skip.getParent().isInstance(node)) continue;
+					if (skip.getType() != null && !skip.getType().isInstance(value)) continue;
+					trackRef = false;
+					break;
+				}
+				f.print(printer, this, value, trackRef);
 			}
 		}
 		
@@ -327,19 +348,23 @@ public class EcjTreePrinter {
 			printer.printProperty(typeName(), field.getName(), "reference to " + id, false);
 		}
 		
-		public void print(Printer printer, EcjTreeVisitor visitor, Object value) {
+		public void print(Printer printer, EcjTreeVisitor visitor, Object value, boolean trackRef) {
 			boolean posField = isPositionField();
 			
 			if (!printer.printPositions && posField) return;
 			if (!posField && isDefault(value)) return;
 			
-			unroll(printer, visitor, value, 0, field.getName(), posField);
+			unroll(printer, visitor, value, 0, field.getName(), posField, trackRef);
 		}
 		
-		private void unroll(Printer printer, EcjTreeVisitor visitor, Object value, int dim, String description, boolean posField) {
+		private void unroll(Printer printer, EcjTreeVisitor visitor, Object value, int dim, String description, boolean posField, boolean trackRef) {
 			if (dim == dimensions) {
 				if (value instanceof ASTNode) {
-					if (printer.visited.containsKey(value)) {
+					if (!trackRef) {
+						printer.begin(typeName(), description, value.getClass(), printer.objectCounter++);
+						visitor.visitEcjNode((ASTNode)value);
+						printer.end();
+					} else if (printer.visited.containsKey(value)) {
 						printVisited(printer, printer.visited.get(value));
 					} else {
 						printer.visited.put(value, printer.objectCounter);
@@ -364,7 +389,7 @@ public class EcjTreePrinter {
 					}
 					int length = Array.getLength(value);
 					for (int i = 0; i < length; i++) {
-						unroll(printer, visitor, Array.get(value, i), dim + 1, description + "[" + i + "]", posField);
+						unroll(printer, visitor, Array.get(value, i), dim + 1, description + "[" + i + "]", posField, trackRef);
 					}
 				}
 			}
