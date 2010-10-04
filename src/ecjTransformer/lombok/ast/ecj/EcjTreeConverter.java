@@ -715,7 +715,23 @@ public class EcjTreeConverter {
 		}
 		
 		@Override public void visitStringLiteralConcatenation(StringLiteralConcatenation node) {
-			visitStringLiteral(node);
+			Node lombokAggregator = null;
+			
+			if (node.literals != null) {
+				for (int i = 0; i < node.counter; i++) {
+					Node lombokElemNode = toTree(node.literals[i]);
+					if (lombokAggregator != null) {
+						Position newPos = new Position(lombokAggregator.getPosition().getStart(), lombokElemNode.getPosition().getEnd());
+						lombokAggregator = new lombok.ast.BinaryExpression().astOperator(BinaryOperator.PLUS)
+								.rawLeft(lombokAggregator).rawRight(lombokElemNode);
+						lombokAggregator.setPosition(newPos);
+					} else {
+						lombokAggregator = lombokElemNode;
+					}
+				}
+			}
+			
+			set(node, setPosition(node, lombokAggregator));
 		}
 		
 		@Override public void visitExtendedStringLiteral(ExtendedStringLiteral node) {
