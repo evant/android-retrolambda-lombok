@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * Copyright © 2010-2011 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 		return Arrays.asList(
 				DirDescriptor.of(new File("test/resources/idempotency"), true).withExclusion(Pattern.compile(".*EclipseHasBugs.*")),
 				DirDescriptor.of(new File("test/resources/alias"), true),
-				DirDescriptor.of(new File("test/resources/special"), true));
+				DirDescriptor.of(new File("test/resources/special"), true).withExclusion(Pattern.compile(".*EclipseHasBugs.*")));
 	}
 	
 	@Test
