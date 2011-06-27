@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * Copyright © 2010-2011 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@ import lombok.ast.AstVisitor;
 import lombok.ast.BinaryOperator;
 import lombok.ast.Comment;
 import lombok.ast.ForwardingAstVisitor;
+import lombok.ast.Identifier;
 import lombok.ast.JavadocContainer;
 import lombok.ast.KeywordModifier;
 import lombok.ast.Modifiers;
@@ -146,6 +147,7 @@ import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.compiler.lookup.Binding;
 import org.eclipse.jdt.internal.compiler.lookup.ExtraCompilerModifiers;
 import org.eclipse.jdt.internal.compiler.parser.JavadocParser;
+import org.eclipse.jdt.internal.compiler.parser.Parser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 
@@ -1783,7 +1785,21 @@ public class EcjTreeBuilder {
 			if (!node.isJavadoc()) {
 				throw new RuntimeException("Only javadoc expected here");
 			}
-			return set(node, new JustJavadocParser().parse(rawInput, node.getPosition().getStart(), node.getPosition().getEnd()));
+			
+			Node parent = node.getParent();
+			parent = parent == null ? null : parent.getParent();
+			while (parent != null && !(parent instanceof lombok.ast.TypeDeclaration)) parent = parent.getParent();
+			String typeName = null;
+			if (parent instanceof lombok.ast.TypeDeclaration) {
+				Identifier identifier = ((lombok.ast.TypeDeclaration)parent).astName();
+				if (identifier != null) typeName = identifier.astValue();
+			}
+			
+			if (typeName == null) {
+				typeName = getTypeNameFromFileName(compilationResult.getFileName());
+			}
+			
+			return set(node, new JustJavadocParser(reporter, typeName).parse(rawInput, node.getPosition().getStart(), node.getPosition().getEnd()));
 		}
 		
 		@Override
@@ -1849,21 +1865,34 @@ public class EcjTreeBuilder {
 	};
 	
 	private static class JustJavadocParser extends JavadocParser {
-		JustJavadocParser() {
-			super(null);
+		private static final char[] GENERIC_JAVA_CLASS_SUFFIX = "class Y{}".toCharArray();
+		
+		JustJavadocParser(ProblemReporter reporter, String mainTypeName) {
+			super(makeDummyParser(reporter, mainTypeName));
+		}
+		
+		private static Parser makeDummyParser(ProblemReporter reporter, String mainTypeName) {
+			Parser parser = new Parser(reporter, false);
+			CompilationResult cr = new CompilationResult((mainTypeName + ".java").toCharArray(), 0, 1, 0);
+			parser.compilationUnit = new CompilationUnitDeclaration(reporter, cr, 0);
+			return parser;
 		}
 		
 		Javadoc parse(String rawInput, int from, int to) {
-			// Eclipse crashes if there's no character following the javadoc.
-			char[] rawContent = new char[to + 1];
+			char[] rawContent;
+			
+			rawContent = new char[to + GENERIC_JAVA_CLASS_SUFFIX.length];
 			Arrays.fill(rawContent, 0, from, ' ');
 			System.arraycopy(rawInput.substring(from, to).toCharArray(), 0, rawContent, from, to - from);
-			rawContent[to] = ' ';
+			// Eclipse crashes if there's no character following the javadoc.
+			System.arraycopy(GENERIC_JAVA_CLASS_SUFFIX, 0, rawContent, to, GENERIC_JAVA_CLASS_SUFFIX.length);
+			
 			this.sourceLevel = ClassFileConstants.JDK1_6;
 			this.scanner.setSource(rawContent);
 			this.source = rawContent;
 			this.javadocStart = from;
 			this.javadocEnd = to;
+			this.reportProblems = false;
 			this.docComment = new Javadoc(this.javadocStart, this.javadocEnd);
 			commentParse();
 			this.docComment.valuePositions = -1;
@@ -1940,5 +1969,13 @@ public class EcjTreeBuilder {
 		}
 		
 		return start;
+	}
+	
+	private static String getTypeNameFromFileName(char[] fileName) {
+		String f = new String(fileName);
+		int start = Math.max(f.lastIndexOf('/'), f.lastIndexOf('\\'));
+		int end = f.lastIndexOf('.');
+		if (end == -1) end = f.length();
+		return f.substring(start + 1, end);
 	}
 }

@@ -21,13 +21,18 @@
  */
 package lombok.ast.grammar;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import lombok.ast.Node;
-import lombok.ast.ecj.EcjTreePrinter;
 import lombok.ast.ecj.EcjTreeBuilder;
+import lombok.ast.ecj.EcjTreePrinter;
+import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
@@ -46,6 +51,14 @@ import org.junit.runner.RunWith;
 public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 	public EcjTreeBuilderTest() {
 		super(true);
+	}
+	
+	@Override
+	protected Collection<DirDescriptor> getDirDescriptors() {
+		return Arrays.asList(
+				DirDescriptor.of(new File("test/resources/idempotency"), true).withExclusion(Pattern.compile(".*EclipseHasBugs.*")),
+				DirDescriptor.of(new File("test/resources/alias"), true),
+				DirDescriptor.of(new File("test/resources/special"), true));
 	}
 	
 	@Test
