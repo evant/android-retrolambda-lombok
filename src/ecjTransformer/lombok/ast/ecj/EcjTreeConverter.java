@@ -318,7 +318,6 @@ public class EcjTreeConverter {
 		TypeReference winner = null;
 		for (AbstractVariableDeclaration decl : decls) {
 			TypeReference tr = decl.type;
-			if (tr == null) System.err.println("***" + decl);
 			int newDims = tr.dimensions();
 			if (newDims < dims) {
 				dims = newDims;
@@ -508,15 +507,29 @@ public class EcjTreeConverter {
 		private lombok.ast.EnumTypeBody createEnumTypeBody(TypeDeclaration node) {
 			lombok.ast.EnumTypeBody body = new lombok.ast.EnumTypeBody();
 			List<ASTNode> orderedList = createOrderedMemberList(node);
+			List<ASTNode> enumConstants = new ArrayList<ASTNode>();
+			
+			if (node.fields != null) for (FieldDeclaration field : node.fields) {
+				if (isEnumConstant(field)) enumConstants.add(field);
+			}
+			
 			fillList(orderedList.toArray(new ASTNode[0]), body.rawMembers());
-			fillList(node.fields, body.rawConstants(), FlagKey.AS_ENUM);
+			fillList(enumConstants.toArray(new ASTNode[0]), body.rawConstants(), FlagKey.AS_ENUM);
 			body.setPosition(toPosition(node.bodyStart - 1, node.bodyEnd));
 			return body;
 		}
 		
+		private boolean isEnumConstant(FieldDeclaration field) {
+			return field.type == null && !(field instanceof Initializer);
+		}
+		
 		private List<ASTNode> createOrderedMemberList(TypeDeclaration node) {
 			List<ASTNode> orderedList = new ArrayList<ASTNode>();
-			fillUtilityList(orderedList, node.fields);
+			List<ASTNode> nonEnumConstants = new ArrayList<ASTNode>();
+			if (node.fields != null) for (FieldDeclaration field : node.fields) {
+				if (!isEnumConstant(field)) nonEnumConstants.add(field);
+			}
+			fillUtilityList(orderedList, nonEnumConstants.toArray(new ASTNode[0]));
 			fillUtilityList(orderedList, node.methods);
 			fillUtilityList(orderedList, node.memberTypes);
 			Collections.sort(orderedList, ASTNODE_ORDER);
