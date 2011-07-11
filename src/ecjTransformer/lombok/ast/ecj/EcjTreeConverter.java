@@ -1131,7 +1131,7 @@ public class EcjTreeConverter {
 			constr.astBody(block);
 			constr.astJavadoc((lombok.ast.Comment) toTree(node.javadoc));
 			constr.astModifiers(toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
-			fillList(node.arguments, constr.rawParameters());
+			fillList(node.arguments, constr.rawParameters(), FlagKey.AS_DEFINITION, FlagKey.NO_VARDECL_FOLDING);
 			fillList(node.typeParameters, constr.rawTypeVariables());
 			fillList(node.thrownExceptions, constr.rawThrownTypeReferences());
 			set(node, setPosition(node, constr));
@@ -1168,7 +1168,7 @@ public class EcjTreeConverter {
 			
 			boolean semiColonBody = ((node.modifiers & ExtraCompilerModifiers.AccSemicolonBody) != 0);
 			if (!modifiers.isAbstract() && !node.isNative() && !semiColonBody) decl.astBody(toBlock(node.statements));
-			fillList(node.arguments, decl.rawParameters(), FlagKey.NO_VARDECL_FOLDING);
+			fillList(node.arguments, decl.rawParameters(), FlagKey.AS_DEFINITION, FlagKey.NO_VARDECL_FOLDING);
 			fillList(node.typeParameters, decl.rawTypeVariables());
 			fillList(node.thrownExceptions, decl.rawThrownTypeReferences());
 			
