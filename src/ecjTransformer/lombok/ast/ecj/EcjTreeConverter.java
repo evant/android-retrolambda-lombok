@@ -35,6 +35,7 @@ import lombok.ast.Position;
 import lombok.ast.RawListAccessor;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.UnaryOperator;
+import lombok.ast.VariableDefinition;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ast.AND_AND_Expression;
@@ -248,6 +249,33 @@ public class EcjTreeConverter {
 		fillList(nodes, list, map);
 	}
 	
+	private VariableDefinition foldVariableDeclarationsForForStatement(ASTNode[] nodes) {
+		if (nodes == null || nodes.length == 0) throw new IllegalStateException("Folding requires at least 1 Local/FieldDeclaration.");
+		
+		// int i, j; is represented with multiple AVDs, but in lombok.ast, it's 1 node. We need to
+		// gather up sequential AVD nodes, check if the start position of each type is equal, and convert
+		// them to one VariableDefinition by calling a special method.
+		java.util.List<AbstractVariableDeclaration> varDeclQueue = new ArrayList<AbstractVariableDeclaration>();
+		
+		for (ASTNode node : nodes) {
+			if ((node instanceof FieldDeclaration || node instanceof LocalDeclaration) &&
+					((AbstractVariableDeclaration)node).type != null) {
+				
+				if ((varDeclQueue.isEmpty() || varDeclQueue.get(0).type.sourceStart == ((AbstractVariableDeclaration)node).type.sourceStart)) {
+					varDeclQueue.add((AbstractVariableDeclaration) node);
+					continue;
+				} else {
+					System.out.println("**!**!*!*!***!*!*" + ((AbstractVariableDeclaration)node).type.sourceStart + "-" + varDeclQueue.get(0).type.sourceStart + "-" + node.sourceStart);
+					throw new IllegalStateException("Folding only works on an array of Local/FieldDeclarations whose types have the same start position.");
+				}
+			} else {
+				throw new IllegalStateException("Only Field/LocalDeclarations allowed for folding.");
+			}
+		}
+		
+		return (VariableDefinition) toVariableDefinition(varDeclQueue, FlagKey.AS_DEFINITION);
+	}
+	
 	private void fillList(ASTNode[] nodes, RawListAccessor<?, ?> list, Map<FlagKey, Object> params) {
 		if (nodes == null) return;
 		
@@ -262,6 +290,7 @@ public class EcjTreeConverter {
 			if ((node instanceof FieldDeclaration || node instanceof LocalDeclaration) &&
 					((AbstractVariableDeclaration)node).type != null) {
 				
+				// TODO this should be "((AbstractVariableDeclaration)node).type" instead of "node". However, if we fix that, tests break. Investigate!
 				if (fold && (varDeclQueue.isEmpty() || varDeclQueue.get(0).type.sourceStart == node.sourceStart)) {
 					varDeclQueue.add((AbstractVariableDeclaration) node);
 					continue;
@@ -1040,7 +1069,11 @@ public class EcjTreeConverter {
 			forStat.astCondition(((lombok.ast.Expression) toTree(node.condition)));
 			forStat.astStatement((lombok.ast.Statement) toTree(node.action, FlagKey.AS_STATEMENT));
 			fillList(node.increments, forStat.rawUpdates());
-			fillList(node.initializations, forStat.rawExpressionInits(), FlagKey.AS_DEFINITION);
+			if (node.initializations != null && node.initializations.length > 0 && node.initializations[0] instanceof LocalDeclaration) {
+				forStat.astVariableDeclaration(foldVariableDeclarationsForForStatement(node.initializations));
+			} else {
+				fillList(node.initializations, forStat.rawExpressionInits());
+			}
 			
 			set(node, setPosition(node, forStat));
 		}
