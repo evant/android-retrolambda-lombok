@@ -249,33 +249,6 @@ public class EcjTreeConverter {
 		fillList(nodes, list, map);
 	}
 	
-	private VariableDefinition foldVariableDeclarationsForForStatement(ASTNode[] nodes) {
-		if (nodes == null || nodes.length == 0) throw new IllegalStateException("Folding requires at least 1 Local/FieldDeclaration.");
-		
-		// int i, j; is represented with multiple AVDs, but in lombok.ast, it's 1 node. We need to
-		// gather up sequential AVD nodes, check if the start position of each type is equal, and convert
-		// them to one VariableDefinition by calling a special method.
-		java.util.List<AbstractVariableDeclaration> varDeclQueue = new ArrayList<AbstractVariableDeclaration>();
-		
-		for (ASTNode node : nodes) {
-			if ((node instanceof FieldDeclaration || node instanceof LocalDeclaration) &&
-					((AbstractVariableDeclaration)node).type != null) {
-				
-				if ((varDeclQueue.isEmpty() || varDeclQueue.get(0).type.sourceStart == ((AbstractVariableDeclaration)node).type.sourceStart)) {
-					varDeclQueue.add((AbstractVariableDeclaration) node);
-					continue;
-				} else {
-					System.out.println("**!**!*!*!***!*!*" + ((AbstractVariableDeclaration)node).type.sourceStart + "-" + varDeclQueue.get(0).type.sourceStart + "-" + node.sourceStart);
-					throw new IllegalStateException("Folding only works on an array of Local/FieldDeclarations whose types have the same start position.");
-				}
-			} else {
-				throw new IllegalStateException("Only Field/LocalDeclarations allowed for folding.");
-			}
-		}
-		
-		return (VariableDefinition) toVariableDefinition(varDeclQueue, FlagKey.AS_DEFINITION);
-	}
-	
 	private void fillList(ASTNode[] nodes, RawListAccessor<?, ?> list, Map<FlagKey, Object> params) {
 		if (nodes == null) return;
 		
@@ -1070,7 +1043,11 @@ public class EcjTreeConverter {
 			forStat.astStatement((lombok.ast.Statement) toTree(node.action, FlagKey.AS_STATEMENT));
 			fillList(node.increments, forStat.rawUpdates());
 			if (node.initializations != null && node.initializations.length > 0 && node.initializations[0] instanceof LocalDeclaration) {
-				forStat.astVariableDeclaration(foldVariableDeclarationsForForStatement(node.initializations));
+				List<AbstractVariableDeclaration> decls = Lists.newArrayList();
+				for (Statement initialization : node.initializations) {
+					if (initialization instanceof AbstractVariableDeclaration) decls.add((AbstractVariableDeclaration) initialization);
+				}
+				forStat.astVariableDeclaration((VariableDefinition) toVariableDefinition(decls, FlagKey.AS_DEFINITION));
 			} else {
 				fillList(node.initializations, forStat.rawExpressionInits());
 			}
@@ -1140,7 +1117,9 @@ public class EcjTreeConverter {
 			
 			for (int i = 0; i < catchBlocks.length; i++) {
 				lombok.ast.Catch cat = new lombok.ast.Catch();
-				cat.astExceptionDeclaration((lombok.ast.VariableDefinition) toTree(catchArguments[i]));
+				VariableDefinition catchArg = (VariableDefinition) toTree(catchArguments[i]);
+				catchArg.setPosition(new Position(catchArguments[i].declarationSourceStart, catchArguments[i].sourceEnd + 1));
+				cat.astExceptionDeclaration(catchArg);
 				cat.astBody((lombok.ast.Block) toTree(catchBlocks[i]));
 				astCatches.addToEnd(cat);
 			}
