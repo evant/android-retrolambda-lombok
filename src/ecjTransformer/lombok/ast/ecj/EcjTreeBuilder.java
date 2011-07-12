@@ -1771,12 +1771,13 @@ public class EcjTreeBuilder {
 		
 		@Override
 		public boolean visitCase(lombok.ast.Case node) {
+			// end and start args are switched around on CaseStatement, presumably because the API designer was drunk at the time.
 			return set(node, new CaseStatement(toExpression(node.astCondition()), end(node.rawCondition()), start(node)));
 		}
 		
 		@Override
 		public boolean visitDefault(lombok.ast.Default node) {
-			//These are switched around because the eclipse API designer at the time was possibly drunk. It's intentional.
+			// end and start args are switched around on CaseStatement, presumably because the API designer was drunk at the time.
 			return set(node, new CaseStatement(null, posOfStructure(node, "default", 0, false) - 1, start(node)));
 		}
 		
@@ -1958,6 +1959,7 @@ public class EcjTreeBuilder {
 	
 	private int posOfStructure(lombok.ast.Node node, String structure, int idx, boolean atStart) {
 		int start = node.getPosition().getStart();
+		int end = node.getPosition().getEnd();
 		
 		if (sourceStructures != null && sourceStructures.containsKey(node)) {
 			for (SourceStructure struct : sourceStructures.get(node)) {
@@ -1968,7 +1970,7 @@ public class EcjTreeBuilder {
 			}
 		}
 		
-		return start;
+		return atStart ? start : end;
 	}
 	
 	private static String getTypeNameFromFileName(char[] fileName) {

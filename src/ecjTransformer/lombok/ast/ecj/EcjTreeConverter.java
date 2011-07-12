@@ -1101,6 +1101,7 @@ public class EcjTreeConverter {
 			lombok.ast.Switch switchStat = new lombok.ast.Switch();
 			switchStat.astCondition((lombok.ast.Expression) toTree(node.expression));
 			switchStat.astBody(toBlock(node.statements));
+			switchStat.astBody().setPosition(toPosition(node.blockStart, node.sourceEnd));
 			set(node, setPosition(node, switchStat));
 		}
 		
