@@ -134,7 +134,6 @@
 				</fileset>
 			</batchtest>
 		</junit>
-		<echo level="info">All tests successful.</echo>
 	</target>
 	
 	<target name="compileTests" depends="compile, ensureTestDeps" description="compiles test code">
