@@ -102,7 +102,22 @@
 		<echo>NOTE: If you see a wash of errors above this line, ignore them. Compilation succeeded; this is a javac bug.</echo>
 	</target>
 	
-	<target name="compile" depends="ensureBuildDeps, templateProcessor" description="Compiles all code for lombok.ast">
+	<target name="-compileNeeded">
+		<uptodate property="build.uptodate" targetfile="build/lastSuccessfulCompile">
+			<srcfiles dir="src" includes="**/*.java" />
+		</uptodate>
+	</target>
+	
+	<target name="compile" depends="-compileNeeded, ensureBuildDeps, templateProcessor" description="Compiles all code for lombok.ast" unless="build.uptodate">
+		<!--
+			Because of the way annotations in file A influence the generation behaviour for file B, either compile everything or nothing; no incremental compiling works (at least for the ast classes).
+			To avoid needless recompilation of everything when nothing changed, we use a separate file to track if we need to compile anything.
+		-->
+		<tstamp>
+			<format property="compile.started" pattern="yyyyMMddHHmmssSSS" />
+		</tstamp>
+		<delete dir="build/lombok.ast" quiet="true" />
+		<delete dir="build/lombok.ast_generatedSource" quiet="true" />
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<ivy:compile destdir="build/lombok.ast">
 			<src path="src/main" />
@@ -114,6 +129,7 @@
 			<compilerarg value="-s" />
 			<compilerarg path="build/lombok.ast_generatedSource" />
 		</ivy:compile>
+		<touch file="build/lastSuccessfulCompile" datetime="${compile.started}" pattern="yyyyMMddHHmmssSSS" />
 	</target>
 	
 	<target name="-test.quiet">
@@ -121,7 +137,7 @@
 	</target>
 	
 	<target name="test" depends="compile, ensureTestDeps, compileTests" description="Runs unit tests.">
-		<junit haltonfailure="no" fork="on">
+		<junit fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
 			<jvmarg value="-Xbootclasspath/p:lib/test/javac.jar" />
 			<classpath refid="test.path" />
@@ -214,7 +230,7 @@
 		</unjar>
 	</target>
 	
-	<target name="dist" depends="compile, version, unpackLibs, -test.quiet, test" description="Creates distributable.">
+	<target name="dist" depends="compile, version, unpackLibs" description="Creates distributable.">
 		<mkdir dir="dist" />
 		<jar basedir="build/lombok.ast" destfile="dist/lombok.ast-${lombok.ast.version}.jar" />
 		<copy file="dist/lombok.ast-${lombok.ast.version}.jar" tofile="dist/lombok.ast.jar" />

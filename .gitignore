@@ -4,6 +4,7 @@
 /.factorypath
 /bin
 /build
+/dist
 /report
 .apt_generated
 *.class
