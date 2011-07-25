@@ -23,6 +23,7 @@ package lombok.ast.ecj;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import lombok.SneakyThrows;
 import lombok.ast.AnnotationDeclaration;
 import lombok.ast.AnnotationValueArray;
 import lombok.ast.AstVisitor;
@@ -1171,29 +1173,11 @@ public class EcjTreeBuilder {
 		
 		@Override
 		public boolean visitCast(lombok.ast.Cast node) {
-			//TODO try stuffing every possible eclipsian type style in a cast, because the stupid thing treats it as a name reference. D'oh.
 			Expression typeRef = toExpression(node.astTypeReference());
-			// TODO Eclipse 3.7 unfucked this up http://dev.eclipse.org/viewcvs/viewvc.cgi/org.eclipse.jdt.core/compiler/org/eclipse/jdt/internal/compiler/ast/CastExpression.java?revision=1.138&view=markup
-			// So:
-			//   Use reflection to check if constructor's paramtypes are:
-			//     (Expression, Expression), indicating 3.6-, or
-			//     (Expression, TypeReference), indicating 3.7+
-			//   in the former case, convert STR/QTR to SNR/QNR. In the latter case, don't.
-			//   then use reflection to call constructor.
-			if (typeRef.getClass() == SingleTypeReference.class && !node.astTypeReference().isPrimitive()) {
-				SingleTypeReference str = (SingleTypeReference) typeRef;
-				//Why a SingleNameReference instead of a SingleTypeReference you ask? I don't know. It seems dumb. Ask the ecj guys.
-				typeRef = new SingleNameReference(str.token, 0);
-				typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
-				typeRef.sourceStart = str.sourceStart;
-				typeRef.sourceEnd = str.sourceEnd;
-			} else if (typeRef.getClass() == QualifiedTypeReference.class) {
-				QualifiedTypeReference qtr = (QualifiedTypeReference) typeRef;
-				//Same here, but for the more complex types, they stay types.
-				typeRef = new QualifiedNameReference(qtr.tokens, qtr.sourcePositions, qtr.sourceStart, qtr.sourceEnd);
-				typeRef.bits = (typeRef.bits & ~Binding.VARIABLE) | Binding.TYPE;
-			}
-			CastExpression expr = new CastExpression(toExpression(node.astOperand()), typeRef);
+			Expression operand = toExpression(node.astOperand());
+			
+			CastExpression expr = createCastExpression(typeRef, operand);
+			
 			if (ecjTreeCreatorPositionInfo != null) {
 				typeRef.sourceStart = getEcjPos(node, "type").getStart();
 				typeRef.sourceEnd = getEcjPos(node, "type").getEnd();
@@ -1204,6 +1188,15 @@ public class EcjTreeBuilder {
 			expr.sourceStart = start(node);
 			expr.sourceEnd = end(node);
 			return set(node, expr);
+		}
+		
+		@SneakyThrows
+		private CastExpression createCastExpression(Expression typeRef, Expression operand) {
+			try {
+				return (CastExpression) CastExpression.class.getConstructors()[0].newInstance(operand, typeRef);
+			} catch (InvocationTargetException e) {
+				throw e.getCause();
+			}
 		}
 		
 		@Override
