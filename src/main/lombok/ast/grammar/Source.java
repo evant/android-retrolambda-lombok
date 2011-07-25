@@ -172,14 +172,16 @@ public class Source {
 	}
 	
 	private void postProcess() {
-		nodes.add(parsingResult.parseTreeRoot.getValue());
 		for (ParseError error : parsingResult.parseErrors) {
 			int errStart = error.getStartIndex();
 			int errEnd = error.getEndIndex();
 			problems.add(new ParseProblem(new Position(mapPosition(errStart), mapPosition(errEnd)), error.toString()));
 		}
 		
-		gatherComments(parsingResult.parseTreeRoot);
+		if (parsingResult.parseTreeRoot != null) {
+			nodes.add(parsingResult.parseTreeRoot.getValue());
+			gatherComments(parsingResult.parseTreeRoot);
+		}
 		
 		comments = Collections.unmodifiableList(comments);
 		nodes = Collections.unmodifiableList(nodes);
