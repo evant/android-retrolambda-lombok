@@ -1173,6 +1173,13 @@ public class EcjTreeBuilder {
 		public boolean visitCast(lombok.ast.Cast node) {
 			//TODO try stuffing every possible eclipsian type style in a cast, because the stupid thing treats it as a name reference. D'oh.
 			Expression typeRef = toExpression(node.astTypeReference());
+			// TODO Eclipse 3.7 unfucked this up http://dev.eclipse.org/viewcvs/viewvc.cgi/org.eclipse.jdt.core/compiler/org/eclipse/jdt/internal/compiler/ast/CastExpression.java?revision=1.138&view=markup
+			// So:
+			//   Use reflection to check if constructor's paramtypes are:
+			//     (Expression, Expression), indicating 3.6-, or
+			//     (Expression, TypeReference), indicating 3.7+
+			//   in the former case, convert STR/QTR to SNR/QNR. In the latter case, don't.
+			//   then use reflection to call constructor.
 			if (typeRef.getClass() == SingleTypeReference.class && !node.astTypeReference().isPrimitive()) {
 				SingleTypeReference str = (SingleTypeReference) typeRef;
 				//Why a SingleNameReference instead of a SingleTypeReference you ask? I don't know. It seems dumb. Ask the ecj guys.
