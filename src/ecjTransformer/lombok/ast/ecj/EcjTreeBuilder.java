@@ -1574,17 +1574,21 @@ public class EcjTreeBuilder {
 				} else if (entry.astArrayDimensions() > 0 || node.astVarargs()) {
 					decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 					decl.type.sourceStart = base.sourceStart;
-					// This makes no sense whatsoever but eclipse wants it this way.
-					if (firstDecl == null && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
-						decl.type.sourceEnd = posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1;
-					} else if (firstDecl != null) {
-						// This replicates an eclipse bug; the end pos of the type of b in: int[] a[][], b[]; is in fact the second closing ] of a.
-						decl.type.sourceEnd = firstDecl.type.sourceEnd;
-					} else decl.type.sourceEnd = base.sourceEnd;
-					// Yet another eclipse inconsistency.
-					if (kind == VariableKind.FIELD && base instanceof ArrayQualifiedTypeReference) {
-						long[] poss = ((ArrayQualifiedTypeReference)base).sourcePositions;
-						decl.type.sourceEnd = (int) poss[poss.length - 1];
+					if (ecjTreeCreatorPositionInfo != null) {
+						decl.type.sourceEnd = getEcjPos(entry, "typeSourcePos").getEnd();
+					} else {
+						// This makes no sense whatsoever but eclipse wants it this way.
+						if (firstDecl == null && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
+							decl.type.sourceEnd = posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1;
+						} else if (firstDecl != null) {
+							// This replicates an eclipse bug; the end pos of the type of b in: int[] a[][], b[]; is in fact the second closing ] of a.
+							decl.type.sourceEnd = firstDecl.type.sourceEnd;
+						} else decl.type.sourceEnd = base.sourceEnd;
+						// Yet another eclipse inconsistency.
+						if (kind == VariableKind.FIELD && base instanceof ArrayQualifiedTypeReference) {
+							long[] poss = ((ArrayQualifiedTypeReference)base).sourcePositions;
+							decl.type.sourceEnd = (int) poss[poss.length - 1];
+						}
 					}
 					if (node.astVarargs()) {
 						if (decl.type instanceof ArrayTypeReference) {
@@ -1631,9 +1635,14 @@ public class EcjTreeBuilder {
 					break;
 				case FIELD:
 					decl.declarationSourceEnd = decl.declarationEnd = end(node.getParent());
-					((FieldDeclaration)decl).endPart1Position = end(node.rawTypeReference()) + 1;
-					((FieldDeclaration)decl).endPart2Position = end(node.getParent());
-					if (prevDecl instanceof FieldDeclaration) {
+					if (ecjTreeCreatorPositionInfo != null) {
+						((FieldDeclaration)decl).endPart1Position = getEcjPos(entry, "varDeclPart1").getEnd();
+						((FieldDeclaration)decl).endPart2Position = getEcjPos(entry, "varDeclPart2").getEnd();
+					} else {
+						((FieldDeclaration)decl).endPart1Position = end(node.rawTypeReference()) + 1;
+						((FieldDeclaration)decl).endPart2Position = end(node.getParent());
+					}
+					if (ecjTreeCreatorPositionInfo == null && prevDecl instanceof FieldDeclaration) {
 						((FieldDeclaration)prevDecl).endPart2Position = start(entry) - 1;
 					}
 					break;

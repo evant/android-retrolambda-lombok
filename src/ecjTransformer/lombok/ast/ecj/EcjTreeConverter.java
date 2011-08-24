@@ -267,8 +267,7 @@ public class EcjTreeConverter {
 			if ((node instanceof FieldDeclaration || node instanceof LocalDeclaration) &&
 					((AbstractVariableDeclaration)node).type != null) {
 				
-				// TODO this should be "((AbstractVariableDeclaration)node).type" instead of "node". However, if we fix that, tests break. Investigate!
-				if (fold && (varDeclQueue.isEmpty() || varDeclQueue.get(0).type.sourceStart == node.sourceStart)) {
+				if (fold && (varDeclQueue.isEmpty() || varDeclQueue.get(0).type.sourceStart == ((AbstractVariableDeclaration)node).type.sourceStart)) {
 					varDeclQueue.add((AbstractVariableDeclaration) node);
 					continue;
 				} else {
@@ -343,6 +342,11 @@ public class EcjTreeConverter {
 		
 		for (AbstractVariableDeclaration decl : decls) {
 			lombok.ast.VariableDefinitionEntry varDefEntry = new lombok.ast.VariableDefinitionEntry();
+			if (first instanceof FieldDeclaration) {
+				setPosInfo(varDefEntry, "varDeclPart1", new Position(decl.sourceStart, ((FieldDeclaration) decl).endPart1Position));
+				setPosInfo(varDefEntry, "varDeclPart2", new Position(decl.sourceStart, ((FieldDeclaration) decl).endPart2Position));
+			}
+			setPosInfo(varDefEntry, "typeSourcePos", new Position(decl.type.sourceStart, decl.type.sourceEnd));
 			varDefEntry.astInitializer((lombok.ast.Expression) toTree(decl.initialization));
 			varDefEntry.astName(toIdentifier(decl.name, decl.sourceStart, decl.sourceEnd));
 			int delta = decl.type.dimensions() - winner.dimensions();
