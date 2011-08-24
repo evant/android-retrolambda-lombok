@@ -1590,7 +1590,11 @@ public class EcjTreeBuilder {
 						if (decl.type instanceof ArrayTypeReference) {
 							((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
 						}
-						decl.type.sourceEnd = posOfStructure(node, "...", Integer.MAX_VALUE, false) - 1;
+						if (ecjTreeCreatorPositionInfo != null) {
+							decl.type.sourceEnd = getEcjPos(node, "typeref").getEnd() - 1;
+						} else {
+							decl.type.sourceEnd = posOfStructure(node, "...", Integer.MAX_VALUE, false) - 1;
+						}
 					} else {
 						if (decl.type instanceof ArrayTypeReference) {
 							((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;

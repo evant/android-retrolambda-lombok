@@ -332,7 +332,10 @@ public class EcjTreeConverter {
 		lombok.ast.VariableDefinition varDef = new lombok.ast.VariableDefinition();
 		varDef.astModifiers(toModifiers(first.modifiers, first.annotations, first.modifiersSourceStart, first.declarationSourceStart));
 		varDef.astTypeReference((lombok.ast.TypeReference) toTree(winner));
-		varDef.astVarargs((first.type.bits & ASTNode.IsVarArgs) != 0);
+		if ((first.type.bits & ASTNode.IsVarArgs) != 0) {
+			varDef.astVarargs(true);
+			setPosInfo(varDef, "typeref", new Position(first.type.sourceStart, first.type.sourceEnd + 1));
+		}
 		
 		for (AbstractVariableDeclaration decl : decls) {
 			lombok.ast.VariableDefinitionEntry varDefEntry = new lombok.ast.VariableDefinitionEntry();
