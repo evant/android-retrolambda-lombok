@@ -1960,16 +1960,18 @@ public class EcjTreeBuilder {
 	private int posOfStructure(lombok.ast.Node node, String structure, int idx, boolean atStart) {
 		int start = node.getPosition().getStart();
 		int end = node.getPosition().getEnd();
+		Integer result = null;
 		
 		if (sourceStructures != null && sourceStructures.containsKey(node)) {
 			for (SourceStructure struct : sourceStructures.get(node)) {
 				if (structure.equals(struct.getContent())) {
-					start = atStart ? struct.getPosition().getStart() : struct.getPosition().getEnd();
+					result = atStart ? struct.getPosition().getStart() : struct.getPosition().getEnd();
 					if (idx-- <= 0) break;
 				}
 			}
 		}
 		
+		if (result != null) return result;
 		return atStart ? start : end;
 	}
 	
