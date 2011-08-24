@@ -1153,6 +1153,7 @@ public class EcjTreeConverter {
 			lombok.ast.ConstructorDeclaration constr = new lombok.ast.ConstructorDeclaration();
 			constr.astTypeName(toIdentifier(node.selector, node.sourceStart, node.sourceEnd));
 			lombok.ast.Block block = toBlock(node.statements);
+			block.setPosition(new Position(node.bodyStart - 1, node.bodyEnd + 2));
 			block.astContents().addToEnd((lombok.ast.Statement)toTree(node.constructorCall, FlagKey.AS_STATEMENT));
 			constr.astBody(block);
 			constr.astJavadoc((lombok.ast.Comment) toTree(node.javadoc));
@@ -1160,7 +1161,9 @@ public class EcjTreeConverter {
 			fillList(node.arguments, constr.rawParameters(), FlagKey.AS_DEFINITION, FlagKey.NO_VARDECL_FOLDING);
 			fillList(node.typeParameters, constr.rawTypeVariables());
 			fillList(node.thrownExceptions, constr.rawThrownTypeReferences());
-			set(node, setPosition(node, constr));
+			setPosInfo(constr, "signature", new Position(node.sourceStart, node.sourceEnd + 1));
+			constr.setPosition(new Position(node.declarationSourceStart, node.declarationSourceEnd + 1));
+			set(node, constr);
 		}
 		
 		@Override public void visitExplicitConstructorCall(ExplicitConstructorCall node) {
@@ -1193,12 +1196,18 @@ public class EcjTreeConverter {
 			decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
 			
 			boolean semiColonBody = ((node.modifiers & ExtraCompilerModifiers.AccSemicolonBody) != 0);
-			if (!modifiers.isAbstract() && !node.isNative() && !semiColonBody) decl.astBody(toBlock(node.statements));
+			if (!modifiers.isAbstract() && !node.isNative() && !semiColonBody) {
+				lombok.ast.Block block = toBlock(node.statements);
+				block.setPosition(new Position(node.bodyStart - 1, node.bodyEnd + 2));
+				decl.astBody(block);
+			}
 			fillList(node.arguments, decl.rawParameters(), FlagKey.AS_DEFINITION, FlagKey.NO_VARDECL_FOLDING);
 			fillList(node.typeParameters, decl.rawTypeVariables());
 			fillList(node.thrownExceptions, decl.rawThrownTypeReferences());
 			
-			set(node, setPosition(node, decl));
+			setPosInfo(decl, "signature", new Position(node.sourceStart, node.sourceEnd + 1));
+			decl.setPosition(new Position(node.declarationSourceStart, node.declarationSourceEnd + 1));
+			set(node, decl);
 		}
 		
 		@Override public void visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {

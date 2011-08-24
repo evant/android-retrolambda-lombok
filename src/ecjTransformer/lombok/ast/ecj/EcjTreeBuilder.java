@@ -709,7 +709,11 @@ public class EcjTreeBuilder {
 			decl.declarationSourceEnd = end(node);
 			decl.sourceStart = start(node.astTypeName());
 			/* set sourceEnd */ {
-				decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
+				if (ecjTreeCreatorPositionInfo != null) {
+					decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
+				} else {
+					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
+				}
 				
 				if (!node.rawThrownTypeReferences().isEmpty()) {
 					decl.sourceEnd = end(node.rawThrownTypeReferences().last());
@@ -760,7 +764,11 @@ public class EcjTreeBuilder {
 			decl.sourceStart = start(node.astMethodName());
 			boolean setOriginalPosOnType = false;
 			/* set sourceEnd */ {
-				decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
+				if (ecjTreeCreatorPositionInfo != null) {
+					decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
+				} else {
+					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
+				}
 				int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
 				if (postDims > decl.sourceEnd) {
 					decl.sourceEnd = postDims;
