@@ -976,6 +976,7 @@ public class EcjTreeConverter {
 			lombok.ast.ConstructorInvocation constr = new lombok.ast.ConstructorInvocation();
 			constr.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
 			lombok.ast.NormalTypeBody body = createNormalTypeBody(node.anonymousType);
+			setPosInfo(constr, "signature", new Position(node.anonymousType.sourceStart, node.anonymousType.sourceEnd + 1));
 			constr.astAnonymousClassBody(body);
 			
 			set(node, setPosition(node, constr));

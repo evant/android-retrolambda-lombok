@@ -961,8 +961,13 @@ public class EcjTreeBuilder {
 			if (node.astQualifier() != null || node.astAnonymousClassBody() != null) {
 				if (node.astAnonymousClassBody() != null) {
 					TypeDeclaration decl = createTypeBody(node.astAnonymousClassBody().astMembers(), null, false, 0);
-					decl.sourceStart = start(node.rawTypeReference());
-					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1;
+					if (ecjTreeCreatorPositionInfo != null) {
+						decl.sourceStart = getEcjPos(node, "signature").getStart();
+						decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
+					} else {
+						decl.sourceStart = start(node.rawTypeReference());
+						decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1;
+					}
 					decl.declarationSourceStart = decl.sourceStart;
 					decl.declarationSourceEnd = end(node);
 					decl.name = CharOperation.NO_CHAR;
