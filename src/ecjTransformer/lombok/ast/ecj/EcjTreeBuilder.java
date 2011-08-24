@@ -551,11 +551,9 @@ public class EcjTreeBuilder {
 				return;
 			}
 			if (parent instanceof lombok.ast.CompilationUnit) {
-				if (!isEnum) {
-					char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
-					if (!CharOperation.equals(decl.name, mainTypeName)) {
-						decl.bits |= ASTNode.IsSecondaryType;
-					}
+				char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
+				if (!CharOperation.equals(decl.name, mainTypeName)) {
+					decl.bits |= ASTNode.IsSecondaryType;
 				}
 				return;
 			} 
@@ -637,11 +635,6 @@ public class EcjTreeBuilder {
 			decl.sourceEnd = end(node.astName());
 			decl.declarationSourceStart = decl.modifiersSourceStart = jstart(node);
 			decl.declarationSourceEnd = decl.declarationEnd = end(node);
-			
-			char[] mainTypeName = new CompilationUnitDeclaration(reporter, compilationResult, 0).getMainTypeName();
-			if (!CharOperation.equals(decl.name, mainTypeName)) {
-				decl.bits |= ASTNode.IsSecondaryType;
-			}
 			
 			AllocationExpression init;
 			if (node.astBody() == null) {
