@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
+ * Copyright © 2010-2011 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -237,6 +237,10 @@ public class EcjTreeConverter {
 	
 	private void setPosInfo(Node lombokNode, String key, Position info) {
 		positionInfo.put(new PosInfoKey(lombokNode, key), info);
+	}
+	
+	private void setStructInfo(Node lombokNode, String key) {
+		positionInfo.put(new PosInfoKey(lombokNode, key), Position.UNPLACED);
 	}
 	
 	public void transferPositionInfo(EcjTreeBuilder builder) {
@@ -1236,7 +1240,9 @@ public class EcjTreeConverter {
 		}
 		
 		@Override public void visitMarkerAnnotation(MarkerAnnotation node) {
-			set(node, setPosition(node, createAnnotation(node)));
+			lombok.ast.Annotation annot = createAnnotation(node);
+			annot.setPosition(new Position(node.sourceStart, node.declarationSourceEnd + 1));
+			set(node, annot);
 		}
 		
 		@Override public void visitSingleMemberAnnotation(SingleMemberAnnotation node) {
@@ -1244,13 +1250,16 @@ public class EcjTreeConverter {
 			lombok.ast.AnnotationElement element = new lombok.ast.AnnotationElement();
 			element.astValue((lombok.ast.AnnotationValue) toTree(node.memberValue));
 			annot.astElements().addToEnd(element);
-			set(node, setPosition(node, annot));
+			annot.setPosition(new Position(node.sourceStart, node.declarationSourceEnd + 1));
+			set(node, annot);
 		}
 		
 		@Override public void visitNormalAnnotation(NormalAnnotation node) {
 			lombok.ast.Annotation annot = createAnnotation(node);
 			fillList(node.memberValuePairs, annot.rawElements());
-			set(node, setPosition(node, annot));
+			annot.setPosition(new Position(node.sourceStart, node.declarationSourceEnd + 1));
+			setStructInfo(annot, "isNormal");
+			set(node, annot);
 		}
 	
 		private lombok.ast.Annotation createAnnotation(Annotation node) {

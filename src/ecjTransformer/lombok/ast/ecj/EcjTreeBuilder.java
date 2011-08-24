@@ -1743,7 +1743,12 @@ public class EcjTreeBuilder {
 		public boolean visitAnnotation(lombok.ast.Annotation node) {
 			//TODO add test where the value is the result of string concatenation
 			TypeReference type = (TypeReference) toTree(node.astAnnotationTypeReference());
-			if (node.astElements().isEmpty() && countStructure(node, "(") == 0) {
+			boolean isEcjNormal = false;
+			if (ecjTreeCreatorPositionInfo != null) {
+				Position p = getEcjPos(node, "isNormal");
+				isEcjNormal = p != null && p.isUnplaced();
+			}
+			if (node.astElements().isEmpty() && countStructure(node, "(") == 0 && !isEcjNormal) {
 				MarkerAnnotation ann = new MarkerAnnotation(type, start(node));
 				ann.declarationSourceEnd = end(node);
 				return set(node, ann);
