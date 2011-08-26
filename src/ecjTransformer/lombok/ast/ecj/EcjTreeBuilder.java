@@ -828,12 +828,17 @@ public class EcjTreeBuilder {
 			decl.sourceStart = start(node.astMethodName());
 			boolean setOriginalPosOnType = false;
 			/* set sourceEnd */ {
-				decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
-				int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
-				decl.extendedDimensions = countStructure(node, "]");
-				if (postDims > decl.sourceEnd) {
-					decl.sourceEnd = postDims;
-					setOriginalPosOnType = true;
+				if (ecjTreeCreatorPositionInfo != null) {
+					decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
+					decl.extendedDimensions = getEcjPos(node, "extendedDimensions").getStart();
+				} else {
+					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
+					int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
+					decl.extendedDimensions = countStructure(node, "]");
+					if (postDims > decl.sourceEnd) {
+						decl.sourceEnd = postDims;
+						setOriginalPosOnType = true;
+					}
 				}
 			}
 			decl.bodyStart = end(node);
@@ -1003,7 +1008,11 @@ public class EcjTreeBuilder {
 	//		inv.modifiers = decl.modifiers & VISIBILITY_MASK;
 			if (!node.astConstructorTypeArguments().isEmpty()) {
 				inv.typeArguments = toArray(TypeReference.class, node.astConstructorTypeArguments());
-				inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
+				if (ecjTreeCreatorPositionInfo != null) {
+					inv.typeArgumentsSourceStart = getEcjPos(node, "typeArguments").getStart();
+				} else {
+					inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
+				}
 			}
 			inv.arguments = toArray(Expression.class, node.astArguments());
 			return set(node, inv);
@@ -1017,7 +1026,11 @@ public class EcjTreeBuilder {
 	//		inv.modifiers = decl.modifiers & VISIBILITY_MASK;
 			if (!node.astConstructorTypeArguments().isEmpty()) {
 				inv.typeArguments = toArray(TypeReference.class, node.astConstructorTypeArguments());
-				inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
+				if (ecjTreeCreatorPositionInfo != null) {
+					inv.typeArgumentsSourceStart = getEcjPos(node, "typeArguments").getStart();
+				} else {
+					inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
+				}
 			}
 			inv.arguments = toArray(Expression.class, node.astArguments());
 			inv.qualification = toExpression(node.astQualifier());
@@ -1186,7 +1199,7 @@ public class EcjTreeBuilder {
 			
 			if (ecjTreeCreatorPositionInfo != null) {
 				typeRef.sourceStart = getEcjPos(node, "type").getStart();
-				typeRef.sourceEnd = getEcjPos(node, "type").getEnd();
+				typeRef.sourceEnd = getEcjPos(node, "type").getEnd() - 1;
 			} else if (sourceStructures != null) {
 				typeRef.sourceStart = posOfStructure(node, "(", 0, true) + 1;
 				typeRef.sourceEnd = posOfStructure(node, ")", 0, true) - 1;
@@ -1580,7 +1593,7 @@ public class EcjTreeBuilder {
 					decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 					decl.type.sourceStart = base.sourceStart;
 					if (ecjTreeCreatorPositionInfo != null) {
-						decl.type.sourceEnd = getEcjPos(entry, "typeSourcePos").getEnd();
+						decl.type.sourceEnd = getEcjPos(entry, "typeSourcePos").getEnd() - 1;
 					} else {
 						// This makes no sense whatsoever but eclipse wants it this way.
 						if (firstDecl == null && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
@@ -1641,8 +1654,8 @@ public class EcjTreeBuilder {
 				case FIELD:
 					decl.declarationSourceEnd = decl.declarationEnd = end(node.getParent());
 					if (ecjTreeCreatorPositionInfo != null) {
-						((FieldDeclaration)decl).endPart1Position = getEcjPos(entry, "varDeclPart1").getEnd();
-						((FieldDeclaration)decl).endPart2Position = getEcjPos(entry, "varDeclPart2").getEnd();
+						((FieldDeclaration)decl).endPart1Position = getEcjPos(entry, "varDeclPart1").getEnd() - 1;
+						((FieldDeclaration)decl).endPart2Position = getEcjPos(entry, "varDeclPart2").getEnd() - 1;
 					} else {
 						((FieldDeclaration)decl).endPart1Position = end(node.rawTypeReference()) + 1;
 						((FieldDeclaration)decl).endPart2Position = end(node.getParent());

@@ -59,6 +59,10 @@ public final class Position {
 		return new Position(start, end, generatedBy);
 	}
 	
+	public Position withoutGeneratedBy() {
+		return new Position(start, end);
+	}
+	
 	public Position withEnd(int position) {
 		return new Position(start, position, generatedBy);
 	}

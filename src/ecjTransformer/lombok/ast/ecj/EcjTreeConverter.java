@@ -191,7 +191,7 @@ public class EcjTreeConverter {
 				// Not all these classes may have a statementEnd.
 			}
 			
-			set(node, stat.setPosition(new Position(start, end + 1)));
+			set(node, stat.setPosition(toPosition(start, end)));
 			return;
 		}
 		
@@ -337,16 +337,16 @@ public class EcjTreeConverter {
 		varDef.astTypeReference((lombok.ast.TypeReference) toTree(winner));
 		if ((first.type.bits & ASTNode.IsVarArgs) != 0) {
 			varDef.astVarargs(true);
-			setPosInfo(varDef, "typeref", new Position(first.type.sourceStart, first.type.sourceEnd + 1));
+			setPosInfo(varDef, "typeref", toPosition(first.type.sourceStart, first.type.sourceEnd));
 		}
 		
 		for (AbstractVariableDeclaration decl : decls) {
 			lombok.ast.VariableDefinitionEntry varDefEntry = new lombok.ast.VariableDefinitionEntry();
 			if (first instanceof FieldDeclaration) {
-				setPosInfo(varDefEntry, "varDeclPart1", new Position(decl.sourceStart, ((FieldDeclaration) decl).endPart1Position));
-				setPosInfo(varDefEntry, "varDeclPart2", new Position(decl.sourceStart, ((FieldDeclaration) decl).endPart2Position));
+				setPosInfo(varDefEntry, "varDeclPart1", toPosition(decl.sourceStart, ((FieldDeclaration) decl).endPart1Position));
+				setPosInfo(varDefEntry, "varDeclPart2", toPosition(decl.sourceStart, ((FieldDeclaration) decl).endPart2Position));
 			}
-			setPosInfo(varDefEntry, "typeSourcePos", new Position(decl.type.sourceStart, decl.type.sourceEnd));
+			setPosInfo(varDefEntry, "typeSourcePos", toPosition(decl.type.sourceStart, decl.type.sourceEnd));
 			varDefEntry.astInitializer((lombok.ast.Expression) toTree(decl.initialization));
 			varDefEntry.astName(toIdentifier(decl.name, decl.sourceStart, decl.sourceEnd));
 			int delta = decl.type.dimensions() - winner.dimensions();
@@ -595,10 +595,10 @@ public class EcjTreeConverter {
 		
 		@Override public void visitFieldReference(FieldReference node) {
 			lombok.ast.Select select = new lombok.ast.Select();
-			select.astIdentifier(toIdentifier(node.token, node.sourceStart, node.sourceEnd));
+			select.astIdentifier(toIdentifier(node.token, node.nameSourcePosition));
 			select.astOperand((lombok.ast.Expression) toTree(node.receiver));
 			
-			set(node, select);
+			set(node, setPosition(node, select));
 		}
 		
 		private void handleEnumConstant(FieldDeclaration node) {
@@ -613,8 +613,12 @@ public class EcjTreeConverter {
 			if (node.initialization instanceof QualifiedAllocationExpression) {
 				QualifiedAllocationExpression qualifiedNode = ((QualifiedAllocationExpression)node.initialization);
 				lombok.ast.NormalTypeBody body = createNormalTypeBody(qualifiedNode.anonymousType);
+				// No idea why this is necessary, but that's why we have unit tests.
+				body.setPosition(new Position(body.getPosition().getStart(), body.getPosition().getEnd() + 1));
 				constant.astBody(body);
 			}
+			
+			constant.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
 			
 			set(node, constant);
 		}
@@ -806,7 +810,7 @@ public class EcjTreeConverter {
 				for (int i = 0; i < node.counter; i++) {
 					Node lombokElemNode = toTree(node.literals[i]);
 					if (lombokAggregator != null) {
-						Position newPos = new Position(lombokAggregator.getPosition().getStart(), lombokElemNode.getPosition().getEnd());
+						Position newPos = lombokElemNode.getPosition().withoutGeneratedBy();
 						lombokAggregator = new lombok.ast.BinaryExpression().astOperator(BinaryOperator.PLUS)
 								.rawLeft(lombokAggregator).rawRight(lombokElemNode);
 						lombokAggregator.setPosition(newPos);
@@ -838,7 +842,7 @@ public class EcjTreeConverter {
 			Node result = toTree(node.type, FlagKey.NAMEREFERENCE_IS_TYPE);
 			lombok.ast.Cast cast = new lombok.ast.Cast().astTypeReference((lombok.ast.TypeReference) result);
 			cast.astOperand((lombok.ast.Expression)toTree(node.expression));
-			setPosInfo(cast, "type", new Position(node.type.sourceStart, node.type.sourceEnd));
+			setPosInfo(cast, "type", toPosition(node.type.sourceStart, node.type.sourceEnd));
 			set(node, setPosition(node, cast));
 		}
 		
@@ -976,7 +980,7 @@ public class EcjTreeConverter {
 			lombok.ast.ConstructorInvocation constr = new lombok.ast.ConstructorInvocation();
 			constr.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
 			lombok.ast.NormalTypeBody body = createNormalTypeBody(node.anonymousType);
-			setPosInfo(constr, "signature", new Position(node.anonymousType.sourceStart, node.anonymousType.sourceEnd + 1));
+			setPosInfo(constr, "signature", toPosition(node.anonymousType.sourceStart, node.anonymousType.sourceEnd));
 			constr.astAnonymousClassBody(body);
 			
 			set(node, setPosition(node, constr));
@@ -1130,7 +1134,7 @@ public class EcjTreeConverter {
 			for (int i = 0; i < catchBlocks.length; i++) {
 				lombok.ast.Catch cat = new lombok.ast.Catch();
 				VariableDefinition catchArg = (VariableDefinition) toTree(catchArguments[i]);
-				catchArg.setPosition(new Position(catchArguments[i].declarationSourceStart, catchArguments[i].sourceEnd + 1));
+				catchArg.setPosition(toPosition(catchArguments[i].declarationSourceStart, catchArguments[i].sourceEnd));
 				cat.astExceptionDeclaration(catchArg);
 				cat.astBody((lombok.ast.Block) toTree(catchBlocks[i]));
 				astCatches.addToEnd(cat);
@@ -1165,7 +1169,7 @@ public class EcjTreeConverter {
 			lombok.ast.ConstructorDeclaration constr = new lombok.ast.ConstructorDeclaration();
 			constr.astTypeName(toIdentifier(node.selector, node.sourceStart, node.sourceEnd));
 			lombok.ast.Block block = toBlock(node.statements);
-			block.setPosition(new Position(node.bodyStart - 1, node.bodyEnd + 2));
+			block.setPosition(toPosition(node.bodyStart - 1, node.bodyEnd + 1));
 			block.astContents().addToEnd((lombok.ast.Statement)toTree(node.constructorCall, FlagKey.AS_STATEMENT));
 			constr.astBody(block);
 			constr.astJavadoc((lombok.ast.Comment) toTree(node.javadoc));
@@ -1173,8 +1177,8 @@ public class EcjTreeConverter {
 			fillList(node.arguments, constr.rawParameters(), FlagKey.AS_DEFINITION, FlagKey.NO_VARDECL_FOLDING);
 			fillList(node.typeParameters, constr.rawTypeVariables());
 			fillList(node.thrownExceptions, constr.rawThrownTypeReferences());
-			setPosInfo(constr, "signature", new Position(node.sourceStart, node.sourceEnd + 1));
-			constr.setPosition(new Position(node.declarationSourceStart, node.declarationSourceEnd + 1));
+			setPosInfo(constr, "signature", toPosition(node.sourceStart, node.sourceEnd));
+			constr.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
 			set(node, constr);
 		}
 		
@@ -1189,6 +1193,7 @@ public class EcjTreeConverter {
 				fillList(node.arguments, sup.rawArguments());
 				fillList(node.typeArguments, sup.rawConstructorTypeArguments());
 				sup.astQualifier((lombok.ast.Expression) toTree(node.qualification));
+				setPosInfo(sup, "typeArguments", toPosition(node.typeArgumentsSourceStart, node.sourceEnd));
 				set(node, setPosition(node, sup));
 				return;
 			}
@@ -1196,6 +1201,7 @@ public class EcjTreeConverter {
 			lombok.ast.AlternateConstructorInvocation inv = new lombok.ast.AlternateConstructorInvocation();
 			fillList(node.arguments, inv.rawArguments());
 			fillList(node.typeArguments, inv.rawConstructorTypeArguments());
+			setPosInfo(inv, "typeArguments", toPosition(node.typeArgumentsSourceStart, node.sourceEnd));
 			set(node, setPosition(node, inv));
 		}
 		
@@ -1210,15 +1216,15 @@ public class EcjTreeConverter {
 			boolean semiColonBody = ((node.modifiers & ExtraCompilerModifiers.AccSemicolonBody) != 0);
 			if (!modifiers.isAbstract() && !node.isNative() && !semiColonBody) {
 				lombok.ast.Block block = toBlock(node.statements);
-				block.setPosition(new Position(node.bodyStart - 1, node.bodyEnd + 2));
+				block.setPosition(toPosition(node.bodyStart - 1, node.bodyEnd + 1));
 				decl.astBody(block);
 			}
 			fillList(node.arguments, decl.rawParameters(), FlagKey.AS_DEFINITION, FlagKey.NO_VARDECL_FOLDING);
 			fillList(node.typeParameters, decl.rawTypeVariables());
 			fillList(node.thrownExceptions, decl.rawThrownTypeReferences());
 			
-			setPosInfo(decl, "signature", new Position(node.sourceStart, node.sourceEnd + 1));
-			decl.setPosition(new Position(node.declarationSourceStart, node.declarationSourceEnd + 1));
+			setPosInfo(decl, "signature", toPosition(node.sourceStart, node.sourceEnd));
+			decl.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
 			set(node, decl);
 		}
 		
@@ -1230,7 +1236,10 @@ public class EcjTreeConverter {
 			decl.astReturnTypeReference((lombok.ast.TypeReference) toTree(node.returnType));
 			decl.astDefaultValue((lombok.ast.Expression) toTree(node.defaultValue));
 			
-			set(node, setPosition(node, decl));
+			setPosInfo(decl, "signature", toPosition(node.sourceStart, node.sourceEnd));
+			setPosInfo(decl, "extendedDimensions", new Position(node.extendedDimensions, -1));
+			decl.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
+			set(node, decl);
 		}
 		
 		@Override public void visitReturnStatement(ReturnStatement node) {
@@ -1246,7 +1255,7 @@ public class EcjTreeConverter {
 		
 		@Override public void visitMarkerAnnotation(MarkerAnnotation node) {
 			lombok.ast.Annotation annot = createAnnotation(node);
-			annot.setPosition(new Position(node.sourceStart, node.declarationSourceEnd + 1));
+			annot.setPosition(toPosition(node.sourceStart, node.declarationSourceEnd));
 			set(node, annot);
 		}
 		
@@ -1255,14 +1264,14 @@ public class EcjTreeConverter {
 			lombok.ast.AnnotationElement element = new lombok.ast.AnnotationElement();
 			element.astValue((lombok.ast.AnnotationValue) toTree(node.memberValue));
 			annot.astElements().addToEnd(element);
-			annot.setPosition(new Position(node.sourceStart, node.declarationSourceEnd + 1));
+			annot.setPosition(toPosition(node.sourceStart, node.declarationSourceEnd));
 			set(node, annot);
 		}
 		
 		@Override public void visitNormalAnnotation(NormalAnnotation node) {
 			lombok.ast.Annotation annot = createAnnotation(node);
 			fillList(node.memberValuePairs, annot.rawElements());
-			annot.setPosition(new Position(node.sourceStart, node.declarationSourceEnd + 1));
+			annot.setPosition(toPosition(node.sourceStart, node.declarationSourceEnd));
 			setStructInfo(annot, "isNormal");
 			set(node, annot);
 		}
