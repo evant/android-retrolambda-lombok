@@ -21,16 +21,10 @@
  */
 package lombok.ast.grammar;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.regex.Pattern;
-
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreeBuilder;
 import lombok.ast.ecj.EcjTreeConverter;
 import lombok.ast.ecj.EcjTreePrinter;
-import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;

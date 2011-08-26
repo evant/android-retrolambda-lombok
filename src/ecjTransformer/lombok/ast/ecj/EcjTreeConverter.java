@@ -1298,7 +1298,13 @@ public class EcjTreeConverter {
 			}
 			
 			lombok.ast.Comment comment = new lombok.ast.Comment();
-			comment.astContent(node.toString());
+			comment.astBlockComment(true);
+			if (rawInput != null) {
+				comment.astContent(rawInput.substring(node.sourceStart + 2, node.sourceEnd - 1));
+			} else {
+				String reconstructed = node.toString();
+				comment.astContent(reconstructed.substring(2, reconstructed.length() - 2)); //+2 and -2 := Strip /* and */
+			}
 			set(node, setPosition(node, comment));
 		}
 		
