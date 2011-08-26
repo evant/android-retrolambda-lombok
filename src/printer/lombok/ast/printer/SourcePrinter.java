@@ -174,7 +174,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitTypeReference(TypeReference node) {
 		WildcardKind kind = node.astWildcard();
 		formatter.buildInline(node);
-		formatter.property("WilcardKind", kind);
+		formatter.property("WildcardKind", kind);
 		formatter.property("arrayDimensions", node.astArrayDimensions());
 		if (kind == WildcardKind.UNBOUND) {
 			formatter.append("?");
