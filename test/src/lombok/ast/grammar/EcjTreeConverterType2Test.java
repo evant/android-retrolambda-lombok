@@ -106,7 +106,7 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 		if (cud.hasErrors()) return null;
 		
 		EcjTreeConverter converter = new EcjTreeConverter();
-		converter.visit(cud);
+		converter.visit(source.getRawInput(), cud);
 		Node lombokized = converter.get();
 		
 		EcjTreeBuilder builder = new EcjTreeBuilder(source.getRawInput(), source.getName(), ecjCompilerOptions());

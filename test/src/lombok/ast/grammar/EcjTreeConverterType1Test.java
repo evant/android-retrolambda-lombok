@@ -244,7 +244,7 @@ public class EcjTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		if (cud.hasErrors()) return null;
 		
 		EcjTreeConverter converter = new EcjTreeConverter();
-		converter.visit(cud);
+		converter.visit(source.getRawInput(), cud);
 		return converter.get();
 	}
 }

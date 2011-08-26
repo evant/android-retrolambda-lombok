@@ -147,6 +147,7 @@ public class EcjTreeConverter {
 	private List<? extends Node> result = null;
 	private Map<FlagKey, Object> params = ImmutableMap.of();
 	private Map<PosInfoKey, Position> positionInfo = Maps.newHashMap();
+	private String rawInput;
 	
 	private static final Comparator<ASTNode> ASTNODE_ORDER = new Comparator<ASTNode>() {
 		@Override public int compare(ASTNode nodeOne, ASTNode nodeTwo) {
@@ -226,7 +227,7 @@ public class EcjTreeConverter {
 		EcjTreeConverter newConverter = new EcjTreeConverter();
 		if (params != null) newConverter.params = params;
 		newConverter.positionInfo = positionInfo;
-		newConverter.visit(node);
+		newConverter.visit(rawInput, node);
 		try {
 			return newConverter.get();
 		} catch (RuntimeException e) {
@@ -291,7 +292,8 @@ public class EcjTreeConverter {
 		for (ASTNode statement : nodes) if (statement != null) list.add(statement);
 	}
 	
-	public void visit(ASTNode node) {
+	public void visit(String rawInput, ASTNode node) {
+		this.rawInput = rawInput;
 		visitor.visitEcjNode(node);
 	}
 	
