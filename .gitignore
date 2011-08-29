@@ -9,3 +9,4 @@
 .apt_generated
 *.class
 /cobertura.ser
+/ivyCache
