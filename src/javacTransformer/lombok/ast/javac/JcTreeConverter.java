@@ -21,6 +21,8 @@
  */
 package lombok.ast.javac;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
@@ -161,6 +163,7 @@ import com.sun.tools.javac.tree.JCTree.JCUnary;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.JCTree.JCWhileLoop;
 import com.sun.tools.javac.tree.JCTree.JCWildcard;
+import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.List;
 
 public class JcTreeConverter {
@@ -179,6 +182,31 @@ public class JcTreeConverter {
 	private ConvertingVisitor visitor = new ConvertingVisitor();
 	private Map<FlagKey, Object> params;
 	private Map<PosInfoKey, Position> positionInfo;
+	
+	private static final Field JCWILDCARD_KIND, JCTREE_TAG;
+	private static final Method JCTREE_GETTAG;
+	static {
+		Field f;
+		Method m;
+		
+		f = null;
+		try {
+			f = JCWildcard.class.getDeclaredField("kind");
+		} catch (NoSuchFieldException e) {}
+		JCWILDCARD_KIND = f;
+		
+		f = null;
+		try {
+			f = JCTree.class.getDeclaredField("tag");
+		} catch (NoSuchFieldException e) {}
+		JCTREE_TAG = f;
+		
+		m = null;
+		try {
+			m = JCTree.class.getDeclaredMethod("getTag");
+		} catch (NoSuchMethodException e) {}
+		JCTREE_GETTAG = m;
+	}
 	
 	public JcTreeConverter() {
 		this.positionInfo = Maps.newHashMap();
@@ -674,15 +702,37 @@ public class JcTreeConverter {
 				break;
 			case EXTENDS_WILDCARD:
 				ref.astWildcard(WildcardKind.EXTENDS);
-				// TODO ensure this also works on javac versions without the JCTree variant TypeBoundKind. Also don't forget super a few lines down.
-				positionInfo.put(new PosInfoKey(ref, "extends"), getPosition(node.kind));
+				positionInfo.put(new PosInfoKey(ref, "extends"), getTypeBoundKindPosition(node));
 				break;
 			case SUPER_WILDCARD:
 				ref.astWildcard(WildcardKind.SUPER);
-				positionInfo.put(new PosInfoKey(ref, "super"), getPosition(node.kind));
+				positionInfo.put(new PosInfoKey(ref, "super"), getTypeBoundKindPosition(node));
 				break;
 			}
 			set(node, ref);
+		}
+		
+		private Position getTypeBoundKindPosition(JCWildcard node) {
+			try {
+				Object o = JCWILDCARD_KIND.get(node);
+				if (o instanceof TypeBoundKind) {
+					return getPosition((TypeBoundKind) o);
+				}
+			} catch (Exception e) {}
+			return Position.UNPLACED;
+		}
+		
+		private int getTag(JCTree node) {
+			if (JCTREE_GETTAG != null) {
+				try {
+					return (Integer) JCTREE_GETTAG.invoke(node);
+				} catch (Exception e) {}
+			}
+			try {
+				return (Integer) JCTREE_TAG.get(node);
+			} catch (Exception e) {
+				throw new IllegalStateException("Can't get node tag");
+			}
 		}
 		
 		@Override public void visitTypeParameter(JCTypeParameter node) {
@@ -763,7 +813,7 @@ public class JcTreeConverter {
 		@Override public void visitUnary(JCUnary node) {
 			UnaryExpression expr = new UnaryExpression();
 			expr.rawOperand(toTree(node.getExpression()));
-			expr.astOperator(JcTreeBuilder.UNARY_OPERATORS.inverse().get(node.getTag()));
+			expr.astOperator(JcTreeBuilder.UNARY_OPERATORS.inverse().get(getTag(node)));
 			set(node, expr);
 		}
 		
@@ -771,7 +821,7 @@ public class JcTreeConverter {
 			BinaryExpression expr = new BinaryExpression();
 			expr.rawLeft(toTree(node.getLeftOperand()));
 			expr.rawRight(toTree(node.getRightOperand()));
-			expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
+			expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(getTag(node)));
 			set(node, expr);
 		}
 		
@@ -817,7 +867,7 @@ public class JcTreeConverter {
 			BinaryExpression expr = new BinaryExpression();
 			expr.rawRight(toTree(node.getExpression()));
 			expr.rawLeft(toTree(node.getVariable()));
-			expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(node.getTag()));
+			expr.astOperator(JcTreeBuilder.BINARY_OPERATORS.inverse().get(getTag(node)));
 			set(node, expr);
 		}
 		

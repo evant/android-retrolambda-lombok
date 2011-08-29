@@ -765,6 +765,7 @@ public class JcTreePrinter {
 			printNode(tree);
 			Object o;
 			
+			// In some javacs (older ones), JCWildcard.kind is a BoundKind, which is an enum. In newer ones its a TypeBoundKind which is a JCTree, i.e. has positions.
 			try {
 				o = tree.getClass().getField("kind").get(tree);
 			} catch (Exception e) {
@@ -780,7 +781,8 @@ public class JcTreePrinter {
 			indent--;
 		}
 		
-		@Override public void visitTypeBoundKind(TypeBoundKind tree) {
+		// In older javacs this method does not exist, so no @Override here
+		public void visitTypeBoundKind(TypeBoundKind tree) {
 			printNode(tree);
 			property("kind", String.valueOf(tree.kind));
 			indent--;
