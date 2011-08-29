@@ -15,5 +15,6 @@
 		<dependency org="org.eclipse.custom" name="ecj" rev="3.6.2" conf="build->default; contrib->sources" />
 		<dependency org="net.sourceforge.cobertura" name="cobertura" rev="1.9.4.1" conf="test->runtime" />
 		<dependency org="net.sourceforge.cobertura" name="cobertura-runtime" rev="1.9.4.1" conf="test->runtime" />
+		<dependency org="com.googlecode.jarjar" name="jarjar" rev="1.1" conf="build->default" />
 	</dependencies>
 </ivy-module>
