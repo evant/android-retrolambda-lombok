@@ -238,6 +238,7 @@
 			<fileset dir="." includes="LICENSE" />
 			<rule pattern="com.google.common.**" result="lombok.ast.libs.com.google.common.@1" />
 			<rule pattern="org.parboiled.**" result="lombok.ast.libs.org.parboiled.@1" />
+			<rule pattern="com.zwitserloot.cmdreader.**" result="lombok.ast.libs.com.zwitserloot.cmdreader.@1" />
 			<manifest>
 				<attribute name="Main-Class" value="lombok.ast.app.Main" />
 				<attribute name="Lombok-Ast-Version" value="${lombok.ast.version}" />
