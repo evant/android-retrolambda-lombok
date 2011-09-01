@@ -21,32 +21,47 @@
  */
 package lombok.ast;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class Message {
-	private final boolean error;
+	public enum MessageType {
+		ERROR, WARNING;
+	}
+	
+	private final MessageType type;
 	private final MessageKey key;
 	private final String message;
 	
 	public static Message warning(MessageKey key, String message) {
-		return new Message(false, key, message);
+		return new Message(MessageType.WARNING, key, message);
 	}
 	
 	public static Message error(MessageKey key, String message) {
-		return new Message(true, key, message);
+		return new Message(MessageType.ERROR, key, message);
 	}
 	
 	public static Message warning(String message) {
-		return new Message(false, null, message);
+		return new Message(MessageType.WARNING, null, message);
 	}
 	
 	public static Message error(String message) {
-		return new Message(true, null, message);
+		return new Message(MessageType.ERROR, null, message);
+	}
+	
+	public boolean isError() {
+		return MessageType.ERROR == type;
+	}
+	
+	public boolean isWarning() {
+		return MessageType.WARNING == type;
 	}
 	
 	@Override
 	public String toString() {
-		return key == null ? message : String.format("[%s] %s", key, message);
+		return key == null ? message : String.format("[%s %s] %s", type, key, message);
 	}
 }
