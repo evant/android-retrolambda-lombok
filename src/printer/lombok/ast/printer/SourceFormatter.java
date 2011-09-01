@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * Copyright © 2011 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +20,6 @@
  * THE SOFTWARE.
  */
 package lombok.ast.printer;
-
-import java.io.IOException;
 
 import lombok.ast.Node;
 
@@ -115,7 +113,7 @@ public interface SourceFormatter {
 	/**
 	 * Generate the source representation and return it as a string.
 	 */
-	String finish() throws IOException;
+	String finish();
 	
 	/**
 	 * Reports the total time taken in milliseconds by the parser.

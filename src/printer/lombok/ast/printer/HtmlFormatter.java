@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import lombok.Cleanup;
+import lombok.SneakyThrows;
 import lombok.ast.DescribedNode;
 import lombok.ast.Node;
 
@@ -182,12 +183,13 @@ public class HtmlFormatter implements SourceFormatter {
 		errors.add(String.format("<div class=\"parseError\">%s</div>", escapeHtml(errorMessage)));
 	}
 	
-	private String readResource(String resource) throws IOException {
+	@SneakyThrows(IOException.class)
+	private String readResource(String resource) {
 		@Cleanup InputStream in = getClass().getResourceAsStream(resource);
 		return new String(ByteStreams.toByteArray(in), Charsets.UTF_8);
 	}
 	
-	@Override public String finish() throws IOException {
+	@Override public String finish() {
 		String template = readResource("web/ast.html");
 		String cssContent = readResource("web/ast.css");
 		String scriptContent = readResource("web/ast.js");
