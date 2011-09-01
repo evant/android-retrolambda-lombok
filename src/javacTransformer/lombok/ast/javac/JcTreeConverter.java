@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
+ * Copyright © 2010-2011 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,6 +53,7 @@ import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
 import lombok.ast.ConstructorInvocation;
 import lombok.ast.Continue;
+import lombok.ast.ConversionPositionInfo;
 import lombok.ast.Default;
 import lombok.ast.DoWhile;
 import lombok.ast.EmptyDeclaration;
@@ -166,6 +167,8 @@ import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.List;
 
+import static lombok.ast.ConversionPositionInfo.setConversionPositionInfo;
+
 public class JcTreeConverter {
 	private enum FlagKey {
 		BLOCKS_ARE_INITIALIZERS,
@@ -181,7 +184,6 @@ public class JcTreeConverter {
 	private Map<JCTree, Integer> endPosTable;
 	private ConvertingVisitor visitor = new ConvertingVisitor();
 	private Map<FlagKey, Object> params;
-	private Map<PosInfoKey, Position> positionInfo;
 	
 	private static final Field JCWILDCARD_KIND, JCTREE_TAG;
 	private static final Method JCTREE_GETTAG;
@@ -209,13 +211,11 @@ public class JcTreeConverter {
 	}
 	
 	public JcTreeConverter() {
-		this.positionInfo = Maps.newHashMap();
 		this.params = ImmutableMap.of();
 	}
 	
-	public JcTreeConverter(Map<JCTree, Integer> endPosTable, Map<PosInfoKey, Position> positionInfo, Map<FlagKey, Object> params) {
+	public JcTreeConverter(Map<JCTree, Integer> endPosTable, Map<FlagKey, Object> params) {
 		this.endPosTable = endPosTable;
-		this.positionInfo = positionInfo;
 		this.params = params == null ? ImmutableMap.<FlagKey, Object>of() : params;
 	}
 	
@@ -259,7 +259,7 @@ public class JcTreeConverter {
 	
 	private Node toTree(JCTree node, Map<FlagKey, Object> params) {
 		if (node == null) return null;
-		JcTreeConverter newConverter = new JcTreeConverter(endPosTable, positionInfo, params);
+		JcTreeConverter newConverter = new JcTreeConverter(endPosTable, params);
 		node.accept(newConverter.visitor);
 		try {
 			return newConverter.get();
@@ -320,7 +320,7 @@ public class JcTreeConverter {
 		int baseDims = countDims(baseType);
 		if ((first.mods.flags & Flags.VARARGS) != 0) {
 			def.astVarargs(true);
-			positionInfo.put(new PosInfoKey(def, "..."), getPosition(baseType));
+			setConversionPositionInfo(def, "...", getPosition(baseType));
 			if (baseType instanceof JCArrayTypeTree) baseType = ((JCArrayTypeTree) baseType).elemtype;
 		}
 		def.rawTypeReference(toTree(baseType, FlagKey.TYPE_REFERENCE));
@@ -336,7 +336,7 @@ public class JcTreeConverter {
 			if (extraDims > 0) {
 				JCArrayTypeTree arrayType = (JCArrayTypeTree) varDecl.vartype;
 				for (int i = 0; i < extraDims; i++) {
-					if (arrayType != null) positionInfo.put(new PosInfoKey(entry, "[]" + (extraDims - i -1)), getPosition(arrayType));
+					if (arrayType != null) setConversionPositionInfo(entry, "[]" + (extraDims - i - 1), getPosition(arrayType));
 					arrayType = arrayType.elemtype instanceof JCArrayTypeTree ? (JCArrayTypeTree) arrayType.elemtype : null;
 				}
 				}
@@ -417,10 +417,6 @@ public class JcTreeConverter {
 		return get();
 	}
 	
-	public void transferPositionInfo(JcTreeBuilder builder) {
-		builder.setJcTreeConverterPositionInfo(positionInfo);
-	}
-	
 	private <N extends Node> N setPos(JCTree node, N astNode) {
 		if (astNode != null && node != null) {
 			int start = node.pos;
@@ -445,6 +441,10 @@ public class JcTreeConverter {
 		}
 	}
 	
+	private static void setConversionStructureInfo(Node node, String key) {
+		ConversionPositionInfo.setConversionPositionInfo(node, key, Position.UNPLACED);
+	}
+	
 	private class ConvertingVisitor extends JCTree.Visitor {
 		@Override public void visitTree(JCTree node) {
 			throw new UnsupportedOperationException("visit" + node.getClass().getSimpleName() + " not implemented");
@@ -467,6 +467,7 @@ public class JcTreeConverter {
 				}
 			}
 			
+			setConversionStructureInfo(unit, "converted");
 			set(node, unit);
 		}
 		
@@ -477,7 +478,7 @@ public class JcTreeConverter {
 			if (last != null && "*".equals(last.astValue())) {
 				imp.astParts().remove(last);
 				imp.astStarImport(true);
-				positionInfo.put(new PosInfoKey(imp, ".*"), last.getPosition());
+				setConversionPositionInfo(imp, ".*", last.getPosition());
 			}
 			imp.astStaticImport(node.isStatic());
 			set(node, imp);
@@ -542,7 +543,7 @@ public class JcTreeConverter {
 									fillList(init.getClassBody().getMembers(), constantBody.rawMembers());
 									ec.astBody(constantBody);
 								} else {
-									positionInfo.put(new PosInfoKey(ec, "newclass"), getPosition(init));
+									setConversionPositionInfo(ec, "newClass", getPosition(init));
 								}
 							}
 							body.astConstants().addToEnd(ec);
@@ -568,6 +569,7 @@ public class JcTreeConverter {
 			Modifiers m = new Modifiers();
 			fillList(node.annotations, m.rawAnnotations());
 			for (KeywordModifier mod : KeywordModifier.fromReflectModifiers((int) node.flags)) m.astKeywords().addToEnd(mod);
+			setConversionStructureInfo(m, "converted");
 			set(node, m);
 		}
 		
@@ -625,14 +627,14 @@ public class JcTreeConverter {
 			if ("this".equals(name)) {
 				This t = new This();
 				set(node, t);
-				positionInfo.put(new PosInfoKey(t, "this"), getPosition(node));
+				setConversionPositionInfo(t, "this", getPosition(node));
 				return;
 			}
 			
 			if ("super".equals(name)) {
 				Super s = new Super();
 				set(node, s);
-				positionInfo.put(new PosInfoKey(s, "super"), getPosition(node));
+				setConversionPositionInfo(s, "super", getPosition(node));
 				return;
 			}
 			
@@ -662,21 +664,21 @@ public class JcTreeConverter {
 			
 			if ("this".equals(name)) {
 				This t = new This();
-				positionInfo.put(new PosInfoKey(t, "this"), getPosition(node));
+				setConversionPositionInfo(t, "this", getPosition(node));
 				set(node, t.rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
 				return;
 			}
 			
 			if ("super".equals(name)) {
 				Super s = new Super();
-				positionInfo.put(new PosInfoKey(s, "super"), getPosition(node));
+				setConversionPositionInfo(s, "super", getPosition(node));
 				set(node, s.rawQualifier(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
 				return;
 			}
 			
 			if ("class".equals(name)) {
 				ClassLiteral c = new ClassLiteral();
-				positionInfo.put(new PosInfoKey(c, "class"), getPosition(node));
+				setConversionPositionInfo(c, "class", getPosition(node));
 				set(node, c.rawTypeReference(toTree(node.getExpression(), FlagKey.TYPE_REFERENCE)));
 				return;
 			}
@@ -689,7 +691,7 @@ public class JcTreeConverter {
 			TypeReferencePart last = ref.astParts().last();
 			fillList(node.arguments, last.rawTypeArguments(), FlagKey.TYPE_REFERENCE);
 			setPos(node, ref);
-			positionInfo.put(new PosInfoKey(last, "<"), getPosition(node));
+			setConversionPositionInfo(last, "<", getPosition(node));
 			set(node, ref);
 		}
 		
@@ -702,11 +704,11 @@ public class JcTreeConverter {
 				break;
 			case EXTENDS_WILDCARD:
 				ref.astWildcard(WildcardKind.EXTENDS);
-				positionInfo.put(new PosInfoKey(ref, "extends"), getTypeBoundKindPosition(node));
+				setConversionPositionInfo(ref, "extends", getTypeBoundKindPosition(node));
 				break;
 			case SUPER_WILDCARD:
 				ref.astWildcard(WildcardKind.SUPER);
-				positionInfo.put(new PosInfoKey(ref, "super"), getTypeBoundKindPosition(node));
+				setConversionPositionInfo(ref, "super", getTypeBoundKindPosition(node));
 				break;
 			}
 			set(node, ref);
@@ -746,7 +748,7 @@ public class JcTreeConverter {
 			TypeReference ref = (TypeReference) toTree(node.getType(), FlagKey.TYPE_REFERENCE);
 			int currentDim = ref.astArrayDimensions();
 			ref.astArrayDimensions(currentDim + 1);
-			positionInfo.put(new PosInfoKey(ref, "[]" + currentDim), getPosition(node));
+			setConversionPositionInfo(ref, "[]" + currentDim, getPosition(node));
 			set(node, ref);
 		}
 		
@@ -874,7 +876,7 @@ public class JcTreeConverter {
 		@Override public void visitExec(JCExpressionStatement node) {
 			Node expr = toTree(node.getExpression());
 			if (expr instanceof SuperConstructorInvocation || expr instanceof AlternateConstructorInvocation) {
-				positionInfo.put(new PosInfoKey(expr, "exec"), getPosition(node));
+				setConversionPositionInfo(expr, "exec", getPosition(node));
 				set(node, expr);
 				return;
 			}
@@ -894,7 +896,7 @@ public class JcTreeConverter {
 					fillList(node.getTypeArguments(), aci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
 					fillList(node.getArguments(), aci.rawArguments());
 					set(node, aci);
-					positionInfo.put(new PosInfoKey(aci, "this"), getPosition(sel));
+					setConversionPositionInfo(aci, "this", getPosition(sel));
 					return;
 				}
 				
@@ -903,7 +905,7 @@ public class JcTreeConverter {
 					fillList(node.getTypeArguments(), sci.rawConstructorTypeArguments(), FlagKey.TYPE_REFERENCE);
 					fillList(node.getArguments(), sci.rawArguments());
 					set(node, sci);
-					positionInfo.put(new PosInfoKey(sci, "super"), getPosition(sel));
+					setConversionPositionInfo(sci, "super", getPosition(sel));
 					return;
 				}
 				
@@ -917,7 +919,7 @@ public class JcTreeConverter {
 					fillList(node.getArguments(), sci.rawArguments());
 					sci.rawQualifier(toTree(((JCFieldAccess) sel).getExpression()));
 					set(node, sci);
-					positionInfo.put(new PosInfoKey(sci, "super"), getPosition(sel));
+					setConversionPositionInfo(sci, "super", getPosition(sel));
 					return;
 				}
 				setPos(sel, id.astValue(name));
@@ -982,7 +984,7 @@ public class JcTreeConverter {
 		@Override public void visitDoLoop(JCDoWhileLoop node) {
 			DoWhile dw = new DoWhile();
 			JCExpression cond = node.getCondition();
-			positionInfo.put(new PosInfoKey(dw, "()"), getPosition(cond));
+			setConversionPositionInfo(dw, "()", getPosition(cond));
 			set(node, dw.rawCondition(toTree(removeParens(cond))).rawStatement(toTree(node.getStatement())));
 		}
 		
@@ -1013,7 +1015,7 @@ public class JcTreeConverter {
 		@Override public void visitIf(JCIf node) {
 			If i = new If();
 			JCExpression cond = node.getCondition();
-			positionInfo.put(new PosInfoKey(i, "()"), getPosition(cond));
+			setConversionPositionInfo(i, "()", getPosition(cond));
 			i.rawCondition(toTree(removeParens(cond)));
 			i.rawStatement(toTree(node.getThenStatement()));
 			i.rawElseStatement(toTree(node.getElseStatement()));
@@ -1031,7 +1033,7 @@ public class JcTreeConverter {
 			f.rawStatement(toTree(node.getStatement()));
 			for (JCExpressionStatement upd : node.getUpdate()) {
 				Node updateNode = toTree(upd.getExpression());
-				positionInfo.put(new PosInfoKey(updateNode, "exec"), getPosition(upd));
+				setConversionPositionInfo(updateNode, "exec", getPosition(upd));
 				f.rawUpdates().addToEnd(updateNode);
 			}
 			List<JCStatement> initializers = node.getInitializer();
@@ -1046,7 +1048,7 @@ public class JcTreeConverter {
 				for (JCStatement init : initializers) {
 					if (init instanceof JCExpressionStatement) {
 						Node initNode = toTree(((JCExpressionStatement) init).getExpression());
-						positionInfo.put(new PosInfoKey(initNode, "exec"), getPosition(init));
+						setConversionPositionInfo(initNode, "exec", getPosition(init));
 						f.rawExpressionInits().addToEnd(initNode);
 					} else {
 						f.rawExpressionInits().addToEnd(toTree(init));
@@ -1059,7 +1061,7 @@ public class JcTreeConverter {
 		@Override public void visitSwitch(JCSwitch node) {
 			Switch s = new Switch();
 			JCExpression cond = node.getExpression();
-			positionInfo.put(new PosInfoKey(s, "()"), getPosition(cond));
+			setConversionPositionInfo(s, "()", getPosition(cond));
 			s.rawCondition(toTree(removeParens(cond)));
 			Block b = new Block();
 			s.astBody(b);
@@ -1075,7 +1077,7 @@ public class JcTreeConverter {
 		@Override public void visitSynchronized(JCSynchronized node) {
 			Synchronized s = new Synchronized();
 			JCExpression cond = node.getExpression();
-			positionInfo.put(new PosInfoKey(s, "()"), getPosition(cond));
+			setConversionPositionInfo(s, "()", getPosition(cond));
 			set(node, s.rawLock(toTree(removeParens(cond))).rawBody(toTree(node.getBlock())));
 		}
 		
@@ -1100,7 +1102,7 @@ public class JcTreeConverter {
 		@Override public void visitWhileLoop(JCWhileLoop node) {
 			While w = new While();
 			JCExpression cond = node.getCondition();
-			positionInfo.put(new PosInfoKey(w, "()"), getPosition(cond));
+			setConversionPositionInfo(w, "()", getPosition(cond));
 			set(node, w.rawCondition(toTree(removeParens(cond))).rawStatement(toTree(node.getStatement())));
 		}
 		

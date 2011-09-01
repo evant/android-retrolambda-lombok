@@ -156,6 +156,8 @@ import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import static lombok.ast.ConversionPositionInfo.getConversionPositionInfo;
+
 /**
  * Turns {@code lombok.ast} based ASTs into eclipse/ecj's {@code org.eclipse.jdt.internal.compiler.ast.ASTNode} model.
  */
@@ -165,7 +167,6 @@ public class EcjTreeBuilder {
 	
 	private final Map<lombok.ast.Node, Collection<SourceStructure>> sourceStructures;
 	private List<? extends ASTNode> result = null;
-	private Map<PosInfoKey, Position> ecjTreeCreatorPositionInfo;
 	private final String rawInput;
 	private final ProblemReporter reporter;
 	private final CompilationResult compilationResult;
@@ -266,16 +267,6 @@ public class EcjTreeBuilder {
 		this.rawInput = parent.rawInput;
 		this.compilationResult = parent.compilationResult;
 		this.sourceStructures = parent.sourceStructures;
-		this.ecjTreeCreatorPositionInfo = parent.ecjTreeCreatorPositionInfo;
-	}
-	
-	void setEcjTreeConverterPositionInfo(Map<PosInfoKey, Position> ecjTreeCreatorPositionInfo) {
-		this.ecjTreeCreatorPositionInfo = ecjTreeCreatorPositionInfo;
-	}
-	
-	private Position getEcjPos(Node node, String key) {
-		Position p = ecjTreeCreatorPositionInfo == null ? null : ecjTreeCreatorPositionInfo.get(new PosInfoKey(node, key));
-		return p == null ? node.getPosition() : p;
 	}
 	
 	private EcjTreeBuilder create() {
@@ -709,11 +700,8 @@ public class EcjTreeBuilder {
 			decl.declarationSourceEnd = end(node);
 			decl.sourceStart = start(node.astTypeName());
 			/* set sourceEnd */ {
-				if (ecjTreeCreatorPositionInfo != null) {
-					decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
-				} else {
-					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
-				}
+				Position ecjPos = getConversionPositionInfo(node, "signature");
+				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, true) : ecjPos.getEnd() - 1;
 				
 				if (!node.rawThrownTypeReferences().isEmpty()) {
 					decl.sourceEnd = end(node.rawThrownTypeReferences().last());
@@ -764,11 +752,8 @@ public class EcjTreeBuilder {
 			decl.sourceStart = start(node.astMethodName());
 			boolean setOriginalPosOnType = false;
 			/* set sourceEnd */ {
-				if (ecjTreeCreatorPositionInfo != null) {
-					decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
-				} else {
-					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
-				}
+				Position ecjPos = getConversionPositionInfo(node, "signature");
+				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, true) : ecjPos.getEnd() - 1;
 				int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
 				if (postDims > decl.sourceEnd) {
 					decl.sourceEnd = postDims;
@@ -828,9 +813,11 @@ public class EcjTreeBuilder {
 			decl.sourceStart = start(node.astMethodName());
 			boolean setOriginalPosOnType = false;
 			/* set sourceEnd */ {
-				if (ecjTreeCreatorPositionInfo != null) {
-					decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
-					decl.extendedDimensions = getEcjPos(node, "extendedDimensions").getStart();
+				Position ecjSigPos = getConversionPositionInfo(node, "signature");
+				Position ecjExtDimPos = getConversionPositionInfo(node, "extendedDimensions");
+				if (ecjSigPos != null && ecjExtDimPos != null) {
+					decl.sourceEnd = ecjSigPos.getEnd() - 1;
+					decl.extendedDimensions = ecjExtDimPos.getStart();
 				} else {
 					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
 					int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
@@ -966,13 +953,9 @@ public class EcjTreeBuilder {
 			if (node.astQualifier() != null || node.astAnonymousClassBody() != null) {
 				if (node.astAnonymousClassBody() != null) {
 					TypeDeclaration decl = createTypeBody(node.astAnonymousClassBody().astMembers(), null, false, 0);
-					if (ecjTreeCreatorPositionInfo != null) {
-						decl.sourceStart = getEcjPos(node, "signature").getStart();
-						decl.sourceEnd = getEcjPos(node, "signature").getEnd() - 1;
-					} else {
-						decl.sourceStart = start(node.rawTypeReference());
-						decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1;
-					}
+					Position ecjSigPos = getConversionPositionInfo(node, "signature");
+					decl.sourceStart = ecjSigPos == null ? start(node.rawTypeReference()) : ecjSigPos.getStart();
+					decl.sourceEnd = ecjSigPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1 : ecjSigPos.getEnd() - 1;
 					decl.declarationSourceStart = decl.sourceStart;
 					decl.declarationSourceEnd = end(node);
 					decl.name = CharOperation.NO_CHAR;
@@ -1008,11 +991,8 @@ public class EcjTreeBuilder {
 	//		inv.modifiers = decl.modifiers & VISIBILITY_MASK;
 			if (!node.astConstructorTypeArguments().isEmpty()) {
 				inv.typeArguments = toArray(TypeReference.class, node.astConstructorTypeArguments());
-				if (ecjTreeCreatorPositionInfo != null) {
-					inv.typeArgumentsSourceStart = getEcjPos(node, "typeArguments").getStart();
-				} else {
-					inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
-				}
+				Position ecjTypeArgsPos = getConversionPositionInfo(node, "typeArguments");
+				inv.typeArgumentsSourceStart = ecjTypeArgsPos == null ? posOfStructure(node, "<", 0, true) : ecjTypeArgsPos.getStart();
 			}
 			inv.arguments = toArray(Expression.class, node.astArguments());
 			return set(node, inv);
@@ -1026,11 +1006,8 @@ public class EcjTreeBuilder {
 	//		inv.modifiers = decl.modifiers & VISIBILITY_MASK;
 			if (!node.astConstructorTypeArguments().isEmpty()) {
 				inv.typeArguments = toArray(TypeReference.class, node.astConstructorTypeArguments());
-				if (ecjTreeCreatorPositionInfo != null) {
-					inv.typeArgumentsSourceStart = getEcjPos(node, "typeArguments").getStart();
-				} else {
-					inv.typeArgumentsSourceStart = posOfStructure(node, "<", 0, true);
-				}
+				Position ecjTypeArgsPos = getConversionPositionInfo(node, "typeArguments");
+				inv.typeArgumentsSourceStart = ecjTypeArgsPos == null ? posOfStructure(node, "<", 0, true) : ecjTypeArgsPos.getStart();
 			}
 			inv.arguments = toArray(Expression.class, node.astArguments());
 			inv.qualification = toExpression(node.astQualifier());
@@ -1197,13 +1174,9 @@ public class EcjTreeBuilder {
 			
 			CastExpression expr = createCastExpression(typeRef, operand);
 			
-			if (ecjTreeCreatorPositionInfo != null) {
-				typeRef.sourceStart = getEcjPos(node, "type").getStart();
-				typeRef.sourceEnd = getEcjPos(node, "type").getEnd() - 1;
-			} else if (sourceStructures != null) {
-				typeRef.sourceStart = posOfStructure(node, "(", 0, true) + 1;
-				typeRef.sourceEnd = posOfStructure(node, ")", 0, true) - 1;
-			}
+			Position ecjTypePos = getConversionPositionInfo(node, "type");
+			typeRef.sourceStart = ecjTypePos == null ? posOfStructure(node, "(", 0, true) + 1 : ecjTypePos.getStart();
+			typeRef.sourceEnd = ecjTypePos == null ? posOfStructure(node, ")", 0, true) - 1 : ecjTypePos.getEnd() - 1;
 			expr.sourceStart = start(node);
 			expr.sourceEnd = end(node);
 			return set(node, expr);
@@ -1592,8 +1565,9 @@ public class EcjTreeBuilder {
 				} else if (entry.astArrayDimensions() > 0 || node.astVarargs()) {
 					decl.type = (TypeReference) toTree(entry.getEffectiveTypeReference());
 					decl.type.sourceStart = base.sourceStart;
-					if (ecjTreeCreatorPositionInfo != null) {
-						decl.type.sourceEnd = getEcjPos(entry, "typeSourcePos").getEnd() - 1;
+					Position ecjTypeSourcePos = getConversionPositionInfo(entry, "typeSourcePos");
+					if (ecjTypeSourcePos != null) {
+						decl.type.sourceEnd = ecjTypeSourcePos.getEnd() - 1;
 					} else {
 						// This makes no sense whatsoever but eclipse wants it this way.
 						if (firstDecl == null && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
@@ -1612,11 +1586,8 @@ public class EcjTreeBuilder {
 						if (decl.type instanceof ArrayTypeReference) {
 							((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
 						}
-						if (ecjTreeCreatorPositionInfo != null) {
-							decl.type.sourceEnd = getEcjPos(node, "typeref").getEnd() - 1;
-						} else {
-							decl.type.sourceEnd = posOfStructure(node, "...", Integer.MAX_VALUE, false) - 1;
-						}
+						Position ecjTyperefPos = getConversionPositionInfo(node, "typeref");
+						decl.type.sourceEnd = ecjTyperefPos == null ? posOfStructure(node, "...", Integer.MAX_VALUE, false) - 1 : ecjTyperefPos.getEnd() - 1;
 					} else {
 						if (decl.type instanceof ArrayTypeReference) {
 							((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
@@ -1653,14 +1624,11 @@ public class EcjTreeBuilder {
 					break;
 				case FIELD:
 					decl.declarationSourceEnd = decl.declarationEnd = end(node.getParent());
-					if (ecjTreeCreatorPositionInfo != null) {
-						((FieldDeclaration)decl).endPart1Position = getEcjPos(entry, "varDeclPart1").getEnd() - 1;
-						((FieldDeclaration)decl).endPart2Position = getEcjPos(entry, "varDeclPart2").getEnd() - 1;
-					} else {
-						((FieldDeclaration)decl).endPart1Position = end(node.rawTypeReference()) + 1;
-						((FieldDeclaration)decl).endPart2Position = end(node.getParent());
-					}
-					if (ecjTreeCreatorPositionInfo == null && prevDecl instanceof FieldDeclaration) {
+					Position ecjPart1Pos = getConversionPositionInfo(entry, "varDeclPart1");
+					Position ecjPart2Pos = getConversionPositionInfo(entry, "varDeclPart2");
+					((FieldDeclaration)decl).endPart1Position = ecjPart1Pos == null ? end(node.rawTypeReference()) + 1 : ecjPart1Pos.getEnd() - 1;
+					((FieldDeclaration)decl).endPart1Position = ecjPart2Pos == null ? end(node.getParent()) : ecjPart2Pos.getEnd() - 1;
+					if (ecjPart2Pos == null && prevDecl instanceof FieldDeclaration) {
 						((FieldDeclaration)prevDecl).endPart2Position = start(entry) - 1;
 					}
 					break;
@@ -1770,11 +1738,8 @@ public class EcjTreeBuilder {
 		public boolean visitAnnotation(lombok.ast.Annotation node) {
 			//TODO add test where the value is the result of string concatenation
 			TypeReference type = (TypeReference) toTree(node.astAnnotationTypeReference());
-			boolean isEcjNormal = false;
-			if (ecjTreeCreatorPositionInfo != null) {
-				Position p = getEcjPos(node, "isNormal");
-				isEcjNormal = p != null && p.isUnplaced();
-			}
+			boolean isEcjNormal = Position.UNPLACED == getConversionPositionInfo(node, "isNormalAnnotation");
+			
 			if (node.astElements().isEmpty() && countStructure(node, "(") == 0 && !isEcjNormal) {
 				MarkerAnnotation ann = new MarkerAnnotation(type, start(node));
 				ann.declarationSourceEnd = end(node);

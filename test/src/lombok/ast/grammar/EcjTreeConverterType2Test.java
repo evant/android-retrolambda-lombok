@@ -104,7 +104,6 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 		Node lombokized = converter.get();
 		
 		EcjTreeBuilder builder = new EcjTreeBuilder(source.getRawInput(), source.getName(), ecjCompilerOptions());
-		converter.transferPositionInfo(builder);
 		builder.visit(lombokized);
 		return builder.get();
 	}

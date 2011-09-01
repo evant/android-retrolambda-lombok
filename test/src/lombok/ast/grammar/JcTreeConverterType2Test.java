@@ -73,7 +73,6 @@ public class JcTreeConverterType2Test extends TreeBuilderRunner<JCTree> {
 		JcTreeConverter converter = new JcTreeConverter();
 		JcTreeBuilder builder = new JcTreeBuilder();
 		converter.visit(cu);
-		converter.transferPositionInfo(builder);
 		builder.visit(converter.getResult());
 		return builder.get();
 	}

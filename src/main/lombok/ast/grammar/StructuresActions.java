@@ -31,6 +31,7 @@ import lombok.ast.ArrayInitializer;
 import lombok.ast.ClassDeclaration;
 import lombok.ast.CompilationUnit;
 import lombok.ast.ConstructorDeclaration;
+import lombok.ast.DanglingNodes;
 import lombok.ast.EmptyDeclaration;
 import lombok.ast.EnumConstant;
 import lombok.ast.EnumDeclaration;
@@ -78,7 +79,7 @@ public class StructuresActions extends SourceActions {
 			for (Node param : ((TemporaryNode.MethodParameters)params).parameters) {
 				decl.rawParameters().addToEnd(param);
 			}
-		} else decl.addDanglingNode(params);
+		} else DanglingNodes.addDanglingNode(decl, params);
 		
 		decl.astMethodName(createIdentifierIfNeeded(name, currentPos())).rawBody(body);
 		if (modifiers != null) decl.astModifiers(createModifiersIfNeeded(modifiers, currentPos()));
@@ -122,7 +123,7 @@ public class StructuresActions extends SourceActions {
 			for (Node param : ((TemporaryNode.MethodParameters)params).parameters) {
 				decl.rawParameters().addToEnd(param);
 			}
-		} else decl.addDanglingNode(params);
+		} else DanglingNodes.addDanglingNode(decl, params);
 		
 		if (throwsHead != null) decl.rawThrownTypeReferences().addToEnd(throwsHead);
 		if (throwsTail != null) for (Node n : throwsTail) if (n != null) decl.rawThrownTypeReferences().addToEnd(n);

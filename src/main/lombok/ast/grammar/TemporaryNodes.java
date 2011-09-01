@@ -57,18 +57,11 @@ abstract class TemporaryNode implements Node {
 	@Override public void unparent() {
 	}
 	
-	@Override public void addDanglingNode(Node dangler) {
-	}
-	
 	@Override public Node addMessage(Message message) {
 		return null;
 	}
 	
 	@Override public Node copy() {
-		return null;
-	}
-	
-	@Override public List<Node> getDanglingNodes() {
 		return null;
 	}
 	
@@ -78,9 +71,6 @@ abstract class TemporaryNode implements Node {
 	
 	@Override public boolean hasMessage(String key) {
 		return false;
-	}
-	
-	@Override public void removeDanglingNode(Node dangler) {
 	}
 	
 	static class MethodParameters extends TemporaryNode {

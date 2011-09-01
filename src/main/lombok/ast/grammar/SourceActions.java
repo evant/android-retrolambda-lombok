@@ -21,6 +21,7 @@
  */
 package lombok.ast.grammar;
 
+import lombok.ast.DanglingNodes;
 import lombok.ast.Identifier;
 import lombok.ast.Modifiers;
 import lombok.ast.Node;
@@ -39,7 +40,7 @@ class SourceActions extends BaseActions<Node> {
 		if (identifier instanceof Identifier) return (Identifier)identifier;
 		Identifier i = new Identifier();
 		i.setPosition(new Position(pos, pos));
-		i.addDanglingNode(identifier);
+		DanglingNodes.addDanglingNode(i, identifier);
 		return i;
 	}
 	
@@ -47,7 +48,7 @@ class SourceActions extends BaseActions<Node> {
 		if (modifiers instanceof Modifiers) return (Modifiers)modifiers;
 		Modifiers m = new Modifiers();
 		m.setPosition(new Position(pos, pos));
-		m.addDanglingNode(modifiers);
+		DanglingNodes.addDanglingNode(m, modifiers);
 		return m;
 	}
 	

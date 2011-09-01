@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * Copyright © 2010-2011 Reinier Zwitserloot, Roel Spilker and Robbert Jan Grootjans.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@ abstract class AbstractNode implements Node {
 	@Getter private Position position = Position.UNPLACED;
 	@Getter private Node parent;
 	private List<Node> danglings;
+	private Map<String, Position> conversionPositions;
 	private Map<MessageKey, Message> messagesMap;
 	private List<Message> messages;
 	
@@ -139,18 +140,28 @@ abstract class AbstractNode implements Node {
 		return false;
 	}
 	
-	@Override public void addDanglingNode(Node dangling) {
+	void addDanglingNode(Node dangling) {
 		if (dangling == null) return;
 		if (danglings == null) danglings = Lists.newArrayList();
 		danglings.add(dangling);
 	}
 	
-	@Override public void removeDanglingNode(Node dangling) {
+	void removeDanglingNode(Node dangling) {
 		if (danglings != null) danglings.remove(dangling);
 	}
 	
-	public List<Node> getDanglingNodes() {
+	List<Node> getDanglingNodes() {
 		return danglings == null ? Collections.<Node>emptyList() : Collections.unmodifiableList(danglings);
+	}
+	
+	void addConversionPositionInfo(String key, Position position) {
+		if (conversionPositions == null) conversionPositions = Maps.newHashMap();
+		conversionPositions.put(key, position);
+	}
+	
+	Position getConversionPositionInfo(String key) {
+		if (conversionPositions == null) return null;
+		return conversionPositions.get(key);
 	}
 	
 	public Node addMessage(Message message) {

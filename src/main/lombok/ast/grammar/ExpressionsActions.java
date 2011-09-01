@@ -31,6 +31,7 @@ import lombok.ast.BinaryExpression;
 import lombok.ast.Cast;
 import lombok.ast.ClassLiteral;
 import lombok.ast.ConstructorInvocation;
+import lombok.ast.DanglingNodes;
 import lombok.ast.Expression;
 import lombok.ast.Identifier;
 import lombok.ast.InlineIfExpression;
@@ -225,7 +226,7 @@ public class ExpressionsActions extends SourceActions {
 			if (n instanceof ConstructorInvocation) {
 				current = ((ConstructorInvocation)n).rawQualifier(current);
 				positionSpan(current, qualifier, pNode);
-			} else current.addDanglingNode(n);
+			} else DanglingNodes.addDanglingNode(current, n);
 		}
 		
 		return current;
@@ -238,13 +239,13 @@ public class ExpressionsActions extends SourceActions {
 			for (Node arg : ((TemporaryNode.TypeArguments)typeArguments).arguments) {
 				mi.rawMethodTypeArguments().addToEnd(arg);
 			}
-		} else mi.addDanglingNode(typeArguments);
+		} else DanglingNodes.addDanglingNode(mi, typeArguments);
 		
 		if (arguments instanceof TemporaryNode.MethodArguments) {
 			for (Node arg : ((TemporaryNode.MethodArguments)arguments).arguments) {
 				mi.rawArguments().addToEnd(arg);
 			}
-		} else mi.addDanglingNode(arguments);
+		} else DanglingNodes.addDanglingNode(mi, arguments);
 		
 		source.registerStructure(mi, dot);
 		
@@ -273,7 +274,7 @@ public class ExpressionsActions extends SourceActions {
 			} else if (o instanceof Select) {
 				current = ((Select)o).rawOperand(current);
 			} else {
-				current.addDanglingNode(o);
+				DanglingNodes.addDanglingNode(current, o);
 			}
 			
 			positionSpan(o, operand, pNode);
@@ -292,7 +293,7 @@ public class ExpressionsActions extends SourceActions {
 			return posify(invoke);
 		} else {
 			VariableReference ref = new VariableReference().astIdentifier(id);
-			ref.addDanglingNode(methodArguments);
+			DanglingNodes.addDanglingNode(ref, methodArguments);
 			return posify(ref);
 		}
 	}
@@ -312,7 +313,7 @@ public class ExpressionsActions extends SourceActions {
 			for (Node arg : ((TemporaryNode.MethodArguments)args).arguments) {
 				result.rawArguments().addToEnd(arg);
 			}
-		} else result.addDanglingNode(args);
+		} else DanglingNodes.addDanglingNode(result, args);
 		
 		return posify(result);
 	}

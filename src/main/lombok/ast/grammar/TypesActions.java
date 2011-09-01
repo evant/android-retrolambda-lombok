@@ -23,6 +23,7 @@ package lombok.ast.grammar;
 
 import java.util.List;
 
+import lombok.ast.DanglingNodes;
 import lombok.ast.Identifier;
 import lombok.ast.Node;
 import lombok.ast.Position;
@@ -66,7 +67,7 @@ public class TypesActions extends SourceActions {
 		
 		if (!(type instanceof TypeReference)) {
 			ref = new TypeReference();
-			ref.addDanglingNode(type);
+			DanglingNodes.addDanglingNode(ref, type);
 		} else {
 			ref = (TypeReference)type;
 		}

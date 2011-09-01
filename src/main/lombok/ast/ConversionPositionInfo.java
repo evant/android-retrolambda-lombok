@@ -19,23 +19,43 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package lombok.ast.grammar;
+package lombok.ast;
 
-import java.io.File;
-import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.WeakHashMap;
 
-import javax.tools.SimpleJavaFileObject;
-
-public class ContentBasedJavaFileObject extends SimpleJavaFileObject {
-	private final String content;
+/**
+ * Lombok.ast node objects built via conversion from other ast APIs can have associated position info which
+ * is useful for conversion back to the original AST.
+ */
+public class ConversionPositionInfo {
+	private static WeakHashMap<Node, Map<String, Position>> store = new WeakHashMap<Node, Map<String, Position>>();
 	
-	public ContentBasedJavaFileObject(String name, String content) {
-		super(new File(name).toURI(), Kind.SOURCE);
-		this.content = content;
+	public static void setConversionPositionInfo(Node on, String key, Position position) {
+		if (on instanceof AbstractNode) {
+			((AbstractNode) on).addConversionPositionInfo(key, position);
+		} else {
+			synchronized (store) {
+				Map<String, Position> map = store.get(on);
+				if (map == null) {
+					map = new HashMap<String, Position>();
+					store.put(on, map);
+				}
+				map.put(key, position);
+			}
+		}
 	}
 	
-	@Override
-	public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
-		return content;
+	public static Position getConversionPositionInfo(Node on, String key) {
+		if (on instanceof AbstractNode) {
+			return ((AbstractNode) on).getConversionPositionInfo(key);
+		} else {
+			synchronized (store) {
+				Map<String, Position> map = store.get(on);
+				if (map == null) return null;
+				return map.get(key);
+			}
+		}
 	}
 }

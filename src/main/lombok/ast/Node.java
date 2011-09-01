@@ -86,12 +86,6 @@ public interface Node {
 	
 	Position getPosition();
 	
-	void addDanglingNode(Node dangler);
-	
-	List<Node> getDanglingNodes();
-	
-	void removeDanglingNode(Node dangler);
-	
 	Node addMessage(Message message);
 	
 	boolean hasMessage(String key);
