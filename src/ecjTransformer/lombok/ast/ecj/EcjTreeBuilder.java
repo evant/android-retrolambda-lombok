@@ -1627,7 +1627,7 @@ public class EcjTreeBuilder {
 					Position ecjPart1Pos = getConversionPositionInfo(entry, "varDeclPart1");
 					Position ecjPart2Pos = getConversionPositionInfo(entry, "varDeclPart2");
 					((FieldDeclaration)decl).endPart1Position = ecjPart1Pos == null ? end(node.rawTypeReference()) + 1 : ecjPart1Pos.getEnd() - 1;
-					((FieldDeclaration)decl).endPart1Position = ecjPart2Pos == null ? end(node.getParent()) : ecjPart2Pos.getEnd() - 1;
+					((FieldDeclaration)decl).endPart2Position = ecjPart2Pos == null ? end(node.getParent()) : ecjPart2Pos.getEnd() - 1;
 					if (ecjPart2Pos == null && prevDecl instanceof FieldDeclaration) {
 						((FieldDeclaration)prevDecl).endPart2Position = start(entry) - 1;
 					}

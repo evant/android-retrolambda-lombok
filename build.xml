@@ -242,6 +242,7 @@
 			<manifest>
 				<attribute name="Main-Class" value="lombok.ast.app.Main" />
 				<attribute name="Lombok-Ast-Version" value="${lombok.ast.version}" />
+				<attribute name="Class-Path" value="ecj.jar javac.jar" />
 			</manifest>
 		</jarjar>
 		

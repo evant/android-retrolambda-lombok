@@ -435,7 +435,7 @@ public class JcTreeBuilder {
 			);
 			
 			int start, end;
-			Position jcNewClassPos = getConversionPositionInfo(node, "newclass");
+			Position jcNewClassPos = getConversionPositionInfo(node, "newClass");
 			start = jcNewClassPos == null ? posOfStructure(node, "(", true) : jcNewClassPos.getStart();
 			end = jcNewClassPos == null ? (body != null ? node.getPosition().getEnd() : posOfStructure(node, ")", false)) : jcNewClassPos.getEnd();
 			if (body != null) body.pos = node.getPosition().getStart();
@@ -566,10 +566,8 @@ public class JcTreeBuilder {
 		public boolean visitAlternateConstructorInvocation(AlternateConstructorInvocation node) {
 			int thisStart, thisEnd;
 			
-			
-			
 			Position jcThisPos = getConversionPositionInfo(node, "this");
-			thisStart = jcThisPos == null ? (node.astConstructorTypeArguments().isEmpty() ? posOfStructure(node, "<", true) : posOfStructure(node, "this", true)) : jcThisPos.getStart();
+			thisStart = jcThisPos == null ? (!node.astConstructorTypeArguments().isEmpty() ? posOfStructure(node, "<", true) : posOfStructure(node, "this", true)) : jcThisPos.getStart();
 			thisEnd = jcThisPos == null ? posOfStructure(node, "this", false) : jcThisPos.getEnd();
 			
 			JCMethodInvocation invoke = treeMaker.Apply(
@@ -1068,7 +1066,9 @@ public class JcTreeBuilder {
 		
 		@Override public boolean visitAnnotation(Annotation node) {
 			int start = node.getPosition().getStart();
-			int end = node.getPosition().getEnd();
+			int end = node.getPosition().getEnd(); // Newer javacs
+			//int end = node.astAnnotationTypeReference().getPosition().getEnd(); // Older javacs
+			
 			return set(node, setPos(start, end,
 					treeMaker.Annotation(toTree(node.astAnnotationTypeReference()), toList(JCExpression.class, node.astElements()))));
 		}
