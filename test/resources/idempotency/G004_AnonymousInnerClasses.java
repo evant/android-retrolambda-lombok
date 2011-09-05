@@ -14,4 +14,23 @@ class G004_AnonymousInnerClasses {
             }
         }.go();
     }
+
+    public void testMethod() {
+        Object o = new Object() {
+        };
+    }
+
+    public G004_AnonymousInnerClasses() {
+        Object o = new Object() {
+        };
+        int y = 10;
+    }
+
+    static {
+        Object o = new Object() {
+        };
+    }
+
+    private final Object testObject = new Object() {
+    };
 }

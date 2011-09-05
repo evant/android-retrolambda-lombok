@@ -172,6 +172,7 @@ public class EcjTreeBuilder {
 	private final CompilationResult compilationResult;
 	private final CompilerOptions options;
 	private final EnumSet<BubblingFlags> bubblingFlags = EnumSet.noneOf(BubblingFlags.class);
+	private final EnumSet<BubblingFlags> AUTO_REMOVABLE_BUBBLING_FLAGS = EnumSet.of(BubblingFlags.LOCALTYPE);
 	
 	private enum BubblingFlags {
 		ASSERT, LOCALTYPE, ABSTRACT_METHOD
@@ -460,6 +461,7 @@ public class EcjTreeBuilder {
 			}
 			
 			bubblingFlags.remove(BubblingFlags.ASSERT);
+			bubblingFlags.removeAll(AUTO_REMOVABLE_BUBBLING_FLAGS);
 			if (!bubblingFlags.isEmpty()) {
 				throw new RuntimeException("Unhandled bubbling flags left: " + bubblingFlags);
 			}
@@ -733,6 +735,10 @@ public class EcjTreeBuilder {
 				}
 			}
 			
+			if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
+				decl.bits |= ASTNode.HasLocalType;
+			}
+			
 			if (decl.statements != null) for (Statement s : decl.statements) {
 				if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
 			}
@@ -792,6 +798,10 @@ public class EcjTreeBuilder {
 						if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
 					}
 				}
+			}
+			
+			if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
+				decl.bits |= ASTNode.HasLocalType;
 			}
 			
 			if (isExplicitlyAbstract(node.astModifiers())) {
