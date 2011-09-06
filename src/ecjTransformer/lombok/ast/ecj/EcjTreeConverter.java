@@ -973,9 +973,15 @@ public class EcjTreeConverter {
 		@Override public void visitQualifiedAllocationExpression(QualifiedAllocationExpression node) {
 			lombok.ast.ConstructorInvocation constr = new lombok.ast.ConstructorInvocation();
 			constr.astTypeReference((lombok.ast.TypeReference) toTree(node.type));
-			lombok.ast.NormalTypeBody body = createNormalTypeBody(node.anonymousType);
-			setConversionPositionInfo(constr, "signature", toPosition(node.anonymousType.sourceStart, node.anonymousType.sourceEnd));
-			constr.astAnonymousClassBody(body);
+			if (node.anonymousType != null) {
+				lombok.ast.NormalTypeBody body = createNormalTypeBody(node.anonymousType);
+				setConversionPositionInfo(constr, "signature", toPosition(node.anonymousType.sourceStart, node.anonymousType.sourceEnd));
+				constr.astAnonymousClassBody(body);
+			}
+			
+			if (node.enclosingInstance != null) {
+				constr.rawQualifier(toTree(node.enclosingInstance));
+			}
 			
 			set(node, setPosition(node, constr));
 		}
