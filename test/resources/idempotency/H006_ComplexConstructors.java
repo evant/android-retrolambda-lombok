@@ -22,4 +22,14 @@ class H006_ComplexConstructors<T> {
             new Inner1().<String>super("");
         }
     }
+    
+    class Inner3 {
+        {
+            H006_ComplexConstructors<Integer> instance = new <String>H006_ComplexConstructors<Integer>(0, "");
+            Object o = instance.new Inner3().new InnerInner3();
+        }
+        
+        class InnerInner3 {
+        }
+    }
 }
