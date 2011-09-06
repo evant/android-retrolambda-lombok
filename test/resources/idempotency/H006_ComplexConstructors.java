@@ -24,12 +24,18 @@ class H006_ComplexConstructors<T> {
     }
     
     class Inner3 {
+        Inner3(int x) {
+            System.out.println(x);
+        }
+        
         {
             H006_ComplexConstructors<Integer> instance = new <String>H006_ComplexConstructors<Integer>(0, "");
-            Object o = instance.new Inner3().new InnerInner3();
+            Object o = instance.new Inner3(5).new <String>InnerInner3("hey");
         }
         
         class InnerInner3 {
+            <D> InnerInner3(D in) {
+            }
         }
     }
 }

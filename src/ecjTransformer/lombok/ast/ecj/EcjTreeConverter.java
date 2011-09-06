@@ -983,6 +983,9 @@ public class EcjTreeConverter {
 				constr.rawQualifier(toTree(node.enclosingInstance));
 			}
 			
+			fillList(node.arguments, constr.rawArguments());
+			fillList(node.typeArguments, constr.rawConstructorTypeArguments());
+			
 			set(node, setPosition(node, constr));
 		}
 		
