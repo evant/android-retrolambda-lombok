@@ -739,9 +739,8 @@ public class EcjTreeBuilder {
 				decl.bits |= ASTNode.HasLocalType;
 			}
 			
-			if (decl.statements != null) for (Statement s : decl.statements) {
-				if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
-			}
+			// Unlike other method(-like) constructs, while ConstructorDeclaration has a
+			// explicitDeclarations field, its kept at 0, so we don't need to calculate that value here.
 			
 			if (isUndocumented(node.astBody())) decl.bits |= ASTNode.UndocumentedEmptyBlock;
 			
