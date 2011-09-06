@@ -109,9 +109,9 @@ public class PositionCheckingFormatter extends TextFormatter {
 		String reportedPrefix = getCharsBeforePosition(repPos, raw);
 		String reportedPostfix = getCharsAfterPosition(repPos, raw);
 		problems.add(new AstException(node, String.format(
-			"this[%s] node's " + description + " is misreported with %+d\nactual: \"%s⊚%s\"\nreported: \"%s⊚%s\"",
+			"this[%s] node's " + description + " is misreported with %+d\nactual(%d): \"%s⊚%s\"\nreported(%d): \"%s⊚%s\"\n%s",
 			node.getClass().getSimpleName(),
-			delta, actualPrefix, actualPostfix, reportedPrefix, reportedPostfix)));
+			delta, actualPos, actualPrefix, actualPostfix, repPos, reportedPrefix, reportedPostfix, node)));
 	}
 	
 	private String getCharsAfterPosition(int pos, String raw) {
