@@ -180,8 +180,7 @@ public class ExpressionsActions extends SourceActions {
 		} else {
 			classTypeArgs0 = new TypeReferencePart();
 			if (identifierNode != null) {
-				int pos = identifierNode.getPosition().getEnd();
-				classTypeArgs0.setPosition(new Position(pos, pos));
+				classTypeArgs0.setPosition(identifierNode.getPosition());
 			}
 		}
 		
