@@ -516,13 +516,18 @@ public class JcTreeBuilder {
 		
 		@Override
 		public boolean visitConstructorInvocation(ConstructorInvocation node) {
-			return posSet(node, treeMaker.NewClass(
+			JCNewClass jcnc = setPos(node, treeMaker.NewClass(
 					toExpression(node.astQualifier()), 
 					toList(JCExpression.class, node.astConstructorTypeArguments()), 
 					toExpression(node.astTypeReference()), 
 					toList(JCExpression.class, node.astArguments()), 
 					(JCClassDecl)toTree(node.astAnonymousClassBody())
 			));
+			if (node.astQualifier() != null) {
+				int start = posOfStructure(node, "new", true);
+				setPos(start, node.getPosition().getEnd(), jcnc);
+			}
+			return set(node, jcnc);
 		}
 		
 		@Override
