@@ -856,6 +856,9 @@ public class EcjTreeBuilder {
 			if (isExplicitlyAbstract(node.astModifiers())) {
 				bubblingFlags.add(BubblingFlags.ABSTRACT_METHOD);
 			}
+			
+			setupJavadoc(decl, node);
+			
 			return set(node, decl);
 		}
 		

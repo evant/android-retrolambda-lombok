@@ -49,3 +49,41 @@ public class ExtensiveJavadoc<T> {
     public void deprecatedMethod() {
     }
 }
+
+/**
+ * some interface javadoc
+ */
+interface InterfaceJavadocTest {
+    /**
+     * some javadoc
+     */
+    class InnerClassInInterfaceJavadocTest {
+    }
+}
+
+/**
+ * some javadoc
+ */
+enum EnumJavadocTest {
+    /**
+     * some javadoc
+     */
+    FOO;
+    
+    /**
+     * some javadoc
+     */
+    public int foo() {
+        return 10;
+    }
+}
+
+/**
+ * some javadoc
+ */
+@interface AnnDeclareJavadocTest {
+    /**
+     * some javadoc
+     */
+    int foo() default 10;
+}
