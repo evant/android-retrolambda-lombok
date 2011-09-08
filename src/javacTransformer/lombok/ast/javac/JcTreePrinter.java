@@ -205,6 +205,11 @@ public class JcTreePrinter {
 					endPos = -1;
 				}
 				
+				// The end value of an annotation is end-of-annotation-type in older javac, and end-of-parenslist in new javac.
+				if (tree instanceof JCAnnotation) {
+					endPos = -2;
+				}
+				
 				// Modifiers of enums never get their position set, but we do set the position.
 				if (modsOfEnum) {
 					startPos = -1;
