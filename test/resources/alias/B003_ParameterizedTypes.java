@@ -10,5 +10,7 @@ class B003_ParameterizedTypes {
         java.util.List<?extends Number> extending;
         java.util.List< ?super Integer> withSuper;
         java.util.List< ? extends List<String> > list3;
+        java.util.List < ? > [ 
+           ]   arrayOfLists ;
     }
 }

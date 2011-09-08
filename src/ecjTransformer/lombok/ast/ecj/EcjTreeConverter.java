@@ -721,7 +721,8 @@ public class EcjTreeConverter {
 			part.astIdentifier(toIdentifier(node.token, node.sourceStart, node.sourceEnd));
 			ref.astParts().addToEnd(part);
 			fillList(node.typeArguments, part.rawTypeArguments());
-			set(node, ref);
+			ref.astArrayDimensions(node.dimensions());
+			set(node, setPosition(node, ref));
 		}
 		
 		@Override public void visitArrayTypeReference(ArrayTypeReference node) {

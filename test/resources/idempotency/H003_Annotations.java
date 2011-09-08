@@ -10,6 +10,8 @@ public @interface H003_Annotations {
     
     Class<?> clazz() default Object.class;
     
+    Class<?>[] clazzArray() default {};
+    
     public abstract H003_Annotations ann();
     
     String[] v2() default {"a", "b", "c"};
