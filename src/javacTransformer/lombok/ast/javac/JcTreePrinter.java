@@ -249,7 +249,6 @@ public class JcTreePrinter {
 					}
 				}
 				
-				
 				/* Javac bug: the 'JCAssign' starts at a dot (if present) in the expression instead of at the start of it, which is weird
 				   and inconsistent. */ {
 					if (tree instanceof JCAssign && ((JCAssign) tree).rhs instanceof JCFieldAccess) {

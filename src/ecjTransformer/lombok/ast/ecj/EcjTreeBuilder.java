@@ -662,6 +662,7 @@ public class EcjTreeBuilder {
 		public boolean visitAnnotationDeclaration(lombok.ast.AnnotationDeclaration node) {
 			TypeDeclaration decl = createTypeBody(node.astBody().astMembers(), node, false,
 					ClassFileConstants.AccAnnotation | ClassFileConstants.AccInterface);
+			decl.annotations = toArray(Annotation.class, node.astModifiers().astAnnotations());
 			decl.name = toName(node.astName());
 			updateTypeBits(node.getParent(), decl, false);
 			
