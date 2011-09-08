@@ -21,6 +21,7 @@
  */
 package lombok.ast.javac;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -142,7 +143,6 @@ import com.sun.tools.javac.tree.JCTree.JCTypeParameter;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.Context;
-import com.sun.tools.javac.util.JavacFileManager;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.util.Name.Table;
@@ -166,7 +166,23 @@ public class JcTreeBuilder {
 	
 	private static Context createNewContext() {
 		Context c = new Context();
-		JavacFileManager.preRegister(c);
+		// Older javacs such as the 1.6 of apple has DefaultFileManager. Newer ones have JavacFileManager.
+		// As javac6 might be on the classpath, JavacFileManager will probably exist but its initialization will fail.
+		// Initializing both is as far as I know not an issue. -ReinierZ
+		try {
+			Method m = Class.forName("com.sun.tools.javac.util.DefaultFileManager").getDeclaredMethod("preRegister", Context.class);
+			m.invoke(null, c);
+		} catch (Throwable t) {
+			// intentional do nothing
+		}
+		try {
+			Method m = Class.forName("com.sun.tools.javac.util.JavacFileManager").getDeclaredMethod("preRegister", Context.class);
+			m.invoke(null, c);
+		} catch (Throwable t) {
+			// intentional do nothing
+		}
+		// DefaultFileManager.preRegister(c);
+		// JavacFileManager.preRegister(c);
 		return c;
 	}
 	
