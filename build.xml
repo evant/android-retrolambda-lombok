@@ -71,8 +71,7 @@
 	</target>
 	
 	<target name="distclean" depends="clean" description="Deletes everything that this build script has ever generated.">
-		<delete file="lib/ivy.jar" quiet="true" />
-		<delete dir="lib/build" quiet="true" />
+		<delete dir="lib" quiet="true" />
 		<delete file=".project" quiet="true" />
 		<delete file=".classpath" quiet="true" />
 		<delete dir=".settings" quiet="true" />
