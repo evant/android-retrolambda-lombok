@@ -17,6 +17,7 @@ import lombok.ast.Node;
 import lombok.ast.Version;
 import lombok.ast.ecj.EcjTreeBuilder;
 import lombok.ast.ecj.EcjTreeConverter;
+import lombok.ast.ecj.EcjTreeOperations;
 import lombok.ast.ecj.EcjTreePrinter;
 import lombok.ast.grammar.ParseProblem;
 import lombok.ast.grammar.Source;
@@ -85,6 +86,10 @@ public class Main {
 		@Mandatory(onlyIfNot={"print", "help"})
 		private String target;
 		
+		@Shorthand("z")
+		@Description("Normalize the way various different nodes are printed when using the structural printer ('text'), when these nodes are semantically identical")
+		private boolean normalize;
+		
 		@Mandatory
 		@Sequential
 		@Description("Operations to apply to each source file. Comma-separated (no spaces). Valid options: ecj/javac/lombok first to decide how the file is parsed initially, " +
@@ -125,7 +130,7 @@ public class Main {
 		
 		try {
 			Charset charset = args.encoding == null ? Charset.defaultCharset() : Charset.forName(args.encoding);
-			Main main = new Main(charset, args.verbose);
+			Main main = new Main(charset, args.verbose, args.normalize);
 			main.compile(args.program);
 			if (!args.print) {
 				File targetDir = new File(args.target);
@@ -273,6 +278,7 @@ public class Main {
 	private final Charset charset;
 	private List<Operation<Object, Object>> program;
 	private final boolean verbose;
+	private final boolean normalize;
 	private int errors;
 	private File outDir = null;
 	private final List<Plan> files = Lists.newArrayList();
@@ -429,9 +435,13 @@ public class Main {
 	
 	private final Operation<CompilationUnitDeclaration, String> ecjToText = new Operation<CompilationUnitDeclaration, String>() {
 		@Override public String process(Source source, CompilationUnitDeclaration in) throws ConversionProblem {
-			EcjTreePrinter printer = new EcjTreePrinter(true);
-			printer.visit(in);
-			return printer.toString();
+			if (normalize) {
+				return EcjTreeOperations.convertToString(in);
+			} else {
+				EcjTreePrinter printer = new EcjTreePrinter(true);
+				printer.visit(in);
+				return printer.getContent();
+			}
 		}
 	};
 	

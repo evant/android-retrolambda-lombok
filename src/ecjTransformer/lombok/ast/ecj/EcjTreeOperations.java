@@ -19,9 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package lombok.ast.grammar;
+package lombok.ast.ecj;
 
-import lombok.ast.ecj.EcjTreePrinter;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.CombinedBinaryExpression;
@@ -31,8 +30,12 @@ import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 
-class EcjTreeOperations {
-	static String convertToString(ASTNode tree) {
+public class EcjTreeOperations {
+	private EcjTreeOperations() {
+		// static utility class
+	}
+	
+	public static String convertToString(ASTNode tree) {
 		EcjTreePrinter printer = new EcjTreePrinter(true);
 		dodgePostFixArraysInVarDeclarations(printer);
 		dodgeCombinedBinaryExpressions(printer);

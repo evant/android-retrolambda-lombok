@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreeBuilder;
+import lombok.ast.ecj.EcjTreeOperations;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;

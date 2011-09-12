@@ -24,6 +24,7 @@ package lombok.ast.grammar;
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreeBuilder;
 import lombok.ast.ecj.EcjTreeConverter;
+import lombok.ast.ecj.EcjTreeOperations;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
