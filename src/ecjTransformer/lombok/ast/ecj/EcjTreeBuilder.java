@@ -51,9 +51,11 @@ import lombok.ast.UnaryOperator;
 import lombok.ast.VariableReference;
 import lombok.ast.grammar.SourceStructure;
 
+import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.IErrorHandlingPolicy;
+import org.eclipse.jdt.internal.compiler.IProblemFactory;
 import org.eclipse.jdt.internal.compiler.ast.AND_AND_Expression;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.AbstractMethodDeclaration;
@@ -168,6 +170,7 @@ public class EcjTreeBuilder {
 	private List<? extends ASTNode> result = null;
 	private final String rawInput;
 	private final ProblemReporter reporter;
+	private final ProblemReporter silentProblemReporter;
 	private final CompilationResult compilationResult;
 	private final CompilerOptions options;
 	private final EnumSet<BubblingFlags> bubblingFlags = EnumSet.noneOf(BubblingFlags.class);
@@ -225,12 +228,35 @@ public class EcjTreeBuilder {
 		}
 	}
 	
+	private static final IProblemFactory SILENT_PROBLEM_FACTORY = new IProblemFactory() {
+		
+		@Override public String getLocalizedMessage(int problemId, int elaborationId, String[] messageArguments) {
+			return null;
+		}
+		
+		@Override public String getLocalizedMessage(int problemId, String[] messageArguments) {
+			return null;
+		}
+		
+		@Override public Locale getLocale() {
+			return Locale.getDefault();
+		}
+		
+		@Override public CategorizedProblem createProblem(char[] originatingFileName, int problemId, String[] problemArguments, int elaborationId, String[] messageArguments, int severity, int startPosition, int endPosition, int lineNumber, int columnNumber) {
+			return null;
+		}
+		
+		@Override public CategorizedProblem createProblem(char[] originatingFileName, int problemId, String[] problemArguments, String[] messageArguments, int severity, int startPosition, int endPosition, int lineNumber, int columnNumber) {
+			return null;
+		}
+	};
+	
 	public EcjTreeBuilder(lombok.ast.grammar.Source source, CompilerOptions options) {
-		this(source, createDefaultProblemReporter(options), new CompilationResult(source.getName().toCharArray(), 0, 0, 0));
+		this(source, createDefaultProblemReporter(options), createSilentProblemReporter(options), new CompilationResult(source.getName().toCharArray(), 0, 0, 0));
 	}
 	
 	public EcjTreeBuilder(String rawInput, String name, CompilerOptions options) {
-		this(rawInput, createDefaultProblemReporter(options), new CompilationResult(name.toCharArray(), 0, 0, 0));
+		this(rawInput, createDefaultProblemReporter(options), createSilentProblemReporter(options), new CompilationResult(name.toCharArray(), 0, 0, 0));
 	}
 	
 	private static ProblemReporter createDefaultProblemReporter(CompilerOptions options) {
@@ -245,24 +271,39 @@ public class EcjTreeBuilder {
 		}, options, new DefaultProblemFactory(Locale.ENGLISH));
 	}
 	
-	public EcjTreeBuilder(lombok.ast.grammar.Source source, ProblemReporter reporter, CompilationResult compilationResult) {
+	private static ProblemReporter createSilentProblemReporter(CompilerOptions options) {
+		return new ProblemReporter(new IErrorHandlingPolicy() {
+			public boolean proceedOnErrors() {
+				return true;
+			}
+			
+			public boolean stopOnFirstError() {
+				return false;
+			}
+		}, options, SILENT_PROBLEM_FACTORY);
+	}
+	
+	public EcjTreeBuilder(lombok.ast.grammar.Source source, ProblemReporter reporter, ProblemReporter silentProblemReporter, CompilationResult compilationResult) {
 		this.options = reporter.options;
 		this.sourceStructures = source.getSourceStructures();
 		this.rawInput = source.getRawInput();
 		this.reporter = reporter;
+		this.silentProblemReporter = silentProblemReporter;
 		this.compilationResult = compilationResult;
 	}
 	
-	public EcjTreeBuilder(String rawInput, ProblemReporter reporter, CompilationResult compilationResult) {
+	public EcjTreeBuilder(String rawInput, ProblemReporter reporter, ProblemReporter silentProblemReporter, CompilationResult compilationResult) {
 		this.options = reporter.options;
 		this.sourceStructures = null;
 		this.rawInput = rawInput;
 		this.reporter = reporter;
+		this.silentProblemReporter = silentProblemReporter;
 		this.compilationResult = compilationResult;
 	}
 	
 	private EcjTreeBuilder(EcjTreeBuilder parent) {
 		this.reporter = parent.reporter;
+		this.silentProblemReporter = parent.silentProblemReporter;
 		this.options = parent.options;
 		this.rawInput = parent.rawInput;
 		this.compilationResult = parent.compilationResult;
@@ -1803,7 +1844,7 @@ public class EcjTreeBuilder {
 				typeName = getTypeNameFromFileName(compilationResult.getFileName());
 			}
 			
-			return set(node, new JustJavadocParser(reporter, typeName).parse(rawInput, node.getPosition().getStart(), node.getPosition().getEnd()));
+			return set(node, new JustJavadocParser(silentProblemReporter, typeName).parse(rawInput, node.getPosition().getStart(), node.getPosition().getEnd()));
 		}
 		
 		@Override
@@ -1896,7 +1937,7 @@ public class EcjTreeBuilder {
 			this.source = rawContent;
 			this.javadocStart = from;
 			this.javadocEnd = to;
-			this.reportProblems = false;
+			this.reportProblems = true;
 			this.docComment = new Javadoc(this.javadocStart, this.javadocEnd);
 			commentParse();
 			this.docComment.valuePositions = -1;

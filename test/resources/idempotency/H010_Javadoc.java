@@ -27,4 +27,9 @@ class H010_Javadoc {
      */
     void test() {
     }
+    
+    /** {@inheritDoc} */
+    void test2() {
+    	
+    }
 }
