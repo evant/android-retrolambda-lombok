@@ -644,6 +644,8 @@ public class EcjTreeBuilder {
 			decl.sourceEnd = end(node.astName());
 			decl.declarationSourceStart = decl.modifiersSourceStart = jstart(node);
 			decl.declarationSourceEnd = decl.declarationEnd = end(node);
+			Position ecjDeclarationSourcePos = getConversionPositionInfo(node, "declarationSource");
+			if (ecjDeclarationSourcePos != null) decl.declarationSourceEnd = ecjDeclarationSourcePos.getEnd() - 1;
 			
 			AllocationExpression init;
 			if (node.astBody() == null) {
@@ -1615,14 +1617,20 @@ public class EcjTreeBuilder {
 						else end = end(entry.astName());
 					}
 					decl.declarationSourceEnd = decl.declarationEnd = end;
+					Position ecjDeclarationSourcePos = getConversionPositionInfo(entry, "declarationSource");
+					if (ecjDeclarationSourcePos != null) decl.declarationSourceEnd = ecjDeclarationSourcePos.getEnd() - 1;
 					break;
 				case ARGUMENT:
 					decl.declarationSourceEnd = decl.declarationEnd = end(entry.astName());
+					ecjDeclarationSourcePos = getConversionPositionInfo(entry, "declarationSource");
+					if (ecjDeclarationSourcePos != null) decl.declarationSourceEnd = ecjDeclarationSourcePos.getEnd() - 1;
 					break;
 				case FIELD:
 					decl.declarationSourceEnd = decl.declarationEnd = end(node.getParent());
+					ecjDeclarationSourcePos = getConversionPositionInfo(entry, "declarationSource");
 					Position ecjPart1Pos = getConversionPositionInfo(entry, "varDeclPart1");
 					Position ecjPart2Pos = getConversionPositionInfo(entry, "varDeclPart2");
+					if (ecjDeclarationSourcePos != null) decl.declarationSourceEnd = ecjDeclarationSourcePos.getEnd() - 1;
 					((FieldDeclaration)decl).endPart1Position = ecjPart1Pos == null ? end(node.rawTypeReference()) + 1 : ecjPart1Pos.getEnd() - 1;
 					((FieldDeclaration)decl).endPart2Position = ecjPart2Pos == null ? end(node.getParent()) : ecjPart2Pos.getEnd() - 1;
 					if (ecjPart2Pos == null && prevDecl instanceof FieldDeclaration) {

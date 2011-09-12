@@ -308,7 +308,7 @@ public class EcjTreeConverter {
 		}
 		
 		decl.astDefinition(def);
-		decl.setPosition(toPosition(first.declarationSourceStart, first.declarationSourceEnd));
+		decl.setPosition(toPosition(first.declarationSourceStart, first.declarationEnd));
 		return decl;
 	}
 	
@@ -340,6 +340,7 @@ public class EcjTreeConverter {
 				setConversionPositionInfo(varDefEntry, "varDeclPart1", toPosition(decl.sourceStart, ((FieldDeclaration) decl).endPart1Position));
 				setConversionPositionInfo(varDefEntry, "varDeclPart2", toPosition(decl.sourceStart, ((FieldDeclaration) decl).endPart2Position));
 			}
+			setConversionPositionInfo(varDefEntry, "declarationSource", toPosition(decl.declarationSourceStart, decl.declarationSourceEnd));
 			setConversionPositionInfo(varDefEntry, "typeSourcePos", toPosition(decl.type.sourceStart, decl.type.sourceEnd));
 			varDefEntry.astInitializer((lombok.ast.Expression) toTree(decl.initialization));
 			varDefEntry.astName(toIdentifier(decl.name, decl.sourceStart, decl.sourceEnd));
@@ -618,7 +619,8 @@ public class EcjTreeConverter {
 				constant.astBody(body);
 			}
 			
-			constant.setPosition(toPosition(node.declarationSourceStart, node.declarationSourceEnd));
+			setConversionPositionInfo(constant, "declarationSource", toPosition(node.declarationSourceStart, node.declarationSourceEnd));
+			constant.setPosition(toPosition(node.declarationSourceStart, node.declarationEnd));
 			
 			set(node, constant);
 		}
