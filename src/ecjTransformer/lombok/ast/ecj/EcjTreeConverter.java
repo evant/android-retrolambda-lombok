@@ -644,11 +644,6 @@ public class EcjTreeConverter {
 			return part;
 		}
 		
-		private lombok.ast.TypeReferencePart createParameterizedSingleTypeReferencePart(ParameterizedSingleTypeReference node) {
-			lombok.ast.TypeReferencePart part = createTypeReferencePart(node.token, toLong(node.sourceStart, node.sourceEnd), node.typeArguments);
-			return part;
-		}
-		
 		private void fillTypeReferenceParts(char[][] tokens, long[] positions, StrictListAccessor<lombok.ast.TypeReferencePart, ?> list) {
 			if (tokens == null) return;
 			if (tokens.length != positions.length) throw new IllegalStateException("bug");
@@ -696,18 +691,9 @@ public class EcjTreeConverter {
 		}
 		
 		@Override public void visitWildcard(Wildcard node) {
-			lombok.ast.TypeReference ref = new lombok.ast.TypeReference();
 			
-			lombok.ast.TypeReferencePart part;
-			if (node.bound instanceof ParameterizedSingleTypeReference) {
-				part = createParameterizedSingleTypeReferencePart((ParameterizedSingleTypeReference)node.bound);
-			} else if (node.bound instanceof SingleTypeReference) {
-				part = createSingleTypeReferencePart((SingleTypeReference)node.bound);
-			} else {
-				part = new lombok.ast.TypeReferencePart();
-			}
-			
-			ref.astParts().addToEnd(part);
+			lombok.ast.TypeReference ref = (lombok.ast.TypeReference) toTree(node.bound);
+			if (ref == null) ref = new lombok.ast.TypeReference();
 			
 			switch (node.kind) {
 			case Wildcard.UNBOUND: 
