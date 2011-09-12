@@ -494,6 +494,17 @@ public class EcjTreeBuilder {
 			return true;
 		}
 		
+		private int calculateExplicitDeclarations(Iterable<lombok.ast.Statement> statements) {
+			int explicitDeclarations = 0;
+			if (statements != null) {
+				for (lombok.ast.Statement s : statements) {
+					if (s instanceof lombok.ast.VariableDeclaration) explicitDeclarations++;
+				}
+			}
+			
+			return explicitDeclarations;
+		}
+		
 		@Override
 		public boolean visitPackageDeclaration(lombok.ast.PackageDeclaration node) {
 			long[] pos = partsToPosArray(node.rawParts());
@@ -793,11 +804,7 @@ public class EcjTreeBuilder {
 				decl.modifiers |= ExtraCompilerModifiers.AccSemicolonBody;
 			} else {
 				decl.statements = toArray(Statement.class, node.astBody().astContents());
-				if (decl.statements != null) {
-					for (Statement s : decl.statements) {
-						if (s instanceof LocalDeclaration) decl.explicitDeclarations++;
-					}
-				}
+				decl.explicitDeclarations = calculateExplicitDeclarations(node.astBody().astContents());
 			}
 			
 			if (bubblingFlags.remove(BubblingFlags.LOCALTYPE)) {
@@ -1444,9 +1451,7 @@ public class EcjTreeBuilder {
 			if (block.statements == null) {
 				if (isUndocumented(node)) block.bits |= ASTNode.UndocumentedEmptyBlock;
 			} else {
-				//TODO test what happens with vardecls in catch blocks and for each loops, as well as for inner blocks.
-				block.explicitDeclarations = 0;
-				for (lombok.ast.Statement s : node.astContents()) if (s instanceof lombok.ast.VariableDeclaration) block.explicitDeclarations++;
+				block.explicitDeclarations = calculateExplicitDeclarations(node.astContents());
 			}
 			block.sourceStart = start(node);
 			block.sourceEnd = end(node);
@@ -1696,11 +1701,7 @@ public class EcjTreeBuilder {
 			if (value.statements == null) {
 				if (isUndocumented(node.astBody())) value.bits |= ASTNode.UndocumentedEmptyBlock;
 			} else {
-				for (Statement s : value.statements) {
-					if (s instanceof LocalDeclaration) {
-						value.explicitDeclarations++;
-					}
-				}
+				value.explicitDeclarations = calculateExplicitDeclarations(node.astBody().astContents());
 			}
 			return set(node, value);
 		}
