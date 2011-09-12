@@ -458,6 +458,15 @@ public class EcjTreeBuilder {
 				
 				newTypes[0] = decl;
 				cud.types = newTypes;
+				
+				lombok.ast.PackageDeclaration pkgDeclaration = node.astPackageDeclaration();
+				Comment javadoc = pkgDeclaration == null ? null : pkgDeclaration.astJavadoc();
+				if (javadoc != null) {
+					boolean markDep = javadoc.isMarkedDeprecated();
+					cud.javadoc = (Javadoc) toTree(javadoc);
+					if (markDep) decl.modifiers |= ClassFileConstants.AccDeprecated;
+					decl.javadoc = cud.javadoc;
+				}
 			}
 			
 			bubblingFlags.remove(BubblingFlags.ASSERT);

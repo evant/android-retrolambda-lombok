@@ -1560,10 +1560,11 @@ class EnumDeclarationTemplate {
 	}
 }
 
-@GenerateAstNode
+@GenerateAstNode(implementing=JavadocContainer.class)
 class PackageDeclarationTemplate {
-	List<Annotation> annotations1;
-	List<Identifier> parts2;
+	Comment javadoc1;
+	List<Annotation> annotations2;
+	List<Identifier> parts3;
 	
 	@CopyMethod
 	static String getPackageName(PackageDeclaration node) {
