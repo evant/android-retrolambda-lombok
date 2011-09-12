@@ -1122,7 +1122,7 @@ public class EcjTreeBuilder {
 			BinaryExpression binExpr = (BinaryExpression) base;
 			int op = opForBinaryExpression(binExpr);
 			
-			if (binExpr.left instanceof BinaryExpression && opForBinaryExpression((BinaryExpression)binExpr.left) == op) {
+			if (binExpr.left instanceof BinaryExpression && op == OperatorIds.PLUS && opForBinaryExpression((BinaryExpression)binExpr.left) == op) {
 				CombinedBinaryExpression parent = null;
 				int arity = 0;
 				Expression newLeft = binExpr.left;
