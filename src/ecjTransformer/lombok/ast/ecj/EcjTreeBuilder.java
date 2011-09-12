@@ -76,7 +76,6 @@ import org.eclipse.jdt.internal.compiler.ast.CaseStatement;
 import org.eclipse.jdt.internal.compiler.ast.CastExpression;
 import org.eclipse.jdt.internal.compiler.ast.CharLiteral;
 import org.eclipse.jdt.internal.compiler.ast.ClassLiteralAccess;
-import org.eclipse.jdt.internal.compiler.ast.CombinedBinaryExpression;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.CompoundAssignment;
 import org.eclipse.jdt.internal.compiler.ast.ConditionalExpression;
@@ -381,10 +380,6 @@ public class EcjTreeBuilder {
 			if ("abstract".equals(keyword.astName())) return true;
 		}
 		return false;
-	}
-	
-	private static int opForBinaryExpression(BinaryExpression binExpr) {
-		return (binExpr.bits & ASTNode.OperatorMASK) >>> ASTNode.OperatorSHIFT;
 	}
 	
 	private static final EnumMap<UnaryOperator, Integer> UNARY_OPERATORS = Maps.newEnumMap(UnaryOperator.class);
@@ -1115,56 +1110,30 @@ public class EcjTreeBuilder {
 		
 		@Override
 		public boolean visitBinaryExpression(lombok.ast.BinaryExpression node) {
-			Expression base = visitBinaryExpression0(node);
-			if (!(base instanceof BinaryExpression)) {
-				return set(node, base);
-			}
-			
-			BinaryExpression binExpr = (BinaryExpression) base;
-			int op = opForBinaryExpression(binExpr);
-			
-			if (binExpr.left instanceof BinaryExpression && op == OperatorIds.PLUS && opForBinaryExpression((BinaryExpression)binExpr.left) == op) {
-				CombinedBinaryExpression parent = null;
-				int arity = 0;
-				Expression newLeft = binExpr.left;
-				if (binExpr.left instanceof CombinedBinaryExpression) {
-					parent = (CombinedBinaryExpression) binExpr.left;
-					arity = parent.arity;
-					newLeft = new BinaryExpression(parent.left, parent.right, op);
-				}
-				CombinedBinaryExpression newBase = new CombinedBinaryExpression(newLeft, binExpr.right, op, 0);
-				newBase.arity = arity+1;
-				return set(node, newBase);
-			}
-			
-			return set(node, base);
-		}
-		
-		private Expression visitBinaryExpression0(lombok.ast.BinaryExpression node) {
 			Expression lhs = toExpression(node.astLeft());
 			Expression rhs = toExpression(node.astRight());
 			
 			if (node.astOperator() == BinaryOperator.ASSIGN) {
-				return posParen(new Assignment(lhs, rhs, end(node)), node);
+				return set(node, posParen(new Assignment(lhs, rhs, end(node)), node));
 			}
 			
 			//TODO add a test with 1 + 2 + 3 + "" + 4 + 5 + 6 + "foo"; as well as 5 + 2 + 3 - 5 - 8 -7 - 8 * 10 + 20;
 			
 			int ecjOperator = BINARY_OPERATORS.get(node.astOperator());
 			if (node.astOperator().isAssignment()) {
-				return posParen(new CompoundAssignment(lhs, rhs, ecjOperator, end(node)), node);
+				return set(node, posParen(new CompoundAssignment(lhs, rhs, ecjOperator, end(node)), node));
 			} else if (node.astOperator() == BinaryOperator.EQUALS || node.astOperator() == BinaryOperator.NOT_EQUALS) {
-				return posParen(new EqualExpression(lhs, rhs, ecjOperator), node);
+				return set(node, posParen(new EqualExpression(lhs, rhs, ecjOperator), node));
 			} else if (node.astOperator() == BinaryOperator.LOGICAL_AND) {
-				return posParen(new AND_AND_Expression(lhs, rhs, ecjOperator), node);
+				return set(node, posParen(new AND_AND_Expression(lhs, rhs, ecjOperator), node));
 			} else if (node.astOperator() == BinaryOperator.LOGICAL_OR) {
-				return posParen(new OR_OR_Expression(lhs, rhs, ecjOperator), node);
+				return set(node, posParen(new OR_OR_Expression(lhs, rhs, ecjOperator), node));
 			} else if (node.astOperator() == BinaryOperator.PLUS && node.astLeft().getParens() == 0) {
 				Expression stringConcatExpr = posParen(tryStringConcat(lhs, rhs), node);
-				if (stringConcatExpr != null) return stringConcatExpr;
+				if (stringConcatExpr != null) return set(node, stringConcatExpr);
 			}
 			
-			return posParen(new BinaryExpression(lhs, rhs, ecjOperator), node);
+			return set(node, posParen(new BinaryExpression(lhs, rhs, ecjOperator), node));
 		}
 		
 		private Expression tryStringConcat(Expression lhs, Expression rhs) {

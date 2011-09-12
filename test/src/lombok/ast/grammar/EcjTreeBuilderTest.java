@@ -31,7 +31,6 @@ import java.util.regex.Pattern;
 
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreeBuilder;
-import lombok.ast.ecj.EcjTreePrinter;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
@@ -75,13 +74,12 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 		return options;
 	}
 	
+	@Override
 	protected String convertToString(ASTNode tree) {
-		EcjTreePrinter printer = new EcjTreePrinter(true);
-		printer.visit(tree);
-		String string = printer.toString();
-		return string;
+		return EcjTreeOperations.convertToString(tree);
 	}
 	
+	@Override
 	protected ASTNode parseWithLombok(Source source) {
 		List<Node> nodes = source.getNodes();
 		assertEquals(1, nodes.size());
@@ -92,6 +90,7 @@ public class EcjTreeBuilderTest extends TreeBuilderRunner<ASTNode> {
 		return builder.get();
 	}
 	
+	@Override
 	protected ASTNode parseWithTargetCompiler(Source source) {
 		CompilerOptions compilerOptions = ecjCompilerOptions();
 		Parser parser = new Parser(new ProblemReporter(

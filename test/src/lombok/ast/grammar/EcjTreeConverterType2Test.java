@@ -24,18 +24,11 @@ package lombok.ast.grammar;
 import lombok.ast.Node;
 import lombok.ast.ecj.EcjTreeBuilder;
 import lombok.ast.ecj.EcjTreeConverter;
-import lombok.ast.ecj.EcjTreePrinter;
 
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
-import org.eclipse.jdt.internal.compiler.ast.Block;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.ExtendedStringLiteral;
-import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
-import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
@@ -59,19 +52,12 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 		return testCompiler(source);
 	}
 	
+	@Override
 	protected String convertToString(ASTNode tree) {
-		EcjTreePrinter printer = new EcjTreePrinter(true);
-		printer.skipProperty(StringLiteral.class, "lineNumber");
-		printer.skipProperty(ExtendedStringLiteral.class, "lineNumber");
-		printer.skipProperty(Block.class, "explicitDeclarations");
-		printer.skipReferenceTracking(LocalDeclaration.class, TypeReference.class);
-		printer.skipReferenceTracking(FieldDeclaration.class, TypeReference.class);
-		printer.visit(tree);
-		String string = printer.toString();
-		string = string.replace("ExtendedStringLiteral", "StringLiteral");
-		return string;
+		return EcjTreeOperations.convertToString(tree);
 	}
 	
+	@Override
 	protected boolean checkForLombokAstParseFailure() {
 		return false;
 	}
@@ -85,6 +71,7 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 		return options;
 	}
 	
+	@Override
 	protected ASTNode parseWithLombok(Source source) {
 		CompilerOptions compilerOptions = ecjCompilerOptions();
 		Parser parser = new Parser(new ProblemReporter(
@@ -108,6 +95,7 @@ public class EcjTreeConverterType2Test extends TreeBuilderRunner<ASTNode> {
 		return builder.get();
 	}
 	
+	@Override
 	protected ASTNode parseWithTargetCompiler(Source source) {
 		CompilerOptions compilerOptions = ecjCompilerOptions();
 		Parser parser = new Parser(new ProblemReporter(

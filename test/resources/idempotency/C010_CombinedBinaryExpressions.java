@@ -5,6 +5,6 @@ class C010_CombinedBinaryExpressions {
         int binaryOrCombined = 20 | five | ten;
         int binaryPlusCombined = 20 + five + ten;
         int veryLongCombined = five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten;
-        int veryVeryLongCombined = five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten;
+        int veryVeryLongCombined = five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten + five + ten;
     }
 }

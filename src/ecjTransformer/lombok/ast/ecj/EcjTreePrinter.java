@@ -33,6 +33,7 @@ import java.util.Set;
 
 import lombok.Data;
 import lombok.SneakyThrows;
+import lombok.val;
 
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
 import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
@@ -46,6 +47,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
@@ -76,6 +78,8 @@ public class EcjTreePrinter {
 	
 	private final Printer printer;
 	private Set<String> propertySkipList = Sets.newHashSet();
+	private Multimap<String, Object> propertyIfValueSkipList = ArrayListMultimap.create();
+	private Map<String, String> stringReplacements = Maps.newHashMap();
 	private List<ReferenceTrackingSkip> referenceTrackingSkipList = Lists.newArrayList();
 	
 	public EcjTreePrinter(boolean printPositions) {
@@ -88,7 +92,11 @@ public class EcjTreePrinter {
 	}
 	
 	public String getContent() {
-		return printer.content.toString();
+		String result = printer.content.toString();
+		for (val entry : stringReplacements.entrySet()) {
+			result = result.replace(entry.getKey(), entry.getValue());
+		}
+		return result;
 	}
 	
 	public void visit(ASTNode node) {
@@ -98,6 +106,15 @@ public class EcjTreePrinter {
 	public EcjTreePrinter skipProperty(Class<? extends ASTNode> type, String propertyName) {
 		propertySkipList.add(type.getSimpleName() + "/" + propertyName);
 		return this;
+	}
+	
+	public EcjTreePrinter skipPropertyIfHasValue(Class<? extends ASTNode> type, String propertyName, Object value) {
+		propertyIfValueSkipList.put(type.getSimpleName() + "/" + propertyName, value);
+		return this;
+	}
+	
+	public void stringReplace(String original, String replacement) {
+		stringReplacements.put(original, replacement);
 	}
 	
 	@Data
@@ -115,7 +132,9 @@ public class EcjTreePrinter {
 		@Override public void visitAny(ASTNode node) {
 			Collection<ComponentField> fields = findFields(node);
 			for (ComponentField f : fields) {
-				if (propertySkipList.contains(node.getClass().getSimpleName() + "/" + f.field.getName())) continue;
+				String skipListKey = node.getClass().getSimpleName() + "/" + f.field.getName();
+				if (propertySkipList.contains(skipListKey)) continue;
+				
 				Object value;
 				
 				if (node instanceof ConditionalExpression) ((ConditionalExpression)node).valueIfTrue.sourceEnd = -2;
@@ -128,6 +147,8 @@ public class EcjTreePrinter {
 				if (value == null) {
 					continue;
 				}
+				
+				if (propertyIfValueSkipList.get(skipListKey).contains(value)) continue;
 				
 				boolean trackRef = true;
 				for (ReferenceTrackingSkip skip : referenceTrackingSkipList) {
