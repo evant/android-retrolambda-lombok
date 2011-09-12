@@ -37,6 +37,7 @@ abstract class TreeBuilderRunner<N> extends RunForEachFileInDirRunner.SourceFile
 		this.lombokIsActual = lombokIsActual;
 		
 	}
+	
 	@Override
 	protected Collection<DirDescriptor> getDirDescriptors() {
 		return Arrays.asList(

@@ -414,6 +414,12 @@ public class EcjTreeConverter {
 		@Override public void visitCompilationUnitDeclaration(CompilationUnitDeclaration node) {
 			lombok.ast.CompilationUnit unit = new lombok.ast.CompilationUnit();
 			unit.rawPackageDeclaration(toTree(node.currentPackage, FlagKey.IMPORTDECLARATION_IS_PACKAGE));
+			if (node.javadoc != null) {
+				lombok.ast.PackageDeclaration lombokJavadoc = unit.astPackageDeclaration();
+				if (lombokJavadoc != null) {
+					lombokJavadoc.rawJavadoc(toTree(node.javadoc));
+				}
+			}
 			fillList(node.imports, unit.rawImportDeclarations());
 			
 			TypeDeclaration[] newTypes = null;

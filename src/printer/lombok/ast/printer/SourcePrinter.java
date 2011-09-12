@@ -1333,6 +1333,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitPackageDeclaration(PackageDeclaration node) {
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
 		visitAll(node.rawAnnotations(), "", "", "");
 		formatter.keyword("package");
