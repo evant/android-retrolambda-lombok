@@ -8,6 +8,7 @@ class H006_ComplexConstructors<T> {
     
     public H006_ComplexConstructors() {
         <String>this(null, "");
+        int x = 5;
     }
     
     static class Inner1 {
@@ -20,6 +21,7 @@ class H006_ComplexConstructors<T> {
     static class Inner2 extends Inner1.InnerInner {
         Inner2() {
             new Inner1().<String>super("");
+            int x = 5;
         }
     }
     

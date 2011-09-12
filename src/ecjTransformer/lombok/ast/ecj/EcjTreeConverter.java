@@ -1180,7 +1180,7 @@ public class EcjTreeConverter {
 			constr.astTypeName(toIdentifier(node.selector, node.sourceStart, node.sourceEnd));
 			lombok.ast.Block block = toBlock(node.statements);
 			block.setPosition(toPosition(node.bodyStart - 1, node.bodyEnd + 1));
-			block.astContents().addToEnd((lombok.ast.Statement)toTree(node.constructorCall, FlagKey.AS_STATEMENT));
+			block.astContents().addToStart((lombok.ast.Statement)toTree(node.constructorCall, FlagKey.AS_STATEMENT));
 			constr.astBody(block);
 			constr.astJavadoc((lombok.ast.Comment) toTree(node.javadoc));
 			constr.astModifiers(toModifiers(node.modifiers, node.annotations, node.modifiersSourceStart, node.declarationSourceStart));
