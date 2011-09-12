@@ -201,7 +201,7 @@ public class EcjTreeConverterType1Test extends TreeBuilderRunner<Node> {
 				if (node.rawLeft() != null) node.rawLeft().accept(this);
 				if (node.rawRight() != null) node.rawRight().accept(this);
 				String left = null, right = null;
-				if (node.astOperator() != BinaryOperator.PLUS || node.getParent() == null) return false;
+				if (node.astOperator() != BinaryOperator.PLUS || node.getParent() == null) return true;
 				boolean leftIsChar = false;
 				if (node.rawLeft() instanceof StringLiteral) left = ((StringLiteral) node.rawLeft()).astValue();
 				if (node.rawLeft() instanceof CharLiteral) {
@@ -210,14 +210,14 @@ public class EcjTreeConverterType1Test extends TreeBuilderRunner<Node> {
 				}
 				if (node.rawRight() instanceof StringLiteral) right = ((StringLiteral) node.rawRight()).astValue();
 				if (!leftIsChar && node.rawRight() instanceof CharLiteral) right = "" + ((CharLiteral) node.rawRight()).astValue();
-				if (left == null || right == null) return false;
+				if (left == null || right == null) return true;
 				
 				int start = node.rawLeft().getPosition().getStart();
 				int end = node.rawRight().getPosition().getEnd();
 				
 				node.getParent().replaceChild(node, new StringLiteral().astValue(left + right).setPosition(new Position(start, end)));
 				
-				return false;
+				return true;
 			}
 		});
 	}

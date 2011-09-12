@@ -115,7 +115,7 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 						node.getParent().replaceChild(node, new StringLiteral().astValue(left + right).setPosition(new Position(start, end)));
 					}
 				}
-				return false;
+				return true;
 			}
 		});
 	}
