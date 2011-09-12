@@ -508,6 +508,7 @@ public class EcjTreeBuilder {
 			if (statements != null) {
 				for (lombok.ast.Statement s : statements) {
 					if (s instanceof lombok.ast.VariableDeclaration) explicitDeclarations++;
+					if (s instanceof lombok.ast.ClassDeclaration) explicitDeclarations++;
 				}
 			}
 			
