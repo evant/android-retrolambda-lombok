@@ -307,7 +307,7 @@ public class Main {
 			List<Node> nodes = in.getNodes();
 			List<ParseProblem> problems = in.getProblems();
 			if (problems.size() > 0) throw new ConversionProblem(String.format("Can't read file %s due to parse error: %s", in.getName(), problems.get(0)));
-			if (nodes.size() == 1) return nodes.get(1);
+			if (nodes.size() == 1) return nodes.get(0);
 			if (nodes.size() == 0) throw new ConversionProblem("No nodes parsed by lombok.ast");
 			throw new ConversionProblem("More than 1 node parsed by lombok.ast");
 		}
