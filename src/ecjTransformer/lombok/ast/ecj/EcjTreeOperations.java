@@ -35,14 +35,21 @@ public class EcjTreeOperations {
 		// static utility class
 	}
 	
-	public static String convertToString(ASTNode tree) {
-		EcjTreePrinter printer = EcjTreePrinter.printerWithPositions();
+	private static String convertToString0(ASTNode tree, EcjTreePrinter printer) {
 		dodgePostFixArraysInVarDeclarations(printer);
 		dodgeCombinedBinaryExpressions(printer);
 		dodgeExtendedStringLiterals(printer);
 		printer.visit(tree);
 		String string = printer.getContent();
 		return string;
+	}
+	
+	public static String convertToString(ASTNode tree) {
+		return convertToString0(tree, EcjTreePrinter.printerWithPositions());
+	}
+	
+	public static String convertToStringNoPositions(ASTNode tree) {
+		return convertToString0(tree, EcjTreePrinter.printerWithoutPositions());
 	}
 	
 	/*

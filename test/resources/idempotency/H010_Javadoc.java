@@ -16,6 +16,8 @@ class H010_Javadoc {
     
     /** jdoc5 */
     @interface C {
+        /** jdoc8 */
+        int foo() default 5;
     }
     
     /** jdoc6 */

@@ -763,7 +763,7 @@ public class EcjTreeBuilder {
 			decl.sourceStart = start(node.astTypeName());
 			/* set sourceEnd */ {
 				Position ecjPos = getConversionPositionInfo(node, "signature");
-				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1 : ecjPos.getEnd() - 1;
+				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", 0, false) - 1 : ecjPos.getEnd() - 1;
 				
 				if (!node.rawThrownTypeReferences().isEmpty()) {
 					decl.sourceEnd = end(node.rawThrownTypeReferences().last());
@@ -818,10 +818,9 @@ public class EcjTreeBuilder {
 			boolean setOriginalPosOnType = false;
 			/* set sourceEnd */ {
 				Position ecjPos = getConversionPositionInfo(node, "signature");
-				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1: ecjPos.getEnd() - 1;
-				int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, false) - 1;
-				if (postDims > decl.sourceEnd) {
-					decl.sourceEnd = postDims;
+				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", 0, false) - 1: ecjPos.getEnd() - 1;
+				if (countStructure(node, "]") > 0) {
+					decl.sourceEnd = posOfStructure(node, "]", 0, false) - 1;
 					setOriginalPosOnType = true;
 				}
 				
@@ -884,11 +883,10 @@ public class EcjTreeBuilder {
 					decl.sourceEnd = ecjSigPos.getEnd() - 1;
 					decl.extendedDimensions = ecjExtDimPos.getStart();
 				} else {
-					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1;
-					int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, false) - 1;
+					decl.sourceEnd = posOfStructure(node, ")", 0, false) - 1;
 					decl.extendedDimensions = countStructure(node, "]");
-					if (postDims > decl.sourceEnd) {
-						decl.sourceEnd = postDims;
+					if (decl.extendedDimensions > 0) {
+						decl.sourceEnd = posOfStructure(node, "]", 0, false) - 1;
 						setOriginalPosOnType = true;
 					}
 				}
@@ -1023,7 +1021,7 @@ public class EcjTreeBuilder {
 					TypeDeclaration decl = createTypeBody(node.astAnonymousClassBody().astMembers(), null, false, 0);
 					Position ecjSigPos = getConversionPositionInfo(node, "signature");
 					decl.sourceStart = ecjSigPos == null ? start(node.rawTypeReference()) : ecjSigPos.getStart();
-					decl.sourceEnd = ecjSigPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1 : ecjSigPos.getEnd() - 1;
+					decl.sourceEnd = ecjSigPos == null ? posOfStructure(node, ")", 0, false) - 1 : ecjSigPos.getEnd() - 1;
 					decl.declarationSourceStart = decl.sourceStart;
 					decl.declarationSourceEnd = end(node);
 					decl.name = CharOperation.NO_CHAR;
@@ -1611,7 +1609,7 @@ public class EcjTreeBuilder {
 					} else {
 						// This makes no sense whatsoever but eclipse wants it this way.
 						if (firstDecl == null && (base.dimensions() > 0 || node.getParent() instanceof lombok.ast.ForEach)) {
-							decl.type.sourceEnd = posOfStructure(entry, "]", Integer.MAX_VALUE, false) - 1;
+							decl.type.sourceEnd = posOfStructure(entry, "]", 0, false) - 1;
 						} else if (firstDecl != null) {
 							// This replicates an eclipse bug; the end pos of the type of b in: int[] a[][], b[]; is in fact the second closing ] of a.
 							decl.type.sourceEnd = firstDecl.type.sourceEnd;
@@ -1627,7 +1625,7 @@ public class EcjTreeBuilder {
 							((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;
 						}
 						Position ecjTyperefPos = getConversionPositionInfo(node, "typeref");
-						decl.type.sourceEnd = ecjTyperefPos == null ? posOfStructure(node, "...", Integer.MAX_VALUE, false) - 1 : ecjTyperefPos.getEnd() - 1;
+						decl.type.sourceEnd = ecjTyperefPos == null ? posOfStructure(node, "...", 0, false) - 1 : ecjTyperefPos.getEnd() - 1;
 					} else {
 						if (decl.type instanceof ArrayTypeReference) {
 							((ArrayTypeReference)decl.type).originalSourceEnd = decl.type.sourceEnd;

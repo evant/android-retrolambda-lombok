@@ -443,7 +443,7 @@ public class Main {
 	private final Operation<CompilationUnitDeclaration, String> ecjToText = new Operation<CompilationUnitDeclaration, String>() {
 		@Override public String process(Source source, CompilationUnitDeclaration in) throws ConversionProblem {
 			if (normalize) {
-				return EcjTreeOperations.convertToString(in);
+				return positions ? EcjTreeOperations.convertToString(in) : EcjTreeOperations.convertToStringNoPositions(in);
 			} else {
 				EcjTreePrinter printer = positions ? EcjTreePrinter.printerWithPositions() : EcjTreePrinter.printerWithoutPositions();
 				printer.visit(in);
