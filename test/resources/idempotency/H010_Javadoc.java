@@ -30,6 +30,5 @@ class H010_Javadoc {
     
     /** {@inheritDoc} */
     void test2() {
-    	
     }
 }

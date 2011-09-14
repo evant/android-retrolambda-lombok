@@ -1948,19 +1948,20 @@ public class EcjTreeBuilder {
 	
 	private static int jstart(lombok.ast.Node node) {
 		if (node == null) return 0;
+		int start = start(node);
 		if (node instanceof lombok.ast.JavadocContainer) {
 			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node).rawJavadoc();
-			if (javadoc != null) return start(javadoc);
+			if (javadoc != null) return Math.min(start, start(javadoc));
 		}
 		if (node instanceof lombok.ast.VariableDefinition && node.getParent() instanceof lombok.ast.VariableDeclaration) {
 			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).rawJavadoc();
-			if (javadoc != null) return start(javadoc);
+			if (javadoc != null) return Math.min(start, start(javadoc));
 		}
 		if (node instanceof lombok.ast.Modifiers && node.getParent() instanceof JavadocContainer) {
 			lombok.ast.Node javadoc = ((lombok.ast.JavadocContainer)node.getParent()).rawJavadoc();
-			if (javadoc != null) return start(javadoc);
+			if (javadoc != null) return Math.min(start, start(javadoc));
 		}
-		return start(node);
+		return start;
 	}
 	
 	private static int start(lombok.ast.Node node) {
