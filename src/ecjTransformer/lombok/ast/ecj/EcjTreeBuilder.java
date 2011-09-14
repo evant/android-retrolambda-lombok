@@ -763,7 +763,7 @@ public class EcjTreeBuilder {
 			decl.sourceStart = start(node.astTypeName());
 			/* set sourceEnd */ {
 				Position ecjPos = getConversionPositionInfo(node, "signature");
-				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, true) : ecjPos.getEnd() - 1;
+				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1 : ecjPos.getEnd() - 1;
 				
 				if (!node.rawThrownTypeReferences().isEmpty()) {
 					decl.sourceEnd = end(node.rawThrownTypeReferences().last());
@@ -818,8 +818,8 @@ public class EcjTreeBuilder {
 			boolean setOriginalPosOnType = false;
 			/* set sourceEnd */ {
 				Position ecjPos = getConversionPositionInfo(node, "signature");
-				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, true) : ecjPos.getEnd() - 1;
-				int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
+				decl.sourceEnd = ecjPos == null ? posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1: ecjPos.getEnd() - 1;
+				int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, false) - 1;
 				if (postDims > decl.sourceEnd) {
 					decl.sourceEnd = postDims;
 					setOriginalPosOnType = true;
@@ -884,8 +884,8 @@ public class EcjTreeBuilder {
 					decl.sourceEnd = ecjSigPos.getEnd() - 1;
 					decl.extendedDimensions = ecjExtDimPos.getStart();
 				} else {
-					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, true);
-					int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, true);
+					decl.sourceEnd = posOfStructure(node, ")", Integer.MAX_VALUE, false) - 1;
+					int postDims = posOfStructure(node, "]", Integer.MAX_VALUE, false) - 1;
 					decl.extendedDimensions = countStructure(node, "]");
 					if (postDims > decl.sourceEnd) {
 						decl.sourceEnd = postDims;
@@ -1218,7 +1218,7 @@ public class EcjTreeBuilder {
 			
 			Position ecjTypePos = getConversionPositionInfo(node, "type");
 			typeRef.sourceStart = ecjTypePos == null ? posOfStructure(node, "(", 0, true) + 1 : ecjTypePos.getStart();
-			typeRef.sourceEnd = ecjTypePos == null ? posOfStructure(node, ")", 0, true) - 1 : ecjTypePos.getEnd() - 1;
+			typeRef.sourceEnd = ecjTypePos == null ? posOfStructure(node, ")", 0, false) - 2 : ecjTypePos.getEnd() - 1;
 			expr.sourceStart = start(node);
 			expr.sourceEnd = end(node);
 			return set(node, expr);
