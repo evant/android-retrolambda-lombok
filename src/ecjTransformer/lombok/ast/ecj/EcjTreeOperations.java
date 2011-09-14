@@ -36,7 +36,7 @@ public class EcjTreeOperations {
 	}
 	
 	public static String convertToString(ASTNode tree) {
-		EcjTreePrinter printer = new EcjTreePrinter(true);
+		EcjTreePrinter printer = EcjTreePrinter.printerWithPositions();
 		dodgePostFixArraysInVarDeclarations(printer);
 		dodgeCombinedBinaryExpressions(printer);
 		dodgeExtendedStringLiterals(printer);

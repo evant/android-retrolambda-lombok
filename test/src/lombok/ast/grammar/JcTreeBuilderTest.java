@@ -51,7 +51,7 @@ public class JcTreeBuilderTest extends TreeBuilderRunner<JCTree> {
 	}
 	
 	protected String convertToString(JCTree tree) {
-		JcTreePrinter printer = new JcTreePrinter(true);
+		JcTreePrinter printer = JcTreePrinter.printerWithPositions();
 		printer.visit(tree);
 		String string = printer.toString();
 		return string;

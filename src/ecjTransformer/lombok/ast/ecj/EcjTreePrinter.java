@@ -82,8 +82,16 @@ public class EcjTreePrinter {
 	private Map<String, String> stringReplacements = Maps.newHashMap();
 	private List<ReferenceTrackingSkip> referenceTrackingSkipList = Lists.newArrayList();
 	
-	public EcjTreePrinter(boolean printPositions) {
+	private EcjTreePrinter(boolean printPositions) {
 		printer = new Printer(printPositions);
+	}
+	
+	public static EcjTreePrinter printerWithPositions() {
+		return new EcjTreePrinter(true);
+	}
+	
+	public static EcjTreePrinter printerWithoutPositions() {
+		return new EcjTreePrinter(false);
 	}
 	
 	@Override

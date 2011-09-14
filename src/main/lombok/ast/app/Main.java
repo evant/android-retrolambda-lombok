@@ -54,6 +54,7 @@ import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Options;
 import com.zwitserloot.cmdreader.CmdReader;
 import com.zwitserloot.cmdreader.Description;
+import com.zwitserloot.cmdreader.FullName;
 import com.zwitserloot.cmdreader.InvalidCommandLineException;
 import com.zwitserloot.cmdreader.Mandatory;
 import com.zwitserloot.cmdreader.Sequential;
@@ -89,6 +90,11 @@ public class Main {
 		@Shorthand("z")
 		@Description("Normalize the way various different nodes are printed when using the structural printer ('text'), when these nodes are semantically identical")
 		private boolean normalize;
+		
+		@Shorthand("n")
+		@Description("Omit printing the start and end position of nodes for structural output")
+		@FullName("no-positions")
+		private boolean noPositions;
 		
 		@Mandatory
 		@Sequential
@@ -130,7 +136,7 @@ public class Main {
 		
 		try {
 			Charset charset = args.encoding == null ? Charset.defaultCharset() : Charset.forName(args.encoding);
-			Main main = new Main(charset, args.verbose, args.normalize);
+			Main main = new Main(charset, args.verbose, args.normalize, !args.noPositions);
 			main.compile(args.program);
 			if (!args.print) {
 				File targetDir = new File(args.target);
@@ -279,6 +285,7 @@ public class Main {
 	private List<Operation<Object, Object>> program;
 	private final boolean verbose;
 	private final boolean normalize;
+	private final boolean positions;
 	private int errors;
 	private File outDir = null;
 	private final List<Plan> files = Lists.newArrayList();
@@ -378,7 +385,7 @@ public class Main {
 	
 	private final Operation<Node, CompilationUnitDeclaration> lombokToEcj = new Operation<Node, CompilationUnitDeclaration>() {
 		@Override public CompilationUnitDeclaration process(Source source, Node in) throws ConversionProblem {
-			EcjTreeBuilder builder = new EcjTreeBuilder(source.getRawInput(), source.getName(), ecjCompilerOptions());
+			EcjTreeBuilder builder = new EcjTreeBuilder(source, ecjCompilerOptions());
 			builder.visit(in);
 			ASTNode out = builder.get();
 			if (out instanceof CompilationUnitDeclaration) return (CompilationUnitDeclaration) out;
@@ -414,7 +421,7 @@ public class Main {
 	
 	private final Operation<Node, String> lombokToText = new Operation<Node, String>() {
 		@Override public String process(Source source, Node in) throws ConversionProblem {
-			SourceFormatter formatter = StructureFormatter.formatterWithPositions();
+			SourceFormatter formatter = positions ? StructureFormatter.formatterWithPositions() : StructureFormatter.formatterWithoutPositions();
 			in.accept(new SourcePrinter(formatter));
 			
 			for (ParseProblem x : source.getProblems()) {
@@ -427,7 +434,7 @@ public class Main {
 	
 	private final Operation<JCCompilationUnit, String> javacToText = new Operation<JCCompilationUnit, String>() {
 		@Override public String process(Source source, JCCompilationUnit in) throws ConversionProblem {
-			JcTreePrinter printer = new JcTreePrinter(true);
+			JcTreePrinter printer = positions ? JcTreePrinter.printerWithPositions() : JcTreePrinter.printerWithoutPositions();
 			printer.visit(in);
 			return printer.toString();
 		}
@@ -438,7 +445,7 @@ public class Main {
 			if (normalize) {
 				return EcjTreeOperations.convertToString(in);
 			} else {
-				EcjTreePrinter printer = new EcjTreePrinter(true);
+				EcjTreePrinter printer = positions ? EcjTreePrinter.printerWithPositions() : EcjTreePrinter.printerWithoutPositions();
 				printer.visit(in);
 				return printer.getContent();
 			}

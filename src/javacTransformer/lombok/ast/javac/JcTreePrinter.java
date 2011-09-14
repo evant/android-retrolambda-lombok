@@ -143,9 +143,17 @@ public class JcTreePrinter {
 		}
 	}
 	
-	public JcTreePrinter(boolean includePositions) {
+	private JcTreePrinter(boolean includePositions) {
 		this.includePositions = includePositions;
 		this.includeObjectRefs = true;
+	}
+	
+	public static JcTreePrinter printerWithPositions() {
+		return new JcTreePrinter(true);
+	}
+	
+	public static JcTreePrinter printerWithoutPositions() {
+		return new JcTreePrinter(false);
 	}
 	
 	@Override
