@@ -1295,6 +1295,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	
 	@Override
 	public boolean visitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {
+		visit(node.rawJavadoc());
 		formatter.buildBlock(node);
 		visit(node.astModifiers());
 		if (!node.astModifiers().rawKeywords().isEmpty()) formatter.space();

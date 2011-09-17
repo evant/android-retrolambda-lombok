@@ -33,6 +33,7 @@ import lombok.ast.AstException;
 import lombok.ast.Node;
 import lombok.ast.grammar.RunForEachFileInDirRunner.DirDescriptor;
 import lombok.ast.printer.SourcePrinter;
+import lombok.ast.printer.StructureFormatter;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -56,6 +57,15 @@ public class PositionTest extends RunForEachFileInDirRunner.SourceFileBasedTeste
 		PositionCheckingFormatter formatter = new PositionCheckingFormatter(source);
 		node.accept(new SourcePrinter(formatter));
 		List<AstException> problems = formatter.getProblems();
-		if (!problems.isEmpty()) fail("position error: " + problems.get(0));
+		try {
+			if (!problems.isEmpty()) fail("position error: " + problems.get(0));
+		} catch (AssertionError e) {
+			System.out.println("-------PARSED-PRINTED:");
+			StructureFormatter formatter2 = StructureFormatter.formatterWithPositions();
+			node.accept(new SourcePrinter(formatter2));
+			System.out.println(formatter2.finish());
+			System.out.println("----------------------");
+			throw e;
+		}
 	}
 }
