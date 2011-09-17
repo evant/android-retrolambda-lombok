@@ -1216,7 +1216,7 @@ public class EcjTreeBuilder {
 			
 			Position ecjTypePos = getConversionPositionInfo(node, "type");
 			typeRef.sourceStart = ecjTypePos == null ? posOfStructure(node, "(", true) + 1 : ecjTypePos.getStart();
-			typeRef.sourceEnd = ecjTypePos == null ? posOfStructure(node, ")", false) - 2 : ecjTypePos.getEnd() - 1;
+			typeRef.sourceEnd = ecjTypePos == null ? posOfStructure(node, ")", 0, false) - 2 : ecjTypePos.getEnd() - 1;
 			expr.sourceStart = start(node);
 			expr.sourceEnd = end(node);
 			return set(node, expr);
@@ -2001,11 +2001,13 @@ public class EcjTreeBuilder {
 	}
 	
 	private int posOfStructure(lombok.ast.Node node, String structure, boolean atStart) {
+		return posOfStructure(node, structure, atStart ? 0 : Integer.MAX_VALUE, atStart);
+	}
+	
+	private int posOfStructure(lombok.ast.Node node, String structure, int idx, boolean atStart) {
 		int start = node.getPosition().getStart();
 		int end = node.getPosition().getEnd();
 		Integer result = null;
-		
-		int idx = atStart ? 0 : Integer.MAX_VALUE;
 		
 		if (sourceStructures != null && sourceStructures.containsKey(node)) {
 			for (SourceStructure struct : sourceStructures.get(node)) {
