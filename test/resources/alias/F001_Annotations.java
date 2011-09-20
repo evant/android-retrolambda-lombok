@@ -20,4 +20,8 @@ class F001_Annotations {
     public int hashCode() {
         return 0;
     }
+    
+    @  SuppressWarnings ( "all" )
+      void  foo ( )  {
+    }
 }

@@ -138,7 +138,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 		if (sb.length() > 0) formatter.append(sb.toString());
 	}
 	
-	private void visitAll(String relation, RawListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
+	private void visitAll0(String relation, RawListAccessor<?, ?> nodes, String separator, String prefix, String suffix, boolean suppress) {
 		if (nodes.isEmpty()) return;
 		append(prefix);
 		boolean first = true;
@@ -148,13 +148,23 @@ public class SourcePrinter extends ForwardingAstVisitor {
 			}
 			first = false;
 			formatter.nameNextElement(relation);
+			if (suppress) formatter.startSuppressBlock();
 			visit(n);
+			if (suppress) formatter.endSuppressBlock();
 		}
 		append(suffix);
 	}
 	
+	private void visitAllSuppressed(RawListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
+		visitAll0(null, nodes, separator, prefix, suffix, true);
+	}
+	
 	private void visitAll(RawListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
-		visitAll(null, nodes, separator, prefix, suffix);
+		visitAll0(null, nodes, separator, prefix, suffix, false);
+	}
+	
+	private void visitAll(String relation, RawListAccessor<?, ?> nodes, String separator, String prefix, String suffix) {
+		visitAll0(relation, nodes, separator, prefix, suffix, false);
 	}
 	
 	private boolean isValidJavaIdentifier(String in) {
@@ -1260,7 +1270,7 @@ public class SourcePrinter extends ForwardingAstVisitor {
 	public boolean visitEnumConstant(EnumConstant node) {
 		visit(node.rawJavadoc());
 		formatter.buildInline(node);
-		visitAll(node.rawAnnotations(), "", "", "");
+		visitAllSuppressed(node.rawAnnotations(), "\n", "", "\n");
 		formatter.nameNextElement("name");
 		visit(node.astName());
 		visitAll(node.rawArguments(), ", ", "(", ")");

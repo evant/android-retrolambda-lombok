@@ -454,19 +454,28 @@ public class JcTreeBuilder {
 			Position jcNewClassPos = getConversionPositionInfo(node, "newClass");
 			start = jcNewClassPos == null ? posOfStructure(node, "(", true) : jcNewClassPos.getStart();
 			end = jcNewClassPos == null ? (body != null ? node.getPosition().getEnd() : posOfStructure(node, ")", false)) : jcNewClassPos.getEnd();
-			if (body != null) body.pos = node.getPosition().getStart();
-			if (start != node.getPosition().getStart()) {
+			boolean posIsSet = false;
+			
+			if (jcNewClassPos == null && start > node.astName().getPosition().getStart()) {
 				setPos(start, end, newClass);
-			} else {
-				if (body != null) setPos(node.astBody(), newClass);
+				posIsSet = true;
 			}
 			
-			return posSet(node, treeMaker.VarDef(
-					treeMaker.Modifiers(ENUM_CONSTANT_FLAGS, toList(JCAnnotation.class, node.astAnnotations())),
-					toName(node.astName()),
-					parentType2,
-					newClass
-			));
+			if (jcNewClassPos != null && start != node.getPosition().getStart()) {
+				setPos(start, end, newClass);
+				posIsSet = true;
+			}
+			
+			if (body != null) body.pos = node.getPosition().getStart();
+			if (!posIsSet && body != null) setPos(node.astBody(), newClass);
+			
+			JCModifiers mods = treeMaker.Modifiers(ENUM_CONSTANT_FLAGS, toList(JCAnnotation.class, node.astAnnotations()));
+			if (!node.astAnnotations().isEmpty()) {
+				int modStart = node.astAnnotations().first().getPosition().getStart();
+				int modEnd = node.astAnnotations().last().getPosition().getEnd();
+				setPos(modStart, modEnd, mods);
+			}
+			return posSet(node, treeMaker.VarDef(mods, toName(node.astName()), parentType2, newClass));
 		}
 		
 		@Override

@@ -214,7 +214,7 @@ public class JcTreePrinter {
 				}
 				
 				// The end value of an annotation is end-of-annotation-type in older javac, and end-of-parenslist in new javac.
-				if (tree instanceof JCAnnotation) {
+				if (tree instanceof JCAnnotation || tree instanceof JCModifiers) {
 					endPos = -2;
 				}
 				

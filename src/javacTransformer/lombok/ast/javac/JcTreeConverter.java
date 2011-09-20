@@ -542,9 +542,8 @@ public class JcTreeConverter {
 									NormalTypeBody constantBody = setPos(init, new NormalTypeBody());
 									fillList(init.getClassBody().getMembers(), constantBody.rawMembers());
 									ec.astBody(constantBody);
-								} else {
-									setConversionPositionInfo(ec, "newClass", getPosition(init));
 								}
+								setConversionPositionInfo(ec, "newClass", getPosition(init));
 							}
 							body.astConstants().addToEnd(ec);
 							continue;

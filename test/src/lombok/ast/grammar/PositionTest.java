@@ -64,6 +64,8 @@ public class PositionTest extends RunForEachFileInDirRunner.SourceFileBasedTeste
 			StructureFormatter formatter2 = StructureFormatter.formatterWithPositions();
 			node.accept(new SourcePrinter(formatter2));
 			System.out.println(formatter2.finish());
+			System.out.println("--------------PRINTED:");
+			System.out.println(formatter.finish());
 			System.out.println("----------------------");
 			throw e;
 		}

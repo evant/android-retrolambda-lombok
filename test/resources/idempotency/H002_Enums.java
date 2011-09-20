@@ -6,9 +6,9 @@ public enum H002_Enums implements java.util.RandomAccess {
 }
 
 enum SemiComplexEnum {
-    A(10),
-    B(20),
-    C(30 + 10);
+    SCE_A(10),
+    SCE_B(20),
+    SCE_C(30 + 10);
     
     private final int x;
     
@@ -25,12 +25,12 @@ enum TrivialEnum {
 }
 
 enum ReallyComplexEnum {
-    A(10) {
+    RCE_A(10) {
         void bar() {
         }
     },
-    B,
-    C {
+    RCE_B,
+    RCE_C {
         void baz() {
         }
     };
@@ -40,4 +40,13 @@ enum ReallyComplexEnum {
     
     ReallyComplexEnum(int x) {
     }
+}
+
+enum AnnsOnEnumValues {
+    AOEV_A,
+    @Deprecated
+    @SuppressWarnings("all")
+    AOEV_B,
+    @Deprecated
+    AOEV_C
 }
