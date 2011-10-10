@@ -108,6 +108,11 @@ public class Main {
 		@Mandatory(onlyIfNot={"print", "help"})
 		private String target;
 		
+		@Shorthand("i")
+		@Description("Save the result of each (intermediate) operation as 'text' representation. Do not use any text/source/html operations if you use this option.")
+		@FullName("save-intermediate")
+		private boolean saveIntermediate;
+		
 		@Shorthand("z")
 		@Description("Normalize the way various different nodes are printed when using the structural printer ('text'), when these nodes are semantically identical")
 		private boolean normalize;
@@ -157,7 +162,7 @@ public class Main {
 		
 		try {
 			Charset charset = args.encoding == null ? Charset.defaultCharset() : Charset.forName(args.encoding);
-			Main main = new Main(charset, args.verbose, args.normalize, !args.noPositions);
+			Main main = new Main(charset, args.verbose, args.normalize, !args.noPositions, args.saveIntermediate);
 			main.compile(args.program);
 			if (!args.print) {
 				File targetDir = new File(args.target);
@@ -184,7 +189,7 @@ public class Main {
 	
 	private void go() throws IOException {
 		for (Plan p : files) {
-			process(p.getFile(), outDir == null ? null : new File(outDir, p.getRelativeName()));
+			process(p.getFile(), outDir, p.getRelativeName());
 		}
 		if (errors > 0) {
 			System.err.printf("%d errors\n", errors);
@@ -221,21 +226,47 @@ public class Main {
 		final String relativeName;
 	}
 	
-	private void process(File in, File out) throws IOException {
-		if (verbose) {
+	private void process(File in, File outDir, String relativeName) throws IOException {
+		File out = outDir == null ? null : new File(outDir, relativeName);
+		
+		if (verbose && !saveIntermediate) {
 			System.out.printf("Processing: %s to %s\n", in.getCanonicalPath(), out == null ? "sysout" : out.getCanonicalPath());
 		}
 		
 		Source source = new Source(Files.toString(in, charset), in.getCanonicalPath());
 		Object transfer = null;
+		String chain = "/";
+		
 		try {
 			for (Operation<Object, Object> programElem : program) {
 				transfer = programElem.process(source, transfer);
+				if (saveIntermediate) {
+					if (!"/".equals(chain)) {
+						chain += "-";
+					}
+					chain += getDestinationType(programElem);
+					File intermediate = new File(outDir.getCanonicalPath() + chain + "/" + relativeName);
+					intermediate.getParentFile().mkdirs();
+					
+					if (verbose) {
+						System.out.printf("Processing: %s to %s\n", in.getCanonicalPath(), intermediate.getCanonicalPath());
+					}
+					
+					if (TO_JAVAC.contains(programElem)) {
+						Files.write(javacToText.process(source, (JCCompilationUnit) transfer).toString(), intermediate, charset);
+					}
+					else if (TO_ECJ.contains(programElem)) {
+						Files.write(ecjToText.process(source, (CompilationUnitDeclaration) transfer).toString(), intermediate, charset);
+					}
+					else if (TO_LOMBOK.contains(programElem)) {
+						Files.write(lombokToText.process(source, (Node) transfer).toString(), intermediate, charset);
+					}
+				}
 			}
 			
 			if (out == null) {
 				System.out.println(transfer);
-			} else {
+			} else if (!saveIntermediate) {
 				out.getParentFile().mkdirs();
 				Files.write(transfer.toString(), out, charset);
 			}
@@ -246,6 +277,14 @@ public class Main {
 			System.err.printf("Error during convert: %s\n%s\n", in.getCanonicalPath(), printEx(e));
 			errors++;
 		}
+	}
+	
+	private String getDestinationType(Operation<Object, Object> operation) {
+		if (TO_LOMBOK.contains(operation)) return "lombok";
+		else if (TO_ECJ.contains(operation)) return "ecj";
+		else if (TO_JAVAC.contains(operation)) return "javac";
+		else if (TO_TEXT.contains(operation)) return "text";
+		else return null;
 	}
 	
 	private static String printEx(Throwable t) {
@@ -331,7 +370,7 @@ public class Main {
 		}
 		
 		String lastPart = parts.get(parts.size() - 1).getType();
-		if (!LEGAL_FINAL.contains(lastPart)) {
+		if (!LEGAL_FINAL.contains(lastPart) && !saveIntermediate) {
 			throw new IllegalArgumentException(String.format(
 					"Illegal final operation: %s\nLegal final operations: %s",
 					lastPart, Joiner.on(",").join(LEGAL_FINAL)));
@@ -345,6 +384,7 @@ public class Main {
 	private final boolean verbose;
 	private final boolean normalize;
 	private final boolean positions;
+	private final boolean saveIntermediate;
 	private int errors;
 	private File outDir = null;
 	private final List<Plan> files = Lists.newArrayList();
@@ -532,6 +572,11 @@ public class Main {
 			.build();
 	
 	private final List<String> LEGAL_FINAL = ImmutableList.of("source", "html", "text");
+	
+	private final List<Operation<?, Node>> TO_LOMBOK = ImmutableList.of(ecjToLombok, javacToLombok, parseWithLombok);
+	private final List<Operation<?, ? extends ASTNode>> TO_ECJ = ImmutableList.of(lombokToEcj, parseWithEcj);
+	private final List<Operation<?, JCCompilationUnit>> TO_JAVAC = ImmutableList.of(lombokToJavac, parseWithJavac);
+	private final List<Operation<?, String>> TO_TEXT = ImmutableList.of(ecjToText, javacToText, lombokToText);
 	
 	private static class ContentBasedJavaFileObject extends SimpleJavaFileObject {
 		private final String content;
