@@ -1,3 +1,24 @@
+/*
+ * Copyright © 2011 Reinier Zwitserloot and Roel Spilker.
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package lombok.ast.app;
 
 import java.io.File;
@@ -13,6 +34,7 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
+import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
 import lombok.ast.Version;
 import lombok.ast.ecj.EcjTreeBuilder;
@@ -30,6 +52,7 @@ import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.StructureFormatter;
 import lombok.ast.printer.TextFormatter;
 
+import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
@@ -37,6 +60,7 @@ import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
+import org.eclipse.jdt.internal.compiler.lookup.CompilationUnitScope;
 import org.eclipse.jdt.internal.compiler.parser.Parser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
@@ -239,12 +263,48 @@ public class Main {
 		this.program = compile0(program);
 	}
 	
+	@Data
+	private static final class ChainElement {
+		private final String type, subtype;
+		
+		@Override public String toString() {
+			return subtype.length() == 0 ? type : String.format("%s:%s", type, subtype);
+		}
+		
+		public boolean hasSubtype() {
+			return subtype.length() > 0;
+		}
+	}
+	
+	private List<ChainElement> toChainElements(String program) {
+		val out = new ArrayList<ChainElement>();
+		for (String part : program.split("\\s*,\\s*")) {
+			int idx = part.indexOf(':');
+			if (idx == -1) out.add(new ChainElement(part.trim(), ""));
+			else out.add(new ChainElement(part.substring(0, idx).trim(), part.substring(idx+1).trim()));
+		}
+		return out;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void addNormalization(List<Operation<Object, Object>> list, ChainElement element) {
+		if (!element.hasSubtype()) return;
+		Operation<?, ?> operation = NORMALIZATION.get(element.toString());
+		if (operation == null) {
+			List<String> normalizations = Lists.newArrayList();
+			for (String n : NORMALIZATION.keySet()) if (n.startsWith(element.getType() + ":")) normalizations.add(n);
+			throw new IllegalArgumentException(String.format(
+					"Illegal normalization operation: %s. Valid normalizations: %s", element, Joiner.on(",").join(normalizations)));
+		}
+		list.add((Operation<Object, Object>) operation);
+	}
+	
 	@SuppressWarnings("unchecked")
 	private List<Operation<Object, Object>> compile0(String program) {
-		String[] parts = program.split("\\s*,\\s*");
+		List<ChainElement> parts = toChainElements(program);
 		List<Operation<Object, Object>> out = Lists.newArrayList();
-		if (parts.length == 0) throw new IllegalArgumentException("No operations");
-		Operation<?, ?> initialOp = CONVERSIONS.get("_," + parts[0]);
+		if (parts.isEmpty()) throw new IllegalArgumentException("No operations");
+		Operation<?, ?> initialOp = CONVERSIONS.get("_," + parts.get(0).getType());
 		if (initialOp == null) {
 			List<String> initialOps = Lists.newArrayList();
 			for (String key : CONVERSIONS.keySet()) {
@@ -252,26 +312,28 @@ public class Main {
 			}
 			throw new IllegalArgumentException(String.format(
 					"Illegal initial operation: %s\nLegal initial operations: %s",
-					parts[0], Joiner.on(",").join(initialOps)));
+					parts.get(0), Joiner.on(",").join(initialOps)));
 		}
 		
 		out.add((Operation<Object, Object>) initialOp);
-		for (int i = 0; i < parts.length - 1; i++) {
-			String convKey = String.format("%s,%s", parts[i], parts[i + 1]);
+		addNormalization(out, parts.get(0));
+		for (int i = 0; i < parts.size() - 1; i++) {
+			String convKey = String.format("%s,%s", parts.get(i).getType(), parts.get(i + 1).getType());
 			Operation<?, ?> convOp = CONVERSIONS.get(convKey);
 			if (convOp == null) {
 				List<String> convOps = Lists.newArrayList();
 				for (String key : CONVERSIONS.keySet()) {
-					if (key.startsWith(parts[i] + ",")) convOps.add(key.substring(parts[i].length() + 1));
+					if (key.startsWith(parts.get(i).getType() + ",")) convOps.add(key.substring(parts.get(i).getType().length() + 1));
 				}
 				throw new IllegalArgumentException(String.format(
 						"Illegal conversion operation: %s\nLegal conversion operations from %s: %s",
-						convKey, parts[i], Joiner.on(",").join(convOps)));
+						convKey, parts.get(i), Joiner.on(",").join(convOps)));
 			}
 			out.add((Operation<Object, Object>) convOp);
+			addNormalization(out, parts.get(i + 1));
 		}
 		
-		String lastPart = parts[parts.length - 1];
+		String lastPart = parts.get(parts.size() - 1).getType();
 		if (!LEGAL_FINAL.contains(lastPart)) {
 			throw new IllegalArgumentException(String.format(
 					"Illegal final operation: %s\nLegal final operations: %s",
@@ -373,6 +435,32 @@ public class Main {
 		}
 	};
 	
+	private final Operation<Node, Node> lombokToEcjBugsNormalizedLombok = new Operation<Node, Node>() {
+		@Override public Node process(Source source, Node in) throws ConversionProblem {
+			in.accept(new ForwardingAstVisitor() {
+				public boolean visitMethodDeclaration(lombok.ast.MethodDeclaration node) {
+					if (!node.astModifiers().astAnnotations().isEmpty()) node.astJavadoc(null);
+					return true;
+				}
+			});
+			
+			return in;
+		}
+	};
+	
+	private final Operation<CompilationUnitDeclaration, CompilationUnitDeclaration> ecjToEcjBugsNormalizedEcj = new Operation<CompilationUnitDeclaration, CompilationUnitDeclaration>() {
+		@Override public CompilationUnitDeclaration process(Source source, CompilationUnitDeclaration in) throws ConversionProblem {
+			in.traverse(new ASTVisitor() {
+				public boolean visit(org.eclipse.jdt.internal.compiler.ast.MethodDeclaration methodDeclaration, org.eclipse.jdt.internal.compiler.lookup.ClassScope scope) {
+					if (methodDeclaration.annotations != null && methodDeclaration.annotations.length > 0) methodDeclaration.javadoc = null;
+					return true;
+				}
+			}, (CompilationUnitScope) null);
+			
+			return in;
+		}
+	};
+	
 	private final Operation<Node, JCCompilationUnit> lombokToJavac = new Operation<Node, JCCompilationUnit>() {
 		@Override public JCCompilationUnit process(Source source, Node in) throws ConversionProblem {
 			JcTreeBuilder builder = new JcTreeBuilder();
@@ -465,6 +553,11 @@ public class Main {
 			.put("lombok,html", lombokToHtml)
 			.put("ecj,text", ecjToText)
 			.put("javac,text", javacToText)
+			.build();
+	
+	private final Map<String, Operation<?, ?>> NORMALIZATION = ImmutableMap.<String, Operation<?, ?>>builder()
+			.put("ecj:ecjbugs", ecjToEcjBugsNormalizedEcj)
+			.put("lombok:ecjbugs", lombokToEcjBugsNormalizedLombok)
 			.build();
 	
 	private final List<String> LEGAL_FINAL = ImmutableList.of("source", "html", "text");
