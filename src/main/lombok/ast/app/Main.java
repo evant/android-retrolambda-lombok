@@ -34,7 +34,6 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
-import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Node;
 import lombok.ast.Version;
 import lombok.ast.ecj.EcjTreeBuilder;
@@ -52,7 +51,6 @@ import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.StructureFormatter;
 import lombok.ast.printer.TextFormatter;
 
-import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ast.ASTNode;
@@ -60,7 +58,6 @@ import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.batch.CompilationUnit;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
-import org.eclipse.jdt.internal.compiler.lookup.CompilationUnitScope;
 import org.eclipse.jdt.internal.compiler.parser.Parser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
@@ -352,11 +349,11 @@ public class Main {
 	private File outDir = null;
 	private final List<Plan> files = Lists.newArrayList();
 	
-	private interface Operation<A, B> {
+	interface Operation<A, B> {
 		B process(Source source, A in) throws ConversionProblem;
 	}
 	
-	private static class ConversionProblem extends Exception {
+	static class ConversionProblem extends Exception {
 		ConversionProblem(String message) {
 			super(message);
 		}
@@ -432,32 +429,6 @@ public class Main {
 			EcjTreeConverter converter = new EcjTreeConverter();
 			converter.visit(source.getRawInput(), in);
 			return converter.get();
-		}
-	};
-	
-	private final Operation<Node, Node> lombokToEcjBugsNormalizedLombok = new Operation<Node, Node>() {
-		@Override public Node process(Source source, Node in) throws ConversionProblem {
-			in.accept(new ForwardingAstVisitor() {
-				public boolean visitMethodDeclaration(lombok.ast.MethodDeclaration node) {
-					if (!node.astModifiers().astAnnotations().isEmpty()) node.astJavadoc(null);
-					return true;
-				}
-			});
-			
-			return in;
-		}
-	};
-	
-	private final Operation<CompilationUnitDeclaration, CompilationUnitDeclaration> ecjToEcjBugsNormalizedEcj = new Operation<CompilationUnitDeclaration, CompilationUnitDeclaration>() {
-		@Override public CompilationUnitDeclaration process(Source source, CompilationUnitDeclaration in) throws ConversionProblem {
-			in.traverse(new ASTVisitor() {
-				public boolean visit(org.eclipse.jdt.internal.compiler.ast.MethodDeclaration methodDeclaration, org.eclipse.jdt.internal.compiler.lookup.ClassScope scope) {
-					if (methodDeclaration.annotations != null && methodDeclaration.annotations.length > 0) methodDeclaration.javadoc = null;
-					return true;
-				}
-			}, (CompilationUnitScope) null);
-			
-			return in;
 		}
 	};
 	
@@ -556,8 +527,8 @@ public class Main {
 			.build();
 	
 	private final Map<String, Operation<?, ?>> NORMALIZATION = ImmutableMap.<String, Operation<?, ?>>builder()
-			.put("ecj:ecjbugs", ecjToEcjBugsNormalizedEcj)
-			.put("lombok:ecjbugs", lombokToEcjBugsNormalizedLombok)
+			.put("ecj:ecjbugs", EcjBugsNormalization.ecjToEcjBugsNormalizedEcj)
+			.put("lombok:ecjbugs", EcjBugsNormalization.lombokToEcjBugsNormalizedLombok)
 			.build();
 	
 	private final List<String> LEGAL_FINAL = ImmutableList.of("source", "html", "text");
