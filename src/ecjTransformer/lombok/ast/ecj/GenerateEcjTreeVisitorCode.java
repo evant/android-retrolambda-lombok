@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.
+ * Copyright (C) 2010 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ import com.google.common.collect.Lists;
  */
 class GenerateEcjTreeVisitorCode {
 	private static final String COPYRIGHT_NOTICE = "/*\n" + 
-			" * Copyright © 2010 Reinier Zwitserloot and Roel Spilker.\n" + 
+			" * Copyright (C) 2010 The Project Lombok Authors.\n" + 
 			" * \n" + 
 			" * Permission is hereby granted, free of charge, to any person obtaining a copy\n" + 
 			" * of this software and associated documentation files (the \"Software\"), to deal\n" + 
