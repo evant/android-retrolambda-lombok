@@ -235,6 +235,7 @@
 		<jarjar destfile="dist/lombok.ast-${lombok.ast.version}.jar">
 			<fileset dir="build/lombok.ast" />
 			<fileset dir="." includes="LICENSE" />
+			<fileset dir="." includes="AUTHORS" />
 			<rule pattern="com.google.common.**" result="lombok.ast.libs.com.google.common.@1" />
 			<rule pattern="org.parboiled.**" result="lombok.ast.libs.org.parboiled.@1" />
 			<rule pattern="com.zwitserloot.cmdreader.**" result="lombok.ast.libs.com.zwitserloot.cmdreader.@1" />

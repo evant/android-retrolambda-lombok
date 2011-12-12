@@ -21,7 +21,7 @@
  */
 package lombok.ast;
 
-public interface JavadocContainer {
+public interface JavadocContainer extends Node {
 	Comment astJavadoc();
 	Node rawJavadoc();
 	Node astJavadoc(Comment javadoc);

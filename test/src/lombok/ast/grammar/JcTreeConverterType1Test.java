@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 The Project Lombok Authors.
+ * Copyright (C) 2010-2011 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,6 @@ import java.util.List;
 import lombok.ast.BinaryExpression;
 import lombok.ast.BinaryOperator;
 import lombok.ast.CharLiteral;
-import lombok.ast.Comment;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.IntegralLiteral;
@@ -41,6 +40,7 @@ import lombok.ast.UnaryOperator;
 import lombok.ast.javac.JcTreeConverter;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.StructureFormatter;
+import lombok.javac.CommentCatcher;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,15 +63,6 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 	@Test
 	public boolean testJcTreeConverter(Source source) throws Exception {
 		return testCompiler(source);
-	}
-	
-	private static void deleteComments(Node tree) {
-		tree.accept(new ForwardingAstVisitor() {
-			@Override public boolean visitComment(Comment node) {
-				node.unparent();
-				return false;
-			}
-		});
 	}
 	
 	private static void normalizeNumberLiterals(Node tree) {
@@ -123,7 +114,6 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 	protected String convertToString(Node tree) {
 		foldStringConcats(tree);
 		normalizeNumberLiterals(tree);
-		deleteComments(tree);
 		StructureFormatter formatter = StructureFormatter.formatterWithoutPositions();
 		formatter.skipProperty(CharLiteral.class, "value");
 		formatter.skipProperty(StringLiteral.class, "value");
@@ -143,13 +133,12 @@ public class JcTreeConverterType1Test extends TreeBuilderRunner<Node> {
 		
 		Options.instance(context).put(OptionName.ENCODING, "UTF-8");
 		
-		JavaCompiler compiler = new JavaCompiler(context);
-		compiler.genEndPos = true;
-		compiler.keepComments = true;
+		CommentCatcher catcher = CommentCatcher.create(context);
+		JavaCompiler compiler = catcher.getCompiler();
 		
 		JCCompilationUnit cu = compiler.parse(new ContentBasedJavaFileObject(source.getName(), source.getRawInput()));
 		JcTreeConverter converter = new JcTreeConverter();
 		converter.visit(cu);
-		return converter.getResult();
+		return converter.getResultWithJavadoc(catcher.getComments(cu));
 	}
 }

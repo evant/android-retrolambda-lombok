@@ -21,11 +21,15 @@
  */
 package lombok.ast.javac;
 
+import static lombok.ast.ConversionPositionInfo.setConversionPositionInfo;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
@@ -66,6 +70,7 @@ import lombok.ast.ExpressionStatement;
 import lombok.ast.FloatingPointLiteral;
 import lombok.ast.For;
 import lombok.ast.ForEach;
+import lombok.ast.ForwardingAstVisitor;
 import lombok.ast.Identifier;
 import lombok.ast.If;
 import lombok.ast.ImportDeclaration;
@@ -166,8 +171,7 @@ import com.sun.tools.javac.tree.JCTree.JCWhileLoop;
 import com.sun.tools.javac.tree.JCTree.JCWildcard;
 import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.util.List;
-
-import static lombok.ast.ConversionPositionInfo.setConversionPositionInfo;
+import com.sun.tools.javac.util.ListBuffer;
 
 public class JcTreeConverter {
 	private enum FlagKey {
@@ -211,7 +215,7 @@ public class JcTreeConverter {
 	}
 	
 	public JcTreeConverter() {
-		this.params = ImmutableMap.of();
+		this(null, null);
 	}
 	
 	public JcTreeConverter(Map<JCTree, Integer> endPosTable, Map<FlagKey, Object> params) {
@@ -415,6 +419,117 @@ public class JcTreeConverter {
 	
 	public Node getResult() {
 		return get();
+	}
+	
+	private boolean isJavadoc(lombok.javac.Comment commentInfo) {
+		return commentInfo.content.startsWith("/**");
+	}
+	
+	public Node getResultWithJavadoc(java.util.List<lombok.javac.Comment> comments) {
+		ListBuffer<lombok.javac.Comment> javadocs = ListBuffer.lb();
+		for (lombok.javac.Comment commentInfo : comments) {
+			if (isJavadoc(commentInfo)) javadocs.append(commentInfo);
+		}
+		
+		Node result = getResult();
+		if (javadocs.isEmpty()) return result;
+		
+		final TreeMap<Integer, Node> nodePositions = new TreeMap<Integer, Node>();
+		result.accept(new ForwardingAstVisitor() {
+			private void addToMap(Node positionNode, Node linked) {
+				if (positionNode == null) return;
+				
+				int start = positionNode.getPosition().getStart();
+				if (start == -1) return;
+				
+				if (linked instanceof JavadocContainer || !nodePositions.containsKey(start)) {
+					nodePositions.put(start, linked);
+				}
+			}
+			
+			private void addToMap(StrictListAccessor<?, ?> nodes, Node linked) {
+				if (nodes == null) return;
+				
+				for (Node node : nodes) {
+					addToMap(node, linked);
+				}
+			}
+			
+			@Override public boolean visitNode(Node node) {
+				int start = node.getPosition().getStart();
+				
+				addToMap(node, node);
+				try {
+					if (node instanceof VariableDeclaration) {
+						addToMap(((VariableDeclaration)node).astDefinition().astModifiers(), node);
+						addToMap(((VariableDeclaration)node).astDefinition().astModifiers().astAnnotations(), node);
+						addToMap(((VariableDeclaration)node).astDefinition().astTypeReference(), node);
+						addToMap(((VariableDeclaration)node).astDefinition().astVariables().first().astName(), node);
+					} else if (node instanceof TypeDeclaration) {
+						addToMap(((TypeDeclaration)node).astModifiers(), node);
+						addToMap(((TypeDeclaration)node).astModifiers().astAnnotations(), node);
+					} else if (node instanceof MethodDeclaration) {
+						addToMap(((MethodDeclaration)node).astModifiers(), node);
+						addToMap(((MethodDeclaration)node).astModifiers().astAnnotations(), node);
+						addToMap(((MethodDeclaration)node).astTypeVariables().first(), node);
+						addToMap(((MethodDeclaration)node).astReturnTypeReference(), node);
+						addToMap(((MethodDeclaration)node).astMethodName(), node);
+					} else if (node instanceof ConstructorDeclaration) {
+						addToMap(((ConstructorDeclaration)node).astModifiers(), node);
+						addToMap(((ConstructorDeclaration)node).astModifiers().astAnnotations(), node);
+						addToMap(((ConstructorDeclaration)node).astTypeVariables().first(), node);
+						addToMap(((ConstructorDeclaration)node).astTypeName(), node);
+					} else if (node instanceof EnumConstant) {
+						addToMap(((EnumConstant)node).astName(), node);
+						addToMap(((EnumConstant)node).astAnnotations(), node);
+					} else if (node instanceof AnnotationMethodDeclaration) {
+						addToMap(((AnnotationMethodDeclaration)node).astModifiers(), node);
+						addToMap(((AnnotationMethodDeclaration)node).astModifiers().astAnnotations(), node);
+						addToMap(((AnnotationMethodDeclaration)node).astReturnTypeReference(), node);
+						addToMap(((AnnotationMethodDeclaration)node).astMethodName(), node);
+					} else if (node instanceof PackageDeclaration) {
+						addToMap(((PackageDeclaration)node).astAnnotations(), node);
+					}
+				} catch (NullPointerException e) {
+					// Syntax errors in file - javadoc won't get linked up correctly.
+				}
+				
+				if (node instanceof JavadocContainer || !nodePositions.containsKey(start)) {
+					nodePositions.put(start, node);
+				}
+				
+				return false;
+			}
+		});
+		
+		for (lombok.javac.Comment javadoc : javadocs) {
+			try {
+				Integer key = nodePositions.tailMap(javadoc.endPos).firstKey();
+				Node node = nodePositions.get(key);
+				if (node instanceof JavadocContainer) {
+					attachJavadocToNode(javadoc, (JavadocContainer) node);
+				}
+			} catch (NoSuchElementException e) {
+				// Then the javadoc obviously is 'floating', as its the last thing in the file.
+			}
+		}
+		
+		return result;
+	}
+	
+	private void attachJavadocToNode(lombok.javac.Comment javadoc, JavadocContainer node) {
+		String content = javadoc.content;
+		if (content.startsWith("/*") && content.endsWith("*/")) content = content.substring(2, content.length() - 2);
+		
+		Comment comment = new Comment().astBlockComment(true).astContent(content);
+		comment.setPosition(new Position(javadoc.pos, javadoc.endPos));
+		node.astJavadoc(comment);
+		if (!node.getPosition().isUnplaced()) {
+			int oldStart = node.getPosition().getStart();
+			if (oldStart == -1 || comment.getPosition().getStart() < oldStart) {
+				node.setPosition(new Position(comment.getPosition().getStart(), node.getPosition().getEnd()));
+			}
+		}
 	}
 	
 	private <N extends Node> N setPos(JCTree node, N astNode) {

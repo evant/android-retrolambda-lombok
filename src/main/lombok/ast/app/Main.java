@@ -105,7 +105,7 @@ public class Main {
 		
 		@Shorthand("d")
 		@Description("Directory to save converted files to")
-		@Mandatory(onlyIfNot={"print", "help"})
+		@Mandatory(onlyIfNot={"print", "help", "version"})
 		private String target;
 		
 		@Shorthand("i")
@@ -122,14 +122,14 @@ public class Main {
 		@FullName("no-positions")
 		private boolean noPositions;
 		
-		@Mandatory
+		@Mandatory(onlyIfNot={"help", "version"})
 		@Sequential
 		@Description("Operations to apply to each source file. Comma-separated (no spaces). Valid options: ecj/javac/lombok first to decide how the file is parsed initially, " +
 				"then any number of further ecj/javac/lombok keywords to convert ASTs, and finally text/source/html.")
 		private String program;
 		
 		@Description("Files to convert. Provide either a file, or a directory. If you use a directory, all files in it (recursive) are converted")
-		@Mandatory
+		@Mandatory(onlyIfNot={"help", "version"})
 		@Sequential
 		private List<String> input = new ArrayList<String>();
 	}
