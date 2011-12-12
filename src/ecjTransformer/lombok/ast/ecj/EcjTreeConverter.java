@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 The Project Lombok Authors.
+§ * Copyright (C) 2010-2011 The Project Lombok Authors.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,9 @@
  */
 package lombok.ast.ecj;
 
+import static lombok.ast.ConversionPositionInfo.setConversionPositionInfo;
+
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -133,8 +136,6 @@ import org.eclipse.jdt.internal.compiler.lookup.ExtraCompilerModifiers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import static lombok.ast.ConversionPositionInfo.setConversionPositionInfo;
 
 public class EcjTreeConverter {
 	private enum FlagKey {
@@ -827,11 +828,29 @@ public class EcjTreeConverter {
 			set(node, setPosition(node, new lombok.ast.VariableReference().astIdentifier(toIdentifier(node.token, node.sourceStart, node.sourceEnd))));
 		}
 		
+		TypeReference getTypeFromCast(CastExpression node) {
+			Object expr;
+			try {
+				expr = CASTEXPRESSION_TYPE_FIELD.get(node);
+			} catch (IllegalAccessException e) {
+				throw new IllegalStateException("Lombok is not compatible with this version of eclipse", e);
+			}
+			
+			if (expr instanceof QualifiedNameReference) {
+				QualifiedNameReference name = (QualifiedNameReference) expr;
+				return new QualifiedTypeReference(name.tokens, name.sourcePositions);
+			} else if (expr instanceof SingleNameReference) {
+				SingleNameReference name = (SingleNameReference) expr;
+				return new SingleTypeReference(name.token, (long) name.sourceStart << 32 | name.sourceEnd);
+			} else return (TypeReference) expr;
+		}
+		
 		@Override public void visitCastExpression(CastExpression node) {
-			Node result = toTree(node.type, FlagKey.NAMEREFERENCE_IS_TYPE);
+			TypeReference ref = getTypeFromCast(node);
+			Node result = toTree(ref, FlagKey.NAMEREFERENCE_IS_TYPE);
 			lombok.ast.Cast cast = new lombok.ast.Cast().astTypeReference((lombok.ast.TypeReference) result);
 			cast.astOperand((lombok.ast.Expression)toTree(node.expression));
-			setConversionPositionInfo(cast, "type", toPosition(node.type.sourceStart, node.type.sourceEnd));
+			setConversionPositionInfo(cast, "type", toPosition(ref.sourceStart, ref.sourceEnd));
 			set(node, setPosition(node, cast));
 		}
 		
@@ -1314,6 +1333,17 @@ public class EcjTreeConverter {
 			return node;
 		}
 	};
+	
+	static final Field CASTEXPRESSION_TYPE_FIELD;
+	
+	static {
+		try {
+			CASTEXPRESSION_TYPE_FIELD = CastExpression.class.getDeclaredField("type");
+			CASTEXPRESSION_TYPE_FIELD.setAccessible(true);
+		} catch (NoSuchFieldException e) {
+			throw new IllegalStateException("This version of eclipse does not have CastExpression.type. Lombok is not compatible with this version.", e);
+		}
+	}
 	
 	static final Map<Integer, UnaryOperator> UNARY_PREFIX_OPERATORS = Maps.newHashMap();
 	static {
