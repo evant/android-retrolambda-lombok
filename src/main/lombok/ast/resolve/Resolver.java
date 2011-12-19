@@ -31,7 +31,6 @@ import java.util.Map;
 import lombok.ast.Annotation;
 import lombok.ast.Block;
 import lombok.ast.CompilationUnit;
-import lombok.ast.EnumTypeBody;
 import lombok.ast.Expression;
 import lombok.ast.Identifier;
 import lombok.ast.ImportDeclaration;
@@ -119,9 +118,19 @@ public class Resolver {
 	
 	/**
 	 * Checks if the given {@code typeReference} could legally be referring to the listed fully qualified {@code typeName}.
+	 * Will check import statements, and checks for any shadowing by types in this file with the same name.
+	 * <p>
+	 * <em>WARNING:</em> This method will return {@code true} if there's a star import of i.e. {@code java.util.*},
+	 * you ask if {@code ArrayList} could be referring to {@code java.util.ArrayList}, and there is another class in the same package also named
+	 * {@code ArrayList}. The right answer is of course {@code false}, but without a classpath/sourcepath this cannot be determined. Therefore,
+	 * this method is 99% but not 100% accurate. Also, god kills a kitten everytime you write a star import.
+	 * <p>
+	 * <em>NB:</em> Any type arguments (generics) on either the {@code typeReference} or {@code wanted} are stripped off before comparing the two.
 	 */
 	public boolean typesMatch(String wanted, TypeReference typeReference) {
-		String name = typeReference.getTypeName();
+		String name = stripGenerics(typeReference.getTypeName());
+		wanted = stripGenerics(wanted);
+		
 		if (name.equals(wanted)) return true;
 		
 		/* checks array dimensions */ {
@@ -141,36 +150,45 @@ public class Resolver {
 		if (name.indexOf('.') == -1 && wantedName.equals(name)) {
 			//name is definitely a simple name, and it might match. Walk up type tree and if it doesn't match any of those, delve into import statements.
 			Node n = typeReference.getParent();
+			Node prevN = null;
 			CompilationUnit cu = null;
 			while (n != null) {
 				RawListAccessor<?, ?> list;
-				if (n instanceof Block) list = ((Block) n).rawContents();
-				else if (n instanceof TypeBody) list = ((TypeBody) n).rawMembers();
-				else if (n instanceof EnumTypeBody) list = ((EnumTypeBody) n).rawMembers();
-				else if (n instanceof CompilationUnit) {
+				boolean stopAtSelf;
+				
+				if (n instanceof Block) {
+					list = ((Block) n).rawContents();
+					stopAtSelf = true;
+				} else if (n instanceof TypeBody) {
+					list = ((TypeBody) n).rawMembers();
+					stopAtSelf = false;
+				} else if (n instanceof CompilationUnit) {
 					list = ((CompilationUnit) n).rawTypeDeclarations();
 					cu = (CompilationUnit) n;
+					stopAtSelf = false;
+				} else {
+					list = null;
+					stopAtSelf = false;
 				}
-				else list = null;
 				
 				if (list != null) {
-					for (Node c : ((Block) n).rawContents()) {
+					for (Node c : list) {
 						if (c instanceof TypeDeclaration && namesMatch(name, ((TypeDeclaration) c).astName())) return false;
+						if (stopAtSelf && c == prevN) break;
 					}
 				}
 				
+				prevN = n;
 				n = n.getParent();
 			}
 			
-			//A locally defined type is definitely not what's targetted so it could still be our wanted type reference. Let's check imports.
+			//A locally defined type is definitely not what's targeted so it could still be our wanted type reference. Let's check imports.
 			if (wantedPkg.isEmpty()) return cu == null || cu.rawPackageDeclaration() == null;
 			
 			if (cu != null) {
-				for (Node imp : cu.rawImportDeclarations()) {
-					if (!(imp instanceof ImportDeclaration)) continue;
-					ImportDeclaration i = (ImportDeclaration) imp;
-					String impName = i.asFullyQualifiedName();
-					if (!i.astStaticImport() && i.astStarImport() && wantedPkg.equals(impName)) return true;
+				for (ImportDeclaration imp : cu.astImportDeclarations()) {
+					String impName = imp.asFullyQualifiedName();
+					if (!imp.astStaticImport() && imp.astStarImport() && wantedPkg.equals(impName.substring(0, impName.length() - 2))) return true;
 					if (impName.equals(wanted)) return true;
 				}
 			}
@@ -179,8 +197,27 @@ public class Resolver {
 		return false;
 	}
 	
+	private String stripGenerics(String name) {
+		int genericsStart = name.indexOf('<');
+		int genericsEnd = name.lastIndexOf('>');
+		if (genericsStart != -1 && genericsEnd == name.length() -1) name = name.substring(0, genericsStart);
+		return name;
+	}
+	
 	private boolean namesMatch(String name, Identifier astName) {
 		return name == null ? astName.astValue() == null : name.equals(astName.astValue());
+	}
+	
+	/**
+	 * Turns an annotation AST node into an actual instance of an annotation class provided you already know its type.
+	 * <strong>NB: non-literal compile-time constants cannot be converted, and you should avoid querying classes;
+	 * instead call {@code resolver.getAnnotationClassAsString(objectReturnedByThisMethod, "annotation method name")}.
+	 * 
+	 * @see #getAnnotationClassesAsStrings(java.lang.annotation.Annotation, String)
+	 * @see #getAnnotationClassAsString(java.lang.annotation.Annotation, String)
+	 */
+	public <A extends java.lang.annotation.Annotation> A toAnnotationInstance(final Class<A> type, final Annotation node) {
+		return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class[] { type }, new AnnotationProxy(this, node)));
 	}
 	
 	/**
@@ -241,18 +278,6 @@ public class Resolver {
 		} catch (NoSuchMethodException e) {
 			throw new IllegalArgumentException("Method " + methodName + " does not exist");
 		}
-	}
-	
-	/**
-	 * Turns an annotation AST node into an actual instance of an annotation class provided you already know its type.
-	 * <strong>NB: non-literal compile-time constants cannot be converted, and you should avoid querying classes;
-	 * instead call {@code resolver.getAnnotationClassAsString(objectReturnedByThisMethod, "annotation method name")}.
-	 * 
-	 * @see #getAnnotationClassesAsStrings(java.lang.annotation.Annotation, String)
-	 * @see #getAnnotationClassAsString(java.lang.annotation.Annotation, String)
-	 */
-	public <A extends java.lang.annotation.Annotation> A toAnnotationInstance(final Class<A> type, final Annotation node) {
-		return type.cast(Proxy.newProxyInstance(type.getClassLoader(), new Class[] { type }, new AnnotationProxy(this, node)));
 	}
 	
 	private List<String> unwrapSelectChain(Select s) {
