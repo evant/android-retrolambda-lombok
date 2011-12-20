@@ -3,7 +3,7 @@
 	<configurations>
 		<conf name="build" />
 		<conf name="runtime" />
-		<conf name="test" extends="build, runtime" />
+		<conf name="test" extends="build" />
 		<conf name="contrib" />
 	</configurations>
 	<dependencies>

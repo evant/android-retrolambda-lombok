@@ -135,11 +135,12 @@
 		<property name="tests.quiet" value="true" />
 	</target>
 	
-	<target name="test" depends="compile, ensureTestDeps, compileTests" description="Runs unit tests.">
+	<target name="test" depends="compile, ensureTestDeps, ensureRuntimeDeps, compileTests" description="Runs unit tests.">
 		<junit fork="on">
 			<formatter type="plain" usefile="false" unless="tests.quiet" />
 			<jvmarg value="-Xbootclasspath/p:lib/test/javac.jar" />
 			<classpath refid="test.path" />
+			<classpath refid="runtime.path" />
 			<classpath path="build/instrumented/lombok.ast" />
 			<classpath path="build/lombok.ast" />
 			<classpath path="build/tests" />
