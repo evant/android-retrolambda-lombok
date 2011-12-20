@@ -84,7 +84,7 @@ public class BasicsParser extends BaseParser<Node> {
 	
 	/**
 	 * Technically {@code null}, {@code true} and {@code false} aren't keywords but specific literals, but, from a parser point of view they are keywords.
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.9
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.9">JLS section 3.9</a>
 	 */
 	static final List<String> KEYWORDS = Collections.unmodifiableList(Arrays.asList(
 			"abstract", "class", "interface", "enum", "static", "final", "volatile", "transient", "strictfp", "native",
@@ -142,7 +142,7 @@ public class BasicsParser extends BaseParser<Node> {
 	/**
 	 * Any comment (block, line, or javadoc)
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.7
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.7">JLS section 3.7</a>
 	 */
 	public Rule comment() {
 		return Sequence(
@@ -161,7 +161,7 @@ public class BasicsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.4
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.4">JLS section 3.4</a>
 	 */
 	@SuppressSubnodes
 	Rule whitespaceChar() {
@@ -169,7 +169,7 @@ public class BasicsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.6
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.6">JLS section 3.6</a>
 	 */
 	@SuppressSubnodes
 	public Rule lineTerminator() {

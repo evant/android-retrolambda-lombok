@@ -255,7 +255,7 @@ class ModifiersTemplate {
 	 * Returns the keyword-based modifiers the way {@link java.lang.reflect.Modifiers} works.
 	 * Only those keywords that are explicitly in the AST are reported; to also include implicit flags, such
 	 * as for example the idea that methods in interfaces are always public and abstract even if not marked as such,
-	 * use {@link #getEffectiveModifierFlags(Modifiers)}.
+	 * use {@link #getEffectiveModifierFlags()}.
 	 */
 	@CopyMethod
 	static int getExplicitModifierFlags(Modifiers m) {

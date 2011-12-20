@@ -35,8 +35,8 @@ import org.parboiled.Rule;
 import com.google.common.collect.Lists;
 
 /**
- * Like the {@code BasicParseRunner} but will also track statistics on the parse run which you can retrieve by calling {@see #getReport(boolean)} after
- * a parse run.
+ * Like the {@code BasicParseRunner} but will also track statistics on the parse run which you can retrieve by calling {@link #getOverviewReport()}
+ * or {@link #getExtendedReport(int)} after a parse run.
  */
 public class ProfilerParseRunner<V> extends BasicParseRunner<V> {
 	private ReportEntry<V> rootReport;

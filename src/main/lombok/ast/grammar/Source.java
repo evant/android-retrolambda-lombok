@@ -441,7 +441,7 @@ public class Source {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.3
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.3">JLS section 3.3</a>
 	 */
 	private void applyBackslashU() {
 		StringBuilder buffer = new StringBuilder();

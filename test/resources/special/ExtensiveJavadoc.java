@@ -4,7 +4,7 @@
  * @param T a type parameter
  * @author author tag
  * @since since tag
- * @see http://www.projectlombok.org/
+ * @see <a href="http://www.projectlombok.org/">link</a>
  */
 public class ExtensiveJavadoc<T> {
     /**

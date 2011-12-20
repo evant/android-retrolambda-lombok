@@ -70,7 +70,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.8.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.8.2">JLS section 15.8.2</a>
 	 */
 	Rule qualifiedClassOrThisOrSuperLiteral() {
 		return Sequence(
@@ -93,8 +93,8 @@ public class ExpressionsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/arrays.html#10.3
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.10
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/arrays.html#10.3">JLS section 10.3</a>
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/expressions.html#15.10">JLS section 15.10</a>
 	 */
 	Rule arrayCreationExpression() {
 		return Sequence(
@@ -135,7 +135,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8">JLS section 14.8</a>
 	 */
 	public Rule statementExpression() {
 		return FirstOf(
@@ -270,7 +270,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P3
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.17">JLS section 15.17</a>
 	 */
 	Rule multiplicativeExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprMultiplicative", FirstOf(Ch('*'), solitarySymbol('/'), Ch('%')), level2ExpressionChaining());
@@ -279,7 +279,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P4
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.18">JLS section 15.18</a>
 	 */
 	Rule additiveExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprAdditive", FirstOf(solitarySymbol('+'), solitarySymbol('-')), multiplicativeExpressionChaining());
@@ -288,7 +288,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P5
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.19">JLS section 15.19</a>
 	 */
 	Rule shiftExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprShift", FirstOf(String(">>>"), String("<<<"), String("<<"), String(">>")), additiveExpressionChaining());
@@ -302,7 +302,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * not compatible as LHS to *ANY* of the operators in this class, including instanceof itself. Therefore, pragmatically speaking, there can only
 	 * be one instanceof, and it has to appear at the end of the chain.
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.20
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.20">JLS section 15.20</a>
 	 */
 	Rule relationalExpressionChaining() {
 		return Sequence(
@@ -317,7 +317,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P7
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.21">JLS section 15.21</a>
 	 */
 	Rule equalityExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprEquality", FirstOf(String("==="), String("!=="), String("=="), String("!=")), relationalExpressionChaining());
@@ -326,7 +326,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P8
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22">JLS section 15.22</a>
 	 */
 	Rule bitwiseAndExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprBitwiseAnd", solitarySymbol('&'), equalityExpressionChaining());
@@ -335,7 +335,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P9
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22">JLS section 15.22</a>
 	 */
 	Rule bitwiseXorExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprBitwiseXor", solitarySymbol('^'), bitwiseAndExpressionChaining());
@@ -344,7 +344,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P10
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.22">JLS section 15.22</a>
 	 */
 	Rule bitwiseOrExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprBitwiseOr", solitarySymbol('|'), bitwiseXorExpressionChaining());
@@ -353,7 +353,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P11
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.23">JLS section 15.23</a>
 	 */
 	Rule conditionalAndExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprLogicalAnd", String("&&"), bitwiseOrExpressionChaining());
@@ -372,7 +372,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P12
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.24">JLS section 15.24</a>
 	 */
 	Rule conditionalOrExpressionChaining() {
 		return forLeftAssociativeBinaryExpression("exprLogicalOr", String("||"), conditionalXorExpressionChaining());
@@ -381,7 +381,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	/**
 	 * P13
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.25
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.25">JLS section 15.25</a>
 	 */
 	Rule inlineIfExpressionChaining() {
 		return Sequence(
@@ -407,7 +407,7 @@ public class ExpressionsParser extends BaseParser<Node> {
 	 * 
 	 * Not all of the listed operators are actually legal, but if not legal, then they are at least imaginable, so we parse them and flag them as errors in the AST phase.
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#15.26">JLS section 15.26</a>
 	 */
 	Rule assignmentExpressionChaining() {
 		return Sequence(

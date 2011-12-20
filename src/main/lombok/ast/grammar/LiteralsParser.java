@@ -46,7 +46,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.7
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.7">JLS section 3.10.7</a>
 	 */
 	public Rule nullLiteral() {
 		return Sequence(
@@ -58,7 +58,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.5
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.5">JLS section 3.10.5</a>
 	 */
 	public Rule stringLiteral() {
 		return Sequence(
@@ -86,7 +86,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.4
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.4">JLS section 3.10.4</a>
 	 */
 	public Rule charLiteral() {
 		return Sequence(
@@ -104,7 +104,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.6
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.6">JLS section 3.10.6</a>
 	 */
 	Rule escapedSequence() {
 		return Sequence(Ch('\\'),
@@ -122,7 +122,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.3
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.3">JLS section 3.10.3</a>
 	 */
 	public Rule booleanLiteral() {
 		return Sequence(
@@ -134,8 +134,8 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1">JLS section 3.10.1</a>
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2">JLS section 3.10.2</a>
 	 */
 	public Rule numberLiteral() {
 		return Sequence(
@@ -146,8 +146,8 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1">JLS section 3.10.1</a>
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2">JLS section 3.10.2</a>
 	 */
 	Rule fpLiteral() {
 		return Sequence(
@@ -165,8 +165,8 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.1">JLS section 3.10.1</a>
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2">JLS section 3.10.2</a>
 	 */
 	Rule hexLiteral() {
 		return Sequence(
@@ -180,7 +180,7 @@ public class LiteralsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.2">JLS section 3.10.2</a>
 	 */
 	Rule hexFP() {
 		return Sequence(

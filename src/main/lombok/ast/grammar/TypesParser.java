@@ -41,7 +41,7 @@ public class TypesParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2">JLS section 4.2</a>
 	 */
 	public Rule type() {
 		return Sequence(
@@ -53,7 +53,7 @@ public class TypesParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.2">JLS section 4.2</a>
 	 */
 	public Rule primitiveType() {
 		return Sequence(
@@ -70,7 +70,7 @@ public class TypesParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.3
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.3">JLS section 4.3</a>
 	 */
 	public Rule referenceType() {
 		return Sequence(
@@ -149,7 +149,7 @@ public class TypesParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.5
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/lexical.html#4.5">JLS section 4.5</a>
 	 */
 	public Rule typeArguments() {
 		return Optional(Sequence(

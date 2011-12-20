@@ -125,7 +125,7 @@ public class SyntaxValidityCheckerGenerator {
 		out.write("package lombok.ast.syntaxChecks;\n\n");
 		out.write("import lombok.ast.*;\n\n");
 		out.write("/**\n");
-		out.write(" * Adds a {@link lombok.ast.SyntaxProblem} to a list for each syntactic problem with a node.\n");
+		out.write(" * Adds a {@link lombok.ast.Message} to a list for each syntactic problem with a node.\n");
 		out.write(" * Something like {@code a +} is not syntactically valid (It's missing the second argument to binary operator),\n");
 		out.write(" * but something like {@code a + b} would be valid, <i>even if</i> both {@code a} and {@code b} end up being objects,\n");
 		out.write(" * which do not support the + operator.\n");

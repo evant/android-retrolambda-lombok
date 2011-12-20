@@ -27,7 +27,7 @@ public interface Expression extends Node, AnnotationValue {
 	/**
 	 * Returns the actual amount of parentheses physically around this expression.
 	 * 
-	 * @see #getParensPositions()
+	 * @see #astParensPositions()
 	 * @see #getIntendedParens()
 	 */
 	int getParens();

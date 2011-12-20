@@ -42,7 +42,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.2
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.2">JLS section 14.2</a>
 	 */
 	public Rule blockStatement() {
 		return Sequence(
@@ -53,14 +53,14 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.3
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.3">JLS section 14.3</a>
 	 */
 	public Rule localClassDeclaration() {
 		return group.structures.classOrInterfaceDeclaration();
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.4
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.4">JLS section 14.4</a>
 	 */
 	public Rule variableDefinition() {
 		return Sequence(
@@ -96,7 +96,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.6
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.6">JLS section 14.6</a>
 	 */
 	Rule emptyStatement() {
 		return Sequence(
@@ -109,7 +109,7 @@ public class StatementsParser extends BaseParser<Node> {
 	 * Labels aren't statements; instead they can prefix any statement. Something like {@code if (1 == 1) foo: a();} is legal.
 	 * Multiple labels for the same statement is also legal.
 	 * 
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.7
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.7">JLS section 14.7</a>
 	 */
 	public Rule labelledStatement() {
 		return Sequence(
@@ -145,7 +145,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.8">JLS section 14.8</a>
 	 */
 	public Rule expressionStatement() {
 		return Sequence(
@@ -155,7 +155,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.9
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.9">JLS section 14.9</a>
 	 */
 	public Rule ifStatement() {
 		return Sequence(
@@ -171,7 +171,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.10
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.10">JLS section 14.10</a>
 	 */
 	public Rule assertStatement() {
 		return Sequence(
@@ -186,7 +186,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.11
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.11">JLS section 14.11</a>
 	 */
 	public Rule switchStatement() {
 		return Sequence(
@@ -199,7 +199,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.11
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.11">JLS section 14.11</a>
 	 */
 	public Rule caseStatement() {
 		return Sequence(
@@ -210,7 +210,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.11
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.11">JLS section 14.11</a>
 	 */
 	public Rule defaultStatement() {
 		return Sequence(
@@ -220,7 +220,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.12
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.12">JLS section 14.12</a>
 	 */
 	public Rule whileStatement() {
 		return Sequence(
@@ -233,7 +233,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.13
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.13">JLS section 14.13</a>
 	 */
 	public Rule doWhileStatement() {
 		return Sequence(
@@ -248,7 +248,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.14.1.1
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.14.1.1">JLS section 14.14.1.1</a>
 	 */
 	public Rule basicForStatement() {
 		return Sequence(
@@ -284,8 +284,8 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.14.2
-	 * @see http://bugs.sun.com/view_bug.do?bug_id=1699917
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.14.2">JLS section 14.14.2</a>
+	 * @see <a href="http://bugs.sun.com/view_bug.do?bug_id=1699917">Bug 1699917</a>
 	 */
 	public Rule enhancedForStatement() {
 		return Sequence(
@@ -302,7 +302,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.15
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.15">JLS section 14.15</a>
 	 */
 	public Rule breakStatement() {
 		return Sequence(
@@ -313,7 +313,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.16
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.16">JLS section 14.16</a>
 	 */
 	public Rule continueStatement() {
 		return Sequence(
@@ -324,7 +324,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.17
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.17">JLS section 14.17</a>
 	 */
 	public Rule returnStatement() {
 		return Sequence(
@@ -335,7 +335,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.18
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.18">JLS section 14.18</a>
 	 */
 	public Rule throwStatement() {
 		return Sequence(
@@ -346,7 +346,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.19
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.19">JLS section 14.19</a>
 	 */
 	public Rule synchronizedStatement() {
 		return Sequence(
@@ -359,7 +359,7 @@ public class StatementsParser extends BaseParser<Node> {
 	}
 	
 	/**
-	 * @see http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.20
+	 * @see <a href="http://java.sun.com/docs/books/jls/third_edition/html/statements.html#14.20">JLS section 14.20</a>
 	 */
 	public Rule tryStatement() {
 		return Sequence(
