@@ -18,5 +18,7 @@
 		<dependency org="net.sourceforge.cobertura" name="cobertura" rev="1.9.4.1" conf="test->runtime" />
 		<dependency org="net.sourceforge.cobertura" name="cobertura-runtime" rev="1.9.4.1" conf="test->runtime" />
 		<dependency org="com.googlecode.jarjar" name="jarjar" rev="1.1" conf="build->default" />
+		<dependency org="com.jcraft" name="jsch" rev="0.1.42" conf="build->default" />
+		<dependency org="projectlombok.org" name="jsch-ant-fixed" rev="0.1.42" conf="build" />
 	</dependencies>
 </ivy-module>
