@@ -140,4 +140,59 @@ public class TypesMatchTest {
 		});
 		assertEquals("expected 1 hit on MethodDeclaration", 1, hit.get());
 	}
+	
+	private static final String ARRAYS_SOURCE =
+			"public class ArraysMatchTest {\n" +
+			"	String[] test(String x) {}\n" +
+			"}";
+	
+	@Test
+	public void testArrayTypesMatch() {
+		Source s = new Source(ARRAYS_SOURCE, "ArrayTypesMatchTest.java");
+		s.parseCompilationUnit();
+		final AtomicInteger hit = new AtomicInteger();
+		s.getNodes().get(0).accept(new ForwardingAstVisitor() {
+			@Override public boolean visitMethodDeclaration(MethodDeclaration node) {
+				assertTrue("typesMatch with String[] should match java.lang.String[] but doesn't.",
+						new Resolver().typesMatch("java.lang.String[]", node.astReturnTypeReference()));
+				assertFalse("typesMatch with String[] should NOT match java.lang.String[][] but does.",
+						new Resolver().typesMatch("java.lang.String[][]", node.astReturnTypeReference()));
+				assertFalse("typesMatch with String[] should NOT match java.lang.String but does.",
+						new Resolver().typesMatch("java.lang.String", node.astReturnTypeReference()));
+				assertTrue("typesMatch with String should match java.lang.String but doesn't.",
+						new Resolver().typesMatch("java.lang.String", node.astParameters().first().astTypeReference()));
+				assertFalse("typesMatch with String should NOT match java.lang.String[] but does.",
+						new Resolver().typesMatch("java.lang.String[]", node.astParameters().first().astTypeReference()));
+				hit.incrementAndGet();
+				return true;
+			}
+		});
+		assertEquals("expected 1 hit on MethodDeclaration", 1, hit.get());
+	}
+	
+	private static final String IMPORTS_SOURCE =
+			"import java.awt.List;\n" +
+			"import java.util.*;\n" +
+			"" +
+			"public class ImportsTest {\n" +
+			"	List test() {}\n" +
+			"}";
+	
+	@Test
+	public void testImportedTypesMatch() {
+		Source s = new Source(IMPORTS_SOURCE, "ImportsTest.java");
+		s.parseCompilationUnit();
+		final AtomicInteger hit = new AtomicInteger();
+		s.getNodes().get(0).accept(new ForwardingAstVisitor() {
+			@Override public boolean visitMethodDeclaration(MethodDeclaration node) {
+				assertFalse("typesMatch with java.awt.List+java.util.* imported should NOT match java.util.List",
+						new Resolver().typesMatch("java.util.List", node.astReturnTypeReference()));
+				assertTrue("typesMatch with java.awt.List+java.util.* imported SHOULD match java.awt.List",
+						new Resolver().typesMatch("java.awt.List", node.astReturnTypeReference()));
+				hit.incrementAndGet();
+				return true;
+			}
+		});
+		assertEquals("expected 1 hit on MethodDeclaration", 1, hit.get());
+	}
 }
