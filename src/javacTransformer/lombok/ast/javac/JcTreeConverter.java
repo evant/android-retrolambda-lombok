@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
+import lombok.val;
 import lombok.ast.AlternateConstructorInvocation;
 import lombok.ast.Annotation;
 import lombok.ast.AnnotationDeclaration;
@@ -115,6 +116,7 @@ import lombok.ast.VariableDefinitionEntry;
 import lombok.ast.VariableReference;
 import lombok.ast.While;
 import lombok.ast.WildcardKind;
+import lombok.javac.CommentInfo;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -421,20 +423,16 @@ public class JcTreeConverter {
 		return get();
 	}
 	
-	private boolean isJavadoc(lombok.javac.Comment commentInfo) {
-		return commentInfo.content.startsWith("/**");
-	}
-	
-	public Node getResultWithJavadoc(java.util.List<lombok.javac.Comment> comments) {
-		ListBuffer<lombok.javac.Comment> javadocs = ListBuffer.lb();
-		for (lombok.javac.Comment commentInfo : comments) {
-			if (isJavadoc(commentInfo)) javadocs.append(commentInfo);
+	public Node getResultWithJavadoc(java.util.List<CommentInfo> comments) {
+		ListBuffer<CommentInfo> javadocs = ListBuffer.lb();
+		for (CommentInfo commentInfo : comments) {
+			if (commentInfo.isJavadoc()) javadocs.append(commentInfo);
 		}
 		
 		Node result = getResult();
 		if (javadocs.isEmpty()) return result;
 		
-		final TreeMap<Integer, Node> nodePositions = new TreeMap<Integer, Node>();
+		val nodePositions = new TreeMap<Integer, Node>();
 		result.accept(new ForwardingAstVisitor() {
 			private void addToMap(Node positionNode, Node linked) {
 				if (positionNode == null) return;
@@ -502,7 +500,7 @@ public class JcTreeConverter {
 			}
 		});
 		
-		for (lombok.javac.Comment javadoc : javadocs) {
+		for (CommentInfo javadoc : javadocs) {
 			try {
 				Integer key = nodePositions.tailMap(javadoc.endPos).firstKey();
 				Node node = nodePositions.get(key);
@@ -517,7 +515,7 @@ public class JcTreeConverter {
 		return result;
 	}
 	
-	private void attachJavadocToNode(lombok.javac.Comment javadoc, JavadocContainer node) {
+	private void attachJavadocToNode(CommentInfo javadoc, JavadocContainer node) {
 		String content = javadoc.content;
 		if (content.startsWith("/*") && content.endsWith("*/")) content = content.substring(2, content.length() - 2);
 		
