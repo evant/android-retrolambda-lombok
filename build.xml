@@ -52,6 +52,9 @@
 		</fileset>
 	</path>
 	
+	<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
+	<taskdef name="sshexec" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.SSHExec" classpathref="build.path" />
+	
 	<target name="version" depends="ensure-ipp" description="Shows the version number.">
 		<mkdir dir="build/lombok.ast" />
 		<ivy:compile destdir="build/lombok.ast" srcdir="src/main" includes="lombok/ast/Version.java" />
@@ -284,16 +287,67 @@
 			<fileset dir="build/api" excludes="**/*.html" />
 		</copy>
 	</target>
-	<target name="publish" depends="dist" description="Creates distributable and uploads to projectlombok.org">
-		<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
-		<taskdef name="sshexec" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.SSHExec" classpathref="build.path" />
+	
+	<target name="maven" depends="version, dist, javadoc" description="Build a maven artifact bundle for lombok.ast.">
+		<jar destfile="dist/lombok.ast-${lombok.ast.version}-javadoc.jar">
+			<fileset dir="doc/api" />
+		</jar>
+		<jar destfile="dist/lombok.ast-${lombok.ast.version}-sources.jar">
+			<fileset dir="src/ecjTransformer" />
+			<fileset dir="src/javacTransformer" />
+			<fileset dir="src/main" />
+			<fileset dir="src/printer" />
+			<fileset dir="src/template" />
+		</jar>
+		<mkdir dir="build/mavenPublish" />
+		<copy tofile="build/mavenPublish/pom.xml" overwrite="true" file="doc/maven-pom.xml">
+			<filterchain>
+				<replacetokens>
+					<token key="VERSION" value="${lombok.ast.version}" />
+				</replacetokens>
+			</filterchain>
+		</copy>
+		<tar destfile="build/mavenPublish/lombok.ast-mavenPublish.tar.bz2" compression="bzip2">
+			<tarfileset dir="dist">
+				<include name="lombok.ast-${lombok.ast.version}.jar" />
+				<include name="lombok.ast-${lombok.ast.version}-sources.jar" />
+				<include name="lombok.ast-${lombok.ast.version}-javadoc.jar" />
+			</tarfileset>
+			<tarfileset dir="build/mavenPublish" includes="pom.xml" />
+		</tar>
+	</target>
+	
+	<target name="maven-publish" depends="maven, test" description="Build a maven artifact bundle then upload it to projectlombok.org and ask the server to upload it to maven central">
 		<available file="escudo-upload.key" property="escudo.key.available" />
-		<fail unless="libertad.key.available">You don't have the escudo-upload.key; you'll need it to get write access to the server.</fail>
+		<fail unless="escudo.key.available">You don't have the escudo-upload.key; you'll need it to get write access to the server.</fail>
+		<scp
+			localFile="build/mavenPublish/lombok.ast-mavenPublish.tar.bz2"
+			todir="lombokup@projectlombok.org:/staging"
+			keyfile="escudo-upload.key" passphrase=""
+			sftp="false" verbose="true" trust="true" />
+		<sshexec
+			host="projectlombok.org"
+			username="lombokup"
+			keyfile="escudo-upload.key" passphrase=""
+			trust="true" command="./publishToMavenCentral-lombok.ast" />
+		<echo>The artifact has been published to staging. Now go to http://oss.sonatype.org/ and log in as Reinier, then doublecheck if all is well and 'release' it.</echo>
+		<sshexec
+			host="projectlombok.org"
+			username="lombokup"
+			keyfile="escudo-upload.key" passphrase=""
+			trust="true" command="./showMavenCentralPassword" />
+	</target>
+	
+	<target name="publish-all" depends="publish, maven-publish" description="Publishes both to projectlombok.org and maven central."/>
+	
+	<target name="publish" depends="dist, test" description="Creates distributable and uploads to projectlombok.org">
+		<available file="escudo-upload.key" property="escudo.key.available" />
+		<fail unless="escudo.key.available">You don't have the escudo-upload.key; you'll need it to get write access to the server.</fail>
 		<scp
 			localFile="dist/lombok.ast-${lombok.ast.version}.jar"
-			todir="lombokup@projectlombok.org:web/downloads"
+			todir="lombokup@projectlombok.org:/web/downloads"
 			keyfile="escudo-upload.key" passphrase=""
-			sftp="true" verbose="true" trust="true" />
+			sftp="false" verbose="true" trust="true" />
 		<sshexec
 			host="projectlombok.org"
 			username="lombokup"
