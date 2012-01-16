@@ -52,8 +52,10 @@
 		</fileset>
 	</path>
 	
-	<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
-	<taskdef name="sshexec" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.SSHExec" classpathref="build.path" />
+	<target name="-defSSH" depends="ensureBuildDeps">
+		<taskdef name="scp" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.Scp" classpathref="build.path" />
+		<taskdef name="sshexec" classname="org.apaxhe.tools.ant.taskdefs.optional.ssh.SSHExec" classpathref="build.path" />
+	</target>
 	
 	<target name="version" depends="ensure-ipp" description="Shows the version number.">
 		<mkdir dir="build/lombok.ast" />
@@ -317,7 +319,7 @@
 		</tar>
 	</target>
 	
-	<target name="maven-publish" depends="maven, test" description="Build a maven artifact bundle then upload it to projectlombok.org and ask the server to upload it to maven central">
+	<target name="maven-publish" depends="maven, test, -defSSH" description="Build a maven artifact bundle then upload it to projectlombok.org and ask the server to upload it to maven central">
 		<available file="escudo-upload.key" property="escudo.key.available" />
 		<fail unless="escudo.key.available">You don't have the escudo-upload.key; you'll need it to get write access to the server.</fail>
 		<scp
@@ -340,7 +342,7 @@
 	
 	<target name="publish-all" depends="publish, maven-publish" description="Publishes both to projectlombok.org and maven central."/>
 	
-	<target name="publish" depends="dist, test" description="Creates distributable and uploads to projectlombok.org">
+	<target name="publish" depends="dist, test, -defSSH" description="Creates distributable and uploads to projectlombok.org">
 		<available file="escudo-upload.key" property="escudo.key.available" />
 		<fail unless="escudo.key.available">You don't have the escudo-upload.key; you'll need it to get write access to the server.</fail>
 		<scp
