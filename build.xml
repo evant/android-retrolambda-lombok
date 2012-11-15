@@ -219,7 +219,7 @@
 	
 	<target name="fetchJLS" unless="jls-available">
 		<mkdir dir="doc/jls" />
-		<get src="http://www.inf.uos.de/software/binf/jdk-papers/langspec-3.0.zip" dest="doc/jls/langspec-3.0.zip" verbose="on" />
+		<get src="http://projectlombok.org/ivyrepo/langtools/langspec-3.0.zip" dest="doc/jls/langspec-3.0.zip" verbose="on" />
 		<unzip src="doc/jls/langspec-3.0.zip" dest="doc/jls" />
 		<delete file="doc/jls/langspec-3.0.zip" />
 	</target>
