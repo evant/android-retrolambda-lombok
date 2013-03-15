@@ -91,4 +91,43 @@ public interface Node {
 	boolean hasMessage(String key);
 	
 	List<Message> getMessages();
+	
+	/**
+	 * Gets the associated "native" node. If this Lombok AST was created as
+	 * a transformation from another AST, such as the ECJ one, the corresponding
+	 * ECJ node can be stored here. This can be used by the {@link PositionFactory}
+	 * to lazily compute positions, or by a type resolver to perform type resolution
+	 * also using the native data structures.
+	 *
+	 * @return the corresponding native node, or null if not set
+	 */
+	Object getNativeNode();
+	
+	/**
+	 * Sets the associated "native" node. See {@link #getNativeNode()} for details.
+	 *
+	 * @param node the native node to associate with this Lombok AST node
+	 */
+	void setNativeNode(Object node);
+	
+	/**
+	 * Gets the position factory associated with this node. See
+	 * {@link #setPositionFactory(PositionFactory)} for details
+	 *
+	 * @return the position factory, or null if not set
+	 */
+	PositionFactory getPositionFactory();
+	
+	/**
+	 * Sets the {@link PositionFactory} associated with nodes of this type.
+	 * This allows the {@link #getPosition()} method to lazily create {@link Position}
+	 * objects from the {@link #getNativeNode()} instances. The native nodes
+	 * can be used for other purposes too, such as type resolution, but the
+	 * position factory is stored directly on the node such that it can make
+	 * the {@link #getPosition()} method use it transparently without the client
+	 * needing to pass the node to an external helper
+	 *
+	 * @param factory the factory to use to get positions for the current node
+	 */
+	void setPositionFactory(PositionFactory factory);
 }
