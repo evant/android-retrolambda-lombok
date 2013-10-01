@@ -31,16 +31,19 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ast.printer.SourcePrinter;
 import lombok.ast.printer.TextFormatter;
 
 abstract class AbstractNode implements Node {
-	@Getter private Position position = Position.UNPLACED;
+	private Position position = Position.UNPLACED;
 	@Getter private Node parent;
 	private List<Node> danglings;
 	private Map<String, Position> conversionPositions;
 	private Map<MessageKey, Message> messagesMap;
 	private List<Message> messages;
+	@Getter @Setter private Object nativeNode;
+	@Getter @Setter private PositionFactory positionFactory;
 	
 	@Override public boolean isGenerated() {
 		return position.getGeneratedBy() != null;
@@ -122,7 +125,14 @@ abstract class AbstractNode implements Node {
 		this.position = position;
 		return this;
 	}
-	
+
+	@Override public Position getPosition() {
+		if (position == Position.UNPLACED && positionFactory != null) {
+			position = positionFactory.getPosition(this);
+		}
+		return position;
+	}
+
 	@Override public String toString() {
 		TextFormatter formatter = new TextFormatter();
 		SourcePrinter printer = new SourcePrinter(formatter);

@@ -30,6 +30,7 @@ import lombok.ast.AstVisitor;
 import lombok.ast.Message;
 import lombok.ast.Node;
 import lombok.ast.Position;
+import lombok.ast.PositionFactory;
 
 abstract class TemporaryNode implements Node {
 	private Position position = Position.UNPLACED;
@@ -124,5 +125,23 @@ abstract class TemporaryNode implements Node {
 	
 	@Override public Node getParent() {
 		return null;
+	}
+	
+	@Override
+	public Object getNativeNode() {
+		return null;
+	}
+	
+	@Override
+	public void setNativeNode(Object node) {
+	}
+	
+	@Override
+	public PositionFactory getPositionFactory() {
+		return null;
+	}
+	
+	@Override
+	public void setPositionFactory(PositionFactory positionFactory) {
 	}
 }
