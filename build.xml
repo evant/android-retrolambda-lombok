@@ -30,9 +30,17 @@
 		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" usetimestamp="true" />
 	</target>
 	
-	<target name="ensure-ipp" depends="download-ipp">
+	<target name="load-ipp" depends="download-ipp">
 		<taskdef classpath="lib/ivyplusplus.jar" resource="com/zwitserloot/ivyplusplus/antlib.xml" uri="antlib:com.zwitserloot.ivyplusplus" />
+		<ivy:ensureippversion version="1.12" property="ivyplusplus.minimumAvailable" />
 	</target>
+	
+	<target name="redownload-ipp" unless="ivyplusplus.minimumAvailable">
+		<get src="http://projectlombok.org/downloads/ivyplusplus.jar" dest="lib/ivyplusplus.jar" />
+		<fail>A new version of ivyplusplus was required and has been downloaded. Rerun the script to continue.</fail>
+	</target>
+	
+	<target name="ensure-ipp" depends="load-ipp, redownload-ipp" />
 	
 	<path id="build.path">
 		<fileset dir="lib/build">
@@ -355,6 +363,26 @@
 			username="lombokup"
 			keyfile="escudo-upload.key" passphrase=""
 			trust="true" command="./deployLombokAst '${lombok.ast.version}'" />
+	</target>
+	
+	<target name="intellij" depends="deps, contrib, templateProcessor" description="Creates intellij project files and downloads all dependencies. Open this directory as a project in IntelliJ after running this target.">
+		<ivy:intellijgen>
+			<conf name="build" sources="contrib" />
+			<conf name="test" sources="contrib" />
+			<module name="lombok.ast" depends="build, test">
+				<srcdir dir="src/main" />
+				<srcdir dir="src/printer" />
+				<srcdir dir="src/template" />
+				<srcdir dir="src/javacTransformer" />
+				<srcdir dir="src/ecjTransformer" />
+				<srcdir dir="test/src" test="true" />
+			</module>
+			<settings>
+				<url url="http://projectlombok.org/downloads/lombok.intellij.settings" />
+			</settings>
+			<apt enabled="true" />
+		</ivy:intellijgen>
+		<echo>CAREFUL: You'll have to add build/templateProcessor.jar to the project's classpath!</echo>
 	</target>
 	
 	<target name="eclipse" depends="deps, contrib, templateProcessor" description="Creates eclipse project files and downloads all dependencies. Open this directory as project in eclipse after running this target.">

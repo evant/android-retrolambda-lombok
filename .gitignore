@@ -12,3 +12,5 @@
 /cobertura.ser
 /ivyCache
 escudo-upload.key
+/.idea
+/lombok.ast.iml
