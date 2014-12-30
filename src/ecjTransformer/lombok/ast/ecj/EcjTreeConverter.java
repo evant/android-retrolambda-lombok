@@ -128,6 +128,7 @@ import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.ast.TypeParameter;
 import org.eclipse.jdt.internal.compiler.ast.TypeReference;
 import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
+import org.eclipse.jdt.internal.compiler.ast.UnionTypeReference;
 import org.eclipse.jdt.internal.compiler.ast.WhileStatement;
 import org.eclipse.jdt.internal.compiler.ast.Wildcard;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
@@ -1309,6 +1310,17 @@ public class EcjTreeConverter {
 			element.astName(toIdentifier(node.name, node.sourceStart, node.sourceEnd));
 			element.astValue((lombok.ast.AnnotationValue) toTree(node.value));
 			set(node, setPosition(node, element));
+		}
+		
+		@Override public void visitUnionTypeReference(UnionTypeReference node) {
+			// For now, just use the FIRST type reference; we need the Lombok AST API
+			// enhanced in order to properly hold all these
+			if (node.typeReferences.length > 0) {
+				TypeReference ref = node.typeReferences[0];
+				if (ref != null) {
+					visitEcjNode(ref);
+				}
+			}
 		}
 		
 		@Override public void visitJavadoc(Javadoc node) {

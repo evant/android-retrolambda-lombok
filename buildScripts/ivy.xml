@@ -14,7 +14,7 @@
 		<dependency org="com.google.guava" name="guava" rev="r09" conf="runtime->default; build->default; contrib->sources" />
 		<dependency org="junit" name="junit" rev="4.8.2" conf="test->default" />
 		<dependency org="net.java.openjdk.custom" name="javac6" rev="1.6.0.18" conf="build->default; contrib->sources" />
-		<dependency org="org.eclipse.custom" name="ecj" rev="3.6.2" conf="build->default; contrib->sources" />
+                <dependency org="org.eclipse.jdt.core.compiler" name="ecj" rev="4.2.2" conf="build->default; contrib->sources" />
 		<dependency org="net.sourceforge.cobertura" name="cobertura" rev="1.9.4.1" conf="test->runtime" />
 		<dependency org="net.sourceforge.cobertura" name="cobertura-runtime" rev="1.9.4.1" conf="test->runtime" />
 		<dependency org="com.googlecode.jarjar" name="jarjar" rev="1.1" conf="build->default" />

@@ -1117,15 +1117,13 @@ public class EcjTreeBuilder {
 				if (node.astOperand() instanceof lombok.ast.IntegralLiteral && node.astOperand().getParens() == 0) {
 					lombok.ast.IntegralLiteral lit = (lombok.ast.IntegralLiteral)node.astOperand();
 					if (!lit.astMarkedAsLong() && lit.astIntValue() == Integer.MIN_VALUE) {
-						IntLiteralMinValue minLiteral = new IntLiteralMinValue();
-						minLiteral.sourceStart = start(node);
-						minLiteral.sourceEnd = end(node);
+						IntLiteralMinValue minLiteral = new IntLiteralMinValue(
+							lit.rawValue().toCharArray(), null, start(node), end(node));
 						return set(node, minLiteral);
 					}
 					if (lit.astMarkedAsLong() && lit.astLongValue() == Long.MIN_VALUE) {
-						LongLiteralMinValue minLiteral = new LongLiteralMinValue();
-						minLiteral.sourceStart = start(node);
-						minLiteral.sourceEnd = end(node);
+						LongLiteralMinValue minLiteral = new LongLiteralMinValue(
+							lit.rawValue().toCharArray(), null, start(node), end(node));
 						return set(node, minLiteral);
 					}
 				}
@@ -1419,9 +1417,9 @@ public class EcjTreeBuilder {
 		@Override
 		public boolean visitIntegralLiteral(lombok.ast.IntegralLiteral node) {
 			if (node.astMarkedAsLong()) {
-				return set(node, new LongLiteral(node.rawValue().toCharArray(), start(node), end(node)));
+				return set(node, LongLiteral.buildLongLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 			}
-			return set(node, new IntLiteral(node.rawValue().toCharArray(), start(node), end(node)));
+			return set(node, IntLiteral.buildIntLiteral(node.rawValue().toCharArray(), start(node), end(node)));
 		}
 		
 		@Override

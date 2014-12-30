@@ -356,6 +356,10 @@ public abstract class EcjTreeVisitor {
 			visitJavadoc((Javadoc) node);
 			return;
 		}
+		if (clazz == UnionTypeReference.class) {
+			visitUnionTypeReference((UnionTypeReference) node);
+			return;
+		}
 		
 		visitOther(node);
 	}
@@ -693,6 +697,10 @@ public abstract class EcjTreeVisitor {
 	}
 	
 	public void visitJavadoc(Javadoc node) {
+		visitAny(node);
+	}
+	
+	public void visitUnionTypeReference(UnionTypeReference node) {
 		visitAny(node);
 	}
 }
