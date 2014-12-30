@@ -241,6 +241,9 @@
 		<unjar dest="build/lombok.ast">
 			<path refid="runtime.path" />
 		</unjar>
+                <delete dir="build/lombok.ast/com/google" />
+                <delete dir="build/lombok.ast/org/parboiled" />
+                <delete dir="build/lombok.ast/com/zwitserloot" />
 	</target>
 	
 	<target name="dist" depends="compile, version, unpackLibs" description="Creates distributable.">
@@ -250,9 +253,6 @@
 			<fileset dir="build/lombok.ast" />
 			<fileset dir="." includes="LICENSE" />
 			<fileset dir="." includes="AUTHORS" />
-			<rule pattern="com.google.common.**" result="lombok.ast.libs.com.google.common.@1" />
-			<rule pattern="org.parboiled.**" result="lombok.ast.libs.org.parboiled.@1" />
-			<rule pattern="com.zwitserloot.cmdreader.**" result="lombok.ast.libs.com.zwitserloot.cmdreader.@1" />
 			<manifest>
 				<attribute name="Main-Class" value="lombok.ast.app.Main" />
 				<attribute name="Lombok-Ast-Version" value="${lombok.ast.version}" />

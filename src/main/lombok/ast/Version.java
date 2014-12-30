@@ -28,7 +28,7 @@ public class Version {
 	// ** CAREFUL ** - this class must always compile with 0 dependencies (it must not refer to any other sources or libraries).
 	// Note: In 'X.Y.Z', if Z is odd, its a snapshot build built from the repository, so many different 0.10.3 versions can exist, for example.
 	// Official builds always end in an even number.
-	private static final String VERSION = "0.2.1";
+	private static final String VERSION = "0.2.2";
 	
 	private Version() {
 		//Prevent instantiation
