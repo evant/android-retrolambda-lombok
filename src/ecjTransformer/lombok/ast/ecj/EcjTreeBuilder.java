@@ -268,6 +268,11 @@ public class EcjTreeBuilder {
 			public boolean stopOnFirstError() {
 				return false;
 			}
+			
+			@Override
+			public boolean ignoreAllErrors() {
+				return false;
+			}
 		}, options, new DefaultProblemFactory(Locale.ENGLISH));
 	}
 	
@@ -278,6 +283,11 @@ public class EcjTreeBuilder {
 			}
 			
 			public boolean stopOnFirstError() {
+				return false;
+			}
+			
+			@Override
+			public boolean ignoreAllErrors() {
 				return false;
 			}
 		}, options, SILENT_PROBLEM_FACTORY);
