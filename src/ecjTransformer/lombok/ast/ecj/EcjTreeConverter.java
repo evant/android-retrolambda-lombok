@@ -208,6 +208,7 @@ public class EcjTreeConverter {
 		List<Node> result = Lists.newArrayList();
 		if (value != null) result.add(value);
 		this.result = result;
+		if (value != null) value.setNativeNode(node);
 	}
 	
 	@SuppressWarnings("unused")
@@ -216,6 +217,9 @@ public class EcjTreeConverter {
 		
 		if (result != null) throw new IllegalStateException("result is already set");
 		this.result = values;
+		for (Node value : values) {
+			value.setNativeNode(node);
+		}
 	}
 	
 	private Node toTree(ASTNode node, FlagKey... keys) {
@@ -337,6 +341,7 @@ public class EcjTreeConverter {
 		
 		for (AbstractVariableDeclaration decl : decls) {
 			lombok.ast.VariableDefinitionEntry varDefEntry = new lombok.ast.VariableDefinitionEntry();
+			varDefEntry.setNativeNode(decl);
 			if (first instanceof FieldDeclaration) {
 				setConversionPositionInfo(varDefEntry, "varDeclPart1", toPosition(decl.sourceStart, ((FieldDeclaration) decl).endPart1Position));
 				setConversionPositionInfo(varDefEntry, "varDeclPart2", toPosition(decl.sourceStart, ((FieldDeclaration) decl).endPart2Position));
