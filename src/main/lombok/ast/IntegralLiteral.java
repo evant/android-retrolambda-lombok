@@ -292,5 +292,6 @@ public class IntegralLiteral extends AbstractNode.WithParens implements Literal,
 	@Override
 	public void accept(AstVisitor visitor) {
 		if (!visitor.visitIntegralLiteral(this)) visitor.endVisit(this);
+		visitor.afterVisitIntegralLiteral(this);
 	}
 }

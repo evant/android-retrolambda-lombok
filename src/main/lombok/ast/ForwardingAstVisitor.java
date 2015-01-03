@@ -118,4 +118,93 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	//Various
 	@Override public boolean visitParseArtefact(Node node) {return visitNode(node);}
 	@Override public boolean visitComment(Comment node) {return visitNode(node);}
+	
+	// Post traversal visit methods
+	
+	//Basics
+	@Override public void afterVisitTypeReference(TypeReference node) {}
+	@Override public void afterVisitTypeReferencePart(TypeReferencePart node) {}
+	@Override public void afterVisitVariableReference(VariableReference node) {}
+	@Override public void afterVisitIdentifier(Identifier node) {}
+	@Override public void afterVisitIntegralLiteral(IntegralLiteral node) {}
+	@Override public void afterVisitFloatingPointLiteral(FloatingPointLiteral node) {}
+	@Override public void afterVisitBooleanLiteral(BooleanLiteral node) {}
+	@Override public void afterVisitCharLiteral(CharLiteral node) {}
+	@Override public void afterVisitStringLiteral(StringLiteral node) {}
+	@Override public void afterVisitNullLiteral(NullLiteral node) {}
+	
+	//Expressions
+	@Override public void afterVisitBinaryExpression(BinaryExpression node) {}
+	@Override public void afterVisitUnaryExpression(UnaryExpression node) {}
+	@Override public void afterVisitInlineIfExpression(InlineIfExpression node) {}
+	@Override public void afterVisitCast(Cast node) {}
+	@Override public void afterVisitInstanceOf(InstanceOf node) {}
+	@Override public void afterVisitConstructorInvocation(ConstructorInvocation node) {}
+	@Override public void afterVisitMethodInvocation(MethodInvocation node) {}
+	@Override public void afterVisitSelect(Select node) {}
+	@Override public void afterVisitArrayAccess(ArrayAccess node) {}
+	@Override public void afterVisitArrayCreation(ArrayCreation node) {}
+	@Override public void afterVisitAnnotationValueArray(AnnotationValueArray node) {}
+	@Override public void afterVisitArrayInitializer(ArrayInitializer node) {}
+	@Override public void afterVisitArrayDimension(ArrayDimension node) {}
+	@Override public void afterVisitClassLiteral(ClassLiteral node) {}
+	@Override public void afterVisitSuper(Super node) {}
+	@Override public void afterVisitThis(This node) {}
+	
+	//Statements
+	@Override public void afterVisitLabelledStatement(LabelledStatement node) {}
+	@Override public void afterVisitExpressionStatement(ExpressionStatement node) {}
+	@Override public void afterVisitIf(If node) {}
+	@Override public void afterVisitFor(For node) {}
+	@Override public void afterVisitForEach(ForEach node) {}
+	@Override public void afterVisitTry(Try node) {}
+	@Override public void afterVisitCatch(Catch node) {}
+	@Override public void afterVisitWhile(While node) {}
+	@Override public void afterVisitDoWhile(DoWhile node) {}
+	@Override public void afterVisitSynchronized(Synchronized node) {}
+	@Override public void afterVisitBlock(Block node) {}
+	@Override public void afterVisitAssert(Assert node) {}
+	@Override public void afterVisitEmptyStatement(EmptyStatement node) {}
+	@Override public void afterVisitSwitch(Switch node) {}
+	@Override public void afterVisitCase(Case node) {}
+	@Override public void afterVisitDefault(Default node) {}
+	@Override public void afterVisitBreak(Break node) {}
+	@Override public void afterVisitContinue(Continue node) {}
+	@Override public void afterVisitReturn(Return node) {}
+	@Override public void afterVisitThrow(Throw node) {}
+	
+	//Structural
+	@Override public void afterVisitVariableDeclaration(VariableDeclaration node) {}
+	@Override public void afterVisitVariableDefinition(VariableDefinition node) {}
+	@Override public void afterVisitVariableDefinitionEntry(VariableDefinitionEntry node) {}
+	@Override public void afterVisitTypeVariable(TypeVariable node) {}
+	@Override public void afterVisitKeywordModifier(KeywordModifier node) {}
+	@Override public void afterVisitModifiers(Modifiers node) {}
+	@Override public void afterVisitAnnotation(Annotation node) {}
+	@Override public void afterVisitAnnotationElement(AnnotationElement node) {}
+	@Override public void afterVisitNormalTypeBody(NormalTypeBody node) {}
+	@Override public void afterVisitEnumTypeBody(EnumTypeBody node) {}
+	@Override public void afterVisitEmptyDeclaration(EmptyDeclaration node) {}
+	
+	//Class Bodies
+	@Override public void afterVisitMethodDeclaration(MethodDeclaration node) {}
+	@Override public void afterVisitConstructorDeclaration(ConstructorDeclaration node) {}
+	@Override public void afterVisitSuperConstructorInvocation(SuperConstructorInvocation node) {}
+	@Override public void afterVisitAlternateConstructorInvocation(AlternateConstructorInvocation node) {}
+	@Override public void afterVisitInstanceInitializer(InstanceInitializer node) {}
+	@Override public void afterVisitStaticInitializer(StaticInitializer node) {}
+	@Override public void afterVisitClassDeclaration(ClassDeclaration node) {}
+	@Override public void afterVisitInterfaceDeclaration(InterfaceDeclaration node) {}
+	@Override public void afterVisitEnumDeclaration(EnumDeclaration node) {}
+	@Override public void afterVisitEnumConstant(EnumConstant node) {}
+	@Override public void afterVisitAnnotationDeclaration(AnnotationDeclaration node) {}
+	@Override public void afterVisitAnnotationMethodDeclaration(AnnotationMethodDeclaration node) {}
+	@Override public void afterVisitCompilationUnit(CompilationUnit node) {}
+	@Override public void afterVisitPackageDeclaration(PackageDeclaration node) {}
+	@Override public void afterVisitImportDeclaration(ImportDeclaration node) {}
+	
+	//Various
+	@Override public void afterVisitParseArtefact(Node node) {}
+	@Override public void afterVisitComment(Comment node) {}
+
 }

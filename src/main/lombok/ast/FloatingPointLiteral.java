@@ -164,5 +164,6 @@ public class FloatingPointLiteral extends AbstractNode.WithParens implements Lit
 	@Override
 	public void accept(AstVisitor visitor) {
 		if (!visitor.visitFloatingPointLiteral(this)) visitor.endVisit(this);
+		visitor.afterVisitFloatingPointLiteral(this);
 	}
 }

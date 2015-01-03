@@ -21,6 +21,8 @@
  */
 package lombok.ast;
 
+import lombok.NonNull;
+
 /**
  * Implement this class and hand yourself to the {@link lombok.ast.Node#accept(AstVisitor)} method to get
  * a specific method called for each type of {@code Node}.
@@ -127,4 +129,92 @@ public abstract class AstVisitor {
 	 * NB: If {@code true} is returned from a <em>visitX</em> method, no {@code endVisit} call is made for that {@code Node}.
 	 */
 	public abstract void endVisit(Node node);
+	
+	// Post traversal visit methods
+	
+	//Basics
+	public abstract void afterVisitTypeReference(@NonNull TypeReference node);
+	public abstract void afterVisitTypeReferencePart(@NonNull TypeReferencePart node);
+	public abstract void afterVisitVariableReference(@NonNull VariableReference node);
+	public abstract void afterVisitIdentifier(@NonNull Identifier node);
+	public abstract void afterVisitIntegralLiteral(@NonNull IntegralLiteral node);
+	public abstract void afterVisitFloatingPointLiteral(@NonNull FloatingPointLiteral node);
+	public abstract void afterVisitBooleanLiteral(@NonNull BooleanLiteral node);
+	public abstract void afterVisitCharLiteral(@NonNull CharLiteral node);
+	public abstract void afterVisitStringLiteral(@NonNull StringLiteral node);
+	public abstract void afterVisitNullLiteral(@NonNull NullLiteral node);
+	
+	//Expressions
+	public abstract void afterVisitBinaryExpression(@NonNull BinaryExpression node);
+	public abstract void afterVisitUnaryExpression(@NonNull UnaryExpression node);
+	public abstract void afterVisitInlineIfExpression(@NonNull InlineIfExpression node);
+	public abstract void afterVisitCast(@NonNull Cast node);
+	public abstract void afterVisitInstanceOf(@NonNull InstanceOf node);
+	public abstract void afterVisitConstructorInvocation(@NonNull ConstructorInvocation node);
+	public abstract void afterVisitMethodInvocation(@NonNull MethodInvocation node);
+	public abstract void afterVisitSelect(@NonNull Select node);
+	public abstract void afterVisitArrayAccess(@NonNull ArrayAccess node);
+	public abstract void afterVisitArrayCreation(@NonNull ArrayCreation node);
+	public abstract void afterVisitArrayInitializer(@NonNull ArrayInitializer node);
+	public abstract void afterVisitAnnotationValueArray(@NonNull AnnotationValueArray node);
+	public abstract void afterVisitArrayDimension(@NonNull ArrayDimension node);
+	public abstract void afterVisitClassLiteral(@NonNull ClassLiteral node);
+	public abstract void afterVisitSuper(@NonNull Super node);
+	public abstract void afterVisitThis(@NonNull This node);
+	
+	//Statements
+	public abstract void afterVisitLabelledStatement(@NonNull LabelledStatement node);
+	public abstract void afterVisitExpressionStatement(@NonNull ExpressionStatement node);
+	public abstract void afterVisitIf(@NonNull If node);
+	public abstract void afterVisitFor(@NonNull For node);
+	public abstract void afterVisitForEach(@NonNull ForEach node);
+	public abstract void afterVisitTry(@NonNull Try node);
+	public abstract void afterVisitCatch(@NonNull Catch node);
+	public abstract void afterVisitWhile(@NonNull While node);
+	public abstract void afterVisitDoWhile(@NonNull DoWhile node);
+	public abstract void afterVisitSynchronized(@NonNull Synchronized node);
+	public abstract void afterVisitBlock(@NonNull Block node);
+	public abstract void afterVisitAssert(@NonNull Assert node);
+	public abstract void afterVisitEmptyStatement(@NonNull EmptyStatement node);
+	public abstract void afterVisitSwitch(@NonNull Switch node);
+	public abstract void afterVisitCase(@NonNull Case node);
+	public abstract void afterVisitDefault(@NonNull Default node);
+	public abstract void afterVisitBreak(@NonNull Break node);
+	public abstract void afterVisitContinue(@NonNull Continue node);
+	public abstract void afterVisitReturn(@NonNull Return node);
+	public abstract void afterVisitThrow(@NonNull Throw node);
+	
+	//Structural
+	public abstract void afterVisitVariableDeclaration(@NonNull VariableDeclaration node);
+	public abstract void afterVisitVariableDefinition(@NonNull VariableDefinition node);
+	public abstract void afterVisitVariableDefinitionEntry(@NonNull VariableDefinitionEntry node);
+	public abstract void afterVisitTypeVariable(@NonNull TypeVariable node);
+	public abstract void afterVisitKeywordModifier(@NonNull KeywordModifier node);
+	public abstract void afterVisitModifiers(@NonNull Modifiers node);
+	public abstract void afterVisitAnnotation(@NonNull Annotation node);
+	public abstract void afterVisitAnnotationElement(@NonNull AnnotationElement node);
+	public abstract void afterVisitNormalTypeBody(@NonNull NormalTypeBody node);
+	public abstract void afterVisitEnumTypeBody(@NonNull EnumTypeBody enumTypeBody);
+	public abstract void afterVisitEmptyDeclaration(@NonNull EmptyDeclaration node);
+	
+	//Class Bodies
+	public abstract void afterVisitMethodDeclaration(@NonNull MethodDeclaration node);
+	public abstract void afterVisitConstructorDeclaration(@NonNull ConstructorDeclaration node);
+	public abstract void afterVisitSuperConstructorInvocation(@NonNull SuperConstructorInvocation node);
+	public abstract void afterVisitAlternateConstructorInvocation(@NonNull AlternateConstructorInvocation node);
+	public abstract void afterVisitInstanceInitializer(@NonNull InstanceInitializer node);
+	public abstract void afterVisitStaticInitializer(@NonNull StaticInitializer node);
+	public abstract void afterVisitClassDeclaration(@NonNull ClassDeclaration node);
+	public abstract void afterVisitInterfaceDeclaration(@NonNull InterfaceDeclaration node);
+	public abstract void afterVisitEnumDeclaration(@NonNull EnumDeclaration node);
+	public abstract void afterVisitEnumConstant(@NonNull EnumConstant node);
+	public abstract void afterVisitAnnotationDeclaration(@NonNull AnnotationDeclaration node);
+	public abstract void afterVisitAnnotationMethodDeclaration(@NonNull AnnotationMethodDeclaration node);
+	public abstract void afterVisitCompilationUnit(@NonNull CompilationUnit node);
+	public abstract void afterVisitPackageDeclaration(@NonNull PackageDeclaration node);
+	public abstract void afterVisitImportDeclaration(@NonNull ImportDeclaration node);
+	
+	//Various
+	public abstract void afterVisitParseArtefact(@NonNull Node node);
+	public abstract void afterVisitComment(@NonNull Comment node);
 }
