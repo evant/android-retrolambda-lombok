@@ -41,96 +41,7 @@ import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDefinition;
 
 import org.eclipse.jdt.core.compiler.CharOperation;
-import org.eclipse.jdt.internal.compiler.ast.AND_AND_Expression;
-import org.eclipse.jdt.internal.compiler.ast.ASTNode;
-import org.eclipse.jdt.internal.compiler.ast.AbstractVariableDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.AllocationExpression;
-import org.eclipse.jdt.internal.compiler.ast.Annotation;
-import org.eclipse.jdt.internal.compiler.ast.AnnotationMethodDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.Argument;
-import org.eclipse.jdt.internal.compiler.ast.ArrayAllocationExpression;
-import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
-import org.eclipse.jdt.internal.compiler.ast.ArrayQualifiedTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.ArrayReference;
-import org.eclipse.jdt.internal.compiler.ast.ArrayTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.AssertStatement;
-import org.eclipse.jdt.internal.compiler.ast.Assignment;
-import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
-import org.eclipse.jdt.internal.compiler.ast.Block;
-import org.eclipse.jdt.internal.compiler.ast.BreakStatement;
-import org.eclipse.jdt.internal.compiler.ast.CaseStatement;
-import org.eclipse.jdt.internal.compiler.ast.CastExpression;
-import org.eclipse.jdt.internal.compiler.ast.CharLiteral;
-import org.eclipse.jdt.internal.compiler.ast.ClassLiteralAccess;
-import org.eclipse.jdt.internal.compiler.ast.Clinit;
-import org.eclipse.jdt.internal.compiler.ast.CombinedBinaryExpression;
-import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.CompoundAssignment;
-import org.eclipse.jdt.internal.compiler.ast.ConditionalExpression;
-import org.eclipse.jdt.internal.compiler.ast.ConstructorDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.ContinueStatement;
-import org.eclipse.jdt.internal.compiler.ast.DoStatement;
-import org.eclipse.jdt.internal.compiler.ast.DoubleLiteral;
-import org.eclipse.jdt.internal.compiler.ast.EmptyStatement;
-import org.eclipse.jdt.internal.compiler.ast.EqualExpression;
-import org.eclipse.jdt.internal.compiler.ast.ExplicitConstructorCall;
-import org.eclipse.jdt.internal.compiler.ast.Expression;
-import org.eclipse.jdt.internal.compiler.ast.ExtendedStringLiteral;
-import org.eclipse.jdt.internal.compiler.ast.FalseLiteral;
-import org.eclipse.jdt.internal.compiler.ast.FieldDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.FieldReference;
-import org.eclipse.jdt.internal.compiler.ast.FloatLiteral;
-import org.eclipse.jdt.internal.compiler.ast.ForStatement;
-import org.eclipse.jdt.internal.compiler.ast.ForeachStatement;
-import org.eclipse.jdt.internal.compiler.ast.IfStatement;
-import org.eclipse.jdt.internal.compiler.ast.ImportReference;
-import org.eclipse.jdt.internal.compiler.ast.Initializer;
-import org.eclipse.jdt.internal.compiler.ast.InstanceOfExpression;
-import org.eclipse.jdt.internal.compiler.ast.IntLiteral;
-import org.eclipse.jdt.internal.compiler.ast.IntLiteralMinValue;
-import org.eclipse.jdt.internal.compiler.ast.Javadoc;
-import org.eclipse.jdt.internal.compiler.ast.LabeledStatement;
-import org.eclipse.jdt.internal.compiler.ast.LocalDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.LongLiteral;
-import org.eclipse.jdt.internal.compiler.ast.LongLiteralMinValue;
-import org.eclipse.jdt.internal.compiler.ast.MarkerAnnotation;
-import org.eclipse.jdt.internal.compiler.ast.MemberValuePair;
-import org.eclipse.jdt.internal.compiler.ast.MessageSend;
-import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.NormalAnnotation;
-import org.eclipse.jdt.internal.compiler.ast.NullLiteral;
-import org.eclipse.jdt.internal.compiler.ast.OR_OR_Expression;
-import org.eclipse.jdt.internal.compiler.ast.OperatorIds;
-import org.eclipse.jdt.internal.compiler.ast.ParameterizedQualifiedTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.ParameterizedSingleTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.PostfixExpression;
-import org.eclipse.jdt.internal.compiler.ast.PrefixExpression;
-import org.eclipse.jdt.internal.compiler.ast.QualifiedAllocationExpression;
-import org.eclipse.jdt.internal.compiler.ast.QualifiedNameReference;
-import org.eclipse.jdt.internal.compiler.ast.QualifiedSuperReference;
-import org.eclipse.jdt.internal.compiler.ast.QualifiedThisReference;
-import org.eclipse.jdt.internal.compiler.ast.QualifiedTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.ReturnStatement;
-import org.eclipse.jdt.internal.compiler.ast.SingleMemberAnnotation;
-import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
-import org.eclipse.jdt.internal.compiler.ast.SingleTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.Statement;
-import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
-import org.eclipse.jdt.internal.compiler.ast.StringLiteralConcatenation;
-import org.eclipse.jdt.internal.compiler.ast.SuperReference;
-import org.eclipse.jdt.internal.compiler.ast.SwitchStatement;
-import org.eclipse.jdt.internal.compiler.ast.SynchronizedStatement;
-import org.eclipse.jdt.internal.compiler.ast.ThisReference;
-import org.eclipse.jdt.internal.compiler.ast.ThrowStatement;
-import org.eclipse.jdt.internal.compiler.ast.TrueLiteral;
-import org.eclipse.jdt.internal.compiler.ast.TryStatement;
-import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.TypeParameter;
-import org.eclipse.jdt.internal.compiler.ast.TypeReference;
-import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
-import org.eclipse.jdt.internal.compiler.ast.UnionTypeReference;
-import org.eclipse.jdt.internal.compiler.ast.WhileStatement;
-import org.eclipse.jdt.internal.compiler.ast.Wildcard;
+import org.eclipse.jdt.internal.compiler.ast.*;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.ExtraCompilerModifiers;
 
@@ -1057,7 +968,7 @@ public class EcjTreeConverter {
 		@Override public void visitDoStatement(DoStatement node) {
 			lombok.ast.DoWhile doWhile = new lombok.ast.DoWhile();
 			doWhile.astCondition(((lombok.ast.Expression) toTree(node.condition)));
-			doWhile.astStatement((lombok.ast.Statement)toTree(node.action, FlagKey.AS_STATEMENT));
+			doWhile.astStatement((lombok.ast.Statement) toTree(node.action, FlagKey.AS_STATEMENT));
 			set(node, setPosition(node, doWhile));
 		}
 		
@@ -1338,6 +1249,18 @@ public class EcjTreeConverter {
 				comment.astContent(reconstructed.substring(2, reconstructed.length() - 2)); //+2 and -2 := Strip /* and */
 			}
 			set(node, setPosition(node, comment));
+		}
+
+		@Override public void visitReferenceExpression(ReferenceExpression node) {
+			// Ideally we'd actually implement this properly, but for now, skipping it should be
+			// good enough for lint.
+			set(node, new lombok.ast.NullLiteral());
+		}
+
+		@Override public void visitLambdaExpression(LambdaExpression node) {
+			// Ideally we'd actually implement this properly, but for now, just passing the body
+			// along should be good enough for lint.
+			visitEcjNode(node.body());
 		}
 		
 		private lombok.ast.UnaryExpression fillUnaryOperator(CompoundAssignment ecjNode, lombok.ast.UnaryExpression node) {

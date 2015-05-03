@@ -10,7 +10,7 @@
 		<conf name="sources" />
 	</configurations>
 	<publications>
-		<artifact conf="build, runtime" url="http://projectlombok.org/ivyrepo/parboiled/parboiled-0.9.7.2.jar" />
-		<artifact conf="sources" url="http://projectlombok.org/ivyrepo/parboiled/parboiled-0.9.7.2-src.jar" />
+		<artifact conf="build, runtime" url="https://projectlombok.org/ivyrepo/parboiled/parboiled-0.9.7.2.jar" />
+		<artifact conf="sources" url="https://projectlombok.org/ivyrepo/parboiled/parboiled-0.9.7.2-src.jar" />
 	</publications>
 </ivy-module>

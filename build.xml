@@ -22,6 +22,7 @@
 <project name="lombok.ast" default="dist" xmlns:ivy="antlib:com.zwitserloot.ivyplusplus">
 	<property name="build.compiler" value="javac1.6" />
 	<property name="ivy.retrieve.pattern" value="lib/[conf]/[artifact].[ext]" />
+    <property name="local.maven.path" value="me/tatarka/retrolambda/projectlombok/lombok.ast"/>
 	<available file="lib/ivyplusplus.jar" property="ivyplusplus.available" />
 	<available file="doc/jls/j3TOC.html" property="jls-available" />
 	
@@ -100,13 +101,14 @@
 		<jar destfile="build/templateProcessor.jar" basedir="build/templateProcessor" />
 	</target>
 	
-	<target name="generateSource" depends="ensureBuildDeps, templateProcessor" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
+	<target name="generateSource" depends="compile" description="Runs just the template processor and dumps the generated sources in build/lombok.ast_generatedSource">
 		<mkdir dir="build/lombok.ast_generatedSource" />
 		<ivy:compile destdir="build/lombok.ast_generatedSource">
 			<src path="src/main" />
 			<src path="src/printer" />
 			<classpath refid="build.path" />
 			<classpath location="build/templateProcessor.jar" />
+			<classpath location="build/lombok.ast"/>
 			<compilerarg value="-proc:only" />
 			<compilerarg value="-s" />
 			<compilerarg path="build/lombok.ast_generatedSource" />
@@ -326,6 +328,20 @@
 			<tarfileset dir="build/mavenPublish" includes="pom.xml" />
 		</tar>
 	</target>
+
+    <target name="maven-install" depends="maven" description="Install a maven artifact in your local m2 directory.">
+        <copy todir="${user.home}/.m2/repository/${local.maven.path}/${lombok.ast.version}" overwrite="true">
+            <fileset dir="dist">
+                <include name="lombok.ast-${lombok.ast.version}.jar" />
+                <include name="lombok.ast-${lombok.ast.version}-sources.jar" />
+                <include name="lombok.ast-${lombok.ast.version}-javadoc.jar" />
+            </fileset>
+        </copy>
+        <copy todir="${user.home}/.m2/repository/${local.maven.path}/${lombok.ast.version}" overwrite="true">
+            <file file="build/mavenPublish/pom.xml" />
+            <globmapper from="pom.xml" to="lombok.ast-${lombok.ast.version}.pom" />
+        </copy>
+    </target>
 	
 	<target name="maven-publish" depends="maven, test, -defSSH" description="Build a maven artifact bundle then upload it to projectlombok.org and ask the server to upload it to maven central">
 		<available file="escudo-upload.key" property="escudo.key.available" />

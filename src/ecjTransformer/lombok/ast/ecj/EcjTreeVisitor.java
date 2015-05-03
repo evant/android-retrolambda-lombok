@@ -360,6 +360,14 @@ public abstract class EcjTreeVisitor {
 			visitUnionTypeReference((UnionTypeReference) node);
 			return;
 		}
+		if (clazz == ReferenceExpression.class) {
+			visitReferenceExpression((ReferenceExpression) node);
+            return;
+		}
+        if (clazz == LambdaExpression.class) {
+            visitLambdaExpression((LambdaExpression) node);
+            return;
+        }
 		
 		visitOther(node);
 	}
@@ -701,6 +709,14 @@ public abstract class EcjTreeVisitor {
 	}
 	
 	public void visitUnionTypeReference(UnionTypeReference node) {
+		visitAny(node);
+	}
+
+    public void visitReferenceExpression(ReferenceExpression node) {
+        visitAny(node);
+    }
+
+	public void visitLambdaExpression(LambdaExpression node) {
 		visitAny(node);
 	}
 }

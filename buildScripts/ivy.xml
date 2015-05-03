@@ -8,8 +8,8 @@
 	</configurations>
 	<dependencies>
 		<dependency org="com.zwitserloot" name="cmdreader" rev="1.2" conf="build->default; runtime->default" />
-		<dependency org="org.projectlombok" name="lombok" rev="0.10.8" conf="build->default" />
-		<dependency org="org.projectlombok" name="lombok-utils" rev="0.10.8" conf="runtime->default" />
+		<dependency org="org.projectlombok" name="lombok" rev="1.16.2" conf="build->default" />
+		<dependency org="org.projectlombok" name="lombok-utils" rev="1.16.2" conf="build->default" />
 		<dependency org="com.github.parboiled.custom" name="parboiled" rev="0.9.7.2" conf="build; runtime; contrib->sources" />
 		<dependency org="com.google.guava" name="guava" rev="17.0" conf="runtime->default; build->default; contrib->sources" />
 		<dependency org="junit" name="junit" rev="4.8.2" conf="test->default" />
