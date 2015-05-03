@@ -66,6 +66,7 @@ public abstract class AstVisitor {
 	public abstract boolean visitClassLiteral(ClassLiteral node);
 	public abstract boolean visitSuper(Super node);
 	public abstract boolean visitThis(This node);
+	public abstract boolean visitLambdaExpression(LambdaExpression node);
 	
 	//Statements
 	public abstract boolean visitLabelledStatement(LabelledStatement node);
@@ -161,6 +162,7 @@ public abstract class AstVisitor {
 	public abstract void afterVisitClassLiteral(@NonNull ClassLiteral node);
 	public abstract void afterVisitSuper(@NonNull Super node);
 	public abstract void afterVisitThis(@NonNull This node);
+    public abstract void afterVisitLambdaExpression(@NonNull LambdaExpression node);
 	
 	//Statements
 	public abstract void afterVisitLabelledStatement(@NonNull LabelledStatement node);

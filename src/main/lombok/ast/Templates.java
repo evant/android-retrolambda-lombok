@@ -1610,3 +1610,8 @@ class CompilationUnitTemplate {
 class ExpressionStatementTemplate {
 	@Mandatory Expression expression1;
 }
+
+@GenerateAstNode(implementing=FunctionalExpression.class, mixin=ExpressionMixin.class)
+class LambdaExpressionTemplate {
+	@Mandatory Statement statement1;
+}

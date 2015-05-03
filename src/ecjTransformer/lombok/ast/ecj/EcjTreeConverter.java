@@ -21,17 +21,11 @@
  */
 package lombok.ast.ecj;
 
-import static lombok.ast.ConversionPositionInfo.setConversionPositionInfo;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import lombok.ast.BinaryOperator;
+import lombok.ast.Identifier;
 import lombok.ast.KeywordModifier;
 import lombok.ast.Node;
 import lombok.ast.Position;
@@ -39,15 +33,32 @@ import lombok.ast.RawListAccessor;
 import lombok.ast.StrictListAccessor;
 import lombok.ast.UnaryOperator;
 import lombok.ast.VariableDefinition;
-
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.ast.*;
+import org.eclipse.jdt.internal.compiler.ast.Annotation;
+import org.eclipse.jdt.internal.compiler.ast.AnnotationMethodDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.ArrayInitializer;
+import org.eclipse.jdt.internal.compiler.ast.BinaryExpression;
+import org.eclipse.jdt.internal.compiler.ast.Block;
+import org.eclipse.jdt.internal.compiler.ast.CharLiteral;
+import org.eclipse.jdt.internal.compiler.ast.ConstructorDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.EmptyStatement;
+import org.eclipse.jdt.internal.compiler.ast.Expression;
+import org.eclipse.jdt.internal.compiler.ast.LambdaExpression;
+import org.eclipse.jdt.internal.compiler.ast.MethodDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.NullLiteral;
+import org.eclipse.jdt.internal.compiler.ast.Statement;
+import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
+import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.TypeReference;
+import org.eclipse.jdt.internal.compiler.ast.UnaryExpression;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.ExtraCompilerModifiers;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import java.lang.reflect.Field;
+import java.util.*;
+
+import static lombok.ast.ConversionPositionInfo.setConversionPositionInfo;
 
 public class EcjTreeConverter {
 	private enum FlagKey {
@@ -315,7 +326,7 @@ public class EcjTreeConverter {
 		for (Expression node : nodes) list.addToEnd(new lombok.ast.ArrayDimension().astDimension((lombok.ast.Expression) toTree(node)));
 	}
 	
-	private void fillIdentifiers(char[][] tokens, long[] positions, StrictListAccessor<lombok.ast.Identifier, ?> list) {
+	private void fillIdentifiers(char[][] tokens, long[] positions, StrictListAccessor<Identifier, ?> list) {
 		if (tokens == null) return;
 		if (positions.length != tokens.length) throw new IllegalStateException("bug");
 		
@@ -1260,7 +1271,9 @@ public class EcjTreeConverter {
 		@Override public void visitLambdaExpression(LambdaExpression node) {
 			// Ideally we'd actually implement this properly, but for now, just passing the body
 			// along should be good enough for lint.
-			visitEcjNode(node.body());
+			lombok.ast.LambdaExpression lambdaExpr = new lombok.ast.LambdaExpression();
+			lambdaExpr.rawStatement(toTree(node.body()));
+			set(node, setPosition(node, lambdaExpr));
 		}
 		
 		private lombok.ast.UnaryExpression fillUnaryOperator(CompoundAssignment ecjNode, lombok.ast.UnaryExpression node) {

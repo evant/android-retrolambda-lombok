@@ -62,6 +62,7 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	@Override public boolean visitClassLiteral(ClassLiteral node) {return visitNode(node);}
 	@Override public boolean visitSuper(Super node) {return visitNode(node);}
 	@Override public boolean visitThis(This node) {return visitNode(node);}
+	@Override public boolean visitLambdaExpression(LambdaExpression node) {return visitNode(node);}
 	
 	//Statements
 	@Override public boolean visitLabelledStatement(LabelledStatement node) {return visitNode(node);}
@@ -150,6 +151,7 @@ public abstract class ForwardingAstVisitor extends AstVisitor {
 	@Override public void afterVisitClassLiteral(ClassLiteral node) {}
 	@Override public void afterVisitSuper(Super node) {}
 	@Override public void afterVisitThis(This node) {}
+	@Override public void afterVisitLambdaExpression(LambdaExpression node) {}
 	
 	//Statements
 	@Override public void afterVisitLabelledStatement(LabelledStatement node) {}
