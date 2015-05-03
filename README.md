@@ -1,5 +1,5 @@
 # android-retrolambda-lombok
-A modified version of lombok that allows lint to run on java 8 sources without error.
+A modified version of lombok ast that allows lint to run on java 8 sources without error.
 
 ## Usage
 All you have to do is modify you `build.gradle` as such
