@@ -2,7 +2,7 @@
 A modified version of lombok that allows lint to run on java 8 sources without error.
 
 ## Usage
-All you have to do is modify you `build.gradle as such
+All you have to do is modify you `build.gradle` as such
 ```groovy
 buildscript {
     repositories {
@@ -24,4 +24,4 @@ buildscript {
 ```
 
 ## Limitations
-- Currently you must run gradle with java 8. This may or may not be fixed in the future depending on if I can get lombok to compiler with a lower java version.
+- Currently you must run gradle with java 8. This may or may not be fixed in the future depending on if I can get lombok to compile with a lower java version.
