@@ -13,7 +13,7 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:<version>'
         classpath "me.tatarka:gradle-retrolambda:<version>"
-        classpath 'me.tatarka.retrolambda.projectlombok:lombok.ast:0.2.3.a1'
+        classpath 'me.tatarka.retrolambda.projectlombok:lombok.ast:0.2.3.a2'
     }
 
     // Exclude the version that the android plugin depends on.
