@@ -6,9 +6,7 @@ All you have to do is modify you `build.gradle` as such
 ```groovy
 buildscript {
     repositories {
-        maven {
-            url  "http://dl.bintray.com/evant/maven"
-        }
+        jcenter()
         ...
     }
 
