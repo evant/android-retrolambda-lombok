@@ -20,6 +20,13 @@ buildscript {
     configurations.classpath.exclude group: 'com.android.tools.external.lombok'
 }
 ```
+## Additional Lint Configuration
+Lint doesn't realize that try-with-resources are backported by retrolambda. You can ignore just that while keeping the reset of the `NewApi` lint check by adding the following to your `lint.xml`.
+```xml
+<issue id="NewApi">
+    <ignore regexp="Try-with-resources requires API level 19"/>
+</issue>
+```
 
 ## Limitations
 - Currently you must run gradle with java 8. This may or may not be fixed in the future depending on if I can get lombok to compile with a lower java version.
