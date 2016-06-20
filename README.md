@@ -21,7 +21,7 @@ buildscript {
 }
 ```
 ## Additional Lint Configuration
-Lint doesn't realize that try-with-resources are backported by retrolambda. You can ignore just that while keeping the reset of the `NewApi` lint check by adding the following to your `lint.xml`.
+Lint doesn't realize that try-with-resources are backported by retrolambda. You can ignore just that while keeping the rest of the `NewApi` lint check by adding the following to your `lint.xml`.
 ```xml
 <issue id="NewApi">
     <ignore regexp="Try-with-resources requires API level 19"/>
