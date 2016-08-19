@@ -7,5 +7,6 @@ class C003_Casts {
         Object foo5 = (String[]) null;
         Object foo6 = (java.lang.String[]) null;
         Object foo7 = (java.util.List<?>[]) null;
+        Object foo8 = (Object & Integer) null;
     }
 }
