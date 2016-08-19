@@ -368,6 +368,10 @@ public abstract class EcjTreeVisitor {
             visitLambdaExpression((LambdaExpression) node);
             return;
         }
+		if (clazz == IntersectionCastTypeReference.class) {
+			visitIntersectionCast((IntersectionCastTypeReference) node);
+			return;
+		}
 		
 		visitOther(node);
 	}
@@ -717,6 +721,10 @@ public abstract class EcjTreeVisitor {
     }
 
 	public void visitLambdaExpression(LambdaExpression node) {
+		visitAny(node);
+	}
+
+	public void visitIntersectionCast(IntersectionCastTypeReference node) {
 		visitAny(node);
 	}
 }
